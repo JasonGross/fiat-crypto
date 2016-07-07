@@ -40,39 +40,20 @@ End PseudoMersenneBase.
 Section CarryBasePow2.
   Context `{prm :PseudoMersenneBaseParams}.
 
-  Definition log_cap i := nth_default 0 limb_widths i.
-
-  Definition add_to_nth n (x:Z) xs :=
-    set_nth n (x + nth_default 0 xs n) xs.
-
-  Definition pow2_mod n i := Z.land n (Z.ones i).
-
-  Definition carry_simple i := fun us =>
-    let di := nth_default 0 us      i in
-    let us' := set_nth i (pow2_mod di (log_cap i)) us in
-    add_to_nth (S i) (   (Z.shiftr di (log_cap i))) us'.
-
   Definition carry_and_reduce i := fun us =>
     let di := nth_default 0 us      i in
-    let us' := set_nth i (pow2_mod di (log_cap i)) us in
-    add_to_nth   0  (c * (Z.shiftr di (log_cap i))) us'.
+    let '(di', ci) := BaseSystem.carry_and_reduce_single limb_widths i di in
+    let us' := set_nth i di' us in
+    add_to_nth   0  (c * ci) us'.
 
   Definition carry i : digits -> digits :=
     if eq_nat_dec i (pred (length base))
     then carry_and_reduce i
-    else carry_simple i.
+    else carry_simple limb_widths i.
 
   Definition carry_sequence is us := fold_right carry us is.
 
-  Fixpoint make_chain i :=
-    match i with
-    | O => nil
-    | S i' => i' :: make_chain i'
-    end.
-
-  Definition full_carry_chain := make_chain (length limb_widths).
-
-  Definition carry_full := carry_sequence full_carry_chain.
+  Definition carry_full := carry_sequence (full_carry_chain limb_widths).
 
   Definition carry_mul us vs := carry_full (mul us vs).
 
@@ -84,7 +65,7 @@ Section Canonicalization.
   (* compute at compile time *)
   Definition max_ones := Z.ones (fold_right Z.max 0 limb_widths).
 
-  Definition max_bound i := Z.ones (log_cap i).
+  Definition max_bound i := Z.ones (log_cap limb_widths i).
 
   Fixpoint isFull' us full i :=
     match i with

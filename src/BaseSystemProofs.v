@@ -3,6 +3,7 @@ Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import ZArith.ZArith ZArith.Zdiv.
 Require Import Omega NPeano Arith.
 Require Import Crypto.BaseSystem.
+Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Notations.
 Local Open Scope Z.
 
@@ -191,7 +192,13 @@ Section BaseSystemProofs.
   Lemma nth_error_base_nonzero : forall n x,
     nth_error base n = Some x -> x <> 0.
   Proof.
-    eauto using (@nth_error_value_In Z), Z.gt0_neq0, base_positive.
+    eauto using nth_error_In, Z.positive_is_nonzero, base_positive.
+  Qed.
+
+  Lemma nth_error_base_pos : forall n x,
+    nth_error base n = Some x -> 0 < x.
+  Proof.
+    eauto using nth_error_In, Z.gt_lt, base_positive.
   Qed.
 
   Hint Rewrite plus_0_r.
@@ -559,7 +566,7 @@ Section BaseSystemProofs.
     reflexivity.
   Qed.
   Definition encode'_zero z max  : encode' base z max 0%nat = nil := eq_refl.
-  Definition encode'_succ z max i : encode' base z max (S i) = 
+  Definition encode'_succ z max i : encode' base z max (S i) =
     encode' base z max i ++ ((z mod (nth_default max base (S i))) / (nth_default max base i)) :: nil := eq_refl.
   Opaque encode'.
   Hint Resolve encode'_zero encode'_succ.
@@ -605,5 +612,76 @@ Section BaseSystemProofs.
     rewrite encode'_spec, nth_default_out_of_bounds by (omega || auto).
     apply Z.mod_small; omega.
   Qed.
+
+  Section carrying.
+    Lemma set_nth_sum : forall n x us, (n < length us)%nat ->
+      decode base (set_nth n x us) =
+      (x - nth_default 0 us n) * nth_default 0 base n + decode base us.
+    Proof.
+      intros.
+      unfold decode.
+      nth_inbounds; auto. (* TODO(andreser): nth_inbounds should do this auto*)
+      unfold splice_nth.
+      rewrite <- (firstn_skipn n us) at 4.
+      do 2 rewrite decode'_splice.
+      remember (length (firstn n us)) as n0.
+      ring_simplify.
+      remember (decode' (firstn n0 base) (firstn n us)).
+      rewrite (skipn_nth_default n us 0) by omega.
+      rewrite firstn_length in Heqn0.
+      rewrite Min.min_l in Heqn0 by omega; subst n0.
+      destruct (le_lt_dec (length base) n). {
+        rewrite nth_default_out_of_bounds by auto.
+        rewrite skipn_all by omega.
+        do 2 rewrite decode_base_nil.
+        ring_simplify; auto.
+      } {
+        rewrite (skipn_nth_default n base 0) by omega.
+        do 2 rewrite decode'_cons.
+        ring_simplify; ring.
+      }
+    Qed.
+
+    Lemma add_to_nth_sum : forall n x us, (n < length us)%nat ->
+      decode base (add_to_nth n x us) =
+      x * nth_default 0 base n + decode base us.
+    Proof.
+      unfold add_to_nth; intros; rewrite set_nth_sum; try ring_simplify; auto.
+    Qed.
+
+    Lemma add_to_nth_nth_default : forall n x l i, (0 <= i < length l)%nat ->
+      nth_default 0 (add_to_nth n x l) i =
+      if (eq_nat_dec i n) then x + nth_default 0 l i else nth_default 0 l i.
+    Proof.
+      intros.
+      unfold add_to_nth.
+      rewrite set_nth_nth_default by assumption.
+      break_if; subst; reflexivity.
+    Qed.
+
+    Lemma length_add_to_nth : forall n x l, length (add_to_nth n x l) = length l.
+    Proof.
+      unfold add_to_nth; intros; apply length_set_nth.
+    Qed.
+
+    Lemma nth_default_base_positive : forall i, (i < length base)%nat ->
+      nth_default 0 base i > 0.
+    Proof.
+      intros.
+      pose proof (nth_error_length_exists_value _ _ H).
+      destruct H0.
+      pose proof (nth_error_value_In _ _ _ H0).
+      pose proof (BaseSystem.base_positive _ H1).
+      unfold nth_default.
+      rewrite H0; auto.
+    Qed.
+
+    (* TODO : move? *)
+    Lemma make_chain_lt : forall x i : nat, In i (make_chain x) -> (i < x)%nat.
+    Proof.
+      induction x; simpl; intuition.
+    Qed.
+
+  End carrying.
 
 End BaseSystemProofs.

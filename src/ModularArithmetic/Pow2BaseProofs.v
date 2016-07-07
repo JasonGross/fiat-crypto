@@ -163,7 +163,7 @@ Section BitwiseDecodeEncode.
     unfold base_max_succ_divide; intros i lt_Si_length.
     rewrite Nat.lt_eq_cases in lt_Si_length; destruct lt_Si_length;
       rewrite !nth_default_base by (omega || auto).
-    + erewrite sum_firstn_succ by (eapply nth_error_Some_nth_default with (x := 0); 
+    + erewrite sum_firstn_succ by (eapply nth_error_Some_nth_default with (x := 0);
          rewrite <-base_from_limb_widths_length by auto; omega).
       rewrite Z.pow_add_r; auto using sum_firstn_limb_widths_nonneg.
       apply Z.divide_factor_r.
@@ -173,10 +173,10 @@ Section BitwiseDecodeEncode.
         (rewrite base_from_limb_widths_length in H by auto; omega).
       replace i with (pred (length limb_widths)) by
         (rewrite base_from_limb_widths_length in H by auto; omega).
-      erewrite sum_firstn_succ by (eapply nth_error_Some_nth_default with (x := 0); 
+      erewrite sum_firstn_succ by (eapply nth_error_Some_nth_default with (x := 0);
          rewrite <-base_from_limb_widths_length by auto; omega).
       rewrite Z.pow_add_r; auto using sum_firstn_limb_widths_nonneg.
-      apply Z.divide_factor_r. 
+      apply Z.divide_factor_r.
   Qed.
   Hint Resolve base_upper_bound_compatible.
 
@@ -198,7 +198,7 @@ Section BitwiseDecodeEncode.
   Proof.
     intros.
     simpl; f_equal.
-    match goal with H : bounded _ _ |- _ => 
+    match goal with H : bounded _ _ |- _ =>
       rewrite Z.lor_shiftl by (auto; unfold bounded in H; specialize (H i); assumption) end.
     rewrite Z.shiftl_mul_pow2 by auto.
     ring.

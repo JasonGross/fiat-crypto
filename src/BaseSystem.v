@@ -94,6 +94,41 @@ Section BaseSystem.
     end.
   Definition mul us := mul' (rev us).
 
+  (** ** Carrying *)
+  Section carrying.
+    (** Here we implement addition and multiplication with simple
+        carrying. *)
+    Definition log_cap i := nth_default 0 base i.
+
+    Definition add_to_nth n (x:Z) xs :=
+      set_nth n (x + nth_default 0 xs n) xs.
+
+    Definition carry_and_reduce_single i := fun di =>
+      (Z.pow2_mod di (log_cap i),
+       Z.shiftr di (log_cap i)).
+
+    Definition carry_simple i := fun us =>
+      let di := nth_default 0 us      i in
+      let '(di', ci) := carry_and_reduce_single i di in
+      let us' := set_nth i di' us in
+      add_to_nth (S i) (   ci) us'.
+
+    Definition carry_simple_sequence is us := fold_right carry_simple us is.
+
+    Fixpoint make_chain i :=
+      match i with
+      | O => nil
+      | S i' => i' :: make_chain i'
+      end.
+
+    Definition full_carry_chain := make_chain (length base).
+
+    Definition carry_simple_full := carry_simple_sequence full_carry_chain.
+
+    Definition carry_simple_add us vs := carry_simple_full (add us vs).
+
+    Definition carry_simple_mul us vs := carry_simple_full (mul us vs).
+  End carrying.
 End BaseSystem.
 
 (* Example : polynomial base system *)
