@@ -62,6 +62,7 @@ src/Util/AdditionChainExponentiation.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v
 src/Util/IterAssocOp.v
+src/Util/LetIn.v
 src/Util/ListUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
