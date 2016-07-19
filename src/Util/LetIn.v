@@ -27,8 +27,8 @@ Ltac Let_In_changebody :=
     (* set variables before [eapply] because both [eapply] and
       [refine] reduce a match that is applied to a constructor *)
     (* TODO: make a coq issue for this *)
-    let ff := fresh "ff" in 
-    let vv := fresh "vv" in 
+    let ff := fresh "ff" in
+    let vv := fresh "vv" in
     set (ff := f); set (vv := v);
     eapply Let_In_changebody_lem;
     intro;
@@ -79,7 +79,7 @@ Ltac replace_match_let_in_pair_with_let_in_match_pair_step :=
     |- ?R ?LHS match (let x := ?E in @?C x) with pair e f => @?P e f end
     =>  let RHS' := eval cbv beta in (let x := E in match C x with pair e f => P e f end) in
             change (R LHS RHS'); let_in_changebody
-  
+
   end.
 
 (* TODO: generalize this to matching on other constructors than pair? *)
@@ -144,7 +144,6 @@ Proof.
   match goal with [H0:_|-_] =>  injection H0; clear H0; intros; subst; eauto end.
 Qed.
 
-(*
 Inductive shape (U:Type) : Type :=
 | leaf : U -> shape U
 | branch : shape U -> shape U -> shape U.
@@ -156,7 +155,22 @@ Fixpoint stuple (s:shape Type) : Type :=
   | leaf t => t
   | branch l r => (stuple l * stuple r)%type
   end.
-  
+
+Fixpoint shape_to_list {T} (s : shape T) : list T
+  := match s with
+     | leaf v => v::nil
+     | branch l r => @shape_to_list _ l ++ @shape_to_list _ r
+     end.
+
+Definition make_tupleT
+
+Fixpoint flattenS (s : shape Type) (X : Type)
+  := match s with
+     | leaf t =>
+
+Fixpoint on_full_match (s:shape Type)
+  : forall P : stuple s -> Type,
+
 
 Fixpoint on_full_match {T} (s:shape Type) {struct s} : (stuple s -> T) -> stuple s -> T.
   refine (
@@ -181,7 +195,7 @@ Fixpoint stuple_nat (s:shape_nat) : Type :=
   | leaf => nat
   | branch l r => (stuple_nat l * stuple_nat r)%type
   end.
-  
+
 Fixpoint on_full_match_nat {T} (s:shape_nat) {struct s} : (stuple_nat s -> T) -> stuple_nat s -> T :=
   match s return ((stuple_nat s -> T) -> stuple_nat s -> T) with
   | leaf => id
@@ -290,7 +304,7 @@ Goal forall (P Q : prod nat nat) (a a0:nat),
     |- context G [match ?v with pair x y => @?E x y G end]
     => is_var v; idtac E
   end.
-
+*)
 Goal forall (P Q:nat*nat),
     { r | r =
     let (xP, yP) := P in
