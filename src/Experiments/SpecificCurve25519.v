@@ -16,7 +16,24 @@ Section Curve25519.
     intros.
     repeat match goal with p:prod _ _ |- _ => destruct p end.
     eexists.
-    cbv beta delta [ge25519_add'].
+    etransitivity.
+    Focus 2. {
+      cbv beta delta [ge25519_add'].
+      cbv iota; cbv beta.
+      cbv iota; cbv beta.
+      cbv iota; cbv beta.
+      change_let_in_with_Let_In.
+      eapply Proper_Let_In_changevalue.
+      Unshelve.
+      Focus 2.
+
+
+      Set Printing All.
+
+      
+      repeat (let_nonvariables_of_type_before_match_pair Z; repeat let_in_changebody; cbv iota; cbv beta).
+      replace_match_let_in_pair_with_let_in_match_pair_step.
+
     replace_match_let_in_pair_with_let_in_match_pair.
     Print Ltac replace_match_let_in_pair_with_let_in_match_pair.
     
