@@ -4,12 +4,18 @@ Require Import Coq.ZArith.BinInt.
 
 Inductive type := TZ | Prod : type -> type -> type.
 
+Fixpoint tinterp (t:type) :=
+  match t with
+  | TZ => Z
+  | Prod a b => prod (tinterp a) (tinterp b)
+  end.
+
 Section expr.
   Context {var : type -> Type}.
   Inductive expr : type -> Type :=
   | Const : Z -> expr TZ
   | Var : forall {t}, var t -> expr t
-  | Binop : (Z->Z->Z) -> expr TZ -> expr TZ -> expr TZ
+  | Binop : forall {t1 t2 t}, (tinterp t1->tinterp t2->tinterp t) -> expr t1 -> expr t2 -> expr t
   | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
   | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
   | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC
@@ -18,23 +24,17 @@ End expr.
 Arguments expr _ _ : clear implicits.
 Definition Expr t := forall var, expr var t.
 
-Fixpoint tinterp (t:type) :=
-  match t with
-  | TZ => Z
-  | Prod a b => prod (tinterp a) (tinterp b)
-  end.
-
 Fixpoint interp {t} (e:expr tinterp t) : tinterp t :=
   match e in expr _ t return tinterp t with
   | Const n => n
   | Var _ n => n
-  | Binop op e1 e2 => op (interp e1) (interp e2)
+  | Binop _ _ _ op e1 e2 => op (interp e1) (interp e2)
   | Let _ ex _ eC => let x := interp ex in interp (eC x)
   | Pair _ e1 _ e2 => (interp e1, interp e2)
   | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
   end.
 
-Example example_expr : interp (Let (Const 7) (fun a => Let (Let (Binop Z.add (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => Binop Z.add (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
+Example example_expr : interp (Let (Const 7) (fun a => Let (Let (@Binop _ TZ TZ TZ Z.add (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => @Binop _ TZ TZ TZ Z.add (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
 
 Section unmatch_pair.
   Context {var : type -> Type}.
@@ -56,7 +56,7 @@ Section unmatch_pair.
          end
     | Const n => Const n
     | Var _ n => Var n
-    | Binop op e1 e2 => Binop op (unmatch_pair e1) (unmatch_pair e2)
+    | Binop _ _ _ op e1 e2 => Binop op (unmatch_pair e1) (unmatch_pair e2)
     | Let _ ex _ eC => Let (unmatch_pair ex) (fun x => unmatch_pair (eC x))
     | Pair _ e1 _ e2 => Pair (unmatch_pair e1) (unmatch_pair e2)
     end.
@@ -114,7 +114,7 @@ Section reassoc_let.
       end
     | Const n => Const n
     | Var _ n => Var n
-    | Binop op e1 e2 => Binop op (reassoc_let e1) (reassoc_let e2)
+    | Binop _ _ _ op e1 e2 => Binop op (reassoc_let e1) (reassoc_let e2)
     | Pair _ e1 _ e2 => Pair (reassoc_let e1) (reassoc_let e2)
     | MatchPair _ _ ep _ eC => MatchPair (reassoc_let ep) (fun x y => reassoc_let (eC x y))
     end.
@@ -136,6 +136,27 @@ Lemma reassoc_let_correct : forall {t} (e:expr tinterp t), interp (reassoc_let e
            | _ => solve [intuition congruence]
            end.
 Qed.
+
+Section fuel_id.
+  Context {var : type -> Type}.
+  Fixpoint fuel_id (n:nat) {t} (e:expr var t) {struct n} : expr var t :=
+    match n with O => e | S n' =>
+    match e in expr _ t return expr var t with
+    | Let _ ex _ eC => Let (fuel_id n' ex) (fun v => fuel_id n' (eC v))
+    | Const n => Const n
+    | Var _ n => Var n
+    | Binop _ _ _ op e1 e2 => Binop op (fuel_id n' e1) (fuel_id n' e2)
+    | Pair _ e1 _ e2 => Pair (fuel_id n' e1) (fuel_id n' e2)
+    | MatchPair _ _ ep _ eC => MatchPair (fuel_id n' ep) (fun x y => fuel_id n' (eC x y))
+    end end.
+End fuel_id.
+
+Lemma fuel_id_correct : forall n {t} (e:expr tinterp t), interp (fuel_id n e) = interp e.
+  induction n; destruct e; simpl; rewrite ?IHn; try reflexivity.
+  break_match; subst. rewrite IHn. reflexivity.
+Qed.
+
+
 
 (* The [reify] tactic below avoids beta-exapnsion file recursing under binders. *)
 (* To do this, it has to manipulate open terms. *)
@@ -193,9 +214,15 @@ Ltac reify var e :=
     let b := reify var b in
     constr:(Pair(var:=var) a b)
   | ?op ?a ?b =>
-    let a := reify var a in
-    let b := reify var b in
-    constr:(Binop(var:=var) op a b)
+    lazymatch type of op with
+      ?t1->?t2->?t =>
+      let t1 := reify_type t1 in
+      let t2 := reify_type t2 in
+      let t := reify_type t in
+      let b := reify var b in
+      let a := reify var a in
+      constr:(@Binop var t1 t2 t op a b)
+    end
   | (fun x : ?T => ?C) =>
     let t := reify_type T in
     (* Work around Coq 8.5 and 8.6 bug *)
@@ -274,6 +301,7 @@ Section Curve25519.
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
+    cbv iota beta delta [interp].
     reflexivity.
   Defined.
 End Curve25519.
