@@ -1,8 +1,6 @@
 Require Import Crypto.Util.GlobalSettings.
-Require Import Crypto.Util.Notations Coq.ZArith.BinInt.
-Require Import Crypto.Specific.GF25519.
-Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.ZArith.BinInt.
 
 Inductive type := TZ | Prod : type -> type -> type.
 
@@ -125,10 +123,6 @@ End reassoc_let.
 Lemma matchLetLetInIn_Some {var} {t} (e:expr var t) {tx} ex eC :
   matchLetLetInIn e = Some (existT _ tx (ex, eC)) <-> e = Let ex eC.
 Proof.
-  destruct e; simpl; intros; try intuition congruence.
-  split; intros; injection H; clear H; intros; subst.
-  admit.
-  admit.
 Admitted.
 
 Lemma reassoc_let_correct : forall {t} (e:expr tinterp t), interp (reassoc_let e) = interp e.
@@ -233,6 +227,12 @@ Goal (0 = let x := 1+2 in x*3)%Z.
   reify_rhs.
 Abort.
 
+
+
+Require Import Crypto.Util.Notations .
+Require Import Crypto.Specific.GF25519.
+Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
+
 Local Infix "<<" := Z.shiftr.
 Local Infix "&" := Z.land.
 Section Curve25519.
@@ -245,60 +245,7 @@ Section Curve25519.
     hnf in twice_d.
     repeat match goal with p:prod _ _ |- _ => destruct p end.
     eexists.
-    etransitivity.
-    Focus 2. {
-      cbv beta delta [ge25519_add'].
-      
-
-| (fun x : ?T => @?f x)
-  => let T' := reify_TypeCode T in
-     let res := match constr:(Set) with
-                | _ => constr:(fun (x : T) (v : var T') (_:reify_as x 
-                               => let vx : reif_Term_of var x := (@RVar var T' v) in
-                                  (_ : reif_Term_of var (f x)))
-                | _ => cidtac_error "Unable to reify function" f
-                end in
-     let res := (eval cbv beta iota zeta in res) in
-     let res := match res with
-                | (fun _ => ?f) => f
-                | _ => cidtac_error "Unable to remove first argument to" f
-                end in
-     match constr:(Set) with
-     | _ => constr:(@RLambda var T' _ res)
-     | _ => cidtac_error "Type error" res
-     end
-
-
-
-                                              
-  | context G[match ?y with pair a b => @?f a b end]
-    => lazymatch eval hnf in y with
-    | pair _ _
-      => let G' := context G [Let_In (optfst y) (fun a => Let_In (optsnd y) (fun b => f a b))] in
-         from_let_in_to_Let_In_and_remove_pairs fuel' G'
-    | _
-      => let dummy := match y with
-                      | prod_rect _ _ ?y' => constr:(_ : is_local_context_var y')
-                      | _ => constr:(_ : is_local_context_var y)
-                      | _ => constr:(_ : cidtac "Warning: Term does not reduce to a pair:" y "")
-                      end in
-         let T := match type of f with _ -> _ -> ?T => T end in
-         let G' := context G [prod_rect (fun _ => T) f y] in
-         from_let_in_to_Let_In_and_remove_pairs fuel' G'
-    end
-  | ?f ?x
-    => let f' := from_let_in_to_Let_In_and_remove_pairs fuel' f in
-       let x' := from_let_in_to_Let_In_and_remove_pairs fuel' x in
-       constr:(f' x')
-  | fun x : ?T => @?f x
-    => let ret := constr:(fun x : T => (_ : from_let_in_to_Let_In_and_remove_pairs fuel' (f x))) in
-       let ret := (eval cbv beta delta [from_let_in_to_Let_In_and_remove_pairs] in ret) in
-       ret
-  | ?term'
-    => term'
-  end.
-
-      
-        
-
+    cbv beta delta [ge25519_add'].
+    reflexivity.
+  Defined.
 End Curve25519.
