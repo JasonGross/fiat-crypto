@@ -143,7 +143,93 @@ Lemma reassoc_let_correct : forall {t} (e:expr tinterp t), interp (reassoc_let e
            end.
 Qed.
 
+(* The [reify] tactic below avoids beta-exapnsion file recursing under binders. *)
+(* To do this, it has to manipulate open terms. *)
+(* One black magic hack for doing this in 8.4 relies on immediate reduction of trivial matches: *)
+(*
+Ltac beta_head term := (*do just first beta reduction*)
+lazymatch term with
+| ((fun a => ?t) ?v) => constr:(match v with a => t end)
+end.
+*)
+(* More sane (but not 8.4-compatible code) here:
+Ltac zeta_head term :=
+  lazymatch term with
+    (let a := ?v in ?B) =>
+    let r := fresh in
+    lazymatch
+        constr:(let a := v in
+                let r := B in
+                ltac:(subst a; let z := get_value r in exact z)) with
+      (let _ := _ in let _ := _ in ?B') => B'
+    end
+  end.
+Ltac beta_head term :=
+  lazymatch term with
+    ((fun a => ?v) ?b) =>
+    let term' := constr:(let a := b in v) in
+    zeta_head term'
+  end.
+*)
 
+Ltac reify_type t :=
+  lazymatch t with
+  | BinInt.Z => constr:(TZ)
+  | prod ?l ?r =>
+    let l := reify_type l in
+    let r := reify_type r in
+    constr:(Prod l r)
+  end.
+
+Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
+Definition reify_var_for_in_is {T} (x:T) t (e:tinterp t) := False.
+
+Ltac reify var e :=
+  lazymatch e with
+  | let x := ?ex in @?eC x =>
+    let ex := reify var ex in
+    let eC := reify var eC in
+    constr:(Let(var:=var) ex eC)
+  | ?op ?a ?b =>
+    let a := reify var a in
+    let b := reify var b in
+    constr:(Binop(var:=var) op a b)
+  | (fun x : ?T => ?C) =>
+    let t := reify_type T in
+    (* re-binding the Gallina variable referenced by Ltax [x] even if
+      its Gallina name matches some Ltac name in this function *)
+    let maybe_x := fresh x in
+    let not_x := fresh x in
+    lazymatch constr:(fun (x : T) (not_x : var t) (_:reify_var_for_in_is x t not_x) =>
+                        (_ : reify var C)) (* [C] here is an open term that references "x" by name *)
+    with fun _ v _ => @?C v => C end
+  | ?x =>
+    match goal with
+    | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var var t v)
+    | _ => constr:(Const(var:=var) x)
+    end
+  end.
+Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
+  
+Ltac type_of x := match type of x with ?t => constr:(t) end.
+Ltac reify_type_of x :=
+  let t := type_of x in
+  reify_type t.
+Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
+Ltac reify_rhs :=
+  let rhs := rhs_of_goal in
+  let rhs := reify tinterp rhs in
+  change (0%Z = interp rhs).
+
+Goal forall (x : Z) (v : tinterp TZ) (_:reify_var_for_in_is x TZ v), reify(T:=Z) tinterp ((fun x => x+x) x)%Z.
+  intros.
+  let A := reify tinterp (x + x)%Z in
+  idtac A.
+Abort.
+
+Goal (0 = let x := 1+2 in x*3)%Z.
+  reify_rhs.
+Abort.
 
 Local Infix "<<" := Z.shiftr.
 Local Infix "&" := Z.land.
@@ -160,74 +246,7 @@ Section Curve25519.
     etransitivity.
     Focus 2. {
       cbv beta delta [ge25519_add'].
-      Set Printing All.
-
-Ltac reify_type t :=
-  lazymatch t with
-  | BinInt.Z => constr:(TZ)
-  | prod ?l ?r =>
-    let l := reify_type l in
-    let r := reify_type r in
-    constr:(Prod l r)
-  end.
-
-Ltac type_of x := match type of x with ?t => constr:(t) end.
-Ltac reify_type_of x :=
-  let t := type_of x in
-  reify_type t.
-Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
-
-      let rhs := rhs_of_goal in
-      let t := reify_type_of rhs in
-      idtac t.
-
-Goal (0 = let x := 0 in x+x)%Z.
-
-Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
-Definition reify_var_for_is {T} (x:T) t (e:tinterp t) := False.
-
-Ltac reify var e :=
-  lazymatch e with
-  | let x := ?ex in @?eC x =>
-    let ex := reify var ex in
-    let eC := reify var eC in
-    constr:(Let(var:=var) ex eC)
-  | ?op ?a ?b =>
-    let a := reify var a in
-    let b := reify var b in
-    constr:(Binop(var:=var) op a b)
-  | (fun x : ?T => @?C x) =>
-    let t := reify_type T in
-    lazymatch constr:(fun (x : T) (v : var t) (_:reify_var_for_is x t v) =>
-                        (_ : reify var ltac:(let Cx := eval cbv beta in (C x) in exact Cx)))
-    with fun _ v _ => @?C v => C end
-  | ?x =>
-    match goal with
-    | _:reify_var_for_is x ?t ?v |- _ => constr:(@Var var t v)
-    | _ => constr:(Const(var:=var) x)
-    end
-  end.
-Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
-
-      let A := constr:(fun x:Z => (_:reify tinterp (Z.add 2 1))) in
-      idtac A.
-
-      Goal forall (x : Z) (v : tinterp TZ) (_:reify_var_for_is x TZ v), reify(T:=Z) tinterp ((fun x => x+x) x)%Z.
-        intros.
-        let A := reify tinterp (x + x)%Z in
-        idtac A.
-      Abort.
-
-      let A := reify tinterp (fun x => Z.add x x) in
-      idtac A.
-
-      let A := reify tinterp constr:(let x := Z0 in Z.add x x) in
-      idtac A.
-
-      let rhs := rhs_of_goal in
-      let rhs := reify tinterp rhs in
-      idtac rhs.
-
+      
 
 | (fun x : ?T => @?f x)
   => let T' := reify_TypeCode T in
