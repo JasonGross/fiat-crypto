@@ -270,6 +270,10 @@ Section Curve25519.
     repeat match goal with p:prod _ _ |- _ => destruct p end.
     eexists.
     cbv beta delta [ge25519_add'].
+    reify_rhs.
+    Set Printing Depth 99999.
+    rewrite <-unmatch_pair_correct.
+    cbv iota beta delta [unmatch_pair CoqPairIfPair].
     reflexivity.
   Defined.
 End Curve25519.
