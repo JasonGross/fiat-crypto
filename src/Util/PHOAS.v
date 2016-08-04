@@ -1,8 +1,9 @@
 Require Import Omega.
-Require Import Crypto.Util.Sigma Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Util.Sigma Crypto.Util.Decidable Crypto.Tactics.VerdiTactics.
 Unset Asymmetric Patterns.
 
 Inductive type := Nat | Prod : type -> type -> type.
+Global Instance dec_eq_type : DecidableRel (@eq type). unfold Decidable; intros; decide equality. Defined.
 
 Section expr.
   Context {var : type -> Type}.
@@ -133,3 +134,51 @@ Lemma unmatch_pair_correct : forall {t} (e:expr tinterp t), interp (unmatch_pair
            | [H: (_, _) = (_, _) |- _ ] => inversion H; subst
            end.
 Qed.
+
+Section reassoc_let.
+  Context {var : type -> Type}.
+
+  Definition matchLetLetInIn {t} (e:expr var t) :
+    option {tx : type & (expr var tx * (var tx -> expr var t))%type} :=
+    match e with Let ex eC => Some (existT _ _ (ex, eC)) | _ => None end.
+
+  Fixpoint reassoc_let {t} (e:expr var t) {struct e} : expr var t :=
+    match e in expr _ t return expr var t with
+    | Let ex eC =>
+      match matchLetLetInIn ex with
+      | Some (existT _ tx' (ex', eC')) =>
+        Let ex' (fun v' => Let (eC' v') (fun v => reassoc_let (eC v)))
+      | None => Let (reassoc_let ex) (fun v => reassoc_let (eC v))
+      end
+    | Const n => Const n
+    | Var n => Var n
+    | Plus e1 e2 => Plus (reassoc_let e1) (reassoc_let e2)
+    | NatBinop op e1 e2 => NatBinop op (reassoc_let e1) (reassoc_let e2)
+    | Pair e1 e2 => Pair (reassoc_let e1) (reassoc_let e2)
+    | MatchPair ep eC => MatchPair (reassoc_let ep) (fun x y => reassoc_let (eC x y))
+    end.
+End reassoc_let.
+
+Lemma matchLetLetInIn_Some {var} {t} (e:expr var t) {tx} ex eC :
+  matchLetLetInIn e = Some (existT _ tx (ex, eC)) <-> e = Let ex eC.
+Proof.
+  destruct e; simpl; intros; try intuition congruence.
+  split; intros; injection H; clear H; intros; subst.
+  admit.
+  admit.
+Admitted.
+
+Lemma reassoc_let_correct : forall {t} (e:expr tinterp t), interp (reassoc_let e) = interp e.
+  induction e;
+    repeat match goal with
+           | [H: _ |- _ ] => simpl_lem_then_rewrite H
+           | [H: _ |- _ ] => rewrite matchLetLetInIn_Some in H
+           | _ => break_match
+           | _ => progress simpl
+           | _ => progress subst
+           | _ => solve [intuition congruence]
+           end.
+Qed.
+
+Eval cbv [reassoc_let matchLetLetInIn] in
+    reassoc_let (Let (Let (Plus (Const 1) (Const 1)) (fun x => NatBinop mult (Var x) (Var x))) (fun v => Plus (Var v) (Var v)) ).
