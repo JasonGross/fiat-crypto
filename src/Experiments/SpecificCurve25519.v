@@ -196,8 +196,10 @@ Ltac reify var e :=
     constr:(Binop(var:=var) op a b)
   | (fun x : ?T => ?C) =>
     let t := reify_type T in
-    (* re-binding the Gallina variable referenced by Ltax [x] even if
-      its Gallina name matches some Ltac name in this function *)
+    (* Work around Coq 8.5 and 8.6 bug *)
+    (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
+    (* Avoid re-binding the Gallina variable referenced by Ltax [x] *)
+    (* even if its Gallina name matches a Ltac in this tactic. *)
     let maybe_x := fresh x in
     let not_x := fresh x in
     lazymatch constr:(fun (x : T) (not_x : var t) (_:reify_var_for_in_is x t not_x) =>
