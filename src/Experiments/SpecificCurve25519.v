@@ -29,7 +29,7 @@ Fixpoint interp {t} (e:expr tinterp t) : tinterp t :=
   | Const n => n
   | Var _ n => n
   | Binop op e1 e2 => op (interp e1) (interp e2)
-  | Let _ ex _ eC => interp (eC (interp ex))
+  | Let _ ex _ eC => let x := interp ex in interp (eC x)
   | Pair _ e1 _ e2 => (interp e1, interp e2)
   | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
   end.
@@ -184,6 +184,14 @@ Ltac reify var e :=
     let ex := reify var ex in
     let eC := reify var eC in
     constr:(Let(var:=var) ex eC)
+  | match ?ep with (v1, v2) => @?eC v1 v2 end =>
+    let ep := reify var ep in
+    let eC := reify var eC in
+    constr:(MatchPair(var:=var) ep eC)
+  | pair ?a ?b =>
+    let a := reify var a in
+    let b := reify var b in
+    constr:(Pair(var:=var) a b)
   | ?op ?a ?b =>
     let a := reify var a in
     let b := reify var b in
@@ -211,21 +219,37 @@ Ltac type_of x := match type of x with ?t => constr:(t) end.
 Ltac reify_type_of x :=
   let t := type_of x in
   reify_type t.
+Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
 Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
 Ltac reify_rhs :=
   let rhs := rhs_of_goal in
   let rhs := reify tinterp rhs in
-  change (0%Z = interp rhs).
+  let lhs := lhs_of_goal in
+  change (lhs = interp rhs).
 
 Goal forall (x : Z) (v : tinterp TZ) (_:reify_var_for_in_is x TZ v), reify(T:=Z) tinterp ((fun x => x+x) x)%Z.
   intros.
   let A := reify tinterp (x + x)%Z in
-  idtac A.
+  pose A.
 Abort.
 
 Goal (0 = let x := 1+2 in x*3)%Z.
   reify_rhs.
 Abort.
+
+Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
+  reify_rhs.
+Abort.
+
+Goal forall x y:Z, ((let x0 := x in let x1 := y in (x0 * x1))
+                    = match (x, y) with (a, b) => a*b end)%Z.
+  intros.
+  reify_rhs.
+  rewrite <-unmatch_pair_correct.
+  cbv iota beta delta [unmatch_pair CoqPairIfPair].
+  cbv iota beta delta [interp].
+  reflexivity.
+Qed.
 
 
 
