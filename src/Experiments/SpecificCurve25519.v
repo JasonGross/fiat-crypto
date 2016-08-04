@@ -198,7 +198,7 @@ Ltac reify var e :=
     let t := reify_type T in
     (* Work around Coq 8.5 and 8.6 bug *)
     (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
-    (* Avoid re-binding the Gallina variable referenced by Ltax [x] *)
+    (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
     (* even if its Gallina name matches a Ltac in this tactic. *)
     let maybe_x := fresh x in
     let not_x := fresh x in
