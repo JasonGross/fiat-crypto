@@ -248,7 +248,7 @@ Ltac reify_type t :=
   end.
 
 Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
-Definition reify_var_for_in_is {T} (x:T) t (e:tinterp t) := False.
+Definition reify_var_for_in_is {T} (x:T) (t:type) {eT} (e:eT) := False.
 
 Ltac type_of x := match type of x with ?t => constr:(t) end.
 Ltac reify_type_of x :=
@@ -291,39 +291,48 @@ Ltac reify var e :=
                         (_ : reify var C)) (* [C] here is an open term that references "x" by name *)
     with fun _ v _ => @?C v => C end
   | ?x =>
-    match goal with
+    lazymatch goal with
     | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var var t v)
     | _ => let t := reify_type_of x in  constr:(@Const var t x)
     end
   end.
 Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
-  
-Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
-Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
-Ltac reify_rhs :=
-  let rhs := rhs_of_goal in
-  let rhs := reify tinterp rhs in
-  let lhs := lhs_of_goal in
-  change (lhs = interp rhs).
+
+Ltac Reify e := constr:(fun (var:type->Type) => (_:reify var e)).
+
+Goal False.
+  let z := Reify Z0 in idtac z.
+  let z := Reify (0+0)%Z in idtac z.
+  let z := reify tinterp (let x := 0 in x)%Z in idtac z.
+  let z := Reify (let x := 0 in x)%Z in idtac z.
+Abort.
 
 Goal forall (x : Z) (v : tinterp TZ) (_:reify_var_for_in_is x TZ v), reify(T:=Z) tinterp ((fun x => x+x) x)%Z.
   intros.
   let A := reify tinterp (x + x)%Z in
   pose A.
 Abort.
+  
+Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
+Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
+Ltac Reify_rhs :=
+  let rhs := rhs_of_goal in
+  let rhs := Reify rhs in
+  let lhs := lhs_of_goal in
+  change (lhs = interp (rhs tinterp)).
 
 Goal (0 = let x := 1+2 in x*3)%Z.
-  reify_rhs.
+  Reify_rhs.
 Abort.
 
 Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
-  reify_rhs.
+  Reify_rhs.
 Abort.
 
 Goal forall x y:Z, ((let x0 := x in let x1 := y in (x0 * x1))
                     = match (x, y) with (a, b) => a*b end)%Z.
   intros.
-  reify_rhs.
+  Reify_rhs.
   rewrite <-unmatch_pair_correct.
   cbv iota beta delta [unmatch_pair CoqPairIfPair].
   cbv iota beta delta [interp].
@@ -351,7 +360,8 @@ Section Curve25519.
     eexists.
     cbv beta delta [ge25519_add'].
     
-    reify_rhs. (* Coq trunk July 2016: 48s *)
+    Reify_rhs. (* Coq trunk July 2016: 47s *)
+    cbv iota. (* don't print type casts *)
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
