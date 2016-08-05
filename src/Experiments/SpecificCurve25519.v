@@ -160,29 +160,30 @@ Qed.
 Section under_lets.
   Context {var : type -> Type}.
   Fixpoint under_lets {te} (e:expr var te) {struct e} :
-    forall {tC} (C:var te -> expr var tC), expr var tC :=
-    match e with
-    | @Const _ z => fun _ C => Let (Const z) C
-    | @Var _ t v => fun _ C => C v
-    | @Binop _ _ _ _ op e1 e2 => fun _ C => Let (Binop op e1 e2) C
-    | @Let _ tx ex tC eC => fun tC C => Let ex (fun vx => @under_lets _ (eC vx) _ C)
-    | @Pair _ t1 e1 t2 e2 =>  fun _ C => Let (Pair e1 e2) C
-    | @MatchPair _ _ _ ep _ eC => fun _ C => Let (MatchPair ep eC) C
-    end.
+    forall {tC} (C:expr var te -> expr var tC), expr var tC :=
+    match e in (expr _ t) return (forall tC : type, (expr var t -> expr var tC) -> expr var tC) with
+    | @Let _ tx ex teC eC => fun tC C => Let ex (fun vx => @under_lets _ (eC vx) _ C)
 
+    | @Const _ z => fun _ C => C (Const z)
+    | @Var _ t v => fun _ C => C (Var v)
+    | @Binop _ _ _ _ op e1 e2 => fun _ C => C (Binop op e1 e2)
+    | @Pair _ t1 e1 t2 e2 =>  fun _ C => C (Pair e1 e2)
+    | @MatchPair _ _ _ ep _ eC => fun _ C => C (MatchPair ep eC)
+    end.
+    
   Eval simpl in under_lets
                   (Let (Const 1) (fun v =>
                    Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' =>
                    @Binop _ TZ TZ TZ (fun a b => a) (Var v') (Var v'))))
 
-                  (fun v' => @Binop _ TZ TZ TZ Z.div (Var v') (Var v'))
+                  (fun e' => @Binop _ TZ TZ TZ Z.div e' e')
                   .
 End under_lets.
 
-Lemma under_lets_correct {te} (e:expr tinterp te) {tC} (C:tinterp te -> expr tinterp tC) :
-  interp (under_lets e C) = interp (Let e C) .
-Proof. induction e; repeat (intuition congruence + simpl + rewrite_hyp -> !*). Qed.
-  
+Lemma under_lets_correct {te} (e:expr tinterp te) {tC} (C:expr tinterp te -> expr tinterp tC)
+      (H:forall {t} (e:expr tinterp t) eC, interp (C (Let e eC)) = interp (C (eC (interp e)))) :
+  interp (under_lets e C) = interp (C e).
+Proof. induction e; repeat (intuition congruence + simpl + rewrite_hyp !*). Qed.
 
 
 (* The [reify] tactic below avoids beta-exapnsion while recursing under binders. *)
@@ -330,8 +331,6 @@ Section Curve25519.
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
-    rewrite <-under_lets_correct.
-    cbv iota beta delta [under_lets].
     cbv iota beta delta [interp].
     reflexivity.
   Defined.
