@@ -3,42 +3,152 @@ Require Import Crypto.Util.Tactics.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.ZArith.BinInt.
 
+
 Inductive type := TZ | Prod : type -> type -> type.
 
-Fixpoint tinterp (t:type) :=
+Fixpoint interp_type (t:type) :=
   match t with
   | TZ => Z
-  | Prod a b => prod (tinterp a) (tinterp b)
+  | Prod a b => prod (interp_type a) (interp_type b)
   end.
+
+Ltac reify_type t :=
+  lazymatch t with
+  | BinInt.Z => constr:(TZ)
+  | prod ?l ?r =>
+    let l := reify_type l in
+    let r := reify_type r in
+    constr:(Prod l r)
+  end.
+
+
+Inductive binop : type -> type -> type -> Type := 
+| OPZadd : binop TZ TZ TZ
+| OPZsub : binop TZ TZ TZ
+| OPZmul : binop TZ TZ TZ
+| OPZland : binop TZ TZ TZ
+| OPZshiftr : binop TZ TZ TZ.
+(* TODO: should [Pair] be a [binop]? *)
+
+Definition interp_binop {t1 t2 t} (op:binop t1 t2 t) : interp_type t1 -> interp_type t2 -> interp_type t :=
+  match op with
+  | OPZadd    => Z.add
+  | OPZsub    => Z.sub
+  | OPZmul    => Z.mul
+  | OPZland   => Z.land
+  | OPZshiftr => Z.shiftr
+  end.
+
+Ltac reify_binop op :=
+  lazymatch op with
+  | Z.add    => constr:(OPZadd)
+  | Z.sub    => constr:(OPZsub)
+  | Z.mul    => constr:(OPZmul)
+  | Z.land   => constr:(OPZland)
+  | Z.shiftr => constr:(OPZshiftr)
+  end.
+
 
 Section expr.
   Context {var : type -> Type}.
   Inductive expr : type -> Type :=
-  | Const : forall {t}, tinterp t -> expr t
+  | Const : forall {t}, interp_type t -> expr t
   | Var : forall {t}, var t -> expr t
-  | Binop : forall {t1 t2 t}, (tinterp t1->tinterp t2->tinterp t) -> expr t1 -> expr t2 -> expr t
+  | Binop : forall {t1 t2 t}, binop t1 t2 t -> expr t1 -> expr t2 -> expr t
   | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
   | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
   | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
 End expr.
+Local Notation ZConst z := (@Const _ TZ z%Z).
 Arguments expr _ _ : clear implicits.
 Definition Expr t : Type := forall var, expr var t.
 
-Local Notation ZConst z := (@Const _ TZ z%Z).
-Local Notation ZBinop op a b := (@Binop _ TZ TZ TZ op%Z a%Z b%Z).
 
-Fixpoint interp {t} (e:expr tinterp t) : tinterp t :=
-  match e in expr _ t return tinterp t with
+Fixpoint interp {t} (e:expr interp_type t) : interp_type t :=
+  match e in expr _ t return interp_type t with
   | Const _ n => n
   | Var _ n => n
-  | Binop _ _ _ op e1 e2 => op (interp e1) (interp e2)
+  | Binop _ _ _ op e1 e2 => interp_binop op (interp e1) (interp e2)
   | Let _ ex _ eC => let x := interp ex in interp (eC x)
   | Pair _ e1 _ e2 => (interp e1, interp e2)
   | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
   end.
-Definition Interp {t} (E:Expr t) : tinterp t := interp (E tinterp).
+Definition Interp {t} (E:Expr t) : interp_type t := interp (E interp_type).
 
-Example example_expr : interp (Let (ZConst 7) (fun a => Let (Let (@Binop _ TZ TZ TZ Z.add (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => @Binop _ TZ TZ TZ Z.add (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
+
+Example example_expr : interp (Let (ZConst 7) (fun a => Let (Let (Binop OPZadd (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => Binop OPZadd (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
+
+Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
+Definition reify_var_for_in_is {T} (x:T) (t:type) {eT} (e:eT) := False.
+Ltac reify var e :=
+  lazymatch e with
+  | let x := ?ex in @?eC x =>
+    let ex := reify var ex in
+    let eC := reify var eC in
+    constr:(Let(var:=var) ex eC)
+  | match ?ep with (v1, v2) => @?eC v1 v2 end =>
+    let ep := reify var ep in
+    let eC := reify var eC in
+    constr:(MatchPair(var:=var) ep eC)
+  | pair ?a ?b =>
+    let a := reify var a in
+    let b := reify var b in
+    constr:(Pair(var:=var) a b)
+  | ?op ?a ?b =>
+      let op := reify_binop op in
+      let b := reify var b in
+      let a := reify var a in
+      constr:(Binop(var:=var) op a b)
+  | (fun x : ?T => ?C) =>
+    let t := reify_type T in
+    (* Work around Coq 8.5 and 8.6 bug *)
+    (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
+    (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
+    (* even if its Gallina name matches a Ltac in this tactic. *)
+    let maybe_x := fresh x in
+    let not_x := fresh x in
+    lazymatch constr:(fun (x : T) (not_x : var t) (_:reify_var_for_in_is x t not_x) =>
+                        (_ : reify var C)) (* [C] here is an open term that references "x" by name *)
+    with fun _ v _ => @?C v => C end
+  | ?x =>
+    lazymatch goal with
+    | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var var t v)
+    | _ => let t := match type of x with ?t => reify_type t end in
+           constr:(@Const var t x)
+    end
+  end.
+Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
+
+Ltac Reify e :=
+  lazymatch constr:(fun (var:type->Type) => (_:reify var e)) with
+    (fun var => ?C) => constr:(fun (var:type->Type) => C) (* copy the term but not the type cast *)
+  end.
+
+Goal forall (x : Z) (v : interp_type TZ) (_:reify_var_for_in_is x TZ v), reify(T:=Z) interp_type ((fun x => x+x) x)%Z.
+  intros.
+  let A := reify interp_type (x + x)%Z in
+  pose A.
+Abort.
+
+Goal False.
+  let z := Reify (let x := 0 in x)%Z in pose z.
+Abort.
+  
+Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
+Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
+Ltac Reify_rhs :=
+  let rhs := rhs_of_goal in
+  let rhs := Reify rhs in
+  let lhs := lhs_of_goal in
+  change (lhs = interp (rhs interp_type)).
+
+Goal (0 = let x := 1+2 in x*3)%Z.
+  Reify_rhs.
+Abort.
+
+Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
+  Reify_rhs.
+Abort.
 
 Section unmatch_pair.
   Context {var : type -> Type}.
@@ -88,7 +198,7 @@ Proof.
   simpl_lem_then_rewrite (CoqPairIfPair_Some_helper ep); reflexivity.
 Qed.
 
-Lemma unmatch_pair_correct : forall {t} (e:expr tinterp t), interp (unmatch_pair e) = interp e.
+Lemma unmatch_pair_correct : forall {t} (e:expr interp_type t), interp (unmatch_pair e) = interp e.
   induction e; simpl;
     try destruct (interp e) eqn:Heqe;
     repeat break_match; simpl;
@@ -100,6 +210,16 @@ Lemma unmatch_pair_correct : forall {t} (e:expr tinterp t), interp (unmatch_pair
            | [H: _, H': _ |- _ ] => rewrite H in H'
            | [H: (_, _) = (_, _) |- _ ] => inversion H; subst
            end.
+Qed.
+
+Goal forall x y:Z, ((let x0 := x in let x1 := y in (x0 * x1))
+                    = match (x, y) with (a, b) => a*b end)%Z.
+  intros.
+  Reify_rhs.
+  rewrite <-unmatch_pair_correct.
+  cbv iota beta delta [unmatch_pair CoqPairIfPair].
+  cbv iota beta delta [interp].
+  reflexivity.
 Qed.
 
 Section subst_args.
@@ -158,7 +278,7 @@ Lemma matchLetLetInIn_Some {var} {t} (e:expr var t) {tx} ex eC :
 Proof.
 Admitted.
 
-Lemma reassoc_let_correct : forall {t} (e:expr tinterp t), interp (reassoc_let e) = interp e.
+Lemma reassoc_let_correct : forall {t} (e:expr interp_type t), interp (reassoc_let e) = interp e.
   induction e;
     repeat match goal with
            | [H: _ |- _ ] => simpl_lem_then_rewrite H
@@ -181,15 +301,15 @@ Section under_lets.
     
   Eval simpl in under_lets
                   (Let (ZConst 1) (fun v =>
-                   Let (ZBinop Z.add (Var v) (Var v)) (fun v' =>
-                   ZBinop (fun a b => a) (Var v') (Var v'))))
+                   Let (Binop OPZadd (Var v) (Var v)) (fun v' =>
+                   Binop OPZsub (Var v') (Var v'))))
 
-                  (fun e' => ZBinop Z.div e' e')
+                  (fun e' => Binop OPZmul e' e')
                   .
 End under_lets.
 
-Lemma under_lets_correct {te} (e:expr tinterp te) {tC} (C:expr tinterp te -> expr tinterp tC)
-      (H:forall {t} (e:expr tinterp t) eC, interp (C (Let e eC)) = interp (C (eC (interp e)))) :
+Lemma under_lets_correct {te} (e:expr interp_type te) {tC} (C:expr interp_type te -> expr interp_type tC)
+      (H:forall {t} (e:expr interp_type t) eC, interp (C (Let e eC)) = interp (C (eC (interp e)))) :
   interp (under_lets e C) = interp (C e).
 Proof. induction e; repeat (intuition congruence + simpl + rewrite_hyp !*). Qed.
 
@@ -201,144 +321,12 @@ Section flatten.
       under_lets (@flatten _ ex) (fun ex => Let ex (fun vx => @flatten _ (eC vx)))
     | e' => e'
     end.
-    Eval simpl in flatten (Let (Let (ZConst 1) (fun v => Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
+    Eval simpl in flatten (Let (Let (ZConst 1) (fun v => Let (Binop OPZadd (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
 End flatten.
 
-Lemma flatten_correct {t} (e:expr tinterp t) :
+Lemma flatten_correct {t} (e:expr interp_type t) :
       interp (flatten e) = interp e.
 Proof. induction e; repeat (intuition congruence + simpl + rewrite under_lets_correct + rewrite_hyp !*). Qed.
-
-(* The [reify] tactic below avoids beta-exapnsion while recursing under binders. *)
-(* To do this, it has to manipulate open terms. *)
-(* An alternative would be to allow beta-expansion and then perform one beta reduction at the head of the term *)
-(* One black magic hack for doing that in 8.4 relies on immediate reduction of trivial matches: *)
-(*
-Ltac beta_head term := (*do just first beta reduction*)
-lazymatch term with
-| ((fun a => ?t) ?v) => constr:(match v with a => t end)
-end.
-*)
-(* More sane (but not 8.4-compatible code) here:
-Ltac zeta_head term :=
-  lazymatch term with
-    (let a := ?v in ?B) =>
-    let r := fresh in
-    lazymatch
-        constr:(let a := v in
-                let r := B in
-                ltac:(subst a; let z := get_value r in exact z)) with
-      (let _ := _ in let _ := _ in ?B') => B'
-    end
-  end.
-Ltac beta_head term :=
-  lazymatch term with
-    ((fun a => ?v) ?b) =>
-    let term' := constr:(let a := b in v) in
-    zeta_head term'
-  end.
-*)
-
-Ltac reify_type t :=
-  lazymatch t with
-  | BinInt.Z => constr:(TZ)
-  | prod ?l ?r =>
-    let l := reify_type l in
-    let r := reify_type r in
-    constr:(Prod l r)
-  end.
-
-Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
-Definition reify_var_for_in_is {T} (x:T) (t:type) {eT} (e:eT) := False.
-
-Ltac type_of x := match type of x with ?t => constr:(t) end.
-Ltac reify_type_of x :=
-  let t := type_of x in
-  reify_type t.
-
-Ltac reify var e :=
-  lazymatch e with
-  | let x := ?ex in @?eC x =>
-    let ex := reify var ex in
-    let eC := reify var eC in
-    constr:(Let(var:=var) ex eC)
-  | match ?ep with (v1, v2) => @?eC v1 v2 end =>
-    let ep := reify var ep in
-    let eC := reify var eC in
-    constr:(MatchPair(var:=var) ep eC)
-  | pair ?a ?b =>
-    let a := reify var a in
-    let b := reify var b in
-    constr:(Pair(var:=var) a b)
-  | ?op ?a ?b =>
-    lazymatch type of op with
-      ?t1->?t2->?t =>
-      let t1 := reify_type t1 in
-      let t2 := reify_type t2 in
-      let t := reify_type t in
-      let b := reify var b in
-      let a := reify var a in
-      constr:(@Binop var t1 t2 t op a b)
-    end
-  | (fun x : ?T => ?C) =>
-    let t := reify_type T in
-    (* Work around Coq 8.5 and 8.6 bug *)
-    (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
-    (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
-    (* even if its Gallina name matches a Ltac in this tactic. *)
-    let maybe_x := fresh x in
-    let not_x := fresh x in
-    lazymatch constr:(fun (x : T) (not_x : var t) (_:reify_var_for_in_is x t not_x) =>
-                        (_ : reify var C)) (* [C] here is an open term that references "x" by name *)
-    with fun _ v _ => @?C v => C end
-  | ?x =>
-    lazymatch goal with
-    | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var var t v)
-    | _ => let t := reify_type_of x in  constr:(@Const var t x)
-    end
-  end.
-Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
-
-Ltac Reify e :=
-  lazymatch constr:(fun (var:type->Type) => (_:reify var e)) with
-    (fun var => ?C) => constr:(fun (var:type->Type) => C) (* copy the term but not the type cast *)
-  end.
-
-Goal forall (x : Z) (v : tinterp TZ) (_:reify_var_for_in_is x TZ v), reify(T:=Z) tinterp ((fun x => x+x) x)%Z.
-  intros.
-  let A := reify tinterp (x + x)%Z in
-  pose A.
-Abort.
-
-Goal False.
-  let z := Reify (let x := 0 in x)%Z in pose z.
-Abort.
-  
-Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
-Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
-Ltac Reify_rhs :=
-  let rhs := rhs_of_goal in
-  let rhs := Reify rhs in
-  let lhs := lhs_of_goal in
-  change (lhs = interp (rhs tinterp)).
-
-Goal (0 = let x := 1+2 in x*3)%Z.
-  Reify_rhs.
-Abort.
-
-Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
-  Reify_rhs.
-Abort.
-
-Goal forall x y:Z, ((let x0 := x in let x1 := y in (x0 * x1))
-                    = match (x, y) with (a, b) => a*b end)%Z.
-  intros.
-  Reify_rhs.
-  rewrite <-unmatch_pair_correct.
-  cbv iota beta delta [unmatch_pair CoqPairIfPair].
-  cbv iota beta delta [interp].
-  reflexivity.
-Qed.
-
 
 
 Require Import Crypto.Util.Notations .
@@ -360,8 +348,11 @@ Section Curve25519.
     eexists.
     cbv beta delta [ge25519_add'].
     
-    Reify_rhs. (* Coq trunk July 2016: 47s *)
+    Reify_rhs. (* Coq trunk July 2016: 48s *)
     Set Printing Depth 99999.
+    let e := match goal with |- _ = interp (?e interp_type) => e end in
+    let e := (eval vm_compute in (Subst_args e)) in
+    pose e.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
     rewrite <-flatten_correct.
