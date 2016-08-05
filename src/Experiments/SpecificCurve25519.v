@@ -19,10 +19,11 @@ Section expr.
   | Binop : forall {t1 t2 t}, (tinterp t1->tinterp t2->tinterp t) -> expr t1 -> expr t2 -> expr t
   | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
   | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
-  | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC
-  .
+  | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
 End expr.
 Arguments expr _ _ : clear implicits.
+Definition Expr t : Type := forall var, expr var t.
+
 Local Notation ZConst z := (@Const _ TZ z%Z).
 Local Notation ZBinop op a b := (@Binop _ TZ TZ TZ op%Z a%Z b%Z).
 
@@ -35,6 +36,7 @@ Fixpoint interp {t} (e:expr tinterp t) : tinterp t :=
   | Pair _ e1 _ e2 => (interp e1, interp e2)
   | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
   end.
+Definition Interp {t} (E:Expr t) : tinterp t := interp (E tinterp).
 
 Example example_expr : interp (Let (ZConst 7) (fun a => Let (Let (@Binop _ TZ TZ TZ Z.add (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => @Binop _ TZ TZ TZ Z.add (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
 
@@ -99,6 +101,35 @@ Lemma unmatch_pair_correct : forall {t} (e:expr tinterp t), interp (unmatch_pair
            | [H: (_, _) = (_, _) |- _ ] => inversion H; subst
            end.
 Qed.
+
+Section subst_args.
+  Context {var : type -> Type}.
+  Fixpoint is_arg {t} (e:expr (expr var) t) : bool :=
+    match e with
+    | Var _ _ => true
+    | Pair _ e1 _ e2 => is_arg e1 && is_arg e2
+    | _ => false
+    end.
+  Fixpoint subst_args {t} (e:expr (expr var) t) {struct e} : expr var t :=
+    match e in (expr _ t) return (expr var t) with
+    | Const _ n => Const n
+    | Var _ v => v
+    | Binop _ _ _ op e1 e2 => Binop op (@subst_args _ e1) (@subst_args _ e2)
+    | Let _ ex _ eC =>
+      if is_arg ex
+      then @subst_args _ (eC (@subst_args _ ex))
+      else Let (@subst_args _ ex) (fun v => @subst_args _ (eC (Var v)))
+    | Pair _ e1 _ e2 => Pair (@subst_args _ e1) (@subst_args _ e2)
+    | MatchPair _ _ ep _ eC =>
+      match is_arg ep, CoqPairIfPair (@subst_args _ ep) with
+      | true, Some (e1, e2) => @subst_args _ (eC e1 e2)
+      | _, _ => MatchPair (@subst_args _ ep) (fun x y => @subst_args _ (eC (Var x) (Var y)))
+      end
+    end.
+End subst_args.
+Definition Subst_args {t} (e:Expr t) : Expr t := fun var => subst_args (e (expr var)).
+
+
 Section reassoc_let.
   Context {var : type -> Type}.
 
@@ -179,7 +210,8 @@ Proof. induction e; repeat (intuition congruence + simpl + rewrite under_lets_co
 
 (* The [reify] tactic below avoids beta-exapnsion while recursing under binders. *)
 (* To do this, it has to manipulate open terms. *)
-(* One black magic hack for doing this in 8.4 relies on immediate reduction of trivial matches: *)
+(* An alternative would be to allow beta-expansion and then perform one beta reduction at the head of the term *)
+(* One black magic hack for doing that in 8.4 relies on immediate reduction of trivial matches: *)
 (*
 Ltac beta_head term := (*do just first beta reduction*)
 lazymatch term with
