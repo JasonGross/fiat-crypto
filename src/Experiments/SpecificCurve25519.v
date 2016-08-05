@@ -14,7 +14,7 @@ Fixpoint tinterp (t:type) :=
 Section expr.
   Context {var : type -> Type}.
   Inductive expr : type -> Type :=
-  | Const : Z -> expr TZ
+  | Const : forall {t}, tinterp t -> expr t
   | Var : forall {t}, var t -> expr t
   | Binop : forall {t1 t2 t}, (tinterp t1->tinterp t2->tinterp t) -> expr t1 -> expr t2 -> expr t
   | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
@@ -23,11 +23,12 @@ Section expr.
   .
 End expr.
 Arguments expr _ _ : clear implicits.
-Definition Expr t := forall var, expr var t.
+Local Notation ZConst z := (@Const _ TZ z%Z).
+Local Notation ZBinop op a b := (@Binop _ TZ TZ TZ op%Z a%Z b%Z).
 
 Fixpoint interp {t} (e:expr tinterp t) : tinterp t :=
   match e in expr _ t return tinterp t with
-  | Const n => n
+  | Const _ n => n
   | Var _ n => n
   | Binop _ _ _ op e1 e2 => op (interp e1) (interp e2)
   | Let _ ex _ eC => let x := interp ex in interp (eC x)
@@ -35,7 +36,7 @@ Fixpoint interp {t} (e:expr tinterp t) : tinterp t :=
   | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
   end.
 
-Example example_expr : interp (Let (Const 7) (fun a => Let (Let (@Binop _ TZ TZ TZ Z.add (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => @Binop _ TZ TZ TZ Z.add (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
+Example example_expr : interp (Let (ZConst 7) (fun a => Let (Let (@Binop _ TZ TZ TZ Z.add (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => @Binop _ TZ TZ TZ Z.add (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
 
 Section unmatch_pair.
   Context {var : type -> Type}.
@@ -55,7 +56,7 @@ Section unmatch_pair.
          | Some (e1, e2) => Let e1 (fun v1 => (Let e2 (fun v2 => unmatch_pair (eC v1 v2))))
          | None => MatchPair (unmatch_pair ep) (fun x y => unmatch_pair (eC x y))
          end
-    | Const n => Const n
+    | Const _ n => Const n
     | Var _ n => Var n
     | Binop _ _ _ op e1 e2 => Binop op (unmatch_pair e1) (unmatch_pair e2)
     | Let _ ex _ eC => Let (unmatch_pair ex) (fun x => unmatch_pair (eC x))
@@ -113,7 +114,7 @@ Section reassoc_let.
         Let ex' (fun v' => Let (eC' v') (fun v => reassoc_let (eC v)))
       | None => Let (reassoc_let ex) (fun v => reassoc_let (eC v))
       end
-    | Const n => Const n
+    | Const _ n => Const n
     | Var _ n => Var n
     | Binop _ _ _ op e1 e2 => Binop op (reassoc_let e1) (reassoc_let e2)
     | Pair _ e1 _ e2 => Pair (reassoc_let e1) (reassoc_let e2)
@@ -138,25 +139,6 @@ Lemma reassoc_let_correct : forall {t} (e:expr tinterp t), interp (reassoc_let e
            end.
 Qed.
 
-Section fuel_id.
-  Context {var : type -> Type}.
-  Fixpoint fuel_id (n:nat) {t} (e:expr var t) {struct n} : expr var t :=
-    match n with O => e | S n' =>
-    match e in expr _ t return expr var t with
-    | Let _ ex _ eC => Let (fuel_id n' ex) (fun v => fuel_id n' (eC v))
-    | Const n => Const n
-    | Var _ n => Var n
-    | Binop _ _ _ op e1 e2 => Binop op (fuel_id n' e1) (fuel_id n' e2)
-    | Pair _ e1 _ e2 => Pair (fuel_id n' e1) (fuel_id n' e2)
-    | MatchPair _ _ ep _ eC => MatchPair (fuel_id n' ep) (fun x y => fuel_id n' (eC x y))
-    end end.
-End fuel_id.
-
-Lemma fuel_id_correct : forall n {t} (e:expr tinterp t), interp (fuel_id n e) = interp e.
-  induction n; destruct e; simpl; rewrite ?IHn; try reflexivity.
-  break_match; subst. rewrite IHn. reflexivity.
-Qed.
-
 Section under_lets.
   Context {var : type -> Type}.
   Fixpoint under_lets {te} (e:expr var te) {struct e} :
@@ -167,11 +149,11 @@ Section under_lets.
     end.
     
   Eval simpl in under_lets
-                  (Let (Const 1) (fun v =>
-                   Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' =>
-                   @Binop _ TZ TZ TZ (fun a b => a) (Var v') (Var v'))))
+                  (Let (ZConst 1) (fun v =>
+                   Let (ZBinop Z.add (Var v) (Var v)) (fun v' =>
+                   ZBinop (fun a b => a) (Var v') (Var v'))))
 
-                  (fun e' => @Binop _ TZ TZ TZ Z.div e' e')
+                  (fun e' => ZBinop Z.div e' e')
                   .
 End under_lets.
 
@@ -188,7 +170,7 @@ Section flatten.
       under_lets (@flatten _ ex) (fun ex => Let ex (fun vx => @flatten _ (eC vx)))
     | e' => e'
     end.
-    Eval simpl in flatten (Let (Let (Const 1) (fun v => Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
+    Eval simpl in flatten (Let (Let (ZConst 1) (fun v => Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
 End flatten.
 
 Lemma flatten_correct {t} (e:expr tinterp t) :
@@ -236,6 +218,11 @@ Ltac reify_type t :=
 Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
 Definition reify_var_for_in_is {T} (x:T) t (e:tinterp t) := False.
 
+Ltac type_of x := match type of x with ?t => constr:(t) end.
+Ltac reify_type_of x :=
+  let t := type_of x in
+  reify_type t.
+
 Ltac reify var e :=
   lazymatch e with
   | let x := ?ex in @?eC x =>
@@ -274,15 +261,11 @@ Ltac reify var e :=
   | ?x =>
     match goal with
     | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var var t v)
-    | _ => constr:(Const(var:=var) x)
+    | _ => let t := reify_type_of x in  constr:(@Const var t x)
     end
   end.
 Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
   
-Ltac type_of x := match type of x with ?t => constr:(t) end.
-Ltac reify_type_of x :=
-  let t := type_of x in
-  reify_type t.
 Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
 Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
 Ltac reify_rhs :=
@@ -336,7 +319,7 @@ Section Curve25519.
     eexists.
     cbv beta delta [ge25519_add'].
     
-    reify_rhs. (* Coq trunk July 2016: reification takes 14s, reification+change takes 46s *)
+    reify_rhs. (* Coq trunk July 2016: 48s *)
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
