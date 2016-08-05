@@ -298,19 +298,19 @@ Ltac reify var e :=
   end.
 Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
 
-Ltac Reify e := constr:(fun (var:type->Type) => (_:reify var e)).
-
-Goal False.
-  let z := Reify Z0 in idtac z.
-  let z := Reify (0+0)%Z in idtac z.
-  let z := reify tinterp (let x := 0 in x)%Z in idtac z.
-  let z := Reify (let x := 0 in x)%Z in idtac z.
-Abort.
+Ltac Reify e :=
+  lazymatch constr:(fun (var:type->Type) => (_:reify var e)) with
+    (fun var => ?C) => constr:(fun (var:type->Type) => C) (* copy the term but not the type cast *)
+  end.
 
 Goal forall (x : Z) (v : tinterp TZ) (_:reify_var_for_in_is x TZ v), reify(T:=Z) tinterp ((fun x => x+x) x)%Z.
   intros.
   let A := reify tinterp (x + x)%Z in
   pose A.
+Abort.
+
+Goal False.
+  let z := Reify (let x := 0 in x)%Z in pose z.
 Abort.
   
 Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
@@ -361,7 +361,6 @@ Section Curve25519.
     cbv beta delta [ge25519_add'].
     
     Reify_rhs. (* Coq trunk July 2016: 47s *)
-    cbv iota. (* don't print type casts *)
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
