@@ -163,12 +163,7 @@ Section under_lets.
     forall {tC} (C:expr var te -> expr var tC), expr var tC :=
     match e in (expr _ t) return (forall tC : type, (expr var t -> expr var tC) -> expr var tC) with
     | @Let _ tx ex teC eC => fun tC C => Let ex (fun vx => @under_lets _ (eC vx) _ C)
-
-    | @Const _ z => fun _ C => C (Const z)
-    | @Var _ t v => fun _ C => C (Var v)
-    | @Binop _ _ _ _ op e1 e2 => fun _ C => C (Binop op e1 e2)
-    | @Pair _ t1 e1 t2 e2 =>  fun _ C => C (Pair e1 e2)
-    | @MatchPair _ _ _ ep _ eC => fun _ C => C (MatchPair ep eC)
+    | e' => fun _ C => C e'
     end.
     
   Eval simpl in under_lets
@@ -185,6 +180,20 @@ Lemma under_lets_correct {te} (e:expr tinterp te) {tC} (C:expr tinterp te -> exp
   interp (under_lets e C) = interp (C e).
 Proof. induction e; repeat (intuition congruence + simpl + rewrite_hyp !*). Qed.
 
+Section flatten.
+  Context {var : type -> Type}.
+  Fixpoint flatten {t} (e:expr var t) {struct e} : expr var t :=
+    match e in (expr _ t0) return (expr var t0) with
+    | @Let _ tx ex tC eC =>
+      under_lets (@flatten _ ex) (fun ex => Let ex (fun vx => @flatten _ (eC vx)))
+    | e' => e'
+    end.
+    Eval simpl in flatten (Let (Let (Const 1) (fun v => Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
+End flatten.
+
+Lemma flatten_correct {t} (e:expr tinterp t) :
+      interp (flatten e) = interp e.
+Proof. induction e; repeat (intuition congruence + simpl + rewrite under_lets_correct + rewrite_hyp !*). Qed.
 
 (* The [reify] tactic below avoids beta-exapnsion while recursing under binders. *)
 (* To do this, it has to manipulate open terms. *)
@@ -331,6 +340,8 @@ Section Curve25519.
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
+    rewrite <-flatten_correct.
+    cbv iota beta delta [flatten under_lets].
     cbv iota beta delta [interp].
     reflexivity.
   Defined.
