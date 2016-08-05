@@ -1,4 +1,5 @@
 Require Import Crypto.Util.GlobalSettings.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.ZArith.BinInt.
 
@@ -156,9 +157,35 @@ Lemma fuel_id_correct : forall n {t} (e:expr tinterp t), interp (fuel_id n e) = 
   break_match; subst. rewrite IHn. reflexivity.
 Qed.
 
+Section under_lets.
+  Context {var : type -> Type}.
+  Fixpoint under_lets {te} (e:expr var te) {struct e} :
+    forall {tC} (C:var te -> expr var tC), expr var tC :=
+    match e with
+    | @Const _ z => fun _ C => Let (Const z) C
+    | @Var _ t v => fun _ C => C v
+    | @Binop _ _ _ _ op e1 e2 => fun _ C => Let (Binop op e1 e2) C
+    | @Let _ tx ex tC eC => fun tC C => Let ex (fun vx => @under_lets _ (eC vx) _ C)
+    | @Pair _ t1 e1 t2 e2 =>  fun _ C => Let (Pair e1 e2) C
+    | @MatchPair _ _ _ ep _ eC => fun _ C => Let (MatchPair ep eC) C
+    end.
+
+  Eval simpl in under_lets
+                  (Let (Const 1) (fun v =>
+                   Let (@Binop _ TZ TZ TZ Z.add (Var v) (Var v)) (fun v' =>
+                   @Binop _ TZ TZ TZ (fun a b => a) (Var v') (Var v'))))
+
+                  (fun v' => @Binop _ TZ TZ TZ Z.div (Var v') (Var v'))
+                  .
+End under_lets.
+
+Lemma under_lets_correct {te} (e:expr tinterp te) {tC} (C:tinterp te -> expr tinterp tC) :
+  interp (under_lets e C) = interp (Let e C) .
+Proof. induction e; repeat (intuition congruence + simpl + rewrite_hyp -> !*). Qed.
+  
 
 
-(* The [reify] tactic below avoids beta-exapnsion file recursing under binders. *)
+(* The [reify] tactic below avoids beta-exapnsion while recursing under binders. *)
 (* To do this, it has to manipulate open terms. *)
 (* One black magic hack for doing this in 8.4 relies on immediate reduction of trivial matches: *)
 (*
@@ -293,14 +320,18 @@ Section Curve25519.
 
   Definition ge25519_add_sig (twice_d : fe25519) : forall P1 P2, { r | r = ge25519_add' twice_d P1 P2 }.
     intros.
+
     hnf in twice_d.
     repeat match goal with p:prod _ _ |- _ => destruct p end.
     eexists.
     cbv beta delta [ge25519_add'].
-    reify_rhs.
+    
+    reify_rhs. (* Coq trunk July 2016: reification takes 14s, reification+change takes 46s *)
     Set Printing Depth 99999.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
+    rewrite <-under_lets_correct.
+    cbv iota beta delta [under_lets].
     cbv iota beta delta [interp].
     reflexivity.
   Defined.
