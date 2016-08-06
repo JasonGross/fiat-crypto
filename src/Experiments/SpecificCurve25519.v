@@ -124,7 +124,7 @@ Fixpoint ninterp {t} (e:nexpr interp_type t) : interp_type t :=
   end.
 Definition Interp {t} (E:Expr t) : interp_type t := interp (E interp_type).
 
-(*Fixpoint partial_npinterp {var} {t} (e:npair var t) : partial_interp_type var t.
+Fixpoint partial_npinterp {var} {t} (e:npair var t) : partial_interp_type var t.
   refine match e in npair _ t return partial_interp_type var t with
      | NVarInj _ v => _
      | _ => _ end; simpl in *.
@@ -189,7 +189,7 @@ Fixpoint reify_struct_partial {var : type -> Type} {t} : forall (v : partial_int
                       => NPairInj (NPair a b)))
      end.
 
-*)
+
 
 Fixpoint partial_reflect {var} {t} : partial_interp_type (npair var) t -> npair var t
   := match t return partial_interp_type (npair var) t -> npair var t with
@@ -406,151 +406,6 @@ Definition smart_Pair {var} {t1 t2} (e1 : expr var t1) (e2 : expr var t2) : expr
        => Let e1' (fun e1'' => Let e2' (fun e2'' => Pair (Var e1'') (Var e2'')))
      end.
 *)
-Section subst_args.
-  Context {var : type -> Type}.
-  Fixpoint is_arg {t} (e:expr (expr var) t) : bool :=
-    match e with
-    | Var _ _ => true
-    | Pair _ e1 _ e2 => is_arg e1 && is_arg e2
-    | _ => false
-    end.
-  Fixpoint subst_args {t} (e:expr (expr var) t) {struct e} : expr var t :=
-    match e in (expr _ t) return (expr var t) with
-    | Const _ n => Const n
-    | Var _ v => v
-    | Binop _ _ _ op e1 e2 => Binop op (@subst_args _ e1) (@subst_args _ e2)
-    | @Let _ tx ex tC eC =>
-      under_lets
-        (@subst_args _ ex)
-        (fun ex => Let ex (fun vx => @flatten _ (eC vx)))
-      if is_arg ex
-      then @subst_args _ (eC (@subst_args _ ex))
-      else Let (@subst_args _ ex) (fun v => @subst_args _ (eC (Var v)))
-    | Pair _ e1 _ e2 => Pair (@subst_args _ e1) (@subst_args _ e2)
-    | MatchPair _ _ ep _ eC =>
-      match is_arg ep, CoqPairIfPair (@subst_args _ ep) with
-      | true, Some (e1, e2) => @subst_args _ (eC e1 e2)
-      | _, _ => MatchPair (@subst_args _ ep) (fun x y => @subst_args _ (eC (Var x) (Var y)))
-      end
-    end.
-End subst_args.
-Definition Subst_args {t} (e:Expr t) : Expr t := fun var => subst_args (e (expr var)).
-
-
-Section reassoc_let.
-  Context {var : type -> Type}.
-
-  Definition matchLetLetInIn {t} (e:expr var t) :
-    option (sigT (fun tx:type => (expr var tx * (var tx -> expr var t))%type)) :=
-    match e with Let _ ex _ eC => Some (existT _ _ (ex, eC)) | _ => None end.
-
-  Fixpoint reassoc_let {t} (e:expr var t) {struct e} : expr var t :=
-    match e in expr _ t return expr var t with
-    | Let _ ex _ eC =>
-      match matchLetLetInIn ex with
-      | Some (existT tx' (ex', eC')) =>
-        Let ex' (fun v' => Let (eC' v') (fun v => reassoc_let (eC v)))
-      | None => Let (reassoc_let ex) (fun v => reassoc_let (eC v))
-      end
-    | Const _ n => Const n
-    | Var _ n => Var n
-    | Binop _ _ _ op e1 e2 => Binop op (reassoc_let e1) (reassoc_let e2)
-    | Pair _ e1 _ e2 => Pair (reassoc_let e1) (reassoc_let e2)
-    | MatchPair _ _ ep _ eC => MatchPair (reassoc_let ep) (fun x y => reassoc_let (eC x y))
-    end.
-End reassoc_let.
-
-Lemma matchLetLetInIn_Some {var} {t} (e:expr var t) {tx} ex eC :
-  matchLetLetInIn e = Some (existT _ tx (ex, eC)) <-> e = Let ex eC.
-Proof.
-Admitted.
-
-Lemma reassoc_let_correct : forall {t} (e:expr interp_type t), interp (reassoc_let e) = interp e.
-  induction e;
-    repeat match goal with
-           | [H: _ |- _ ] => simpl_lem_then_rewrite H
-           | [H: _ |- _ ] => rewrite matchLetLetInIn_Some in H
-           | _ => break_match
-           | _ => progress simpl
-           | _ => progress subst
-           | _ => solve [intuition congruence]
-           end.
-Qed.
-
-Section under_lets.
-  Context {var : type -> Type}.
-  Fixpoint under_lets {te} (e:expr var te) {struct e} :
-    forall {tC} (C:expr var te -> expr var tC), expr var tC :=
-    match e in (expr _ t) return (forall tC : type, (expr var t -> expr var tC) -> expr var tC) with
-    | @Let _ tx ex teC eC => fun tC C => Let ex (fun vx => @under_lets _ (eC vx) _ C)
-    | e' => fun _ C => C e'
-    end.
-
-  Eval simpl in under_lets
-                  (Let (ZConst 1) (fun v =>
-                   Let (Binop OPZadd (Var v) (Var v)) (fun v' =>
-                   Binop OPZsub (Var v') (Var v'))))
-
-                  (fun e' => Binop OPZmul e' e')
-                  .
-End under_lets.
-
-Lemma under_lets_correct {te} (e:expr interp_type te) {tC} (C:expr interp_type te -> expr interp_type tC)
-      (H:forall {t} (e:expr interp_type t) eC, interp (C (Let e eC)) = interp (C (eC (interp e)))) :
-  interp (under_lets e C) = interp (C e).
-Proof. induction e; repeat (intuition congruence + simpl + rewrite_hyp !*). Qed.
-
-Section flatten.
-  Context {var : type -> Type}.
-  Fixpoint flatten {t} (e:expr var t) {struct e} : expr var t :=
-    match e in (expr _ t0) return (expr var t0) with
-    | @Let _ tx ex tC eC =>
-      under_lets (@flatten _ ex) (fun ex => Let ex (fun vx => @flatten _ (eC vx)))
-    | e' => e'
-    end.
-    Eval simpl in flatten (Let (Let (ZConst 1) (fun v => Let (Binop OPZadd (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
-End flatten.
-
-Lemma flatten_correct {t} (e:expr interp_type t) :
-      interp (flatten e) = interp e.
-Proof. induction e; repeat (intuition congruence + simpl + rewrite under_lets_correct + rewrite_hyp !*). Qed.
-
-
-Require Import Crypto.Util.Notations .
-Require Import Crypto.Specific.GF25519.
-Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
-
-Local Infix "<<" := Z.shiftr.
-Local Infix "&" := Z.land.
-Section Curve25519.
-  Definition ge25519_add' (twice_d : fe25519) :=
-    Eval cbv beta delta [Extended.add_coordinates fe25519 add mul sub ModularBaseSystemOpt.Let_In] in
-      @Extended.add_coordinates fe25519 add sub mul twice_d.
-
-  Definition ge25519_add_sig (twice_d : fe25519) : forall P1 P2, { r | r = ge25519_add' twice_d P1 P2 }.
-    intros.
-
-    hnf in twice_d.
-    repeat match goal with p:prod _ _ |- _ => destruct p end.
-    eexists.
-    cbv beta delta [ge25519_add'].
-
-    Time Reify_rhs. (* Coq trunk July 2016: 48s *)
-    Set Printing Depth 99999.
-    exfalso.
-    Time let e0 := (eval vm_compute in (Subst_args e)) in
-    pose e0.
-    rewrite <-unmatch_pair_correct.
-    cbv iota beta delta [unmatch_pair CoqPairIfPair].
-    rewrite <-flatten_correct.
-    cbv iota beta delta [flatten under_lets].
-    cbv iota beta delta [interp].
-    reflexivity.
-  Defined.
-End Curve25519.
-
-
-
 Section subst_args.
   Context {var : type -> Type}.
 Set Printing Coercions.
