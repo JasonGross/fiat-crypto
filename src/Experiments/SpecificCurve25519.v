@@ -80,123 +80,90 @@ Section nexp.
   | NLet : forall {tx}, nboundexpr tx -> forall {tC}, (var tx -> nexpr tC) -> nexpr tC
   | NPairInj : forall {tx}, npair tx -> nexpr tx.
 
-  Fixpoint under_lets {te} (e:nexpr te) {struct e} :
-    forall {tC} (C:npair te -> nexpr tC), nexpr tC :=
-    match e in (nexpr t) return (forall tC : type, (npair t -> nexpr tC) -> nexpr tC) with
-    | @NLet tx ex teC eC => fun tC C => NLet ex (fun vx => @under_lets _ (eC vx) _ C)
-    | @NPairInj _ e => fun _ C => C e
-    end.
-
   Fixpoint refl (t : type) :=
     match t with
-    | stype t' => nexpr t'
+    | stype t' => nvar t'
     | Prod t0 t1 => prod (refl t0) (refl t1)
     end.
 
-  Fixpoint reify (t : type) : refl t -> nexpr t :=
-    match t return refl t -> nexpr t with
-    | stype t' => fun e => e
-    | Prod t0 t1
-      => fun e => under_lets
-                (reify t0 (fst e))
-                (fun e0
-                 => under_lets
-                     (reify t1 (snd e))
-                     (fun e1
-                      => NPairInj (NPair e0 e1)))
-    end.
+  Fixpoint reify_pair (t : type) : refl t -> npair t
+    := match t return refl t -> npair t with
+       | stype t' => fun e => NVarInj e
+       | Prod t0 t1
+         => fun e => NPair (@reify_pair t0 (fst e)) (@reify_pair t1 (snd e))
+       end.
 
-  Fixpoint meaning t (e : expr refl t) {struct e} : refl t.
-    refine match e in expr _ t return refl t with
-           | Const _ v => _
-           | _ => _
-           end; simpl in *.
+  Fixpoint reflect (t : type) (x : npair t) : refl t
+    := match x in npair t return refl t with
+       | NPair _ x0 _ x1 => (@reflect _ x0, @reflect _ x1)
+       | NVarInj _ v => v
+       end.
 
-    match e in expr _ t return refl t with
-      | Source.Var _ x => x
-      | Source.ETrue => ETrue
-      | Source.EFalse => EFalse
-      | Source.App _ _ e1 e2 => (meaning e1) (meaning e2)
-      | Source.Abs _ _ e1 => fun x => meaning (e1 x)
-    end.
+  Fixpoint reify_const t {tC} {struct t} : interp_type t -> (refl t -> nexpr tC) -> nexpr tC
+    := match t return interp_type t -> (refl t -> nexpr tC) -> nexpr tC with
+       | stype _
+         => fun v F
+            => NLet
+                 (NConst v)
+                 (fun v' => F (NVar v'))
+       | Prod t0 t1
+         => fun v F
+            => @reify_const
+                 t0 _ (fst v)
+                 (fun v0
+                  => @reify_const
+                       t1 _ (snd v)
+                       (fun v1
+                        => F (v0, v1)))
+       end.
 
+  Fixpoint precompose_meaning t (e : expr refl t) {tC} {struct e} : (refl t -> nexpr tC) -> nexpr tC
+    := match e in expr _ t return (refl t -> nexpr tC) -> nexpr tC with
+       | Const _ x => @reify_const _ _ x
+       | Var _ x => fun f => f x
+       | Binop _ _ _ f e0 e1
+         => fun F
+            => @precompose_meaning
+                 _ e0 _
+                 (fun e0'
+                  => @precompose_meaning
+                       _ e1 _
+                       (fun e1'
+                        => NLet (NBinop f e0' e1') (fun x => F (NVar x))))
+       | Let _ x _ e
+         => fun F
+            => @precompose_meaning
+                 _ x _
+                 (fun x'
+                  => @precompose_meaning
+                       _ (e x') _
+                       (fun ex'
+                        => F ex'))
+       | Pair _ e0 _ e1
+         => fun F
+            => @precompose_meaning
+                 _ e0 _
+                 (fun e0'
+                  => @precompose_meaning
+                       _ e1 _
+                       (fun e1'
+                        => F (e0', e1')))
+       | MatchPair _ _ x _ b
+         => fun F
+            => @precompose_meaning
+                 _ x _
+                 (fun x'
+                  => @precompose_meaning
+                       _ (b (fst x') (snd x')) _
+                       (fun bx
+                        => F bx))
+       end.
 
+  Definition normalize t (e : expr refl t) : nexpr t := precompose_meaning _ e (fun x => NPairInj (reify_pair _ x)).
 
-
-End expr.
-
-Section NbE.
-  Variable var : type -> Type.
-
-  Inductive nexp : type -> Type :=
-  | Apps {t} : apps Bool -> nexp Bool
-  | ETrue : nexp Bool
-  | EFalse : nexp Bool
-  | Abs : forall dom ran, (var dom -> nexp ran) -> nexp (dom --> ran)
-
-  with apps : type -> Type :=
-  | Var : forall t, var t -> apps t
-  | App : forall dom ran, apps (dom --> ran) -> nexp dom -> apps ran.
-
-  Fixpoint refl (t : type) : Type :=
-    match t with
-      | Bool => nexp Bool
-      | dom --> ran => refl dom -> refl ran
-    end.
-
-  Fixpoint reify (t : type) : refl t -> nexp t :=
-    match t return refl t -> nexp t with
-      | Bool => fun e => e
-      | dom --> ran => fun f => Abs (fun x => reify _ (f (reflect (Var x))))
-    end
-
-  with reflect (t : type) : apps t -> refl t :=
-    match t return apps t -> refl t with
-      | Bool => fun e => Apps e
-      | dom --> ran => fun e x => reflect (App e (reify _ x))
-    end.
-
-  Implicit Arguments reify [t].
-
-  Fixpoint meaning t (e : exp refl t) {struct e} : refl t :=
-    match e in exp _ t return refl t with
-      | Source.Var _ x => x
-      | Source.ETrue => ETrue
-      | Source.EFalse => EFalse
-      | Source.App _ _ e1 e2 => (meaning e1) (meaning e2)
-      | Source.Abs _ _ e1 => fun x => meaning (e1 x)
-    end.
-
-  Definition normalize t (e : exp refl t) : nexp t := reify (meaning e).
-End NbE.
-
-
+End nexp.
 
 
-
-Section expr.
-  Context {var : type -> Type}.
-  Inductive expr : type -> Type :=
-  | Const : forall {t}, interp_type t -> expr t
-  | Var : forall {t}, var t -> expr t
-  | Binop : forall {t1 t2 t}, binop t1 t2 t -> expr t1 -> expr t2 -> expr t
-  | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
-  | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
-  | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
-  Inductive nboundexpr : type -> Type :=
-  | NConst : forall {t}, interp_type t -> nboundexpr t
-  | NBinop : forall {t1 t2 t}, binop t1 t2 t -> var t1 -> var t2 -> nboundexpr t.
-  Inductive nvar : type -> Type :=
-  | NVar : forall {t}, var t -> nvar t
-  | Nfst : forall {t1 t2}, nvar (Prod t1 t2) -> nvar t1
-  | Nsnd : forall {t1 t2}, nvar (Prod t1 t2) -> nvar t2.
-  Inductive npair : type -> Type :=
-  | NVarInj : forall {t : simple_type}, nvar t -> npair t
-  | NPair : forall {t1}, npair t1 -> forall {t2}, npair t2 -> npair (Prod t1 t2).
-  Inductive nexpr : type -> Type :=
-  | NLet : forall {tx}, nboundexpr tx -> forall {tC}, (var tx -> nexpr tC) -> nexpr tC
-  | NPairInj : forall {tx}, npair tx -> nexpr tx.
-End expr.
 Local Notation ZConst z := (@Const _ TZ z%Z).
 Arguments expr _ _ : clear implicits.
 Arguments nexpr _ _ : clear implicits.
@@ -204,15 +171,7 @@ Arguments nvar _ _ : clear implicits.
 Arguments npair _ _ : clear implicits.
 Arguments nboundexpr _ _ : clear implicits.
 Definition Expr t : Type := forall var, expr var t.
-
-Definition partial_interp_once expr recr (t:type) :=
-  match t with
-  | Prod a b => prod (recr a) (recr b)
-  | stype t' => expr t'
-  end.
-Fixpoint partial_interp_type expr (t:type) :=
-  partial_interp_once expr (partial_interp_type expr) t.
-Definition partial_interp_oncep (var:type -> Type) (t:type) := partial_interp_once var (npair var) t.
+Definition NExpr t : Type := forall var, nexpr var t.
 
 Fixpoint interp {t} (e:expr interp_type t) : interp_type t :=
   match e in expr _ t return interp_type t with
@@ -223,16 +182,16 @@ Fixpoint interp {t} (e:expr interp_type t) : interp_type t :=
   | Pair _ e1 _ e2 => (interp e1, interp e2)
   | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
   end.
-Fixpoint nbinterp {t} (e:nboundexpr interp_type t) : interp_type t :=
-  match e in nboundexpr _ t return interp_type t with
-  | NConst _ v => v
-  | NBinop _ _ _ op e1 e2 => interp_binop op e1 e2
-  end.
 Fixpoint nvinterp {t} (e:nvar interp_type t) : interp_type t :=
   match e in nvar _ t return interp_type t with
   | NVar _ v => v
   | Nfst _ _ p => fst (nvinterp p)
   | Nsnd _ _ p => snd (nvinterp p)
+  end.
+Fixpoint nbinterp {t} (e:nboundexpr interp_type t) : interp_type t :=
+  match e in nboundexpr _ t return interp_type t with
+  | NConst _ v => v
+  | NBinop _ _ _ op e1 e2 => interp_binop op (nvinterp e1) (nvinterp e2)
   end.
 Fixpoint npinterp {t} (e:npair interp_type t) : interp_type t :=
   match e in npair _ t return interp_type t with
@@ -246,107 +205,6 @@ Fixpoint ninterp {t} (e:nexpr interp_type t) : interp_type t :=
   | NPairInj _ p => npinterp p
   end.
 Definition Interp {t} (E:Expr t) : interp_type t := interp (E interp_type).
-
-Fixpoint partial_npinterp {var} {t} (e:npair var t) : partial_interp_type var t.
-  refine match e in npair _ t return partial_interp_type var t with
-     | NVarInj _ v => _
-     | _ => _ end; simpl in *.
-
-
-Section under_lets.
-  Context {var : type -> Type}.
-  Fixpoint under_lets {te} (e:nexpr var te) {struct e} :
-    forall {tC} (C:npair var te -> nexpr var tC), nexpr var tC :=
-    match e in (nexpr _ t) return (forall tC : type, (npair var t -> nexpr var tC) -> nexpr var tC) with
-    | @NLet _ tx ex teC eC => fun tC C => NLet ex (fun vx => @under_lets _ (eC vx) _ C)
-    | @NPairInj _ _ e => fun _ C => C e
-    end.
-
-  Fixpoint under_pairs {te} (e:npair var te) {struct e} :
-    forall {tC} (C:partial_interp_type var te -> nexpr var tC), nexpr var tC.
-    refine match e in (npair _ t) return (forall tC : type, (partial_interp_type var t -> nexpr var tC) -> nexpr var tC) with
-           | NPair _ a _ b
-             =>
-             _ | _ => _ end; simpl in *.
-    | @NLet _ tx ex teC eC => fun tC C => NLet ex (fun vx => @under_lets_and_pairs _ (eC vx) _ C)
-    | _ => _ end
-    | @NPairInj _ _ e => fun _ C => C e
-    end.
-
-  (*Eval simpl in under_lets
-                  (Let (ZConst 1) (fun v =>
-                   Let (Binop OPZadd (Var v) (Var v)) (fun v' =>
-                   Binop OPZsub (Var v') (Var v'))))
-
-                  (fun e' => Binop OPZmul e' e')
-                  .*)
-End under_lets.
-
-
-
-Fixpoint reify_struct {var} {t} : forall (v : interp_type t), nexpr var t
-  := match t return forall (v : interp_type t), nexpr var t with
-     | stype TZ => fun z => NLet (NConst z) (fun v => NPairInj (NVar v))
-     | Prod A B
-       => fun ab
-          => under_lets
-               (@reify_struct var _ (fst ab))
-               (fun a
-                => under_lets
-                     (@reify_struct var _ (snd ab))
-                     (fun b
-                      => NPairInj (NPair a b)))
-     end.
-
-Fixpoint reify_struct_partial {var : type -> Type} {t} : forall (v : partial_interp_type var t), nexpr var t
-  := match t return forall (v : partial_interp_type var t), nexpr var t with
-     | stype _ => fun z => NPairInj (@NVar var _ z)
-     | Prod A B
-       => fun ab
-          => under_lets
-               (@reify_struct_partial var _ (fst ab))
-               (fun a
-                => under_lets
-                     (@reify_struct_partial var _ (snd ab))
-                     (fun b
-                      => NPairInj (NPair a b)))
-     end.
-
-
-
-Fixpoint partial_reflect {var} {t} : partial_interp_type (npair var) t -> npair var t
-  := match t return partial_interp_type (npair var) t -> npair var t with
-     | Prod a b => fun xy => NPair (partial_reflect (fst xy)) (partial_reflect (snd xy))
-     | _ => fun xy => xy
-     end.
-(*Fixpoint smart_pair_Let {var} {tx} (ex : npair var tx) {tC} : forall (eC : partial_interp_oncep var tx -> nexpr var tC), nexpr var tC.
-  refine match ex in npair _ tx return forall (eC : partial_interp_oncep var tx -> nexpr var tC), nexpr var tC with
-         | NVar _ v => fun eC => eC v
-         | NPair _ e1 _ e2 =>
-           fun eC => _
-         end.
-simpl in *.
-     | NLet _ ex' _ eC'
-       => fun eC => NLet ex' (fun x' => @smart_Let _ _ (eC' x') _ eC)
-     | _ => _ end.
-Fixpoint smart_Let {var} {tx} (ex : nexpr var tx) {tC} : forall (eC : partial_interp_type var tx -> nexpr var tC), nexpr var tC.
-  refine match ex in nexpr _ tx return forall (eC : partial_interp_type var tx -> nexpr var tC), nexpr var tC with
-     | NLet _ ex' _ eC'
-       => fun eC => NLet ex' (fun x' => @smart_Let _ _ (eC' x') _ eC)
-     | _ => _ end.
-     | NPairInj
-       => *)
-(*Fixpoint partial_reflect' {var} {t} : partial_interp_type var t -> nexpr var t.
-  refine match t return partial_interp_type _ t -> nexpr _ t with
-     | Prod a b => fun xy => NPair (@partial_reflect' _ _ (fst xy)) (@partial_reflect' _ _ (snd xy))
-     | _ => _
-     end.
-Fixpoint partial_denote {var} {t} (x : npair (partial_interp_type var) t) : partial_interp_type var t
-  := match x in npair _ t return partial_interp_type _ t with
-     | NPair _ a _ b => (partial_denote a, partial_denote b)
-     | NVar _ v => v
-     end.*)
-
 
 
 Example example_expr : interp (Let (ZConst 7) (fun a => Let (Let (Binop OPZadd (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p => MatchPair (Var p) (fun x y => Binop OPZadd (Var x) (Var y))) )) = 28%Z. reflexivity. Qed.
@@ -531,44 +389,11 @@ Definition smart_Pair {var} {t1 t2} (e1 : expr var t1) (e2 : expr var t2) : expr
 *)
 Section subst_args.
   Context {var : type -> Type}.
-Set Printing Coercions.
-  Fixpoint subst_args {t} (e:expr (partial_interp_type var) t) {struct e} : nexpr var t.
-    refine match e in (expr _ t) return (nexpr var t) with
-    | Const t n => reify_struct n
-    | Var _ v => reify_struct_partial v
-    | Let _ ex _ eC =>
-      under_lets
-        (@subst_args _ ex)
-        (fun ex'
-         => NLet ex' (fun v => @subst_args _ (eC (NVar v))))
-    | _ => _ end; simpl in *.
 
-
-    | _ => _
-           end.
-    | Binop t1 t2 t op e1 e2
-      => under_lets
-           (@subst_args _ e1)
-           (smart_Let'
-              (fun e1'
-               => under_lets
-                    (@subst_args _ e2)
-                    (smart_Let'
-                       (fun e2'
-                        => Binop op (Var e1') (Var e2')))))
-    | Pair _ e1 _ e2
-      => under_lets (@subst_args _ e1)
-                    (fun e1' => under_lets (@subst_args _ e2)
-                                           (fun e2' => smart_Pair e1' e2'))
-    | MatchPair _ _ ep _ eC =>
-      under_lets (@subst_args _ ep)
-                 (fun ep' => match is_arg ep', CoqPairIfPair ep' with
-                             | true, Some (e1, e2) => @subst_args _ (eC e1 e2)
-                             | _, _ => MatchPair ep' (fun x y => @subst_args _ (eC (Var x) (Var y)))
-                             end)
-    end.
+  Definition subst_args {t} (e:expr _ t) : nexpr var t
+    := normalize t e.
 End subst_args.
-Definition Subst_args {t} (e:Expr t) : Expr t := fun var => subst_args (e (expr var)).
+Definition Subst_args {t} (e:Expr t) : NExpr t := fun var => subst_args (e _).
 
 
 Section reassoc_let.
@@ -611,21 +436,6 @@ Lemma reassoc_let_correct : forall {t} (e:expr interp_type t), interp (reassoc_l
            end.
 Qed.
 
-Section flatten.
-  Context {var : type -> Type}.
-  Fixpoint flatten {t} (e:expr var t) {struct e} : expr var t :=
-    match e in (expr _ t0) return (expr var t0) with
-    | @Let _ tx ex tC eC =>
-      under_lets (@flatten _ ex) (fun ex => Let ex (fun vx => @flatten _ (eC vx)))
-    | e' => e'
-    end.
-    Eval simpl in flatten (Let (Let (ZConst 1) (fun v => Let (Binop OPZadd (Var v) (Var v)) (fun v' => Pair (Var v') (Var v')))) (fun vp => MatchPair (Var vp) (fun a b => Var a ))).
-End flatten.
-
-Lemma flatten_correct {t} (e:expr interp_type t) :
-      interp (flatten e) = interp e.
-Proof. induction e; repeat (intuition congruence + simpl + rewrite under_lets_correct + rewrite_hyp !*). Qed.
-
 
 Require Import Crypto.Util.Notations .
 Require Import Crypto.Specific.GF25519.
@@ -651,7 +461,7 @@ Section Curve25519.
     exfalso.
     Time vm_compute in e.
     Time let e0 := (eval vm_compute in (Subst_args e)) in
-    clear e; pose e0.
+    clear e; pose e0 as e.
     rewrite <-unmatch_pair_correct.
     cbv iota beta delta [unmatch_pair CoqPairIfPair].
     rewrite <-flatten_correct.
