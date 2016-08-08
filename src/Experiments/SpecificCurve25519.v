@@ -51,6 +51,129 @@ Ltac reify_binop op :=
   end.
 
 
+
+Section expr.
+  Context {var : type -> Type}.
+  Inductive expr : type -> Type :=
+  | Const : forall {t}, interp_type t -> expr t
+  | Var : forall {t}, var t -> expr t
+  | Binop : forall {t1 t2 t}, binop t1 t2 t -> expr t1 -> expr t2 -> expr t
+  | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
+  | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
+  | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
+End expr.
+Arguments expr : clear implicits.
+
+Section nexp.
+  Context {var : type -> Type}.
+  Inductive nvar : type -> Type :=
+  | NVar : forall {t}, var t -> nvar t
+  | Nfst : forall {t1 t2}, nvar (Prod t1 t2) -> nvar t1
+  | Nsnd : forall {t1 t2}, nvar (Prod t1 t2) -> nvar t2.
+  Inductive nboundexpr : type -> Type :=
+  | NConst : forall {t}, interp_type t -> nboundexpr t
+  | NBinop : forall {t1 t2 t}, binop t1 t2 t -> nvar t1 -> nvar t2 -> nboundexpr t.
+  Inductive npair : type -> Type :=
+  | NVarInj : forall {t : simple_type}, nvar t -> npair t
+  | NPair : forall {t1}, npair t1 -> forall {t2}, npair t2 -> npair (Prod t1 t2).
+  Inductive nexpr : type -> Type :=
+  | NLet : forall {tx}, nboundexpr tx -> forall {tC}, (var tx -> nexpr tC) -> nexpr tC
+  | NPairInj : forall {tx}, npair tx -> nexpr tx.
+
+  Fixpoint under_lets {te} (e:nexpr te) {struct e} :
+    forall {tC} (C:npair te -> nexpr tC), nexpr tC :=
+    match e in (nexpr t) return (forall tC : type, (npair t -> nexpr tC) -> nexpr tC) with
+    | @NLet tx ex teC eC => fun tC C => NLet ex (fun vx => @under_lets _ (eC vx) _ C)
+    | @NPairInj _ e => fun _ C => C e
+    end.
+
+  Fixpoint refl (t : type) :=
+    match t with
+    | stype t' => nexpr t'
+    | Prod t0 t1 => prod (refl t0) (refl t1)
+    end.
+
+  Fixpoint reify (t : type) : refl t -> nexpr t :=
+    match t return refl t -> nexpr t with
+    | stype t' => fun e => e
+    | Prod t0 t1
+      => fun e => under_lets
+                (reify t0 (fst e))
+                (fun e0
+                 => under_lets
+                     (reify t1 (snd e))
+                     (fun e1
+                      => NPairInj (NPair e0 e1)))
+    end.
+
+  Fixpoint meaning t (e : expr refl t) {struct e} : refl t.
+    refine match e in expr _ t return refl t with
+           | Const _ v => _
+           | _ => _
+           end; simpl in *.
+
+    match e in expr _ t return refl t with
+      | Source.Var _ x => x
+      | Source.ETrue => ETrue
+      | Source.EFalse => EFalse
+      | Source.App _ _ e1 e2 => (meaning e1) (meaning e2)
+      | Source.Abs _ _ e1 => fun x => meaning (e1 x)
+    end.
+
+
+
+
+End expr.
+
+Section NbE.
+  Variable var : type -> Type.
+
+  Inductive nexp : type -> Type :=
+  | Apps {t} : apps Bool -> nexp Bool
+  | ETrue : nexp Bool
+  | EFalse : nexp Bool
+  | Abs : forall dom ran, (var dom -> nexp ran) -> nexp (dom --> ran)
+
+  with apps : type -> Type :=
+  | Var : forall t, var t -> apps t
+  | App : forall dom ran, apps (dom --> ran) -> nexp dom -> apps ran.
+
+  Fixpoint refl (t : type) : Type :=
+    match t with
+      | Bool => nexp Bool
+      | dom --> ran => refl dom -> refl ran
+    end.
+
+  Fixpoint reify (t : type) : refl t -> nexp t :=
+    match t return refl t -> nexp t with
+      | Bool => fun e => e
+      | dom --> ran => fun f => Abs (fun x => reify _ (f (reflect (Var x))))
+    end
+
+  with reflect (t : type) : apps t -> refl t :=
+    match t return apps t -> refl t with
+      | Bool => fun e => Apps e
+      | dom --> ran => fun e x => reflect (App e (reify _ x))
+    end.
+
+  Implicit Arguments reify [t].
+
+  Fixpoint meaning t (e : exp refl t) {struct e} : refl t :=
+    match e in exp _ t return refl t with
+      | Source.Var _ x => x
+      | Source.ETrue => ETrue
+      | Source.EFalse => EFalse
+      | Source.App _ _ e1 e2 => (meaning e1) (meaning e2)
+      | Source.Abs _ _ e1 => fun x => meaning (e1 x)
+    end.
+
+  Definition normalize t (e : exp refl t) : nexp t := reify (meaning e).
+End NbE.
+
+
+
+
+
 Section expr.
   Context {var : type -> Type}.
   Inductive expr : type -> Type :=
