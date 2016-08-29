@@ -4,7 +4,8 @@ Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Import Crypto.ModularArithmetic.Montgomery.ZBounded.
 Require Import Crypto.Util.Tuple.
-Require Import Coq.FSets.FMaps Coq.FSets.FMapAVL Coq.FSets.FMapFacts Coq.FSets.FMapFullAVL.
+(* These might be needed for faster lookups *)
+(*Require Import Coq.FSets.FMaps Coq.FSets.FMapAVL Coq.FSets.FMapFacts Coq.FSets.FMapFullAVL.*)
 
 Require Import Bedrock.Word.
 Require Import Crypto.Util.GlobalSettings.
@@ -46,7 +47,7 @@ Let ldi : load_immediate
             (@ZBounded.SmallT (2 ^ 256) (2 ^ 256) modulus
                               (@ZLikeOps_of_ArchitectureBoundedOps 128 ops modulus 256)) := _.
 Let isldi : is_load_immediate ldi := _.
-Let f := (fun v => proj1_sig (partial_reduce (2^256) modulus (props := props') (ldi m') I Hm (fst' v, snd' v))).
+Let f := (fun v => proj1_sig (reduce_via_partial (2^256) modulus (props := props') (ldi m') I Hm (fst' v, snd' v))).
 
 Section Definitions.
   Inductive vartype := Tbool | TW.
@@ -304,51 +305,70 @@ Module Input.
 
   Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
     Reify_rhs.
-  Abort.
+  Abort.*)
 
   Section wf.
-    Context {T : Type} {var1 var2 : type -> Type}.
+    Context {var1 var2 : type -> Type}.
 
     Local Notation "x ≡ y" := (existT _ _ (x, y)).
 
-    Definition Texpr var t := @expr T var t.
-
-    Inductive wf : list (sigT (fun t => var1 t * var2 t))%type -> forall {t}, Texpr var1 t -> Texpr var2 t -> Prop :=
-    | WfConst : forall G n, wf G (Const n) (Const n)
+    Inductive wf : list (sigT (fun t => var1 t * var2 t))%type -> forall {t}, @expr var1 t -> @expr var2 t -> Prop :=
+    | WfConst : forall G t n, wf G (Const (t := t) n) (Const n)
+    | WfSpZConst : forall G n, wf G (SpZConst n) (SpZConst n)
     | WfVar : forall G t x x', In (x ≡ x') G -> @wf G t (Var x) (Var x')
-    | WfBinop : forall G {t1} {t2} (e1:Texpr var1 t1) (e2:Texpr var1 t2)
-                       (e1':Texpr var2 t1) (e2':Texpr var2 t2) op,
+    | WfUnop : forall G {t1 t2} (op : nop 1 1 t1 t2) (e1:@expr var1 t1) (e1':@expr var2 t1),
         wf G e1 e1'
-        -> wf G e2 e2'
-        -> wf G (Binop (T := T) op e1 e2) (Binop (T := T) op e1' e2')
-    | WfLet : forall G t1 t2 e1 e1' (e2 : _ t1 -> Texpr _ t2) e2',
+        -> wf G (Unop op e1) (Unop op e1')
+    | WfBinop : forall G {t10 t11 t2} (op : nop 2 1 (t10, t11) t2)
+                       (e10:@expr var1 t10) (e11:@expr var1 t11)
+                       (e10':@expr var2 t10) (e11':@expr var2 t11),
+        wf G e10 e10'
+        -> wf G e11 e11'
+        -> wf G (Binop op e10 e11) (Binop op e10' e11')
+    | WfTrinop : forall G {t10 t11 t12 t2} (op : nop 3 1 (t10, t11, t12) t2)
+                       (e10:@expr var1 t10) (e11:@expr var1 t11) (e12:@expr var1 t12)
+                       (e10':@expr var2 t10) (e11':@expr var2 t11) (e12':@expr var2 t12),
+        wf G e10 e10'
+        -> wf G e11 e11'
+        -> wf G e12 e12'
+        -> wf G (Trinop op e10 e11 e12) (Trinop op e10' e11' e12')
+    | WfTrinop2Ret : forall G {t10 t11 t12 t2} (op : nop 3 2 (t10, t11, t12) t2)
+                       (e10:@expr var1 t10) (e11:@expr var1 t11) (e12:@expr var1 t12)
+                       (e10':@expr var2 t10) (e11':@expr var2 t11) (e12':@expr var2 t12),
+        wf G e10 e10'
+        -> wf G e11 e11'
+        -> wf G e12 e12'
+        -> wf G (Trinop2Ret op e10 e11 e12) (Trinop2Ret op e10' e11' e12')
+    | WfLet : forall G t1 t2 e1 e1' (e2 : _ t1 -> @expr _ t2) e2',
         wf G e1 e1'
         -> (forall x1 x2, wf ((x1 ≡ x2) :: G) (e2 x1) (e2' x2))
-        -> wf G (Let (T := T) e1 e2) (Let (T := T) e1' e2')
-    | WfPair : forall G {t1} {t2} (e1: Texpr var1 t1) (e2: Texpr var1 t2)
-                      (e1': Texpr var2 t1) (e2': Texpr var2 t2),
+        -> wf G (Let e1 e2) (Let e1' e2')
+    | WfPair : forall G {t1} {t2} (e1: @expr var1 t1) (e2: @expr var1 t2)
+                      (e1': @expr var2 t1) (e2': @expr var2 t2),
         wf G e1 e1'
         -> wf G e2 e2'
-        -> wf G (Pair (T := T) e1 e2) (Pair (T := T) e1' e2')
-    | WfMatchPair : forall G t1 t2 tC ep ep' (eC : _ t1 -> _ t2 -> Texpr _ tC) eC',
+        -> wf G (Pair e1 e2) (Pair e1' e2')
+    | WfMatchPair : forall G t1 t2 tC ep ep' (eC : _ t1 -> _ t2 -> @expr _ tC) eC',
         wf G ep ep'
         -> (forall x1 x2 y1 y2, wf ((x1 ≡ x2) :: (y1 ≡ y2) :: G) (eC x1 y1) (eC' x2 y2))
-        -> wf G (MatchPair (T := T) ep eC) (MatchPair (T := T) ep' eC').
+        -> wf G (MatchPair ep eC) (MatchPair ep' eC').
   End wf.
 
-  Definition Wf {T: Type} {t} (E : @Expr T t) := forall var1 var2, wf nil (E var1) (E var2).
+  (*Definition Wf {t} (E : @Expr t) := forall var1 var2, wf nil (E var1) (E var2).*)
 
-  Example example_Expr_Wf : Wf example_Expr.
+  Example example_Expr_Wf : forall var1 var2 (xv1 yv1 : var1 (Tconst TW)) (xv2 yv2 : var2 (Tconst TW)),
+      wf ((existT _ _ (yv1, yv2)) :: (existT _ _ (xv1, xv2)) :: nil) (example_expr var1 xv1 yv1) (example_expr var2 xv2 yv2).
   Proof.
-    unfold Wf; repeat match goal with
-    | [ |- wf _ _ _ ] => constructor
-    | [ |- In ?x (cons ?x _) ] => constructor 1; reflexivity
-    | [ |- In _ _ ] => constructor 2
-    | _ => intros
-    end.
+    repeat match goal with
+           | [ |- wf _ _ _ ] => constructor
+           | [ |- In ?x (cons ?x _) ] => constructor 1; reflexivity
+           | [ |- In _ _ ] => progress unfold tuple'_fold, id, fst
+           | [ |- In _ _ ] => constructor 2; constructor 1; reflexivity
+           | _ => intros
+           end.
   Qed.
 
-  Axiom Wf_admitted : forall {t} (E:Expr t), @Wf Z t E.
+  (*Axiom Wf_admitted : forall {t} (E:Expr t), @Wf Z t E.
   Ltac admit_Wf := apply Wf_admitted.*)
 End Input.
 
@@ -404,7 +424,7 @@ Module Output.
       | LetTrinop _ _ _ op a b c _ eC
         => let x := interp_nop op (interp_arg a, interp_arg b, interp_arg c) in interp (eC x)
       | LetTrinop2Ret _ _ _ op a b c _ eC
-        => let '(c, v) := interp_nop op (interp_arg a, interp_arg b, interp_arg c) in interp (eC c v)
+        => let '(c, v) := eta (interp_nop op (interp_arg a, interp_arg b, interp_arg c)) in interp (eC c v)
       | Return _ a => interp_arg a
       end.
 
@@ -433,11 +453,11 @@ Module Output.
          end.
   End under_lets.
 
-  (*Lemma under_lets_correct {t} (e: @expr T _ t) {tC}
-    (C: @arg T _ t -> @expr T _ tC)
+  Lemma under_lets_correct {t} (e: @expr _ t) {tC}
+    (C: @arg _ t -> @expr _ tC)
     (C_Proper : forall a1 a2, interp_arg a1 = interp_arg a2 -> interp (C a1) = interp (C a2)) :
     forall a, interp_arg a = interp e -> interp (under_lets e C) = interp (C a).
-  Proof. induction e; repeat (intuition (congruence || eauto) + simpl + rewrite_hyp !* ). Qed.*)
+  Proof. induction e; repeat (intuition (congruence || eauto) + simpl + rewrite_hyp !* ). Qed.
 
   Section match_arg.
     Context {var:vartype -> Type}.
@@ -522,10 +542,10 @@ Module Output.
               interp (C a1) = interp (C a2)) :
     interp (under_lets e C) = interp (C (@uninterp_arg t (interp e))).
   Proof.
-    (*intros; apply under_lets_correct;
+    intros; apply under_lets_correct;
     [ assumption
-    | rewrite interp_arg_uninterp_arg; reflexivity ].*)
-  Admitted.
+    | rewrite interp_arg_uninterp_arg; reflexivity ].
+  Qed.
 End Output.
 
 Section compile.
@@ -589,12 +609,27 @@ Section compile.
 (*Definition Compile {t} (e:Input.Expr t) : Output.Expr t := fun var =>
   compile (e (@Output.arg var)).*)
 
-(*Lemma compile_correct {_: Evaluable Z} {t} e1 e2 G (wf:Input.wf G e1 e2) :
+Lemma interp_reify_interped t n
+  : Output.interp (t := t) (reify_interped n) = n.
+Proof.
+  induction t; simpl.
+  { repeat break_match; reflexivity. }
+  { repeat first [ reflexivity
+                 | rewrite !Output.interp_under_lets
+                 | rewrite !Output.interp_arg_uninterp_arg
+                 | rewrite <- surjective_pairing
+                 | intro
+                 | progress simpl in *
+                 | rewrite_hyp !* ]. }
+Qed.
+
+Lemma compile_correct {t} e1 e2 G (wf:Input.wf G e1 e2) :
   List.Forall (fun v => let 'existT _ (x, a) := v in Output.interp_arg a = x) G ->
     Output.interp (compile e2) = Input.interp e1 :> interp_type t.
 Proof.
   induction wf;
     repeat match goal with
+           | [ |- ?x = ?x ] => reflexivity
     | [HIn:In ?x ?l, HForall:Forall _ ?l |- _ ] =>
       (pose proof (proj1 (Forall_forall _ _) HForall _ HIn); clear HIn)
     | [ H : Output.match_arg_Prod _ = (_, _) |- _ ] =>
@@ -608,14 +643,18 @@ Proof.
     | _ => progress specialize_by assumption
     | _ => progress break_match
     | _ => rewrite !Output.interp_under_lets
+    | _ => rewrite !interp_reify_interped
     | _ => rewrite !Output.interp_arg_uninterp_arg
+    | _ => rewrite <- !surjective_pairing
     | _ => progress erewrite_hyp !*
     | _ => apply Forall_cons
+    | [ |- context[match ?op with OPldi => _ | _ => _ end] ]
+      => solve [ exfalso; refine (match op with OPldi => idProp end) ]
     | _ => solve [intuition (congruence || eauto)]
     end.
 Qed.
 
-Lemma Compile_correct {_: Evaluable Z} {t} (E:Input.Expr t) (WfE:Input.Wf E) :
+(*Lemma Compile_correct {_: Evaluable Z} {t} (E:Input.Expr t) (WfE:Input.Wf E) :
   Output.Interp (Compile E) = Input.Interp E.
 Proof. eapply compile_correct; eauto. Qed.
  *)
@@ -803,10 +842,10 @@ Fixpoint cseExpr {var t} v xs := @cseExpr_step var (@cseExpr var) t v xs.
 
 (*Definition Compile {t} (e:Input.Expr t) : Output.Expr t := fun var =>
   compile (e (@Output.arg var)).*)
-
-(*Lemma compile_correct {_: Evaluable Z} {t} e1 e2 G (wf:Input.wf G e1 e2) :
+Set Printing Implicit.
+Lemma cse_correct {t} e1 e2 G (wf:Input.wf G e1 e2) :
   List.Forall (fun v => let 'existT _ (x, a) := v in Output.interp_arg a = x) G ->
-    Output.interp (compile e2) = Input.interp e1 :> interp_type t.
+    Output.interp (cseExpr e2) = Input.interp e1 :> interp_type t.
 Proof.
   induction wf;
     repeat match goal with
@@ -853,6 +892,7 @@ Section syn.
   | cMul128 : Syntax -> Syntax -> Syntax
   | cSelc : var Tbool -> Syntax -> Syntax -> Syntax
   | cAddc : var Tbool -> Syntax -> Syntax -> Syntax
+  | cAddm : Syntax -> Syntax -> Syntax
   | cAdd : Syntax -> Syntax -> Syntax
   | cSub : Syntax -> Syntax -> Syntax
   | cPair : Syntax -> Syntax -> Syntax
@@ -925,6 +965,8 @@ Proof.
                        => cSub x0' x1'
                      | OPselc, cVarC x0', _, _
                        => cSelc x0' x1' x2'
+                     | OPaddm, _, RegMod, _
+                       => cAddm x0' x1'
                      | _, _, _, _ => cINVALID op
                      end)
                     (fun v => @assemble_syntax var _ (b (cVar v)))
@@ -990,6 +1032,9 @@ Notation "'clet' ( c , x ) := 'sub' A B 'in' b" :=
 Notation "'ilet' x := 'selc' A B C 'in' b" :=
   (Output.LetTrinop OPselc (Output.Var A) (Output.Var B) (Output.Var C) (fun x => b))
     (at level 200, b at level 200, format "'ilet'  x  :=  'selc'  A  B  C  'in' '//' b").
+Notation "'ilet' x := 'addm' A B C 'in' b" :=
+  (Output.LetTrinop OPaddm (Output.Var A) (Output.Var B) (Output.Var C) (fun x => b))
+    (at level 200, b at level 200, format "'ilet'  x  :=  'addm'  A  B  C  'in' '//' b").
 Notation Return x := (Output.Return (Output.Var x)).
 
 Definition compiled_example (x y : fancy_machine.W) : Output.expr (var:=interp_type) TW
@@ -1182,6 +1227,19 @@ Notation "'c.Sub' ( x , A , B ) , b" :=
 Notation "'c.Sub' ( x , A , B ) , b" :=
   (cBindCarry (cSub (cVar A) (cVar B)) (fun _ x => b))
     (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
+
+Notation "'c.Addm' ( x , A , B ) , b" :=
+  (cBind (cAddm A B) (fun x => b))
+    (at level 200, b at level 200, format "'c.Addm' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Addm' ( x , A , B ) , b" :=
+  (cBind (cAddm A (cVar B)) (fun x => b))
+    (at level 200, b at level 200, format "'c.Addm' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Addm' ( x , A , B ) , b" :=
+  (cBind (cAddm (cVar A) B) (fun x => b))
+    (at level 200, b at level 200, format "'c.Addm' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Addm' ( x , A , B ) , b" :=
+  (cBind (cAddm (cVar A) (cVar B)) (fun x => b))
+    (at level 200, b at level 200, format "'c.Addm' ( x ,  A ,  B ) , '//' b").
 
 Notation "'c.LowerHalf' ( x )" :=
   (cLowerHalf x)
