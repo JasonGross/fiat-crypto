@@ -883,9 +883,13 @@ Definition compiled_example (x y : fancy_machine.W) : Output.expr (var:=interp_t
       let x := (x, SVar TW 0)%core in
       let y := (y, SVar TW 1)%core in
       @cseExpr interp_type _
-               (@compile _ _ (example_expr _ (Output.Var x) (Output.Var y)))
+               (ilet RegZero := ldi (0 : interp_type TZ) in
+                ilet RegMod := ldi modulus in
+                ilet RegPinv := ldi m' in
+                @compile _ _ (example_expr _ (Output.Var x) (Output.Var y)))
                (y::x::nil, nil).
 Print compiled_example.
+
 
 (* compiled_example =
 fun x y : fancy_machine.W =>
@@ -915,6 +919,91 @@ clet (x29, x30) := adc y x26 x27 in
 ilet x31 := ldi 0 in
 ilet x32 := selc x29 x10 x31 in
 clet (_, x34) := sub x30 x32 in
+Return x34
+     : fancy_machine.W -> fancy_machine.W -> Output.expr TW
+ *)
+
+
+Notation "'ilet' x := 'ldi' v 'in' b" :=
+  (Output.LetUnop OPldi (Output.Const v) (fun x => b))
+    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  v  'in' '//' b").
+Notation "'ilet' x := 'ldi' 'm'' 'in' b" :=
+  (Output.LetUnop OPldi (Output.SpZConst Cm') (fun x => b))
+    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'm''  'in' '//' b").
+Notation "'ilet' x := 'ldi' 'modulus' 'in' b" :=
+  (Output.LetUnop OPldi (Output.SpZConst Cmodulus) (fun x => b))
+    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'modulus'  'in' '//' b").
+Notation "'c.Mul128' ( x , 'c.LowerHalf' ( A ) , 'c.LowerHalf' ( B ) ) , b" :=
+  (Output.LetBinop OPmulhwll (Output.Var A) (Output.Var B) (fun x => b))
+    (at level 200, b at level 200, A at level 0, B at level 0, format "'c.Mul128' ( x ,  'c.LowerHalf' ( A ) ,  'c.LowerHalf' ( B ) ) , '//' b").
+Notation "'c.Mul128' ( x , 'c.UpperHalf' ( A ) , 'c.LowerHalf' ( B ) ) , b" :=
+  (Output.LetBinop OPmulhwhl (Output.Var A) (Output.Var B) (fun x => b))
+    (at level 200, b at level 200, A at level 0, B at level 0, format "'c.Mul128' ( x ,  'c.UpperHalf' ( A ) ,  'c.LowerHalf' ( B ) ) , '//' b").
+Notation "'c.Mul128' ( x , 'c.UpperHalf' ( A ) , 'c.UpperHalf' ( B ) ) , b" :=
+  (Output.LetBinop OPmulhwhh (Output.Var A) (Output.Var B) (fun x => b))
+    (at level 200, b at level 200, A at level 0, B at level 0, format "'c.Mul128' ( x ,  'c.UpperHalf' ( A ) ,  'c.UpperHalf' ( B ) ) , '//' b").
+Notation "'let' x := 'c.LeftShifted' { A , B } 'in' b" :=
+  (Output.LetBinop OPshl (Output.Var A) (Output.Const B) (fun x => b))
+    (at level 200, b at level 200, format "'let'  x  :=  'c.LeftShifted' { A ,  B }  'in' '//' b").
+Notation "'let' x := 'c.RightShifted' { A , B } 'in' b" :=
+  (Output.LetBinop OPshr (Output.Var A) (Output.Const B) (fun x => b))
+    (at level 200, b at level 200, format "'let'  x  :=  'c.RightShifted' { A ,  B }  'in' '//' b").
+Notation "'clet' ( c , x ) := 'adc' A B C 'in' b" :=
+  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
+    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'adc'  A  B  C  'in' '//' b").
+Notation "'clet' ( c , x ) := 'subc' A B C 'in' b" :=
+  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
+    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'subc'  A  B  C  'in' '//' b").
+Notation "'clet' ( c , x ) := 'add' A B 'in' b" :=
+  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => b))
+    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'add'  A  B  'in' '//' b").
+
+Notation "'c.Add' ( x , A , B ) , b" :=
+  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' b").
+
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x' , A' , B' ) , b" :=
+  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => (Output.LetTrinop2Ret OPadc (Output.Var A') (Output.Var B') (Output.Var c) (fun _ x' => b))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x' ,  A' ,  B' ) , '//' b").
+
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x' , A' , B' ) , 'c.Selc' ( x'' , A'' , B'' ) , b" :=
+  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => (Output.LetTrinop2Ret OPadc (Output.Var A') (Output.Var B') (Output.Var c) (fun c' x' => (Output.LetTrinop OPselc (Output.Var c') (Output.Var A'') (Output.Var B'') (fun x'' => b))))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x' ,  A' ,  B' ) , '//' 'c.Selc' ( x'' ,  A'' ,  B'' ) , '//' b").
+
+Notation "'c.Sub' ( x , A , B ) , b" :=
+  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Const false) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
+Print compiled_example.
+
+
+(* compiled_example =
+fun x y : fancy_machine.W =>
+ilet x0 := ldi 0 in
+ilet x1 := ldi modulus in
+ilet x2 := ldi m' in
+c.Mul128(x3, c.LowerHalf(x), c.LowerHalf(x2)),
+c.Mul128(x4, c.UpperHalf(x), c.LowerHalf(x2)),
+let x5 := c.LeftShifted{x4, 128} in
+c.Add(x7, x3, x5),
+c.Mul128(x8, c.UpperHalf(x2), c.LowerHalf(x)),
+let x9 := c.LeftShifted{x8, 128} in
+c.Add(x11, x7, x9),
+c.Mul128(x12, c.UpperHalf(x11), c.UpperHalf(x1)),
+c.Mul128(x13, c.UpperHalf(x11), c.LowerHalf(x1)),
+let x14 := c.RightShifted{x13, 128} in
+c.Mul128(x15, c.LowerHalf(x11), c.LowerHalf(x1)),
+let x16 := c.LeftShifted{x13, 128} in
+c.Add(x18, x15, x16),
+c.Addc(x20, x12, x14),
+c.Mul128(x21, c.UpperHalf(x1), c.LowerHalf(x11)),
+let x22 := c.RightShifted{x21, 128} in
+let x23 := c.LeftShifted{x21, 128} in
+c.Add(x25, x18, x23),
+c.Addc(x27, x20, x22),
+c.Add(_, x, x25),
+c.Addc(x31, y, x27),
+c.Selc(x32, x1, x0),
+c.Sub(x34, x31, x32),
 Return x34
      : fancy_machine.W -> fancy_machine.W -> Output.expr TW
  *)
