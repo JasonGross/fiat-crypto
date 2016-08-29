@@ -1166,12 +1166,21 @@ Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2
 Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2 , B2 ) , b" :=
   (cBindCarry (cAdd (cVar A) B) (fun c x => cBindCarry (cAddc c (cVar A1) B1) (fun c1 x1 => cBind (cSelc c1 A2 B2) (fun x2 => b))))
     (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' 'c.Selc' ( x2 ,  A2 ,  B2 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2 , B2 ) , b" :=
+  (cBindCarry (cAdd (cVar A) (cVar B)) (fun c x => cBindCarry (cAddc c (cVar A1) (cVar B1)) (fun c1 x1 => cBind (cSelc c1 A2 B2) (fun x2 => b))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' 'c.Selc' ( x2 ,  A2 ,  B2 ) , '//' b").
 
 Notation "'c.Sub' ( x , A , B ) , b" :=
   (cBindCarry (cSub A B) (fun _ x => b))
     (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
 Notation "'c.Sub' ( x , A , B ) , b" :=
   (cBindCarry (cSub (cVar A) B) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Sub' ( x , A , B ) , b" :=
+  (cBindCarry (cSub A (cVar B)) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Sub' ( x , A , B ) , b" :=
+  (cBindCarry (cSub (cVar A) (cVar B)) (fun _ x => b))
     (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
 
 Notation "'c.LowerHalf' ( x )" :=
