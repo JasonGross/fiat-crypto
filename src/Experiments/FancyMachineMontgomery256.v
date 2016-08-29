@@ -4,7 +4,7 @@ Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Import Crypto.ModularArithmetic.Montgomery.ZBounded.
 Require Import Crypto.Util.Tuple.
-
+Require Import Coq.FSets.FMaps Coq.FSets.FMapAVL Coq.FSets.FMapFacts Coq.FSets.FMapFullAVL.
 
 Require Import Bedrock.Word.
 Require Import Crypto.Util.GlobalSettings.
@@ -50,9 +50,9 @@ Let f := (fun v => proj1_sig (partial_reduce (2^256) modulus (props := props') (
 
 Section Definitions.
   Inductive vartype := Tbool | TW.
-  Inductive consttype := TZ.
-  Inductive type := Tvar (_ : vartype) | Tconst (_ : consttype) | Prod : type -> type -> type.
-  Global Coercion Tvar : vartype >-> type.
+  Inductive consttype := TZ | Tvar (_ : vartype).
+  Inductive type := Tconst (_ : consttype) | Prod : type -> type -> type.
+  Global Coercion Tvar : vartype >-> consttype.
   Global Coercion Tconst : consttype >-> type.
 
   Fixpoint interp_type (t:type): Type :=
@@ -65,8 +65,8 @@ Section Definitions.
 
   Section ind.
     Local Notation TZ := (Tconst TZ).
-    Local Notation TW := (Tvar TW).
-    Local Notation Tbool := (Tvar Tbool).
+    Local Notation TW := (Tconst TW).
+    Local Notation Tbool := (Tconst Tbool).
     Inductive nop : forall (narg nret : nat), tuple type narg -> tuple type nret -> Type :=
     | OPldi     : nop 1 1 TZ TW
     | OPshrd    : nop 3 1 (TW, TW, TZ) TW
@@ -258,16 +258,23 @@ Module Input.
       (fun var => ?C) => constr:(fun (var:type->Type) => C) (* copy the term but not the type cast *)
     end.
 
-  Definition example_expr var : fancy_machine.W -> fancy_machine.W -> expr (var:=var) TW.
+  Definition example_expr' var : forall (x y : fancy_machine.W) (xv yv : var (Tconst TW)), expr (var:=var) TW.
   Proof.
-    intros x y.
+    intros x y xv yv.
     let f' := (eval cbv [f] in (f (x, y))) in
     let f' := (eval simpl in f') in
     let f' := (eval unfold fst', snd', fst, snd in f') in
-    let rv := (reify var f') in exact rv.
+    let rv := constr:(fun (_:reify_var_for_in_is x TW xv) (_:reify_var_for_in_is y TW yv) => (_ : reify var f')) in
+    lazymatch rv with fun _ _ => ?rv => exact rv end.
   Defined.
 
-  Lemma example_expr_good x y : Interp (fun var => @example_expr var x y) = f (x, y).
+  Definition example_expr var : forall (xv yv : var (Tconst TW)), expr (var:=var) TW.
+  Proof.
+    let f := (eval cbv beta delta [example_expr'] in (example_expr' var)) in
+    lazymatch f with fun _ _ => ?rv => exact rv end.
+  Defined.
+
+  Lemma example_expr_good x y : interp (@example_expr _ x y) = f (x, y).
   Proof.
     cbv [Interp interp example_expr fst snd interp_nop].
     unfold f; simpl.
@@ -360,7 +367,7 @@ Module Output.
                                    forall {tC}, (var TW -> expr tC) -> expr tC
       | LetTrinop : forall {t1 t2 t3}, nop 3 1 (t1, t2, t3) TW -> arg t1 -> arg t2 -> arg t3 ->
                                        forall {tC}, (var TW -> expr tC) -> expr tC
-      | LetTrinop2Ret : forall {t1 t2 t3}, nop 3 2 (t1, t2, t3) (Tvar Tbool, Tvar TW)
+      | LetTrinop2Ret : forall {t1 t2 t3}, nop 3 2 (t1, t2, t3) (Tconst Tbool, Tconst TW)
                                            -> arg t1 -> arg t2 -> arg t3 ->
                                            forall {tC}, (var Tbool -> var TW -> expr tC) -> expr tC
       | Return : forall {t}, arg t -> expr t.
@@ -495,7 +502,7 @@ Module Output.
   Lemma interp_arg_uninterp_arg : forall t (a:interp_type t), interp_arg (uninterp_arg a) = a.
   Proof.
     induction t; simpl; intros; try reflexivity;
-      break_match; subst; simpl; intuition congruence.
+      repeat break_match; subst; simpl; intuition try congruence.
   Qed.
 
   Lemma interp_under_lets {t: type} {tC: type}
@@ -514,8 +521,6 @@ End Output.
 Section compile.
   Context {ivar : type -> Type}.
   Context {ovar : type -> Type}.
-  Context (make_ovar_W : fancy_machine.W -> ovar TW)
-          (make_ovar_bool : bool -> ovar Tbool).
 
   Fixpoint reify_interped {t} : interp_type t -> @Output.expr ovar t
     := match t return interp_type t -> @Output.expr ovar t with
@@ -529,8 +534,8 @@ Section compile.
                        (fun x1
                         => Output.Return (Output.Pair x0 x1)))
        | TZ => fun n => Output.Return (Output.Const n)
-       | TW => fun n => Output.Return (Output.Var (make_ovar_W n))
-       | Tbool => fun n => Output.Return (Output.Var (make_ovar_bool n))
+       | TW => fun n => Output.Return (Output.Const n)
+       | Tbool => fun n => Output.Return (Output.Const n)
        end.
 
   Fixpoint compile {t} (e:@Input.expr (@Output.arg ovar) t) : @Output.expr ovar t
@@ -602,11 +607,120 @@ Qed.
 Lemma Compile_correct {_: Evaluable Z} {t} (E:Input.Expr t) (WfE:Input.Wf E) :
   Output.Interp (Compile E) = Input.Interp E.
 Proof. eapply compile_correct; eauto. Qed.
-*)
+ *)
+
+Section symbolic.
+  Local Set Boolean Equality Schemes.
+  Local Set Decidable Equality Schemes.
+  (** Holds decidably-equal versions of raw expressions, for lookup. *)
+  Inductive sop : Set :=
+    SOPldi | SOPshrd | SOPshl | SOPshr | SOPmkl | SOPadc | SOPsubc | SOPmulhwll | SOPmulhwhl | SOPmulhwhh | SOPselc | SOPaddm.
+  Inductive SymbolicExpr : Set :=
+  | SConstZ : Z -> SymbolicExpr
+  | SConstBool : bool -> SymbolicExpr
+  | SConstW : nat -> SymbolicExpr
+  | SVar : vartype -> nat -> SymbolicExpr
+  | SPair : SymbolicExpr -> SymbolicExpr -> SymbolicExpr
+  | SUnOp : sop -> SymbolicExpr -> SymbolicExpr
+  | SBinOp : sop -> SymbolicExpr -> SymbolicExpr -> SymbolicExpr
+  | STrinOp : sop -> SymbolicExpr -> SymbolicExpr -> SymbolicExpr -> SymbolicExpr
+  | STrinOp2Ret : sop -> SymbolicExpr -> SymbolicExpr -> SymbolicExpr -> SymbolicExpr.
+End symbolic.
+
+Section CSE.
+  Context {ovar : type -> Type}.
+
+  Fixpoint reify_interped {t} : interp_type t -> @Output.expr ovar t
+    := match t return interp_type t -> @Output.expr ovar t with
+       | Prod t0 t1
+         => fun x0x1
+            => @Output.under_lets
+                 _ _ (@reify_interped t0 (fst x0x1)) _
+                 (fun x0
+                  => @Output.under_lets
+                       _ _ (@reify_interped t1 (snd x0x1)) _
+                       (fun x1
+                        => Output.Return (Output.Pair x0 x1)))
+       | TZ => fun n => Output.Return (Output.Const n)
+       | TW => fun n => Output.Return (Output.Const n)
+       | Tbool => fun n => Output.Return (Output.Const n)
+       end.
+
+  Fixpoint compile {t} (e:@Input.expr (@Output.arg ovar) t) : @Output.expr ovar t
+    := match e in @Input.expr _ t return @Output.expr ovar t with
+           | Input.Const _ n => reify_interped n
+           | Input.Var _ n => Output.Return n
+           | Input.Unop _ TW op a =>
+             Output.under_lets (@compile _ a) (fun arg1 =>
+                Output.LetUnop op arg1 (fun v => Output.Return (Output.Var v)))
+           | Input.Unop _ _ op a => match op with OPldi => fun x => x end (* whee small inversion magic *)
+           | Input.Binop _ _ TW op a b =>
+             Output.under_lets (@compile _ a) (fun arg1 =>
+             Output.under_lets (@compile _ b) (fun arg2 =>
+                Output.LetBinop op arg1 arg2 (fun v => Output.Return (Output.Var v))))
+           | Input.Binop _ _ _ op a b => match op with OPldi => fun x => x end (* whee small inversion magic *)
+           | Input.Trinop _ _ _ TW op a b c =>
+             Output.under_lets (@compile _ a) (fun arg1 =>
+             Output.under_lets (@compile _ b) (fun arg2 =>
+             Output.under_lets (@compile _ c) (fun arg3 =>
+                Output.LetTrinop op arg1 arg2 arg3 (fun v => Output.Return (Output.Var v)))))
+           | Input.Trinop _ _ _ _ op a b c => match op with OPldi => fun x => x end (* whee small inversion magic *)
+           | Input.Trinop2Ret _ _ _ (Tbool, TW) op a b c =>
+             Output.under_lets (@compile _ a) (fun arg1 =>
+             Output.under_lets (@compile _ b) (fun arg2 =>
+             Output.under_lets (@compile _ c) (fun arg3 =>
+                Output.LetTrinop2Ret op arg1 arg2 arg3 (fun v0 v1 => Output.Return (Output.Pair (Output.Var v0) (Output.Var v1))))))
+           | Input.Trinop2Ret _ _ _ _ op a b c => match op with OPldi => fun x => x end (* whee small inversion magic *)
+    | Input.Let _ ex _ eC =>
+       Output.under_lets (@compile _ ex) (fun arg => @compile _ (eC arg))
+    | Input.Pair _ e1 _ e2 =>
+       Output.under_lets (@compile _ e1) (fun arg1 =>
+          Output.under_lets (@compile _ e2) (fun arg2 =>
+             Output.Return (Output.Pair arg1 arg2)))
+    | Input.MatchPair _ _ ep _ eC =>
+        Output.under_lets (@compile _ ep) (fun arg =>
+          let (a1, a2) := Output.match_arg_Prod arg in @compile _ (eC a1 a2))
+           end.
+  End compile.
+
+(*Definition Compile {t} (e:Input.Expr t) : Output.Expr t := fun var =>
+  compile (e (@Output.arg var)).*)
+
+(*Lemma compile_correct {_: Evaluable Z} {t} e1 e2 G (wf:Input.wf G e1 e2) :
+  List.Forall (fun v => let 'existT _ (x, a) := v in Output.interp_arg a = x) G ->
+    Output.interp (compile e2) = Input.interp e1 :> interp_type t.
+Proof.
+  induction wf;
+    repeat match goal with
+    | [HIn:In ?x ?l, HForall:Forall _ ?l |- _ ] =>
+      (pose proof (proj1 (Forall_forall _ _) HForall _ HIn); clear HIn)
+    | [ H : Output.match_arg_Prod _ = (_, _) |- _ ] =>
+      apply Output.match_arg_Prod_correct in H
+    | [ H : Output.Pair _ _ = Output.Pair _ _ |- _ ] =>
+      apply Output.Pair_eq in H
+    | [ H : (_, _) = (_, _) |- _ ] => inversion H; clear H
+    | _ => progress intros
+    | _ => progress simpl in *
+    | _ => progress subst
+    | _ => progress specialize_by assumption
+    | _ => progress break_match
+    | _ => rewrite !Output.interp_under_lets
+    | _ => rewrite !Output.interp_arg_uninterp_arg
+    | _ => progress erewrite_hyp !*
+    | _ => apply Forall_cons
+    | _ => solve [intuition (congruence || eauto)]
+    end.
+Qed.
+
+Lemma Compile_correct {_: Evaluable Z} {t} (E:Input.Expr t) (WfE:Input.Wf E) :
+  Output.Interp (Compile E) = Input.Interp E.
+Proof. eapply compile_correct; eauto. Qed.
+ *)
+
 Import Input.
 
-Definition compiled_example (x y : fancy_machine.W) : Output.expr (var:=interp_type) TW
-  := Eval vm_compute in @compile interp_type id id _ (example_expr _ x y).
+Definition compiled_example x y : Output.expr (var:=interp_type) TW
+  := Eval vm_compute in @compile interp_type _ (example_expr _ (Output.Var x) (Output.Var y)).
 Notation "'ilet' x := 'ldi' v 'in' b" :=
   (Output.LetUnop OPldi (Output.Const v) (fun x => b))
     (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  v  'in' '//' b").
@@ -632,10 +746,10 @@ Notation "'clet' ( c , x ) := 'subc' A B C 'in' b" :=
   (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
     (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'subc'  A  B  C  'in' '//' b").
 Notation "'clet' ( c , x ) := 'add' A B 'in' b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Var false) (fun c x => b))
+  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => b))
     (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'add'  A  B  'in' '//' b").
 Notation "'clet' ( c , x ) := 'sub' A B 'in' b" :=
-  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Var false) (fun c x => b))
+  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => b))
     (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'sub'  A  B  'in' '//' b").
 Notation "'ilet' x := 'selc' A B C 'in' b" :=
   (Output.LetTrinop OPselc (Output.Var A) (Output.Var B) (Output.Var C) (fun x => b))
