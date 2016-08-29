@@ -628,8 +628,106 @@ Section symbolic.
 End symbolic.
 
 Section CSE.
-  Context {ovar : type -> Type}.
+  Context {var : type -> Type}.
+  Let svar t := (var t * SymbolicExpr)%type.
+  Let mapping := (list (svar TW) * list (svar Tbool))%type.
 
+  Fixpoint lookup' {t} (sv : SymbolicExpr) (xs : list (svar t)) {struct xs} : option (var t) :=
+    match xs with
+    | nil => None
+    | (x, sv') :: xs' =>
+      if SymbolicExpr_beq sv' sv
+      then Some x
+      else lookup' sv xs'
+    end.
+  Definition lookup t (sv : SymbolicExpr) (xs : mapping) : option (var t) :=
+    match t with
+    | TW => lookup' sv (fst xs)
+    | Tbool => lookup' sv (snd xs)
+    | _ => None
+    end.
+  Definition symbolicify_var {t : vartype} (v : var t) (xs : mapping) : SymbolicExpr :=
+    SVar t (match t with
+            | TW => length (fst xs)
+            | Tbool => length (snd xs)
+            end).
+  Definition add_mapping {t} (v : var t) (xs : mapping) : mapping :=
+    match t return var t -> mapping with
+    | TW => fun v => ((v, SVar TW (length (fst xs))) :: fst xs, snd xs)
+    | Tbool => fun v => (fst xs, (v, SVar Tbool (length (snd xs))) :: snd xs)
+    | _ => fun _ => xs
+    end v.
+
+  Fixpoint cseArg {t} (v : @Output.arg svar t) (xs : mapping) {struct v}
+    : @Output.arg var t * option SymbolicExpr
+    := match v in Output.arg t return Output.arg t * option SymbolicExpr with
+       | Output.Const Tbool v'
+         => let sv := SConstBool v' in
+           (match lookup Tbool sv xs with
+            | Some val => Output.Var val
+            | None => Output.Const v'
+            end,
+            Some sv)
+       | Output.Const TZ v'
+         => (Output.Const v', Some (SConstZ v'))
+       | Output.Const _ v' => (Output.Const v', None)
+       | Output.Var t v'
+         => (Output.Var (match lookup t (snd v') xs with
+                        | Some val => val
+                        | None => fst v'
+                        end),
+            Some (snd v'))
+       | Output.Pair _ v0 _ v1
+         => let '(v0v, v0s) := eta (@cseArg _ v0 xs) in
+           let '(v1v, v1s) := eta (@cseArg _ v1 xs) in
+           (Output.Pair v0v v1v,
+            match v0s, v1s with
+            | Some v0', Some v1' => Some (SPair v0' v1')
+            | _, _ => None
+            end)
+       end.
+  Definition cseOp {narg nret t1 t2} (op : @nop narg nret t1 t2) : sop
+    := match op with
+       | OPldi => SOPldi
+       | OPshrd => SOPshrd
+       | OPshl => SOPshl
+       | OPshr => SOPshr
+       | OPmkl => SOPmkl
+       | OPadc => SOPadc
+       | OPsubc => SOPsubc
+       | OPmulhwll => SOPmulhwll
+       | OPmulhwhl => SOPmulhwhl
+       | OPmulhwhh => SOPmulhwhh
+       | OPselc => SOPselc
+       | OPaddm => SOPaddm
+       end.
+
+  Fixpoint cseExpr {t} (v : @Output.expr svar t) (xs : mapping) {struct v}
+    : @Output.expr var t.
+    refine match v in Output.expr t return Output.expr t with
+           | Output.LetUnop _ op x0 _ f
+             => let sop := cseOp op in
+               let '(x0v, x0s) := eta (cseArg x0 xs) in
+               let sv := match x0s with
+                         | Some x0' => Some (SUnOp sop x0')
+                         | _ => None
+                         end in
+               let default_head := Output.LetUnop op x0v in
+               match sv with
+               | Some sv'
+                 => match lookup _ sv' xs with
+                   | Some v' => @cseExpr _ (f (v', sv')) xs
+                   | None => default_head (fun v => @cseExpr _ (f v) (add_mapping v xs))
+                   end
+               | None => default_head _
+               end
+           | Output.LetBinop _ _ op x0 x1 _ f => _
+           | Output.LetTrinop _ _ _ op x0 x1 x2 _ f => _
+           | Output.LetTrinop2Ret _ _ _ op x0 x1 x2 _ f => _
+           | Output.Return _ x => Output.Return (fst (cseArg x xs))
+           end.
+    Focus 5.
+    :=
   Fixpoint reify_interped {t} : interp_type t -> @Output.expr ovar t
     := match t return interp_type t -> @Output.expr ovar t with
        | Prod t0 t1
