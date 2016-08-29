@@ -835,6 +835,120 @@ Lemma Compile_correct {_: Evaluable Z} {t} (E:Input.Expr t) (WfE:Input.Wf E) :
 Proof. eapply compile_correct; eauto. Qed.
  *)
 
+
+Section syn.
+  Context {var : vartype -> Type}.
+  Inductive Syntax :=
+  | RegPInv
+  | RegMod
+  | RegZero
+  | cLowerHalf : Syntax -> Syntax
+  | cUpperHalf : Syntax -> Syntax
+  | cLeftShifted : Syntax -> Z -> Syntax
+  | cRightShifted : Syntax -> Z -> Syntax
+  | cVar : var TW -> Syntax
+  | cVarC : var Tbool -> Syntax
+  | cBind : Syntax -> (var TW -> Syntax) -> Syntax
+  | cBindCarry : Syntax -> (var Tbool -> var TW -> Syntax) -> Syntax
+  | cMul128 : Syntax -> Syntax -> Syntax
+  | cSelc : var Tbool -> Syntax -> Syntax -> Syntax
+  | cAddc : var Tbool -> Syntax -> Syntax -> Syntax
+  | cAdd : Syntax -> Syntax -> Syntax
+  | cSub : Syntax -> Syntax -> Syntax
+  | cPair : Syntax -> Syntax -> Syntax
+  | cINVALID {T} (_ : T).
+End syn.
+
+Fixpoint assemble_arg {var} {t} (v : @Output.arg (fun _ => @Syntax var) t) : @Syntax var
+  := match v with
+     | Output.Const TZ v' => if Z_beq v' 0 then RegZero else cINVALID v'
+     | Output.Const _ x => cINVALID x
+     | Output.SpZConst Cm' => RegPInv
+     | Output.SpZConst Cmodulus => RegMod
+     | Output.Var _ v => v
+     | Output.Pair _ x0 _ x1 => cPair (@assemble_arg _ _ x0) (@assemble_arg _ _ x1)
+     end.
+Definition var_of_arg_helper {var} {t} (v : @Output.arg var t)
+  : match t with
+    | Prod _ _ => unit
+    | Tconst t'
+      => match t' with
+         | Tvar t'' => var t''
+         | TZ => SpecialZConst
+         end + interp_type t'
+    end.
+Proof.
+  destruct v;
+    try solve [ right; assumption
+              | left; assumption
+              | exact tt ].
+Defined.
+
+Definition assemble_syntax_step
+           (assemble_syntax : forall {var} {t} (v : @Output.expr (fun _ => @Syntax var) t), @Syntax var)
+           {var} {t} (v : @Output.expr (fun _ => @Syntax var) t) : @Syntax var.
+Proof.
+  refine match v with
+         | Output.LetUnop _ op x0 _ b
+           => let x0' := assemble_arg x0 in
+              match op with
+              | OPldi => @assemble_syntax var _ (b x0')
+              | _ => cINVALID op
+              end
+         | Output.LetBinop _ _ op x0 x1 _ b
+           => let x0' : @Syntax var := assemble_arg x0 in
+              let x1' : @Syntax var := assemble_arg x1 in
+              let default := fun s => cBind s (fun v => @assemble_syntax var _ (b (cVar v))) in
+              match op, x1 return @Syntax var with
+              | OPshl, Output.Const TZ x1'
+                => @assemble_syntax var _ (b (cLeftShifted x0' x1'))
+              | OPshr, Output.Const TZ x1'
+                => @assemble_syntax var _ (b (cRightShifted x0' x1'))
+              | OPmulhwll, _
+                => default (cMul128 (cLowerHalf x0') (cLowerHalf x1'))
+              | OPmulhwhl, _
+                => default (cMul128 (cUpperHalf x0') (cLowerHalf x1'))
+              | OPmulhwhh, _
+                => default (cMul128 (cUpperHalf x0') (cUpperHalf x1'))
+              | _, _ => default (cINVALID op)
+              end
+         | Output.LetTrinop _ _ _ op x0 x1 x2 _ b
+           => let x0' : @Syntax var := assemble_arg x0 in
+              let x1' : @Syntax var := assemble_arg x1 in
+              let x2' : @Syntax var := assemble_arg x2 in
+              cBind (match op, x0', x2', x2 return @Syntax var with
+                     | OPadc, _, _, Output.Const Tbool false
+                       => cAdd x0' x1'
+                     | OPadc, _, cVarC x2', _
+                       => cAddc x2' x0' x1'
+                     | OPsubc, _, _, Output.Const Tbool false
+                       => cSub x0' x1'
+                     | OPselc, cVarC x0', _, _
+                       => cSelc x0' x1' x2'
+                     | _, _, _, _ => cINVALID op
+                     end)
+                    (fun v => @assemble_syntax var _ (b (cVar v)))
+         | Output.LetTrinop2Ret _ _ _ op x0 x1 x2 _ b
+           => let x0' : @Syntax var := assemble_arg x0 in
+              let x1' : @Syntax var := assemble_arg x1 in
+              let x2' : @Syntax var := assemble_arg x2 in
+              cBindCarry (match op, x0', x2', x2 return @Syntax var with
+                          | OPadc, _, _, Output.Const Tbool false
+                            => cAdd x0' x1'
+                          | OPadc, _, cVarC x2', _
+                            => cAddc x2' x0' x1'
+                          | OPsubc, _, _, Output.Const Tbool false
+                            => cSub x0' x1'
+                          | _, _, _, _ => cINVALID op
+                          end)
+                         (fun c v => @assemble_syntax var _ (b (cVarC c) (cVar v)))
+         | Output.Return _ x => @assemble_arg var _ x
+         end.
+  exact (fun _ => unit).
+Defined.
+Fixpoint assemble_syntax {var} {t} (v : @Output.expr (fun _ => @Syntax var) t) : @Syntax var
+  := @assemble_syntax_step (@assemble_syntax) var t v.
+
 Import Input.
 
 Notation "'ilet' x := 'ldi' v 'in' b" :=
@@ -888,6 +1002,17 @@ Definition compiled_example (x y : fancy_machine.W) : Output.expr (var:=interp_t
                 ilet RegPinv := ldi m' in
                 @compile _ _ (example_expr _ (Output.Var x) (Output.Var y)))
                (y::x::nil, nil).
+Definition compiled_example_syn (x y : fancy_machine.W) : Syntax (var:=interp_type)
+  := Eval vm_compute in
+      assemble_syntax
+        (let x := (cVar x, SVar TW 0)%core in
+         let y := (cVar y, SVar TW 1)%core in
+         @cseExpr (fun _ => @Syntax interp_type) _
+                  (ilet RegZero := ldi (0 : interp_type TZ) in
+                   ilet RegMod := ldi modulus in
+                   ilet RegPinv := ldi m' in
+                   @compile _ _ (example_expr _ (Output.Var x) (Output.Var y)))
+                  (y::x::nil, nil)).
 Print compiled_example.
 
 
@@ -975,7 +1100,6 @@ Notation "'c.Sub' ( x , A , B ) , b" :=
     (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
 Print compiled_example.
 
-
 (* compiled_example =
 fun x y : fancy_machine.W =>
 ilet x0 := ldi 0 in
@@ -1007,3 +1131,71 @@ c.Sub(x34, x31, x32),
 Return x34
      : fancy_machine.W -> fancy_machine.W -> Output.expr TW
  *)
+
+Notation "'Return' x" := (cVar x) (at level 200).
+Notation "'c.Mul128' ( x , A , B ) , b" :=
+  (cBind (cMul128 A B) (fun x => b))
+    (at level 200, b at level 200, format "'c.Mul128' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , b" :=
+  (cBindCarry (cAdd A B) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , b" :=
+  (cBindCarry (cAdd (cVar A) B) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , b" :=
+  (cBindCarry (cAdd A B) (fun c x => cBindCarry (cAddc c A1 B1) (fun _ x1 => b)))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , b" :=
+  (cBindCarry (cAdd A B) (fun c x => cBindCarry (cAddc c (cVar A1) B1) (fun _ x1 => b)))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , b" :=
+  (cBindCarry (cAdd (cVar A) B) (fun c x => cBindCarry (cAddc c A1 B1) (fun _ x1 => b)))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , b" :=
+  (cBindCarry (cAdd (cVar A) B) (fun c x => cBindCarry (cAddc c (cVar A1) B1) (fun _ x1 => b)))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2 , B2 ) , b" :=
+  (cBindCarry (cAdd A B) (fun c x => cBindCarry (cAddc c A1 B1) (fun c1 x1 => cBind (cSelc c1 A2 B2) (fun x2 => b))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' 'c.Selc' ( x2 ,  A2 ,  B2 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2 , B2 ) , b" :=
+  (cBindCarry (cAdd (cVar A) B) (fun c x => cBindCarry (cAddc c A1 B1) (fun c1 x1 => cBind (cSelc c1 A2 B2) (fun x2 => b))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' 'c.Selc' ( x2 ,  A2 ,  B2 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2 , B2 ) , b" :=
+  (cBindCarry (cAdd A B) (fun c x => cBindCarry (cAddc c (cVar A1) B1) (fun c1 x1 => cBind (cSelc c1 A2 B2) (fun x2 => b))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' 'c.Selc' ( x2 ,  A2 ,  B2 ) , '//' b").
+Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x1 , A1 , B1 ) , 'c.Selc' ( x2 , A2 , B2 ) , b" :=
+  (cBindCarry (cAdd (cVar A) B) (fun c x => cBindCarry (cAddc c (cVar A1) B1) (fun c1 x1 => cBind (cSelc c1 A2 B2) (fun x2 => b))))
+    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x1 ,  A1 ,  B1 ) , '//' 'c.Selc' ( x2 ,  A2 ,  B2 ) , '//' b").
+
+Notation "'c.Sub' ( x , A , B ) , b" :=
+  (cBindCarry (cSub A B) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
+Notation "'c.Sub' ( x , A , B ) , b" :=
+  (cBindCarry (cSub (cVar A) B) (fun _ x => b))
+    (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
+
+Notation "'c.LowerHalf' ( x )" :=
+  (cLowerHalf x)
+    (at level 200, format "'c.LowerHalf' ( x )").
+Notation "'c.LowerHalf' ( x )" :=
+  (cLowerHalf (cVar x))
+    (at level 200, format "'c.LowerHalf' ( x )").
+Notation "'c.UpperHalf' ( x )" :=
+  (cUpperHalf x)
+    (at level 200, format "'c.UpperHalf' ( x )").
+Notation "'c.UpperHalf' ( x )" :=
+  (cUpperHalf (cVar x))
+    (at level 200, format "'c.UpperHalf' ( x )").
+Notation "'c.LeftShifted' { x , v }" :=
+  (cLeftShifted x v)
+    (at level 200, format "'c.LeftShifted' { x ,  v }").
+Notation "'c.LeftShifted' { x , v }" :=
+  (cLeftShifted (cVar x) v)
+    (at level 200, format "'c.LeftShifted' { x ,  v }").
+Notation "'c.RightShifted' { x , v }" :=
+  (cRightShifted x v)
+    (at level 200, format "'c.RightShifted' { x ,  v }").
+Notation "'c.RightShifted' { x , v }" :=
+  (cRightShifted (cVar x) v)
+    (at level 200, format "'c.RightShifted' { x ,  v }").
+Print compiled_example_syn.
