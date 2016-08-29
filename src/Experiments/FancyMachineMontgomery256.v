@@ -104,6 +104,10 @@ Section Definitions.
        end.
 End Definitions.
 
+Inductive SpecialZConst : Set := Cmodulus | Cm'.
+Fixpoint interp_SpecialZConst (e: SpecialZConst) : Z :=
+  match e with Cmodulus => modulus | Cm' => m' end.
+
 Module Input.
   Section Language.
     Section expr.
@@ -111,6 +115,7 @@ Module Input.
 
       Inductive expr : type -> Type :=
       | Const : forall {t}, interp_type t -> expr t
+      | SpZConst : SpecialZConst -> expr TZ
       | Var : forall {t}, var t -> expr t
       | Unop : forall {t1 t2}, @nop 1 1 t1 t2
                                -> expr t1 -> expr (tuple_fold id Prod TZ t2)
@@ -132,6 +137,7 @@ Module Input.
     Fixpoint interp {t} (e: @expr interp_type t) : interp_type t :=
       match e in @expr _ t return interp_type t with
       | Const _ n => n
+      | SpZConst n => interp_SpecialZConst n
       | Var _ n => n
       | Unop _ _ op e1 => interp_nop op (interp e1)
       | Binop _ _ _ op e1 e2 => interp_nop op (interp e1, interp e2)
@@ -202,6 +208,8 @@ Module Input.
       lazymatch constr:(fun (x : T) (not_x : var t) (_:reify_var_for_in_is x t not_x) =>
                           (_ : reify var C)) (* [C] here is an open term that references "x" by name *)
       with fun _ v _ => @?C v => C end
+    | modulus => constr:(SpZConst (var := var) Cmodulus)
+    | m' => constr:(SpZConst (var := var) Cm')
     | ?x
       => lazymatch goal with
          | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var var t v)
@@ -357,6 +365,7 @@ Module Output.
 
       Inductive arg : type -> Type :=
       | Const {t} : @interp_type (Tconst t) -> arg t
+      | SpZConst : SpecialZConst -> arg TZ
       | Var {t} : var t -> arg t
       | Pair : forall {t1}, arg t1 -> forall {t2}, arg t2 -> arg (Prod t1 t2).
 
@@ -381,6 +390,7 @@ Module Output.
     Fixpoint interp_arg {t} (e: arg interp_type t) : interp_type t :=
       match e with
       | Const _ n => n
+      | SpZConst n => interp_SpecialZConst n
       | Var _ n => n
       | Pair _ e1 _ e2 => (interp_arg e1, interp_arg e2)
       end.
@@ -541,6 +551,7 @@ Section compile.
   Fixpoint compile {t} (e:@Input.expr (@Output.arg ovar) t) : @Output.expr ovar t
     := match e in @Input.expr _ t return @Output.expr ovar t with
            | Input.Const _ n => reify_interped n
+           | Input.SpZConst n => Output.Return (Output.SpZConst n)
            | Input.Var _ n => Output.Return n
            | Input.Unop _ TW op a =>
              Output.under_lets (@compile _ a) (fun arg1 =>
@@ -617,6 +628,7 @@ Section symbolic.
     SOPldi | SOPshrd | SOPshl | SOPshr | SOPmkl | SOPadc | SOPsubc | SOPmulhwll | SOPmulhwhl | SOPmulhwhh | SOPselc | SOPaddm.
   Inductive SymbolicExpr : Set :=
   | SConstZ : Z -> SymbolicExpr
+  | SSpZConst : SpecialZConst -> SymbolicExpr
   | SConstBool : bool -> SymbolicExpr
   | SConstW : nat -> SymbolicExpr
   | SVar : vartype -> nat -> SymbolicExpr
@@ -651,10 +663,10 @@ Section CSE.
             | TW => length (fst xs)
             | Tbool => length (snd xs)
             end).
-  Definition add_mapping {t} (v : var t) (xs : mapping) : mapping :=
+  Definition add_mapping {t} (v : var t) (sv : SymbolicExpr) (xs : mapping) : mapping :=
     match t return var t -> mapping with
-    | TW => fun v => ((v, SVar TW (length (fst xs))) :: fst xs, snd xs)
-    | Tbool => fun v => (fst xs, (v, SVar Tbool (length (snd xs))) :: snd xs)
+    | TW => fun v => ((v, sv) :: fst xs, snd xs)
+    | Tbool => fun v => (fst xs, (v, sv) :: snd xs)
     | _ => fun _ => xs
     end v.
 
@@ -670,6 +682,8 @@ Section CSE.
             Some sv)
        | Output.Const TZ v'
          => (Output.Const v', Some (SConstZ v'))
+       | Output.SpZConst v'
+         => (Output.SpZConst v', Some (SSpZConst v'))
        | Output.Const _ v' => (Output.Const v', None)
        | Output.Var t v'
          => (Output.Var (match lookup t (snd v') xs with
@@ -702,84 +716,90 @@ Section CSE.
        | OPaddm => SOPaddm
        end.
 
-  Fixpoint cseExpr {t} (v : @Output.expr svar t) (xs : mapping) {struct v}
-    : @Output.expr var t.
-    refine match v in Output.expr t return Output.expr t with
-           | Output.LetUnop _ op x0 _ f
-             => let sop := cseOp op in
-               let '(x0v, x0s) := eta (cseArg x0 xs) in
-               let sv := match x0s with
-                         | Some x0' => Some (SUnOp sop x0')
-                         | _ => None
-                         end in
-               let default_head := Output.LetUnop op x0v in
-               match sv with
-               | Some sv'
-                 => match lookup _ sv' xs with
-                   | Some v' => @cseExpr _ (f (v', sv')) xs
-                   | None => default_head (fun v => @cseExpr _ (f v) (add_mapping v xs))
-                   end
-               | None => default_head _
-               end
-           | Output.LetBinop _ _ op x0 x1 _ f => _
-           | Output.LetTrinop _ _ _ op x0 x1 x2 _ f => _
-           | Output.LetTrinop2Ret _ _ _ op x0 x1 x2 _ f => _
-           | Output.Return _ x => Output.Return (fst (cseArg x xs))
-           end.
-    Focus 5.
-    :=
-  Fixpoint reify_interped {t} : interp_type t -> @Output.expr ovar t
-    := match t return interp_type t -> @Output.expr ovar t with
-       | Prod t0 t1
-         => fun x0x1
-            => @Output.under_lets
-                 _ _ (@reify_interped t0 (fst x0x1)) _
-                 (fun x0
-                  => @Output.under_lets
-                       _ _ (@reify_interped t1 (snd x0x1)) _
-                       (fun x1
-                        => Output.Return (Output.Pair x0 x1)))
-       | TZ => fun n => Output.Return (Output.Const n)
-       | TW => fun n => Output.Return (Output.Const n)
-       | Tbool => fun n => Output.Return (Output.Const n)
+  Definition cseExprHelper1
+             (cseExpr : forall t (v : @Output.expr svar t) (xs : mapping), @Output.expr var t)
+             (xs : mapping)
+             {tC}
+             (f : svar TW -> @Output.expr svar tC)
+             (sv : option SymbolicExpr)
+             (default_head : (var TW -> @Output.expr var tC) -> @Output.expr var tC)
+    : @Output.expr var tC
+    := match option_map (fun sv' => (sv', lookup _ sv' xs)) sv with
+       | Some (sv', Some v') => @cseExpr _ (f (v', sv')) xs
+       | Some (sv', None)    => default_head (fun v => @cseExpr _ (f (v, sv')) (add_mapping v sv' xs))
+       | None                => default_head (fun v => let sv' := symbolicify_var v xs in
+                                                       @cseExpr _ (f (v, sv')) (add_mapping v sv' xs))
        end.
-
-  Fixpoint compile {t} (e:@Input.expr (@Output.arg ovar) t) : @Output.expr ovar t
-    := match e in @Input.expr _ t return @Output.expr ovar t with
-           | Input.Const _ n => reify_interped n
-           | Input.Var _ n => Output.Return n
-           | Input.Unop _ TW op a =>
-             Output.under_lets (@compile _ a) (fun arg1 =>
-                Output.LetUnop op arg1 (fun v => Output.Return (Output.Var v)))
-           | Input.Unop _ _ op a => match op with OPldi => fun x => x end (* whee small inversion magic *)
-           | Input.Binop _ _ TW op a b =>
-             Output.under_lets (@compile _ a) (fun arg1 =>
-             Output.under_lets (@compile _ b) (fun arg2 =>
-                Output.LetBinop op arg1 arg2 (fun v => Output.Return (Output.Var v))))
-           | Input.Binop _ _ _ op a b => match op with OPldi => fun x => x end (* whee small inversion magic *)
-           | Input.Trinop _ _ _ TW op a b c =>
-             Output.under_lets (@compile _ a) (fun arg1 =>
-             Output.under_lets (@compile _ b) (fun arg2 =>
-             Output.under_lets (@compile _ c) (fun arg3 =>
-                Output.LetTrinop op arg1 arg2 arg3 (fun v => Output.Return (Output.Var v)))))
-           | Input.Trinop _ _ _ _ op a b c => match op with OPldi => fun x => x end (* whee small inversion magic *)
-           | Input.Trinop2Ret _ _ _ (Tbool, TW) op a b c =>
-             Output.under_lets (@compile _ a) (fun arg1 =>
-             Output.under_lets (@compile _ b) (fun arg2 =>
-             Output.under_lets (@compile _ c) (fun arg3 =>
-                Output.LetTrinop2Ret op arg1 arg2 arg3 (fun v0 v1 => Output.Return (Output.Pair (Output.Var v0) (Output.Var v1))))))
-           | Input.Trinop2Ret _ _ _ _ op a b c => match op with OPldi => fun x => x end (* whee small inversion magic *)
-    | Input.Let _ ex _ eC =>
-       Output.under_lets (@compile _ ex) (fun arg => @compile _ (eC arg))
-    | Input.Pair _ e1 _ e2 =>
-       Output.under_lets (@compile _ e1) (fun arg1 =>
-          Output.under_lets (@compile _ e2) (fun arg2 =>
-             Output.Return (Output.Pair arg1 arg2)))
-    | Input.MatchPair _ _ ep _ eC =>
-        Output.under_lets (@compile _ ep) (fun arg =>
-          let (a1, a2) := Output.match_arg_Prod arg in @compile _ (eC a1 a2))
-           end.
-  End compile.
+  Definition cseExprHelper2
+             (cseExpr : forall t (v : @Output.expr svar t) (xs : mapping), @Output.expr var t)
+             (xs : mapping)
+             {tC}
+             (f : svar Tbool -> svar TW -> @Output.expr svar tC)
+             (sv : option SymbolicExpr)
+             (default_head : (var Tbool -> var TW -> @Output.expr var tC) -> @Output.expr var tC)
+    : @Output.expr var tC
+    := match option_map (fun sv' => (sv', lookup Tbool sv' xs, lookup TW sv' xs)) sv with
+       | Some (sv', Some vb', Some vw')
+         => @cseExpr _ (f (vb', sv') (vw', sv')) xs
+       | Some (sv', _, _)
+         => default_head (fun vb vw => @cseExpr _ (f (vb, sv') (vw, sv'))
+                                                (add_mapping vw sv' (add_mapping vb sv' xs)))
+       | None
+         => default_head (fun vb vw => let svb' := symbolicify_var vb xs in
+                                       let svw' := symbolicify_var vw xs in
+                                       @cseExpr _ (f (vb, svb') (vw, svw'))
+                                                (add_mapping vw svw' (add_mapping vb svb' xs)))
+       end.
+  Definition cseExpr_step
+             (cseExpr : forall {t} (v : @Output.expr svar t) (xs : mapping), @Output.expr var t)
+             {t} (v : @Output.expr svar t) (xs : mapping)
+    : @Output.expr var t
+    := match v in Output.expr t return Output.expr t with
+       | Output.LetUnop _ op x0 _ f
+         => let sop := cseOp op in
+            let '(x0v, x0s) := eta (cseArg x0 xs) in
+            let sv := match x0s with
+                      | Some x0' => Some (SUnOp sop x0')
+                      | _ => None
+                      end in
+            let default_head := Output.LetUnop op x0v in
+            cseExprHelper1 (@cseExpr) xs f sv default_head
+       | Output.LetBinop _ _ op x0 x1 _ f
+         => let sop := cseOp op in
+            let '(x0v, x0s) := eta (cseArg x0 xs) in
+            let '(x1v, x1s) := eta (cseArg x1 xs) in
+            let sv := match x0s, x1s with
+                      | Some x0', Some x1' => Some (SBinOp sop x0' x1')
+                      | _, _ => None
+                      end in
+            let default_head := Output.LetBinop op x0v x1v in
+            cseExprHelper1 (@cseExpr) xs f sv default_head
+       | Output.LetTrinop _ _ _ op x0 x1 x2 _ f
+         => let sop := cseOp op in
+            let '(x0v, x0s) := eta (cseArg x0 xs) in
+            let '(x1v, x1s) := eta (cseArg x1 xs) in
+            let '(x2v, x2s) := eta (cseArg x2 xs) in
+            let sv := match x0s, x1s, x2s with
+                      | Some x0', Some x1', Some x2' => Some (STrinOp sop x0' x1' x2')
+                      | _, _, _ => None
+                      end in
+            let default_head := Output.LetTrinop op x0v x1v x2v in
+            cseExprHelper1 (@cseExpr) xs f sv default_head
+       | Output.LetTrinop2Ret _ _ _ op x0 x1 x2 _ f
+         => let sop := cseOp op in
+            let '(x0v, x0s) := eta (cseArg x0 xs) in
+            let '(x1v, x1s) := eta (cseArg x1 xs) in
+            let '(x2v, x2s) := eta (cseArg x2 xs) in
+            let sv := match x0s, x1s, x2s with
+                      | Some x0', Some x1', Some x2' => Some (STrinOp2Ret sop x0' x1' x2')
+                      | _, _, _ => None
+                      end in
+            let default_head := Output.LetTrinop2Ret op x0v x1v x2v in
+            cseExprHelper2 (@cseExpr) xs f sv default_head
+       | Output.Return _ x => Output.Return (fst (cseArg x xs))
+       end.
+End CSE.
+Fixpoint cseExpr {var t} v xs := @cseExpr_step var (@cseExpr var) t v xs.
 
 (*Definition Compile {t} (e:Input.Expr t) : Output.Expr t := fun var =>
   compile (e (@Output.arg var)).*)
@@ -817,11 +837,15 @@ Proof. eapply compile_correct; eauto. Qed.
 
 Import Input.
 
-Definition compiled_example x y : Output.expr (var:=interp_type) TW
-  := Eval vm_compute in @compile interp_type _ (example_expr _ (Output.Var x) (Output.Var y)).
 Notation "'ilet' x := 'ldi' v 'in' b" :=
   (Output.LetUnop OPldi (Output.Const v) (fun x => b))
     (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  v  'in' '//' b").
+Notation "'ilet' x := 'ldi' 'm'' 'in' b" :=
+  (Output.LetUnop OPldi (Output.SpZConst Cm') (fun x => b))
+    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'm''  'in' '//' b").
+Notation "'ilet' x := 'ldi' 'modulus' 'in' b" :=
+  (Output.LetUnop OPldi (Output.SpZConst Cmodulus) (fun x => b))
+    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'modulus'  'in' '//' b").
 Notation "'ilet' x := 'mulhwll' A B 'in' b" :=
   (Output.LetBinop OPmulhwll (Output.Var A) (Output.Var B) (fun x => b))
     (at level 200, b at level 200, format "'ilet'  x  :=  'mulhwll'  A  B  'in' '//' b").
@@ -853,310 +877,44 @@ Notation "'ilet' x := 'selc' A B C 'in' b" :=
   (Output.LetTrinop OPselc (Output.Var A) (Output.Var B) (Output.Var C) (fun x => b))
     (at level 200, b at level 200, format "'ilet'  x  :=  'selc'  A  B  C  'in' '//' b").
 Notation Return x := (Output.Return (Output.Var x)).
+
+Definition compiled_example (x y : fancy_machine.W) : Output.expr (var:=interp_type) TW
+  := Eval vm_compute in
+      let x := (x, SVar TW 0)%core in
+      let y := (y, SVar TW 1)%core in
+      @cseExpr interp_type _
+               (@compile _ _ (example_expr _ (Output.Var x) (Output.Var y)))
+               (y::x::nil, nil).
 Print compiled_example.
 
 (* compiled_example =
 fun x y : fancy_machine.W =>
 ilet x0 := ldi m' in
 ilet x1 := mulhwll x x0 in
-ilet x2 := ldi m' in
-ilet x3 := mulhwhl x x2 in
-ilet x4 := shl x3 128 in
-clet (_, x6) := add x1 x4 in
-ilet x7 := ldi m' in
-ilet x8 := mulhwhl x7 x in
-ilet x9 := shl x8 128 in
-clet (_, x11) := add x6 x9 in
-ilet x12 := ldi modulus in
-ilet x13 := mulhwhh x11 x12 in
-ilet x14 := ldi m' in
-ilet x15 := mulhwll x x14 in
-ilet x16 := ldi m' in
-ilet x17 := mulhwhl x x16 in
-ilet x18 := shl x17 128 in
-clet (_, x20) := add x15 x18 in
-ilet x21 := ldi m' in
-ilet x22 := mulhwhl x21 x in
-ilet x23 := shl x22 128 in
-clet (_, x25) := add x20 x23 in
-ilet x26 := ldi modulus in
-ilet x27 := mulhwhl x25 x26 in
-ilet x28 := shr x27 128 in
-ilet x29 := ldi m' in
-ilet x30 := mulhwll x x29 in
-ilet x31 := ldi m' in
-ilet x32 := mulhwhl x x31 in
-ilet x33 := shl x32 128 in
-clet (_, x35) := add x30 x33 in
-ilet x36 := ldi m' in
-ilet x37 := mulhwhl x36 x in
-ilet x38 := shl x37 128 in
-clet (_, x40) := add x35 x38 in
-ilet x41 := ldi modulus in
-ilet x42 := mulhwll x40 x41 in
-ilet x43 := ldi m' in
-ilet x44 := mulhwll x x43 in
-ilet x45 := ldi m' in
-ilet x46 := mulhwhl x x45 in
-ilet x47 := shl x46 128 in
-clet (_, x49) := add x44 x47 in
-ilet x50 := ldi m' in
-ilet x51 := mulhwhl x50 x in
-ilet x52 := shl x51 128 in
-clet (_, x54) := add x49 x52 in
-ilet x55 := ldi modulus in
-ilet x56 := mulhwhl x54 x55 in
-ilet x57 := shl x56 128 in
-clet (x58, _) := add x42 x57 in
-clet (_, x61) := adc x13 x28 x58 in
-ilet x62 := ldi modulus in
-ilet x63 := ldi m' in
-ilet x64 := mulhwll x x63 in
-ilet x65 := ldi m' in
-ilet x66 := mulhwhl x x65 in
-ilet x67 := shl x66 128 in
-clet (_, x69) := add x64 x67 in
-ilet x70 := ldi m' in
-ilet x71 := mulhwhl x70 x in
-ilet x72 := shl x71 128 in
-clet (_, x74) := add x69 x72 in
-ilet x75 := mulhwhl x62 x74 in
-ilet x76 := shr x75 128 in
-ilet x77 := ldi m' in
-ilet x78 := mulhwll x x77 in
-ilet x79 := ldi m' in
-ilet x80 := mulhwhl x x79 in
-ilet x81 := shl x80 128 in
-clet (_, x83) := add x78 x81 in
-ilet x84 := ldi m' in
-ilet x85 := mulhwhl x84 x in
-ilet x86 := shl x85 128 in
-clet (_, x88) := add x83 x86 in
-ilet x89 := ldi modulus in
-ilet x90 := mulhwll x88 x89 in
-ilet x91 := ldi m' in
-ilet x92 := mulhwll x x91 in
-ilet x93 := ldi m' in
-ilet x94 := mulhwhl x x93 in
-ilet x95 := shl x94 128 in
-clet (_, x97) := add x92 x95 in
-ilet x98 := ldi m' in
-ilet x99 := mulhwhl x98 x in
-ilet x100 := shl x99 128 in
-clet (_, x102) := add x97 x100 in
-ilet x103 := ldi modulus in
-ilet x104 := mulhwhl x102 x103 in
-ilet x105 := shl x104 128 in
-clet (_, x107) := add x90 x105 in
-ilet x108 := ldi modulus in
-ilet x109 := ldi m' in
-ilet x110 := mulhwll x x109 in
-ilet x111 := ldi m' in
-ilet x112 := mulhwhl x x111 in
-ilet x113 := shl x112 128 in
-clet (_, x115) := add x110 x113 in
-ilet x116 := ldi m' in
-ilet x117 := mulhwhl x116 x in
-ilet x118 := shl x117 128 in
-clet (_, x120) := add x115 x118 in
-ilet x121 := mulhwhl x108 x120 in
-ilet x122 := shl x121 128 in
-clet (x123, _) := add x107 x122 in
-clet (_, x126) := adc x61 x76 x123 in
-ilet x127 := ldi m' in
-ilet x128 := mulhwll x x127 in
-ilet x129 := ldi m' in
-ilet x130 := mulhwhl x x129 in
-ilet x131 := shl x130 128 in
-clet (_, x133) := add x128 x131 in
-ilet x134 := ldi m' in
-ilet x135 := mulhwhl x134 x in
-ilet x136 := shl x135 128 in
-clet (_, x138) := add x133 x136 in
-ilet x139 := ldi modulus in
-ilet x140 := mulhwll x138 x139 in
-ilet x141 := ldi m' in
-ilet x142 := mulhwll x x141 in
-ilet x143 := ldi m' in
-ilet x144 := mulhwhl x x143 in
-ilet x145 := shl x144 128 in
-clet (_, x147) := add x142 x145 in
-ilet x148 := ldi m' in
-ilet x149 := mulhwhl x148 x in
-ilet x150 := shl x149 128 in
-clet (_, x152) := add x147 x150 in
-ilet x153 := ldi modulus in
-ilet x154 := mulhwhl x152 x153 in
-ilet x155 := shl x154 128 in
-clet (_, x157) := add x140 x155 in
-ilet x158 := ldi modulus in
-ilet x159 := ldi m' in
-ilet x160 := mulhwll x x159 in
-ilet x161 := ldi m' in
-ilet x162 := mulhwhl x x161 in
-ilet x163 := shl x162 128 in
-clet (_, x165) := add x160 x163 in
-ilet x166 := ldi m' in
-ilet x167 := mulhwhl x166 x in
-ilet x168 := shl x167 128 in
-clet (_, x170) := add x165 x168 in
-ilet x171 := mulhwhl x158 x170 in
-ilet x172 := shl x171 128 in
-clet (_, x174) := add x157 x172 in
-clet (x175, _) := add x x174 in
-clet (_, x178) := adc y x126 x175 in
-ilet x179 := ldi m' in
-ilet x180 := mulhwll x x179 in
-ilet x181 := ldi m' in
-ilet x182 := mulhwhl x x181 in
-ilet x183 := shl x182 128 in
-clet (_, x185) := add x180 x183 in
-ilet x186 := ldi m' in
-ilet x187 := mulhwhl x186 x in
-ilet x188 := shl x187 128 in
-clet (_, x190) := add x185 x188 in
-ilet x191 := ldi modulus in
-ilet x192 := mulhwhh x190 x191 in
-ilet x193 := ldi m' in
-ilet x194 := mulhwll x x193 in
-ilet x195 := ldi m' in
-ilet x196 := mulhwhl x x195 in
-ilet x197 := shl x196 128 in
-clet (_, x199) := add x194 x197 in
-ilet x200 := ldi m' in
-ilet x201 := mulhwhl x200 x in
-ilet x202 := shl x201 128 in
-clet (_, x204) := add x199 x202 in
-ilet x205 := ldi modulus in
-ilet x206 := mulhwhl x204 x205 in
-ilet x207 := shr x206 128 in
-ilet x208 := ldi m' in
-ilet x209 := mulhwll x x208 in
-ilet x210 := ldi m' in
-ilet x211 := mulhwhl x x210 in
-ilet x212 := shl x211 128 in
-clet (_, x214) := add x209 x212 in
-ilet x215 := ldi m' in
-ilet x216 := mulhwhl x215 x in
-ilet x217 := shl x216 128 in
-clet (_, x219) := add x214 x217 in
-ilet x220 := ldi modulus in
-ilet x221 := mulhwll x219 x220 in
-ilet x222 := ldi m' in
-ilet x223 := mulhwll x x222 in
-ilet x224 := ldi m' in
-ilet x225 := mulhwhl x x224 in
-ilet x226 := shl x225 128 in
-clet (_, x228) := add x223 x226 in
-ilet x229 := ldi m' in
-ilet x230 := mulhwhl x229 x in
-ilet x231 := shl x230 128 in
-clet (_, x233) := add x228 x231 in
-ilet x234 := ldi modulus in
-ilet x235 := mulhwhl x233 x234 in
-ilet x236 := shl x235 128 in
-clet (x237, _) := add x221 x236 in
-clet (_, x240) := adc x192 x207 x237 in
-ilet x241 := ldi modulus in
-ilet x242 := ldi m' in
-ilet x243 := mulhwll x x242 in
-ilet x244 := ldi m' in
-ilet x245 := mulhwhl x x244 in
-ilet x246 := shl x245 128 in
-clet (_, x248) := add x243 x246 in
-ilet x249 := ldi m' in
-ilet x250 := mulhwhl x249 x in
-ilet x251 := shl x250 128 in
-clet (_, x253) := add x248 x251 in
-ilet x254 := mulhwhl x241 x253 in
-ilet x255 := shr x254 128 in
-ilet x256 := ldi m' in
-ilet x257 := mulhwll x x256 in
-ilet x258 := ldi m' in
-ilet x259 := mulhwhl x x258 in
-ilet x260 := shl x259 128 in
-clet (_, x262) := add x257 x260 in
-ilet x263 := ldi m' in
-ilet x264 := mulhwhl x263 x in
-ilet x265 := shl x264 128 in
-clet (_, x267) := add x262 x265 in
-ilet x268 := ldi modulus in
-ilet x269 := mulhwll x267 x268 in
-ilet x270 := ldi m' in
-ilet x271 := mulhwll x x270 in
-ilet x272 := ldi m' in
-ilet x273 := mulhwhl x x272 in
-ilet x274 := shl x273 128 in
-clet (_, x276) := add x271 x274 in
-ilet x277 := ldi m' in
-ilet x278 := mulhwhl x277 x in
-ilet x279 := shl x278 128 in
-clet (_, x281) := add x276 x279 in
-ilet x282 := ldi modulus in
-ilet x283 := mulhwhl x281 x282 in
-ilet x284 := shl x283 128 in
-clet (_, x286) := add x269 x284 in
-ilet x287 := ldi modulus in
-ilet x288 := ldi m' in
-ilet x289 := mulhwll x x288 in
-ilet x290 := ldi m' in
-ilet x291 := mulhwhl x x290 in
-ilet x292 := shl x291 128 in
-clet (_, x294) := add x289 x292 in
-ilet x295 := ldi m' in
-ilet x296 := mulhwhl x295 x in
-ilet x297 := shl x296 128 in
-clet (_, x299) := add x294 x297 in
-ilet x300 := mulhwhl x287 x299 in
-ilet x301 := shl x300 128 in
-clet (x302, _) := add x286 x301 in
-clet (_, x305) := adc x240 x255 x302 in
-ilet x306 := ldi m' in
-ilet x307 := mulhwll x x306 in
-ilet x308 := ldi m' in
-ilet x309 := mulhwhl x x308 in
-ilet x310 := shl x309 128 in
-clet (_, x312) := add x307 x310 in
-ilet x313 := ldi m' in
-ilet x314 := mulhwhl x313 x in
-ilet x315 := shl x314 128 in
-clet (_, x317) := add x312 x315 in
-ilet x318 := ldi modulus in
-ilet x319 := mulhwll x317 x318 in
-ilet x320 := ldi m' in
-ilet x321 := mulhwll x x320 in
-ilet x322 := ldi m' in
-ilet x323 := mulhwhl x x322 in
-ilet x324 := shl x323 128 in
-clet (_, x326) := add x321 x324 in
-ilet x327 := ldi m' in
-ilet x328 := mulhwhl x327 x in
-ilet x329 := shl x328 128 in
-clet (_, x331) := add x326 x329 in
-ilet x332 := ldi modulus in
-ilet x333 := mulhwhl x331 x332 in
-ilet x334 := shl x333 128 in
-clet (_, x336) := add x319 x334 in
-ilet x337 := ldi modulus in
-ilet x338 := ldi m' in
-ilet x339 := mulhwll x x338 in
-ilet x340 := ldi m' in
-ilet x341 := mulhwhl x x340 in
-ilet x342 := shl x341 128 in
-clet (_, x344) := add x339 x342 in
-ilet x345 := ldi m' in
-ilet x346 := mulhwhl x345 x in
-ilet x347 := shl x346 128 in
-clet (_, x349) := add x344 x347 in
-ilet x350 := mulhwhl x337 x349 in
-ilet x351 := shl x350 128 in
-clet (_, x353) := add x336 x351 in
-clet (x354, _) := add x x353 in
-clet (x356, _) := adc y x305 x354 in
-ilet x358 := ldi modulus in
-ilet x359 := ldi 0 in
-ilet x360 := selc x356 x358 x359 in
-clet (_, x362) := sub x178 x360 in
-Return x362
+ilet x2 := mulhwhl x x0 in
+ilet x3 := shl x2 128 in
+clet (_, x5) := add x1 x3 in
+ilet x6 := mulhwhl x0 x in
+ilet x7 := shl x6 128 in
+clet (_, x9) := add x5 x7 in
+ilet x10 := ldi modulus in
+ilet x11 := mulhwhh x9 x10 in
+ilet x12 := mulhwhl x9 x10 in
+ilet x13 := shr x12 128 in
+ilet x14 := mulhwll x9 x10 in
+ilet x15 := shl x12 128 in
+clet (x16, x17) := add x14 x15 in
+clet (_, x19) := adc x11 x13 x16 in
+ilet x20 := mulhwhl x10 x9 in
+ilet x21 := shr x20 128 in
+ilet x22 := shl x20 128 in
+clet (x23, x24) := add x17 x22 in
+clet (_, x26) := adc x19 x21 x23 in
+clet (x27, _) := add x x24 in
+clet (x29, x30) := adc y x26 x27 in
+ilet x31 := ldi 0 in
+ilet x32 := selc x29 x10 x31 in
+clet (_, x34) := sub x30 x32 in
+Return x34
      : fancy_machine.W -> fancy_machine.W -> Output.expr TW
  *)
