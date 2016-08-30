@@ -697,6 +697,12 @@ Section CSE.
     | Tbool => lookup' sv (snd xs)
     | _ => None
     end.
+  Definition mapping_nth_error (xs : mapping) t n : option (svar t) :=
+    match t with
+    | TW => nth_error (fst xs) n
+    | Tbool => nth_error (snd xs) n
+    | _ => None
+    end.
   Definition symbolicify_var {t : vartype} (v : var t) (xs : mapping) : SymbolicExpr :=
     SVar t (match t with
             | TW => length (fst xs)
@@ -708,6 +714,103 @@ Section CSE.
     | Tbool => fun v => (fst xs, (v, sv) :: snd xs)
     | _ => fun _ => xs
     end v.
+  Definition sop_eval_dep (op : sop)
+    := match op return match op with SOPldi => _ | _ => _ end with
+       | SOPldi => OPldi
+       | SOPshrd => OPshrd
+       | SOPshl => OPshl
+       | SOPshr => OPshr
+       | SOPmkl => OPmkl
+       | SOPadc => OPadc
+       | SOPsubc => OPsubc
+       | SOPmulhwll => OPmulhwll
+       | SOPmulhwhl => OPmulhwhl
+       | SOPmulhwhh => OPmulhwhh
+       | SOPselc => OPselc
+       | SOPaddm => OPaddm
+       end.
+  Definition sop_eval nret (op : sop) (t : tuple type nret) : option (sigT (fun nargs : nat => sigT (fun args : tuple type nargs => nop nargs nret args t)))
+    := match nret return forall t : tuple type nret, option (sigT (fun nargs : nat => sigT (fun args : tuple type nargs => nop nargs nret args t))) with
+       | 1%nat => fun t => match op, t with
+                     | SOPldi as op, TW
+                     | SOPshrd as op, TW
+                     | SOPshr as op, TW
+                     | SOPshl as op, TW
+                     | SOPmkl as op, TW
+                     | SOPmulhwll as op, TW
+                     | SOPmulhwhl as op, TW
+                     | SOPmulhwhh as op, TW
+                     | SOPselc as op, TW
+                     | SOPaddm as op, TW
+                       => Some (existT _ _ (existT _ _ (sop_eval_dep op)))
+                     | _, _ => None
+                     end
+       | 2%nat => fun t => match op, t with
+                     | SOPadc as op, (Tbool, TW)
+                     | SOPsubc as op, (Tbool, TW)
+                       => Some (existT _ _ (existT _ _ (sop_eval_dep op)))
+                     | _, _ => None
+                     end
+       | _ => fun _ => None
+       end t.
+  Fixpoint symbolic_eval {t} (xs : mapping) (e : SymbolicExpr) : option (@Output.expr var t).
+  Proof.
+    refine match e, t return option (@Output.expr var t) with
+           | SConstZ v, TZ as t
+           | SConstBool v, Tbool as t
+             => Some (Output.Return (Output.Const (t := t) v))
+           | SConstZ _, _ => None
+           | SConstBool _, _ => None
+           | SSpZConst v, TZ => Some (Output.Return (Output.SpZConst v))
+           | SSpZConst _, _ => None
+           | SConstW n, TW as t => option_map (fun x => Output.Return (Output.Var (fst x)))
+                                             (mapping_nth_error xs t n)
+           | SConstW _, _ => None
+           | SVar Tbool n, Tbool as t
+           | SVar TW n, TW as t
+             => option_map (fun x => Output.Return (Output.Var (fst x)))
+                          (mapping_nth_error xs t n)
+           | SVar _ _, _ => None
+           | SPair x y, Prod tx ty
+             => match @symbolic_eval tx xs x, @symbolic_eval ty xs y with
+               | Some x', Some y' => Some (Output.under_lets x' (fun x0 => Output.under_lets y' (fun y0 => Output.Return (Output.Pair x0 y0))))
+               | _, _ => None
+               end
+           | SPair _ _, _ => None
+           | SUnOp op x0, TW as t
+             => match sop_eval 1 op t with
+               | Some (existT 1%nat (existT x0t opv))
+                 => option_map
+                     (fun x0' => Output.under_lets
+                                x0' (fun x0' => Output.LetUnop
+                                               opv x0'
+                                               (fun v => Output.Return (Output.Var v))))
+                     (@symbolic_eval x0t xs x0)
+               | _ => None
+               end
+           | SUnOp _ _, _ => None
+           | SBinOp op x0 x1, TW as t
+             => match sop_eval 1 op t with
+               | Some (existT 2%nat (existT (x0t, x1t) opv))
+                 => match @symbolic_eval x0t xs x0, @symbolic_eval x1t xs x1 with
+                   | Some x0', Some x1'
+                     => Some
+                         (Output.under_lets
+                            x0' (fun x0' =>
+                                   Output.under_lets
+                                     x1' (fun x1' => Output.LetBinop
+                                                    opv x0' x1'
+                                                    (fun v => Output.Return (Output.Var v)))))
+                   | _, _ => None
+                   end
+               | _ => None
+               end
+           | SBinOp _ _ _, _ => None
+           | STrinOp x x0 x1 x2, _ => _
+           | STrinOp2Ret x x0 x1 x2, _ => _
+           end.
+    pose (sop_eval 1 op t).
+    Print nop.
 
   Fixpoint cseArg {t} (v : @Output.arg svar t) (xs : mapping) {struct v}
     : @Output.arg var t * option SymbolicExpr
