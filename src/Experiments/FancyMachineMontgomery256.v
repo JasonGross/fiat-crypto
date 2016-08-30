@@ -753,9 +753,8 @@ Section CSE.
                      end
        | _ => fun _ => None
        end t.
-  Fixpoint symbolic_eval {t} (xs : mapping) (e : SymbolicExpr) : option (@Output.expr var t).
-  Proof.
-    refine match e, t return option (@Output.expr var t) with
+  Fixpoint symbolic_eval {t} (xs : mapping) (e : SymbolicExpr) : option (@Output.expr var t)
+    := match e, t return option (@Output.expr var t) with
            | SConstZ v, TZ as t
            | SConstBool v, Tbool as t
              => Some (Output.Return (Output.Const (t := t) v))
@@ -806,11 +805,45 @@ Section CSE.
                | _ => None
                end
            | SBinOp _ _ _, _ => None
-           | STrinOp x x0 x1 x2, _ => _
-           | STrinOp2Ret x x0 x1 x2, _ => _
-           end.
-    pose (sop_eval 1 op t).
-    Print nop.
+           | STrinOp op x0 x1 x2, TW as t
+             => match sop_eval 1 op t with
+               | Some (existT 3%nat (existT (x0t, x1t, x2t) opv))
+                 => match @symbolic_eval x0t xs x0, @symbolic_eval x1t xs x1, @symbolic_eval x2t xs x2 with
+                   | Some x0', Some x1', Some x2'
+                     => Some
+                         (Output.under_lets
+                            x0' (fun x0' =>
+                                   Output.under_lets
+                                     x1' (fun x1' =>
+                                            Output.under_lets
+                                              x2' (fun x2' => Output.LetTrinop
+                                                             opv x0' x1' x2'
+                                                             (fun v => Output.Return (Output.Var v))))))
+                   | _, _, _ => None
+                   end
+               | _ => None
+               end
+           | STrinOp _ _ _ _, _ => None
+           | STrinOp2Ret op x0 x1 x2, (Prod Tbool TW) as t
+             => match sop_eval 2 op (Tbool:type, TW:type) with
+               | Some (existT 3%nat (existT (x0t, x1t, x2t) opv))
+                 => match @symbolic_eval x0t xs x0, @symbolic_eval x1t xs x1, @symbolic_eval x2t xs x2 with
+                   | Some x0', Some x1', Some x2'
+                     => Some
+                         (Output.under_lets
+                            x0' (fun x0' =>
+                                   Output.under_lets
+                                     x1' (fun x1' =>
+                                            Output.under_lets
+                                              x2' (fun x2' => Output.LetTrinop2Ret
+                                                             opv x0' x1' x2'
+                                                             (fun c v => Output.Return (Output.Pair (Output.Var c) (Output.Var v)))))))
+                   | _, _, _ => None
+                   end
+               | _ => None
+               end
+           | STrinOp2Ret _ _ _ _, _ => None
+       end.
 
   Fixpoint cseArg {t} (v : @Output.arg svar t) (xs : mapping) {struct v}
     : @Output.arg var t * option SymbolicExpr
