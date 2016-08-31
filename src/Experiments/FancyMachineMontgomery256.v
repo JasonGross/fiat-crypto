@@ -4,7 +4,7 @@ Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Import Crypto.ModularArithmetic.Montgomery.ZBounded.
-Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Tuple Crypto.Util.Option Crypto.Util.Sigma.
 (* These might be needed for faster lookups *)
 (*Require Import Coq.FSets.FMaps Coq.FSets.FMapAVL Coq.FSets.FMapFacts Coq.FSets.FMapFullAVL.*)
 
@@ -1252,17 +1252,8 @@ Fixpoint cseExpr {var}
 Definition CSE {t} (e:Output.Expr t) : Output.Expr t := fun var =>
   @cseExpr var t (e _) (nil, nil).
 
-(** TODO: Move me *)
-Definition wf_context_mapping_good
-           (var := interp_type)
-           (svar := fun t => (var t * SymbolicExpr)%type)
-           (mapping := (list (svar TW) * list (svar Tbool))%type)
-  : list (sigT (fun t : vartype => (interp_type t * (interp_type t * SymbolicExpr))%type))
-    -> mapping
-    -> Prop
-  := fun G xs => List.Forall (fun v => let 'existT _ (x, (a, symbolic_a)) := v in Output.pointwise_eq_interp x a /\ True) G.
 
-
+(*
 Local Ltac SymbolicExpr_beq_to_eq :=
   repeat match goal with
          | [ H : SymbolicExpr_beq _ _ = true |- _ ] => apply internal_SymbolicExpr_dec_bl in H
@@ -1399,7 +1390,31 @@ Proof.
        (interp_nop op (Output.interp_arg e1),
        (interp_nop op (Output.interp_arg (fst (cseArg e1' xs))), SUnOp (cseOp op) s)) :: G)
     ((interp_nop op (Output.interp_arg (fst (cseArg e1' xs))), SUnOp (cseOp op) s) :: fst xs, snd xs)
-*)*)
+*)*)*)
+
+Definition wf_context_mapping_good
+           (var := interp_type)
+           (svar := fun t => (var t * SymbolicExpr)%type)
+           (mapping := (list (svar TW) * list (svar Tbool))%type)
+  : list (sigT (fun t : vartype => (interp_type t * (interp_type t * SymbolicExpr))%type))
+    -> mapping
+    -> Prop
+  := fun G xs
+     => (forall t x1 sv x2, In (existT _ t (x1, (x2, sv))) G -> x1 = x2).
+
+Lemma wf_context_mapping_good_cons g G xs
+  : wf_context_mapping_good (g :: G) xs
+    <-> (fst (projT2 g) = fst (snd (projT2 g))
+         /\ wf_context_mapping_good G xs).
+Proof.
+  destruct g as [? [? [? ?] ] ]; simpl.
+  unfold wf_context_mapping_good; simpl;
+    repeat intuition (subst || inversion_sigma || simpl in * || eauto).
+  (subst || inversion_sigma || eauto).
+  { eapply H0.
+    eauto.
+  split_and.
+
 Lemma cse'_correct {t} (e1 : @Output.expr interp_type t) (e2 : @Output.expr (fun t : vartype => (interp_type t * SymbolicExpr)%type) t) G (wf:Output.wf G e1 e2) xs :
   wf_context_mapping_good G xs ->
     Output.pointwise_eq_interp (t := t) (Output.interp (cseExpr' e2 xs)) (Output.interp e1).
@@ -1413,8 +1428,13 @@ Proof.
            | _ => progress break_match
            | _ => progress congruence_option
            | _ => progress unfold cseExprHelper1, cseExprHelper2 in *
-           | _ => solve [ eauto using @wf_context_mapping_good_unop ]
-           end;
+           end.
+  { apply H2.
+
+    unfold wf_context_mapping_good in *.
+    simpl.
+    intros.
+
     [ apply H2
     | apply H2
     | try apply H2
