@@ -1252,10 +1252,195 @@ Fixpoint cseExpr {var}
 Definition CSE {t} (e:Output.Expr t) : Output.Expr t := fun var =>
   @cseExpr var t (e _) (nil, nil).
 
-Lemma cse'_correct {t} (e1 : @Output.expr interp_type t) (e2 : @Output.expr (fun t : vartype => (interp_type t * SymbolicExpr)%type) t) G (wf:Output.wf G e1 e2) :
-  List.Forall (fun v => let 'existT _ (x, (a, symbolic_a)) := v in Output.pointwise_eq_interp x a /\ True) G ->
-    Output.pointwise_eq_interp (t := t) (Output.interp (cseExpr' e2 (nil, nil))) (Output.interp e1).
+(** TODO: Move me *)
+Definition wf_context_mapping_good
+           (var := interp_type)
+           (svar := fun t => (var t * SymbolicExpr)%type)
+           (mapping := (list (svar TW) * list (svar Tbool))%type)
+  : list (sigT (fun t : vartype => (interp_type t * (interp_type t * SymbolicExpr))%type))
+    -> mapping
+    -> Prop
+  := fun G xs => List.Forall (fun v => let 'existT _ (x, (a, symbolic_a)) := v in Output.pointwise_eq_interp x a /\ True) G.
+
+
+Local Ltac SymbolicExpr_beq_to_eq :=
+  repeat match goal with
+         | [ H : SymbolicExpr_beq _ _ = true |- _ ] => apply internal_SymbolicExpr_dec_bl in H
+         | [ H : context[SymbolicExpr_beq ?x ?x] |- _ ]
+           => rewrite (@internal_SymbolicExpr_dec_lb x x eq_refl) in H
+         end.
+Lemma wf_good_lookup t G s xs b
+      (H : wf_context_mapping_good G xs)
+  : lookup (var:=interp_type) t s xs = Some b
+    -> option_map Output.interp (symbolic_eval xs s) = Some b.
 Proof.
+  destruct xs as [ls0 ls1], t; simpl in *;
+    first [ revert dependent ls0; induction ls1 as [|?? IHxs]
+          | revert dependent ls1; induction ls0 as [|?? IHxs] ];
+    repeat match goal with
+           | _ => congruence
+           | _ => progress simpl
+           | _ => progress break_match
+           | _ => progress intros
+           | _ => progress congruence_option
+           | _ => progress SymbolicExpr_beq_to_eq
+           | _ => progress subst
+           end.
+Admitted.
+
+Local Ltac apply_lookup_good :=
+  repeat match goal with
+         | [ H : lookup' _ _ = Some _ |- _ ]
+           => first [ eapply (@wf_good_lookup Tbool) in H; [ | eassumption ]
+                    | eapply (@wf_good_lookup TW) in H; [ | eassumption ] ]
+         end.
+
+Lemma wf_context_mapping_good_In_sym_eval_eq t G xs x b x'
+      (H : wf_context_mapping_good G xs)
+      (HIn : In (existT _ t (x, x')) G)
+  : option_map Output.interp (symbolic_eval (t := t) xs (snd x')) = Some b
+    -> b = x.
+Proof.
+Admitted.
+
+Lemma wf_good_lookup_None_In t G xs x x'
+      (H : wf_context_mapping_good G xs)
+      (HIn : In (existT _ t (x, x')) G)
+  : lookup (var:=interp_type) t (snd x') xs = None
+    -> fst x' = x.
+Proof.
+  destruct xs as [ls0 ls1], t; simpl in *;
+    first [ revert dependent ls0; induction ls1 as [|?? IHxs]
+          | revert dependent ls1; induction ls0 as [|?? IHxs] ];
+    repeat match goal with
+           | _ => congruence
+           | _ => progress simpl
+           | _ => progress break_match
+           | _ => progress intros
+           | _ => progress congruence_option
+           | _ => progress SymbolicExpr_beq_to_eq
+           | _ => progress subst
+           end.
+Admitted.
+
+(*Local Ltac use_wf_context_mapping_good_In_sym_eval_eq
+  := repeat match goal with
+            | [ H : option_map Output.interp (symbolic_eval (t := Tflat (Tconst (Tvar ?t))) ?xs (snd ?x')) = Some ?b |- _]
+              => eapply (@wf_context_mapping_good_In_sym_eval_eq t _ xs _ b x') in H; [ | eassumption | eassumption ]
+            end.
+
+Lemma wf_to_interp_arg t G x x' xs
+      (wf : Output.wf_arg G x x')
+      (Hgood : wf_context_mapping_good G xs)
+  : Output.interp_arg (fst (cseArg x' xs)) = Output.interp_arg (t := t) x.
+Proof.
+  revert dependent xs; induction wf;
+    repeat match goal with
+           | _ => reflexivity
+           | _ => progress intros
+           | _ => progress subst
+           | _ => progress simpl in *
+           | _ => progress break_match
+           | _ => progress congruence_option
+           | _ => progress apply_lookup_good
+           | _ => progress use_wf_context_mapping_good_In_sym_eval_eq
+           | _ => progress unfold cseExprHelper1, cseExprHelper2 in *
+           end.
+lazymatch goal with
+            | [ H : option_map Output.interp (symbolic_eval (t := Tflat (Tconst (Tvar ?t))) ?xs (snd ?x')) = Some ?b |- _]
+              => eapply (@wf_context_mapping_good_In_sym_eval_eq t _ xs _ b x') in H
+end.
+eapply wf_context_mapping_good_In_sym_eval_eq in Heqo.
+eappply
+
+Lemma wf_context_mapping_good_unop G t (op : nop 1 1 t TW) xs s w
+      (e : @Output.arg interp_type t)
+      (e' : @Output.arg (fun t' => interp_type t' * SymbolicExpr)%type t)
+      (H : wf_context_mapping_good G xs)
+      (Heq : snd (cseArg (var:=interp_type) e' xs) = Some s)
+      (Hlookup : lookup (var:=interp_type) TW (SUnOp (cseOp op) s) xs = Some w)
+      (wf : Output.wf_arg G e e')
+  : wf_context_mapping_good
+      (existT _ _ (interp_nop op (Output.interp_arg e), (w, SUnOp (cseOp op) s)) :: G) xs.
+Proof.
+  revert dependent s.
+  revert dependent w.
+  revert H.
+  induction wf;
+    repeat match goal with
+           | _ => progress intros
+           | _ => progress subst
+           | _ => progress simpl in *
+           | _ => progress break_match
+           | _ => progress congruence_option
+           | _ => progress unfold cseExprHelper1, cseExprHelper2 in *
+           end.
+Admitted.
+(*Lemma wf_context_mapping_good_unop' G t (op : nop 1 1 t TW) xs s w
+      (e : @Output.arg interp_type t)
+      (e' : @Output.arg (fun t' => interp_type t' * SymbolicExpr)%type t)
+      (H : wf_context_mapping_good G xs)
+      (Heq : snd (cseArg (var:=interp_type) e' xs) = Some s)
+      (Hlookup : lookup (var:=interp_type) TW (SUnOp (cseOp op) s) xs = None)
+      (wf : Output.wf_arg G e e')
+  : wf_context_mapping_good
+      (existT _ _ (interp_nop op (Output.interp_arg e), (w, SUnOp (cseOp op) s)) :: G) xs.
+Proof.
+  wf_context_mapping_good
+    (existT
+       (fun t : vartype =>
+        (match t with
+         | Tbool => bool
+         | TW => fancy_machine.W
+         end * (match t with
+                | Tbool => bool
+                | TW => fancy_machine.W
+                end * SymbolicExpr))%type) TW
+       (interp_nop op (Output.interp_arg e1),
+       (interp_nop op (Output.interp_arg (fst (cseArg e1' xs))), SUnOp (cseOp op) s)) :: G)
+    ((interp_nop op (Output.interp_arg (fst (cseArg e1' xs))), SUnOp (cseOp op) s) :: fst xs, snd xs)
+*)*)
+Lemma cse'_correct {t} (e1 : @Output.expr interp_type t) (e2 : @Output.expr (fun t : vartype => (interp_type t * SymbolicExpr)%type) t) G (wf:Output.wf G e1 e2) xs :
+  wf_context_mapping_good G xs ->
+    Output.pointwise_eq_interp (t := t) (Output.interp (cseExpr' e2 xs)) (Output.interp e1).
+Proof.
+  revert dependent xs.
+  induction wf;
+    repeat match goal with
+           | _ => progress intros
+           | _ => progress subst
+           | _ => progress simpl in *
+           | _ => progress break_match
+           | _ => progress congruence_option
+           | _ => progress unfold cseExprHelper1, cseExprHelper2 in *
+           | _ => solve [ eauto using @wf_context_mapping_good_unop ]
+           end;
+    [ apply H2
+    | apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | try apply H2
+    | ].
+  Focus 20.
+  {
+Set Printing Implicit.
+  { apply H2.
+
+
 pose @symbolic_eval.
 cbv beta in *.
 Set Printing All.
