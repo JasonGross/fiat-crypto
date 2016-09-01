@@ -1939,18 +1939,20 @@ Proof.
 Qed.
 
 Infix "≡" := (ZUtil.Z.equiv_modulo modulus).
+Infix "≡₂₅₆" := (ZUtil.Z.equiv_modulo (2^256)) (at level 70).
 
 Theorem correctness
         (R' : Z)
-        (Hmod : 2 ^ 256 * R' ≡ 1)
-        (Hmod' : ZUtil.Z.equiv_modulo (2 ^ 256) (modulus * m') (-1))
+        (Hmod : 2^256 * R' ≡ 1)
+        (Hmod' : modulus * m' ≡₂₅₆ -1)
         (x y : fancy_machine.W)
-        (Hxy : 0 <= DoubleBounded.tuple_decoder (k:=2) (x, y) <= 2 ^ 256 * modulus)
+        (decoded_input := DoubleBounded.tuple_decoder (k:=2) (x, y))
+        (Hxy : 0 <= decoded_input <= 2^256 * modulus)
         (res := fancy_machine.decode (Output.Interp compiled_example x y))
-  : res ≡ DoubleBounded.tuple_decoder (k:=2) (x, y) * R'
+  : res ≡ decoded_input * R'
     /\ 0 <= res < modulus.
 Proof.
-  subst res; rewrite sanity.
+  subst res decoded_input; rewrite sanity.
   pose proof (@Montgomery.ZBounded.reduce_via_partial_correct _ _ _ props') as H'.
   unfold ZBounded.decode_small, ZBounded.decode_large, ZLikeOps_of_ArchitectureBoundedOps in *.
   unfold f, fst', snd', fst, snd in *.
