@@ -1943,34 +1943,19 @@ Infix "≡" := (ZUtil.Z.equiv_modulo modulus).
 Theorem correctness
         (R' : Z)
         (Hmod : 2 ^ 256 * R' ≡ 1)
-        (Hmod' : ZUtil.Z.equiv_modulo (2 ^ 256) (modulus * m') (-1))
+        (Hmod' : ZUtil.Z.equiv_modulo (2 ^ 256) (modulus * (fancy_machine.decode (ldi m'))) (-1))
         (x y : fancy_machine.W)
         (Hxy : 0 <= DoubleBounded.tuple_decoder (k:=2) (x, y) <= 2 ^ 256 * modulus)
         (res := fancy_machine.decode (Output.Interp compiled_example x y))
   : res ≡ DoubleBounded.tuple_decoder (k:=2) (x, y) * R'
     /\ 0 <= res < modulus.
 Proof.
-  assert (modulus <= 2^256) by (pose proof H; omega).
   subst res; rewrite sanity.
-  let H := lazymatch (eval cbv [f] in f) with fun x => proj1_sig (@?f x) => f end in
-  pose proof (proj1 (proj2_sig (H (x, y)) I)) as H'.
-  cbv beta in *.
-  unfold f.
-  unfold fst', snd' in *.
-  simpl @fst in *.
-  simpl @snd in *.
-  unfold ZBounded.decode_small, ZBounded.decode_large in *.
-  unfold ZLikeOps_of_ArchitectureBoundedOps in *.
-  rewrite H'; clear H'.
-  split.
-  { eapply reduce_via_partial_correct; eauto using Hm, Hm', @decode_range_bound.
-    { apply decode_range_bound. }
-    { rewrite decode_load_immediate; try eauto using Hm' with typeclass_instances.
-      apply Hm'. } }
-  { pose proof (@reduce_via_partial_in_range modulus Hm (2^256) m' Hm' _ Hxy) as H'.
-    rewrite Z.min_l in H' by omega.
-    rewrite decode_load_immediate; try eauto using Hm' with typeclass_instances.
-    apply Hm'. }
+  pose proof (@Montgomery.ZBounded.reduce_via_partial_correct _ _ _ props') as H'.
+  unfold ZBounded.decode_small, ZBounded.decode_large, ZLikeOps_of_ArchitectureBoundedOps in *.
+  unfold f, fst', snd', fst, snd in *.
+  eapply H'; eauto using Hm, Hm', @decode_range_bound.
+  exact I.
 Qed.
 
 Notation "'Return' x" := (cVar x) (at level 200).
