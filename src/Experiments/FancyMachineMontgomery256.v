@@ -1943,7 +1943,7 @@ Infix "≡" := (ZUtil.Z.equiv_modulo modulus).
 Theorem correctness
         (R' : Z)
         (Hmod : 2 ^ 256 * R' ≡ 1)
-        (Hmod' : ZUtil.Z.equiv_modulo (2 ^ 256) (modulus * (fancy_machine.decode (ldi m'))) (-1))
+        (Hmod' : ZUtil.Z.equiv_modulo (2 ^ 256) (modulus * m') (-1))
         (x y : fancy_machine.W)
         (Hxy : 0 <= DoubleBounded.tuple_decoder (k:=2) (x, y) <= 2 ^ 256 * modulus)
         (res := fancy_machine.decode (Output.Interp compiled_example x y))
@@ -1955,8 +1955,13 @@ Proof.
   unfold ZBounded.decode_small, ZBounded.decode_large, ZLikeOps_of_ArchitectureBoundedOps in *.
   unfold f, fst', snd', fst, snd in *.
   eapply H'; eauto using Hm, Hm', @decode_range_bound.
-  exact I.
+  { replace (fancy_machine.decode (ldi m')) with m'.
+    { assumption. }
+    { symmetry; apply (decode_load_immediate _ _), Hm'. } }
+  { exact I. }
 Qed.
+
+Print Assumptions correctness.
 
 Notation "'Return' x" := (cVar x) (at level 200).
 Notation "'c.Mul128' ( x , A , B ) , b" :=
