@@ -4,7 +4,8 @@ Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Import Crypto.ModularArithmetic.Montgomery.ZBounded.
-Require Import Crypto.Util.Tuple Crypto.Util.Option Crypto.Util.Sigma.
+Require Import Crypto.ModularArithmetic.Montgomery.ZProofs.
+Require Import Crypto.Util.Tuple Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
 (* These might be needed for faster lookups *)
 (*Require Import Coq.FSets.FMaps Coq.FSets.FMapAVL Coq.FSets.FMapFacts Coq.FSets.FMapFullAVL.*)
 
@@ -21,6 +22,7 @@ Require Import Crypto.Assembly.Evaluables.
 Local Open Scope Z_scope.
 Notation eta x := (fst x, snd x).
 Notation eta3 x := (eta (fst x), snd x).
+Notation eta3' x := (fst x, eta (snd x)).
 
 Section fold.
   Context {A B} (f : A -> B) (join : B -> B -> B).
@@ -1008,7 +1010,7 @@ Section CSE.
                      end
        | _ => fun _ => None
        end t.
-  Fixpoint symbolic_eval {t} (xs : mapping) (e : SymbolicExpr) : option (@Output.expr var t)
+  Fixpoint symbolic_preeval {t} (xs : mapping) (e : SymbolicExpr) : option (@Output.expr var t)
     := match e, t return option (@Output.expr var t) with
            | SConstZ v, TZ as t
            | SConstBool v, Tbool as t
@@ -1026,7 +1028,7 @@ Section CSE.
                           (mapping_nth_error xs t n)
            | SVar _ _, _ => None
            | SPair x y, Prod tx ty
-             => match @symbolic_eval tx xs x, @symbolic_eval ty xs y with
+             => match @symbolic_preeval tx xs x, @symbolic_preeval ty xs y with
                | Some x', Some y' => Some (Output.under_lets x' (fun x0 => Output.under_lets y' (fun y0 => Output.Return (Output.Pair x0 y0))))
                | _, _ => None
                end
@@ -1040,14 +1042,14 @@ Section CSE.
                            x0' (fun x0' => Output.LetUnop
                                              opv x0'
                                              (fun v => Output.Return (Output.Var v))))
-                     (@symbolic_eval x0t xs x0)
+                     (@symbolic_preeval x0t xs x0)
                | _ => None
                end
            | SUnOp _ _, _ => None
            | SBinOp op x0 x1, TW as t
              => match sop_eval 1 op t with
                | Some (existT 2%nat (existT (x0t, x1t) opv))
-                 => match @symbolic_eval x0t xs x0, @symbolic_eval x1t xs x1 with
+                 => match @symbolic_preeval x0t xs x0, @symbolic_preeval x1t xs x1 with
                    | Some x0', Some x1'
                      => Some
                          (Output.under_lets
@@ -1065,7 +1067,7 @@ Section CSE.
            | STrinOp op x0 x1 x2, TW as t
              => match sop_eval 1 op t with
                | Some (existT 3%nat (existT (x0t, x1t, x2t) opv))
-                 => match @symbolic_eval x0t xs x0, @symbolic_eval x1t xs x1, @symbolic_eval x2t xs x2 with
+                 => match @symbolic_preeval x0t xs x0, @symbolic_preeval x1t xs x1, @symbolic_preeval x2t xs x2 with
                    | Some x0', Some x1', Some x2'
                      => Some
                          (Output.under_lets
@@ -1084,7 +1086,7 @@ Section CSE.
            | STrinOp2Ret op x0 x1 x2, (Prod Tbool TW) as t
              => match sop_eval 2 op (Tbool:flat_type, TW:flat_type) with
                | Some (existT 3%nat (existT (x0t, x1t, x2t) opv))
-                 => match @symbolic_eval x0t xs x0, @symbolic_eval x1t xs x1, @symbolic_eval x2t xs x2 with
+                 => match @symbolic_preeval x0t xs x0, @symbolic_preeval x1t xs x1, @symbolic_preeval x2t xs x2 with
                    | Some x0', Some x1', Some x2'
                      => Some
                          (Output.under_lets
@@ -1233,6 +1235,7 @@ Section CSE.
                                                   @cseExpr _ (f (x, sx)) (add_mapping x sx xs))
        end.
 End CSE.
+Definition symbolic_eval {t} xs sv := option_map Output.interp (@symbolic_preeval _ t xs sv).
 Fixpoint cseExpr' {var t} v xs := @cseExpr_step var (@cseExpr' var) t v xs.
 
 Fixpoint cseExpr {var}
@@ -1252,6 +1255,37 @@ Fixpoint cseExpr {var}
 Definition CSE {t} (e:Output.Expr t) : Output.Expr t := fun var =>
   @cseExpr var t (e _) (nil, nil).
 
+Local Ltac specialize_vartype :=
+  repeat match goal with
+         | [ H : forall x : vartype, _ |- _ ]
+           => pose proof (H Tbool); pose proof (H TW); clear H
+         end.
+
+Lemma lookup_correct
+      (var := interp_type)
+      (svar := fun t => (var t * SymbolicExpr)%type)
+      (mapping := (list (svar TW) * list (svar Tbool))%type)
+  : forall sv vs (G : list (sigT (fun t : vartype => (interp_type t * (interp_type t * SymbolicExpr))%type))) (xs : mapping),
+    (forall t x1 sv x2, In (existT _ t (x1, (x2, sv))) G -> x1 = x2)
+    -> (forall t x1 sv x2,
+           In (existT _ t (x1, (x2, sv))) G -> symbolic_eval vs sv = Some x1)
+    -> (forall t x sv, lookup (var:=var) t sv xs = Some x -> In (existT _ t (x, (x, sv))) G)
+    -> forall t, match lookup (var:=var) t sv xs with
+                 | Some x' => symbolic_eval vs sv = Some x' /\ In (existT _ t (x', (x', sv))) G
+                 | None => True
+                 end.
+Proof.
+  induction xs;
+    repeat first [ congruence
+                 | solve [ trivial ]
+                 | progress intros
+                 | progress subst
+                 | progress simpl in *
+                 | progress break_match
+                 | progress inversion_option
+                 | progress specialize_vartype
+                 | solve [ eauto ] ].
+Qed.
 
 (*
 Local Ltac SymbolicExpr_beq_to_eq :=
@@ -1400,20 +1434,68 @@ Definition wf_context_mapping_good
     -> mapping
     -> Prop
   := fun G xs
-     => (forall t x1 sv x2, In (existT _ t (x1, (x2, sv))) G -> x1 = x2).
+     => (forall t x1 sv x2, In (existT _ t (x1, (x2, sv))) G -> x1 = x2)
+        /\ (forall t x1 sv x2,
+               In (existT _ t (x1, (x2, sv))) G -> symbolic_eval xs sv = Some x1)
+        /\ (forall t x sv, lookup (var:=var) t sv xs = Some x -> In (existT _ t (x, (x, sv))) G).
 
-Lemma wf_context_mapping_good_cons g G xs
+(*Lemma wf_context_mapping_good_cons g G xs
   : wf_context_mapping_good (g :: G) xs
-    <-> (fst (projT2 g) = fst (snd (projT2 g))
+    <-> (let '(x1, (x2, sv)) := eta3' (projT2 g) in
+         x1 = x2
+         /\ symbolic_eval xs sv = Some x1
+         /\ ((forall t, lookup (var:=interp_type) t sv xs = None) \/ In g G)
          /\ wf_context_mapping_good G xs).
 Proof.
   destruct g as [? [? [? ?] ] ]; simpl.
   unfold wf_context_mapping_good; simpl;
-    repeat intuition (subst || inversion_sigma || simpl in * || eauto).
-  (subst || inversion_sigma || eauto).
-  { eapply H0.
-    eauto.
-  split_and.
+    repeat intuition (subst || inversion_sigma || inversion_prod || simpl in * || eauto || specialize_vartype).
+  destruct x.
+  repeat match goal with
+         | [ x : _, H' : forall y, _ |- _ ] => unique pose proof (H' x)
+         end.
+  repeat match goal with
+         | [ H : None = Some _ -> _ |- _ ] => clear H
+         | [ H : ?x = ?x -> _ |- _ ] => specialize (H eq_refl)
+         | [ H : @lookup' ?a ?b ?c ?d = Some _ -> _ |- _ ]
+           => destruct (@lookup' a b c d) eqn:?
+         end.
+
+
+         end.
+  { repeat match goal with
+         | [ H : or _ _ |- _ ] => destruct H
+         end.
+  specialize_all_ways.
+Qed.
+
+Definition wf_context_mapping_good_cons1 g G xs
+  := proj2 (wf_context_mapping_good_cons g G xs).
+
+Lemma cseArg_correct {t} (x1 : @Output.arg interp_type t) (x2 : @Output.arg (fun t : vartype => (interp_type t * SymbolicExpr)%type) t) G (wf:Output.wf_arg G x1 x2) xs :
+  wf_context_mapping_good G xs ->
+    Output.pointwise_eq_interp (t := t) (Output.interp_arg (fst (cseArg x2 xs))) (Output.interp_arg x1).
+Proof.
+  revert dependent xs; induction wf;
+    repeat match goal with
+           | _ => congruence
+           | _ => progress intros
+           | _ => progress subst
+           | _ => progress simpl in *
+           | _ => progress break_match
+           | _ => progress inversion_option
+           | _ => progress unfold cseExprHelper1, cseExprHelper2 in *
+           end.
+
+  t : flat_type
+  x : Output.arg t
+  x' : Output.arg t
+  H0 : Output.wf_arg G x x'
+  xs : list (fancy_machine.W * SymbolicExpr) * list (bool * SymbolicExpr)
+  H1 : wf_context_mapping_good G xs
+  ============================
+  Output.interp_arg (fst (cseArg x' xs)) = Output.interp_arg x
+
 
 Lemma cse'_correct {t} (e1 : @Output.expr interp_type t) (e2 : @Output.expr (fun t : vartype => (interp_type t * SymbolicExpr)%type) t) G (wf:Output.wf G e1 e2) xs :
   wf_context_mapping_good G xs ->
@@ -1422,15 +1504,106 @@ Proof.
   revert dependent xs.
   induction wf;
     repeat match goal with
+           | _ => congruence
            | _ => progress intros
            | _ => progress subst
            | _ => progress simpl in *
            | _ => progress break_match
-           | _ => progress congruence_option
+           | _ => progress inversion_option
            | _ => progress unfold cseExprHelper1, cseExprHelper2 in *
            end.
-  { apply H2.
-
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    split; eauto.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  {
+match goal with
+    | [ H : _ |- _ ] => apply H, wf_context_mapping_good_cons1; simpl
+    end.
+    admit. }
+  { apply H2, wf_context_mapping_good_cons1; simpl.
+    admit. }
+  {
+apply H2, wf_context_mapping_good_cons1; simpl.
+    admit. }
+    a
     unfold wf_context_mapping_good in *.
     simpl.
     intros.
@@ -1760,8 +1933,45 @@ Notation "'c.Sub' ( x , A , B ) , b" :=
     (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
 Print compiled_example.
 
+Theorem sanity : Output.Interp compiled_example = (fun x y => f (x, y)).
+Proof.
+  reflexivity.
+Qed.
 
+Infix "≡" := (ZUtil.Z.equiv_modulo modulus).
 
+Theorem correctness
+        (R' : Z)
+        (Hmod : 2 ^ 256 * R' ≡ 1)
+        (Hmod' : ZUtil.Z.equiv_modulo (2 ^ 256) (modulus * m') (-1))
+        (x y : fancy_machine.W)
+        (Hxy : 0 <= DoubleBounded.tuple_decoder (k:=2) (x, y) <= 2 ^ 256 * modulus)
+        (res := fancy_machine.decode (Output.Interp compiled_example x y))
+  : res ≡ DoubleBounded.tuple_decoder (k:=2) (x, y) * R'
+    /\ 0 <= res < modulus.
+Proof.
+  assert (modulus <= 2^256) by (pose proof H; omega).
+  subst res; rewrite sanity.
+  let H := lazymatch (eval cbv [f] in f) with fun x => proj1_sig (@?f x) => f end in
+  pose proof (proj1 (proj2_sig (H (x, y)) I)) as H'.
+  cbv beta in *.
+  unfold f.
+  unfold fst', snd' in *.
+  simpl @fst in *.
+  simpl @snd in *.
+  unfold ZBounded.decode_small, ZBounded.decode_large in *.
+  unfold ZLikeOps_of_ArchitectureBoundedOps in *.
+  rewrite H'; clear H'.
+  split.
+  { eapply reduce_via_partial_correct; eauto using Hm, Hm', @decode_range_bound.
+    { apply decode_range_bound. }
+    { rewrite decode_load_immediate; try eauto using Hm' with typeclass_instances.
+      apply Hm'. } }
+  { pose proof (@reduce_via_partial_in_range modulus Hm (2^256) m' Hm' _ Hxy) as H'.
+    rewrite Z.min_l in H' by omega.
+    rewrite decode_load_immediate; try eauto using Hm' with typeclass_instances.
+    apply Hm'. }
+Qed.
 
 Notation "'Return' x" := (cVar x) (at level 200).
 Notation "'c.Mul128' ( x , A , B ) , b" :=
