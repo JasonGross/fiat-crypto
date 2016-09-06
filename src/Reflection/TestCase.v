@@ -184,6 +184,11 @@ Module bounds.
     exists {| lower := x ; value := x ; upper := x |}.
     simpl; split; reflexivity.
   Defined.
+  Definition constant_unbounded t (x : interp_base_type_bounds t) : interp_base_type t.
+  Proof.
+    destruct t.
+    exact (value (proj1_sig x)).
+  Defined.
   Fixpoint constant_bounds t
     : interp_flat_type_gen interp_base_type t -> interp_flat_type_gen interp_base_type_bounds t
     := match t with
@@ -195,7 +200,21 @@ Module bounds.
     Eval vm_compute in
       (fun var => map base_type op interp_base_type interp_base_type_bounds constant_bounds (fun _ x => x) (fun _ x => x) (example_expr (fun t => var t))).
 
+  Definition new_example_expr : Syntax.expr base_type interp_base_type op (var:=interp_base_type) _
+    := (map base_type op interp_base_type_bounds interp_base_type (@f_const base_type _ _ (@constant_unbounded)) (@constant_unbounded) (@constant_bounded) (example_expr_bounds _)).
+
   Compute (fun x xpf y ypf => proj1_sig (Syntax.Interp interp_op_bounds example_expr_bounds
                                          (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf)
                                          (exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
+
+  Lemma example_expr_in_bounds x y
+        (v := (proj1_sig (Syntax.Interp interp_op_bounds example_expr_bounds x y)))
+    : lower v <= Syntax.interp interp_op new_example_expr (constant_unbounded _ x) (constant_unbounded _ y) <= upper v.
+  Proof.
+    unfold Syntax.Interp, new_example_expr.
+    pose proof (fun f1 f2 pf1 pf2 => @interp_map base_type op interp_base_type_bounds interp_base_type interp_op_bounds interp_op f1 f2 pf1 pf2 (Arrow Tnat (Arrow Tnat (Tflat _ tnat))) (example_expr_bounds _)) as H.
+    rewrite H.
+    2:intros [?]; simpl.
+
+    unfold new_example_expr.
 End bounds.
