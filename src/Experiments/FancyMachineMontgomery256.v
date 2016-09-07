@@ -199,6 +199,9 @@ End syn.
 
 Definition Syntax := forall var, @syntax var.
 
+Notation RegPInvPlaceholder := 1%Z.
+Notation RegModPlaceholder := 2%Z.
+
 Section assemble.
   Context (ops : fancy_machine.instructions (2 * 128)).
 
@@ -220,10 +223,30 @@ Section assemble.
                (assemble_syntaxf : forall {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t), @syntax var)
                {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t) : @syntax var.
     Proof.
-      refine match v with
+      refine match v return @syntax var with
              | Syntax.Const t x => assemble_syntax_const x
              | Syntax.Var _ x => x
-             | Syntax.Op _ _ op args => _
+             | Syntax.Op t1 tR op args
+               => let v := @assemble_syntaxf t1 args in
+                  match op, v with
+                  | OPldi    , cConstZ 0 => RegZero
+                  | OPldi    , cConstZ RegPInvPlaceholder => RegPInv
+                  | OPldi    , cConstZ RegModPlaceholder => RegMod
+                  | OPldi    , cConstZ v => cINVALID v
+                  | OPshrd   , _ => cINVALID op
+                  | OPshl    , cPair w (cConstZ n) => cLeftShifted w n
+                  | OPshr    , cPair w (cConstZ n) => cRightShifted w n
+                  | OPmkl    , _ => cINVALID op
+                  | OPadc    , cPair (cVarC c) (cPair x y) => cAddc c x y
+                  | OPadc    , cPair (cConstBool false) (cPair x y) => cAdd x y
+                  | OPsubc   , _ => _
+                  | OPmulhwll, _ => _
+                  | OPmulhwhl, _ => _
+                  | OPmulhwhh, _ => _
+                  | OPselc   , cPair (cVarC c) (cPair x y) => cSelc c x y
+                  | OPaddm   , _ => _
+                  | _, _ => cINVALID op
+                  end
              | Syntax.Let _ ex _ eC
                => cBind (@assemble_syntaxf _ ex) (fun x => @assemble_syntaxf _ (eC _))
              | Syntax.Pair _ ex _ ey
