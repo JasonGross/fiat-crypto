@@ -110,6 +110,28 @@ Section instances.
   Global Instance: reify type fancy_machine.W := TW.
 End instances.
 
+Ltac base_reify_op op op_head ::=
+     lazymatch op_head with
+     | @Interface.ldi => constr:(reify_op op op_head 1 OPldi)
+     | @Interface.shrd => constr:(reify_op op op_head 3 OPshrd)
+     | @Interface.shl => constr:(reify_op op op_head 2 OPshl)
+     | @Interface.shr => constr:(reify_op op op_head 2 OPshr)
+     | @Interface.mkl => constr:(reify_op op op_head 2 OPmkl)
+     | @Interface.adc => constr:(reify_op op op_head 3 OPadc)
+     | @Interface.subc => constr:(reify_op op op_head 3 OPsubc)
+     | @Interface.mulhwll => constr:(reify_op op op_head 2 OPmulhwll)
+     | @Interface.mulhwhl => constr:(reify_op op op_head 2 OPmulhwhl)
+     | @Interface.mulhwhh => constr:(reify_op op op_head 2 OPmulhwhh)
+     | @Interface.selc => constr:(reify_op op op_head 3 OPselc)
+     | @Interface.addm => constr:(reify_op op op_head 3 OPaddm)
+     end.
+Ltac base_reify_type T ::=
+     match T with
+     | Z => TZ
+     | bool => Tbool
+     | fancy_machine.W => TW
+     end.
+
 Ltac Reify' e := Reify.Reify' base_type (interp_base_type _) op e.
 Ltac Reify e :=
   let v := Reify.Reify base_type (interp_base_type _) op e in
