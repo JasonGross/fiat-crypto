@@ -42,8 +42,7 @@ Section expression.
              R' HR0 HR1
              v
              Hv
-    : ZUtil.Z.equiv_modulo _ (fancy_machine.decode (expression v)) _
-      /\ 0 <= fancy_machine.decode (expression v) < _
+    : fancy_machine.decode (expression v) = _
     := @ZBounded.reduce_via_partial_correct (2^256) modulus _ props' (ldi' m') I Hm R' HR0 HR1 v I Hv.
 End expression.
 

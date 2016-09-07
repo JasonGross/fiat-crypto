@@ -93,18 +93,18 @@ Section reflection.
 End reflection.
 Section instances.
   Context {ops : fancy_machine.instructions (2 * 128)}.
-  Global Instance: forall x, reify_op op (ldi x) 1 OPldi := fun _ => I.
-  Global Instance: forall x y z, reify_op op (shrd x y z) 3 OPshrd := fun _ _ _ => I.
-  Global Instance: forall x y, reify_op op (shl x y) 2 OPshl := fun _ _ => I.
-  Global Instance: forall x y, reify_op op (shr x y) 2 OPshr := fun _ _ => I.
-  Global Instance: forall x y, reify_op op (mkl x y) 2 OPmkl := fun _ _ => I.
-  Global Instance: forall x y z, reify_op op (adc x y z) 3 OPadc := fun _ _ _ => I.
-  Global Instance: forall x y z, reify_op op (subc x y z) 3 OPsubc := fun _ _ _ => I.
-  Global Instance: forall x y, reify_op op (mulhwll x y) 2 OPmulhwll := fun _ _ => I.
-  Global Instance: forall x y, reify_op op (mulhwhl x y) 2 OPmulhwhl := fun _ _ => I.
-  Global Instance: forall x y, reify_op op (mulhwhh x y) 2 OPmulhwhh := fun _ _ => I.
-  Global Instance: forall x y z, reify_op op (selc x y z) 3 OPselc := fun _ _ _ => I.
-  Global Instance: forall x y z, reify_op op (addm x y z) 3 OPaddm := fun _ _ _ => I.
+  Global Instance: reify_op op (@Interface.ldi) 1 OPldi := I.
+  Global Instance: reify_op op (@Interface.shrd) 3 OPshrd := I.
+  Global Instance: reify_op op (@Interface.shl) 2 OPshl := I.
+  Global Instance: reify_op op (@Interface.shr) 2 OPshr := I.
+  Global Instance: reify_op op (@Interface.mkl) 2 OPmkl := I.
+  Global Instance: reify_op op (@Interface.adc) 3 OPadc := I.
+  Global Instance: reify_op op (@Interface.subc) 3 OPsubc := I.
+  Global Instance: reify_op op (@Interface.mulhwll) 2 OPmulhwll := I.
+  Global Instance: reify_op op (@Interface.mulhwhl) 2 OPmulhwhl := I.
+  Global Instance: reify_op op (@Interface.mulhwhh) 2 OPmulhwhh := I.
+  Global Instance: reify_op op (@Interface.selc) 3 OPselc := I.
+  Global Instance: reify_op op (@Interface.addm) 3 OPaddm := I.
   Global Instance: reify type Z := TZ.
   Global Instance: reify type bool := Tbool.
   Global Instance: reify type fancy_machine.W := TW.
