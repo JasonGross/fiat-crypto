@@ -39,23 +39,21 @@ Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op interp_op.
 
 Goal (flat_type base_type -> Type) -> False.
   intro var.
-  let x := reifyf (@nil cache) base_type interp_base_type op var 1%nat in pose x.
-  let x := reify_abs base_type interp_base_type op var 1%nat in pose x.
+  let x := reifyf base_type interp_base_type op var 1%nat in pose x.
   let x := Reify' 1%nat in unify x (fun var => Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1).
-  let x := reify_op (@nil cache) op plus in pose x.
-  let x := reifyf (@nil cache) base_type interp_base_type op var (1 + 1)%nat in pose x.
+  let x := reifyf base_type interp_base_type op var (1 + 1)%nat in pose x.
   let x := Reify' (1 + 1)%nat in unify x (fun var => Op Add (Pair (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1))).
   let x := reify_abs base_type interp_base_type op var (fun x => x + 1)%nat in pose x.
   let x := Reify' (fun x => x + 1)%nat in unify x (fun var => Abs (fun y => Op Add (Pair (Var y) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
-  let x := reifyf (@nil cache) base_type interp_base_type op var (let '(a, b) := (1, 1) in a + b)%nat in pose x.
-  let x := reifyf (@nil cache) base_type interp_base_type op var (let '(a, b, c) := (1, 1, 1) in a + b + c)%nat in pose x.
+  let x := reifyf base_type interp_base_type op var (let '(a, b) := (1, 1) in a + b)%nat in pose x.
+  let x := reifyf base_type interp_base_type op var (let '(a, b, c) := (1, 1, 1) in a + b + c)%nat in pose x.
   let x := Reify' (fun x => let '(a, b) := (1, 1) in a + x)%nat in let x := (eval vm_compute in x) in pose x.
   let x := Reify' (fun x => let '(a, b) := (1, 1) in a + x)%nat in
   unify x (fun var => Abs (fun x' =>
                           let c1 := (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) in
                           MatchPair (tC:=tnat) (Pair c1 c1)
                                     (fun x0 _ : var tnat => Op Add (Pair (Var x0) (Var x'))))).
-  let x := reifyf (@nil cache) base_type interp_base_type op var (let x := 5 in let y := 6 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
+  let x := reifyf base_type interp_base_type op var (let x := 5 in let y := 6 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
   let x := Reify' (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
 Abort.
 

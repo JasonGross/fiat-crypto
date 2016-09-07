@@ -1,7 +1,7 @@
 (** * Exact reification of PHOAS Representation of Gallina *)
 (** The reification procedure goes through [InputSyntax], which allows
     judgmental equality of the denotation of the reified term. *)
-Require Import Coq.Strings.String Coq.Lists.List.
+Require Import Coq.Strings.String.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
@@ -23,43 +23,22 @@ Arguments reify_var_for_in_is _ {T} _ _ {eT} _.
 Class reify_op {opTF} (op_family : opTF) {opExprT} (opExpr : opExprT) (nargs : nat) {opT} (reified_op : opT)
   := Build_reify_op : True.
 Ltac strip_type_cast term := lazymatch term with ?term' => term' end.
-
-Record cache := { argT : Type ; arg : argT ; valT : Type ; val : valT }.
-
-Ltac memoize tac cache x :=
-  lazymatch cache with
-  | context[{| arg := x ; val := ?v |}] => constr:((cache, v))
-  | _ => let ret := tac x in
-         constr:((({| arg := x ; val := ret |} :: cache)%list, ret))
+Ltac reify_type T :=
+  lazymatch T with
+  | (?A -> ?B)%type
+    => let a := reify_type A in
+       let b := reify_type B in
+       constr:(@Arrow _ a b)
+  | prod ?A ?B
+    => let a := reify_type A in
+       let b := reify_type B in
+       constr:(@Prod _ a b)
+  | _
+    => let v := strip_type_cast (_ : reify type T) in
+       constr:(Tbase v)
   end.
-
-Ltac reify_type cache T :=
-  memoize ltac:(fun T
-                => lazymatch T with
-                   | (?A -> ?B)%type
-                     => let a := reify_type cache A in
-                        let cache := lazymatch a with pair ?cache ?t => cache end in
-                        let a := lazymatch a with pair ?cache ?t => t end in
-                        let b := reify_type cache B in
-                        let cache := lazymatch b with pair ?cache ?t => cache end in
-                        let b := lazymatch b with pair ?cache ?t => t end in
-                        constr:(@Arrow _ a b)
-                   | prod ?A ?B
-                     => let a := reify_type cache A in
-                        let cache := lazymatch a with pair ?cache ?t => cache end in
-                        let a := lazymatch a with pair ?cache ?t => t end in
-                        let b := reify_type cache B in
-                        let cache := lazymatch b with pair ?cache ?t => cache end in
-                        let b := lazymatch b with pair ?cache ?t => t end in
-                        constr:(@Prod _ a b)
-                   | _
-                     => let v := strip_type_cast (_ : reify type T) in
-                        constr:(Tbase v)
-                   end)
-                 cache T.
-Ltac reify_base_type cache T :=
-  let t := reify_type cache T in
-  let t := lazymatch t with pair ?cache ?t => t end in
+Ltac reify_base_type T :=
+  let t := reify_type T in
   lazymatch t with
   | Tbase ?t => t
   | ?t => t
@@ -82,13 +61,6 @@ Inductive reify_result_helper :=
 | finished_value {T} (res : T)
 | op_info {T} (res : T)
 | reification_unsuccessful.
-
-Ltac reify_op cache op op_head :=
-  memoize ltac:(fun op_head
-                => let r := constr:(_ : reify_op op op_head _ _) in
-                   let t := type of r in
-                   constr:(op_info t))
-                 cache op_head.
 
 (** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
     more debugging. *)
@@ -123,8 +95,8 @@ Ltac debug_leave_reify_rec e :=
   | _ => idtac
   end.
 
-Ltac reifyf cache base_type_code interp_base_type op var e :=
-  let reify_rec cache e := reifyf cache base_type_code interp_base_type op var e in
+Ltac reifyf base_type_code interp_base_type op var e :=
+  let reify_rec e := reifyf base_type_code interp_base_type op var e in
   let mkLet ex eC := constr:(Let (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex eC) in
   let mkPair ex ey := constr:(Pair (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex ey) in
   let mkVar T ex := constr:(Var (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
@@ -135,17 +107,15 @@ Ltac reifyf cache base_type_code interp_base_type op var e :=
   let dummy := debug_enter_reifyf e in
   lazymatch e with
   | let x := ?ex in @?eC x =>
-    let ex := reify_rec cache ex in
-    let eC := reify_rec cache eC in
+    let ex := reify_rec ex in
+    let eC := reify_rec eC in
     mkLet ex eC
   | pair ?a ?b =>
-    let a := reify_rec cache a in
-    let b := reify_rec cache b in
+    let a := reify_rec a in
+    let b := reify_rec b in
     mkPair a b
   | (fun x : ?T => ?C) =>
-    let t := reify_type cache T in
-    let cache := lazymatch t with pair ?cache ?t => cache end in
-    let t := lazymatch t with pair ?cache ?t => t end in
+    let t := reify_type T in
     (* Work around Coq 8.5 and 8.6 bug *)
     (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
     (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
@@ -156,21 +126,18 @@ Ltac reifyf cache base_type_code interp_base_type op var e :=
                         (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
     with fun _ v _ => @?C v => C end
   | match ?ev with pair a b => @?eC a b end =>
-    let t := (let T := match type of eC with _ -> _ -> ?T => T end in reify_type cache T) in
-    let cache := lazymatch t with pair ?cache ?t => cache end in
-    let t := lazymatch t with pair ?cache ?t => t end in
-    let v := reify_rec cache ev in
-    let C := reify_rec cache eC in
+    let t := (let T := match type of eC with _ -> _ -> ?T => T end in reify_type T) in
+    let v := reify_rec ev in
+    let C := reify_rec eC in
     mkMatchPair t v C
   | ?x =>
-    let t := lazymatch type of x with ?t => reify_type cache t end in
-    let cache := lazymatch t with pair ?cache ?t => cache end in
-    let t := lazymatch t with pair ?cache ?t => t end in
+    let t := lazymatch type of x with ?t => reify_type t end in
     let retv := match constr:(Set) with
                 | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
                 | _ => let op_head := head x in
-                       let retv := reify_op cache op op_head in
-                       lazymatch retv with pair ?cache ?retv => retv end
+                       let r := constr:(_ : reify_op op op_head _ _) in
+                       let t := type of r in
+                       constr:(op_info t)
                 | _ => let c := mkConst t x in
                        constr:(finished_value c)
                 | _ => constr:(reification_unsuccessful)
@@ -178,48 +145,34 @@ Ltac reifyf cache base_type_code interp_base_type op var e :=
     lazymatch retv with
     | finished_value ?v => v
     | op_info (reify_op _ _ ?nargs ?op_code)
-      => let tR := (let tR := type of x in reify_type cache tR) in
-         let cache := lazymatch tR with pair ?cache ?t => cache end in
-         let tR := lazymatch tR with pair ?cache ?t => t end in
+      => let tR := (let tR := type of x in reify_type tR) in
          lazymatch nargs with
          | 1%nat
            => lazymatch x with
               | ?f ?x0
-                => let a0T := (let t := type of x0 in reify_type cache t) in
-                   let cache := lazymatch a0T with pair ?cache ?t => cache end in
-                   let a0T := lazymatch a0T with pair ?cache ?t => t end in
-                   let a0 := reify_rec cache x0 in
+                => let a0T := (let t := type of x0 in reify_type t) in
+                   let a0 := reify_rec x0 in
                    mkOp a0T tR op_code a0
               end
          | 2%nat
            => lazymatch x with
               | ?f ?x0 ?x1
-                => let a0T := (let t := type of x0 in reify_type cache t) in
-                   let cache := lazymatch a0T with pair ?cache ?t => cache end in
-                   let a0T := lazymatch a0T with pair ?cache ?t => t end in
-                   let a0 := reify_rec cache x0 in
-                   let a1T := (let t := type of x1 in reify_type cache t) in
-                   let cache := lazymatch a1T with pair ?cache ?t => cache end in
-                   let a1T := lazymatch a1T with pair ?cache ?t => t end in
-                   let a1 := reify_rec cache x1 in
+                => let a0T := (let t := type of x0 in reify_type t) in
+                   let a0 := reify_rec x0 in
+                   let a1T := (let t := type of x1 in reify_type t) in
+                   let a1 := reify_rec x1 in
                    let args := mkPair a0 a1 in
                    mkOp (@Prod _ a0T a1T) tR op_code args
               end
          | 3%nat
            => lazymatch x with
               | ?f ?x0 ?x1 ?x2
-                => let a0T := (let t := type of x0 in reify_type cache t) in
-                   let cache := lazymatch a0T with pair ?cache ?t => cache end in
-                   let a0T := lazymatch a0T with pair ?cache ?t => t end in
-                   let a0 := reify_rec cache x0 in
-                   let a1T := (let t := type of x1 in reify_type cache t) in
-                   let cache := lazymatch a1T with pair ?cache ?t => cache end in
-                   let a1T := lazymatch a1T with pair ?cache ?t => t end in
-                   let a1 := reify_rec cache x1 in
-                   let a2T := (let t := type of x2 in reify_type cache t) in
-                   let cache := lazymatch a2T with pair ?cache ?t => cache end in
-                   let a2T := lazymatch a2T with pair ?cache ?t => t end in
-                   let a2 := reify_rec cache x2 in
+                => let a0T := (let t := type of x0 in reify_type t) in
+                   let a0 := reify_rec x0 in
+                   let a1T := (let t := type of x1 in reify_type t) in
+                   let a1 := reify_rec x1 in
+                   let a2T := (let t := type of x2 in reify_type t) in
+                   let a2 := reify_rec x2 in
                    let args := let a01 := mkPair a0 a1 in mkPair a01 a2 in
                    mkOp (@Prod _ (@Prod _ a0T a1T) a2T) tR op_code args
               end
@@ -231,19 +184,19 @@ Ltac reifyf cache base_type_code interp_base_type op var e :=
   end.
 
 Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
-=> (debug_enter_reify_rec; let e := reifyf (@nil cache) base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e) : typeclass_instances.
+=> (debug_enter_reify_rec; let e := reifyf base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e) : typeclass_instances.
 
 (** For reification including [Abs] *)
 Class reify_abs {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs : T.
 Ltac reify_abs base_type_code interp_base_type op var e :=
   let reify_rec e := reify_abs base_type_code interp_base_type op var e in
-  let reifyf_term e := reifyf (@nil cache) base_type_code interp_base_type op var e in
+  let reifyf_term e := reifyf base_type_code interp_base_type op var e in
   let mkAbs src ef := constr:(Abs (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (src:=src) ef) in
   let reify_tag := constr:(@exprf base_type_code interp_base_type op var) in
   let dummy := debug_enter_reify_abs e in
   lazymatch e with
   | (fun x : ?T => ?C) =>
-    let t := reify_base_type (@nil cache) T in
+    let t := reify_base_type T in
     (* Work around Coq 8.5 and 8.6 bug *)
     (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
     (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
