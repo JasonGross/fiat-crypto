@@ -197,397 +197,6 @@ Section syn.
   | cINVALID {T} (_ : T).
 End syn.
 
-Definition Syntax := forall var, @syntax var.
-
-Notation RegPInvPlaceholder := 1%Z.
-Notation RegModPlaceholder := 2%Z.
-
-Section assemble.
-  Context (ops : fancy_machine.instructions (2 * 128)).
-
-  Section with_var.
-    Context {var : base_type -> Type}.
-
-    Fixpoint assemble_syntax_const
-             {t}
-      : interp_flat_type_gen (interp_base_type _) t -> @syntax var
-      := match t return interp_flat_type_gen (interp_base_type _) t -> @syntax var with
-         | Tbase TZ => cConstZ
-         | Tbase Tbool => cConstBool
-         | Tbase t => fun _ => cINVALID t
-         | Prod A B => fun xy => cPair (@assemble_syntax_const A (fst xy))
-                                       (@assemble_syntax_const B (snd xy))
-         end.
-
-    Definition assemble_syntaxf_step
-               (assemble_syntaxf : forall {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t), @syntax var)
-               {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t) : @syntax var.
-    Proof.
-      refine match v return @syntax var with
-             | Syntax.Const t x => assemble_syntax_const x
-             | Syntax.Var _ x => x
-             | Syntax.Op t1 tR op args
-               => let v := @assemble_syntaxf t1 args in
-                  match op, v with
-                  | OPldi    , cConstZ 0 => RegZero
-                  | OPldi    , cConstZ RegPInvPlaceholder => RegPInv
-                  | OPldi    , cConstZ RegModPlaceholder => RegMod
-                  | OPldi    , cConstZ v => cINVALID v
-                  | OPshrd   , _ => cINVALID op
-                  | OPshl    , cPair w (cConstZ n) => cLeftShifted w n
-                  | OPshr    , cPair w (cConstZ n) => cRightShifted w n
-                  | OPmkl    , _ => cINVALID op
-                  | OPadc    , cPair (cVarC c) (cPair x y) => cAddc c x y
-                  | OPadc    , cPair (cConstBool false) (cPair x y) => cAdd x y
-                  | OPsubc   , _ => _
-                  | OPmulhwll, _ => _
-                  | OPmulhwhl, _ => _
-                  | OPmulhwhh, _ => _
-                  | OPselc   , cPair (cVarC c) (cPair x y) => cSelc c x y
-                  | OPaddm   , _ => _
-                  | _, _ => cINVALID op
-                  end
-             | Syntax.Let _ ex _ eC
-               => cBind (@assemble_syntaxf _ ex) (fun x => @assemble_syntaxf _ (eC _))
-             | Syntax.Pair _ ex _ ey
-               => cPair (@assemble_syntaxf _ ex) (@assemble_syntaxf _ ey)
-             end.
-Focus 2.
-  refine match v with
-         | Output.LetUnop _ op x0 _ b
-           => let x0' := assemble_arg x0 in
-              match op with
-              | OPldi => @assemble_syntax var _ (b x0')
-              | _ => cINVALID op
-              end
-         | Output.LetBinop _ _ op x0 x1 _ b
-           => let x0' : @syntax var := assemble_arg x0 in
-              let x1' : @syntax var := assemble_arg x1 in
-              let default := fun s => cBind s (fun v => @assemble_syntax var _ (b (cVar v))) in
-              match op, x1 return @syntax var with
-              | OPshl, Output.Const TZ x1'
-                => @assemble_syntax var _ (b (cLeftShifted x0' x1'))
-              | OPshr, Output.Const TZ x1'
-                => @assemble_syntax var _ (b (cRightShifted x0' x1'))
-              | OPmulhwll, _
-                => default (cMul128 (cLowerHalf x0') (cLowerHalf x1'))
-              | OPmulhwhl, _
-                => default (cMul128 (cUpperHalf x0') (cLowerHalf x1'))
-              | OPmulhwhh, _
-                => default (cMul128 (cUpperHalf x0') (cUpperHalf x1'))
-              | _, _ => default (cINVALID op)
-              end
-         | Output.LetTrinop _ _ _ op x0 x1 x2 _ b
-           => let x0' : @syntax var := assemble_arg x0 in
-              let x1' : @syntax var := assemble_arg x1 in
-              let x2' : @syntax var := assemble_arg x2 in
-              cBind (match op, x0', x2', x2 return @syntax var with
-                     | OPadc, _, _, Output.Const Tbool false
-                       => cAdd x0' x1'
-                     | OPadc, _, cVarC x2', _
-                       => cAddc x2' x0' x1'
-                     | OPsubc, _, _, Output.Const Tbool false
-                       => cSub x0' x1'
-                     | OPselc, cVarC x0', _, _
-                       => cSelc x0' x1' x2'
-                     | OPaddm, _, RegMod, _
-                       => cAddm x0' x1'
-                     | _, _, _, _ => cINVALID op
-                     end)
-                    (fun v => @assemble_syntax var _ (b (cVar v)))
-         | Output.LetTrinop2Ret _ _ _ op x0 x1 x2 _ b
-           => let x0' : @syntax var := assemble_arg x0 in
-              let x1' : @syntax var := assemble_arg x1 in
-              let x2' : @syntax var := assemble_arg x2 in
-              cBindCarry (match op, x0', x2', x2 return @syntax var with
-                          | OPadc, _, _, Output.Const Tbool false
-                            => cAdd x0' x1'
-                          | OPadc, _, cVarC x2', _
-                            => cAddc x2' x0' x1'
-                          | OPsubc, _, _, Output.Const Tbool false
-                            => cSub x0' x1'
-                          | _, _, _, _ => cINVALID op
-                          end)
-                         (fun c v => @assemble_syntax var _ (b (cVarC c) (cVar v)))
-         | Output.Return _ x => @assemble_arg var _ x
-         | Output.Abs TW d f => cAbs (fun x : var TW => @assemble_syntax var _ (f (cVar x)))
-         | Output.Abs s _ _ => cINVALID s
-         end.
-  exact (fun _ => unit).
-Defined.
-
-
-Fixpoint assemble_arg {var} {t} (v : @Output.arg (fun _ => @syntax var) t) : @syntax var
-  := match v with
-     | Output.Const TZ v' => if Z_beq v' 0 then RegZero else cINVALID v'
-     | Output.Const _ x => cINVALID x
-     | Output.SpZConst Cm' => RegPInv
-     | Output.SpZConst Cmodulus => RegMod
-     | Output.Var _ v => v
-     | Output.Pair _ x0 _ x1 => cPair (@assemble_arg _ _ x0) (@assemble_arg _ _ x1)
-     end.
-Definition var_of_arg_helper {var} {t} (v : @Output.arg var t)
-  : match t with
-    | Prod _ _ => unit
-    | Tconst t'
-      => match t' with
-         | Tvar t'' => var t''
-         | TZ => SpecialZConst
-         end + interp_type t'
-    end.
-Proof.
-  destruct v;
-    try solve [ right; assumption
-              | left; assumption
-              | exact tt ].
-Defined.
-
-Definition assemble_syntax_step
-           (assemble_syntax : forall {var} {t} (v : @Output.expr (fun _ => @syntax var) t), @syntax var)
-           {var} {t} (v : @Output.expr (fun _ => @syntax var) t) : @syntax var.
-Proof.
-  refine match v with
-         | Output.LetUnop _ op x0 _ b
-           => let x0' := assemble_arg x0 in
-              match op with
-              | OPldi => @assemble_syntax var _ (b x0')
-              | _ => cINVALID op
-              end
-         | Output.LetBinop _ _ op x0 x1 _ b
-           => let x0' : @syntax var := assemble_arg x0 in
-              let x1' : @syntax var := assemble_arg x1 in
-              let default := fun s => cBind s (fun v => @assemble_syntax var _ (b (cVar v))) in
-              match op, x1 return @syntax var with
-              | OPshl, Output.Const TZ x1'
-                => @assemble_syntax var _ (b (cLeftShifted x0' x1'))
-              | OPshr, Output.Const TZ x1'
-                => @assemble_syntax var _ (b (cRightShifted x0' x1'))
-              | OPmulhwll, _
-                => default (cMul128 (cLowerHalf x0') (cLowerHalf x1'))
-              | OPmulhwhl, _
-                => default (cMul128 (cUpperHalf x0') (cLowerHalf x1'))
-              | OPmulhwhh, _
-                => default (cMul128 (cUpperHalf x0') (cUpperHalf x1'))
-              | _, _ => default (cINVALID op)
-              end
-         | Output.LetTrinop _ _ _ op x0 x1 x2 _ b
-           => let x0' : @syntax var := assemble_arg x0 in
-              let x1' : @syntax var := assemble_arg x1 in
-              let x2' : @syntax var := assemble_arg x2 in
-              cBind (match op, x0', x2', x2 return @syntax var with
-                     | OPadc, _, _, Output.Const Tbool false
-                       => cAdd x0' x1'
-                     | OPadc, _, cVarC x2', _
-                       => cAddc x2' x0' x1'
-                     | OPsubc, _, _, Output.Const Tbool false
-                       => cSub x0' x1'
-                     | OPselc, cVarC x0', _, _
-                       => cSelc x0' x1' x2'
-                     | OPaddm, _, RegMod, _
-                       => cAddm x0' x1'
-                     | _, _, _, _ => cINVALID op
-                     end)
-                    (fun v => @assemble_syntax var _ (b (cVar v)))
-         | Output.LetTrinop2Ret _ _ _ op x0 x1 x2 _ b
-           => let x0' : @syntax var := assemble_arg x0 in
-              let x1' : @syntax var := assemble_arg x1 in
-              let x2' : @syntax var := assemble_arg x2 in
-              cBindCarry (match op, x0', x2', x2 return @syntax var with
-                          | OPadc, _, _, Output.Const Tbool false
-                            => cAdd x0' x1'
-                          | OPadc, _, cVarC x2', _
-                            => cAddc x2' x0' x1'
-                          | OPsubc, _, _, Output.Const Tbool false
-                            => cSub x0' x1'
-                          | _, _, _, _ => cINVALID op
-                          end)
-                         (fun c v => @assemble_syntax var _ (b (cVarC c) (cVar v)))
-         | Output.Return _ x => @assemble_arg var _ x
-         | Output.Abs TW d f => cAbs (fun x : var TW => @assemble_syntax var _ (f (cVar x)))
-         | Output.Abs s _ _ => cINVALID s
-         end.
-  exact (fun _ => unit).
-Defined.
-Fixpoint assemble_syntax {var} {t} (v : @Output.expr (fun _ => @syntax var) t) : @syntax var
-  := @assemble_syntax_step (@assemble_syntax) var t v.
-Fixpoint AssembleSyntax {t} (v : Output.Expr t) : Syntax
-  := fun var => @assemble_syntax var t (v _).
-
-Import Input.
-
-Notation "'ilet' x := 'ldi' v 'in' b" :=
-  (Output.LetUnop OPldi (Output.Const v) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  v  'in' '//' b").
-Notation "'ilet' x := 'ldi' 'm'' 'in' b" :=
-  (Output.LetUnop OPldi (Output.SpZConst Cm') (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'm''  'in' '//' b").
-Notation "'ilet' x := 'ldi' 'modulus' 'in' b" :=
-  (Output.LetUnop OPldi (Output.SpZConst Cmodulus) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'modulus'  'in' '//' b").
-Notation "'ilet' x := 'mulhwll' A B 'in' b" :=
-  (Output.LetBinop OPmulhwll (Output.Var A) (Output.Var B) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'mulhwll'  A  B  'in' '//' b").
-Notation "'ilet' x := 'mulhwhl' A B 'in' b" :=
-  (Output.LetBinop OPmulhwhl (Output.Var A) (Output.Var B) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'mulhwhl'  A  B  'in' '//' b").
-Notation "'ilet' x := 'mulhwhh' A B 'in' b" :=
-  (Output.LetBinop OPmulhwhh (Output.Var A) (Output.Var B) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'mulhwhh'  A  B  'in' '//' b").
-Notation "'ilet' x := 'shl' A B 'in' b" :=
-  (Output.LetBinop OPshl (Output.Var A) (Output.Const B) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'shl'  A  B  'in' '//' b").
-Notation "'ilet' x := 'shr' A B 'in' b" :=
-  (Output.LetBinop OPshr (Output.Var A) (Output.Const B) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'shr'  A  B  'in' '//' b").
-Notation "'clet' ( c , x ) := 'adc' A B C 'in' b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'adc'  A  B  C  'in' '//' b").
-Notation "'clet' ( c , x ) := 'subc' A B C 'in' b" :=
-  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'subc'  A  B  C  'in' '//' b").
-Notation "'clet' ( c , x ) := 'add' A B 'in' b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'add'  A  B  'in' '//' b").
-Notation "'clet' ( c , x ) := 'sub' A B 'in' b" :=
-  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'sub'  A  B  'in' '//' b").
-Notation "'ilet' x := 'selc' A B C 'in' b" :=
-  (Output.LetTrinop OPselc (Output.Var A) (Output.Var B) (Output.Var C) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'selc'  A  B  C  'in' '//' b").
-Notation "'ilet' x := 'addm' A B C 'in' b" :=
-  (Output.LetTrinop OPaddm (Output.Var A) (Output.Var B) (Output.Var C) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'addm'  A  B  C  'in' '//' b").
-Notation Return x := (Output.Return (Output.Var x)).
-Notation "'λ'  x .. y , t" := (Output.Abs (fun x => .. (Output.Abs (fun y => t)) ..))
-  (at level 200, x binder, y binder, right associativity).
-
-Definition compiled_example : Output.Expr (Arrow TW (Arrow TW TW))
-  := Eval vm_compute in
-      CSE (Compile example_Expr).
-Definition compiled_example_syn : Syntax
-  := Eval vm_compute in
-      AssembleSyntax compiled_example.
-Print compiled_example.
-
-(* compiled_example =
-fun var : vartype -> Type =>
-λ x x0 : var TW,
-ilet x1 := ldi 0 in
-ilet x2 := ldi modulus in
-ilet x3 := ldi m' in
-ilet x4 := mulhwll x x3 in
-ilet x5 := mulhwhl x x3 in
-ilet x6 := shl x5 128 in
-clet (_, x8) := add x4 x6 in
-ilet x9 := mulhwhl x3 x in
-ilet x10 := shl x9 128 in
-clet (_, x12) := add x8 x10 in
-ilet x13 := mulhwhh x12 x2 in
-ilet x14 := mulhwhl x12 x2 in
-ilet x15 := shr x14 128 in
-ilet x16 := mulhwll x12 x2 in
-ilet x17 := shl x14 128 in
-clet (x18, x19) := add x16 x17 in
-clet (_, x21) := adc x13 x15 x18 in
-ilet x22 := mulhwhl x2 x12 in
-ilet x23 := shr x22 128 in
-ilet x24 := shl x22 128 in
-clet (x25, x26) := add x19 x24 in
-clet (_, x28) := adc x21 x23 x25 in
-clet (x29, _) := add x x26 in
-clet (x31, x32) := adc x0 x28 x29 in
-ilet x33 := selc x31 x2 x1 in
-clet (_, x35) := sub x32 x33 in
-ilet x36 := addm x35 x1 x2 in
-Return x36
-     : Output.Expr (Arrow TW (Arrow TW TW))
-
- *)
-
-
-Notation "'ilet' x := 'ldi' v 'in' b" :=
-  (Output.LetUnop OPldi (Output.Const v) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  v  'in' '//' b").
-Notation "'ilet' x := 'ldi' 'm'' 'in' b" :=
-  (Output.LetUnop OPldi (Output.SpZConst Cm') (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'm''  'in' '//' b").
-Notation "'ilet' x := 'ldi' 'modulus' 'in' b" :=
-  (Output.LetUnop OPldi (Output.SpZConst Cmodulus) (fun x => b))
-    (at level 200, b at level 200, format "'ilet'  x  :=  'ldi'  'modulus'  'in' '//' b").
-Notation "'c.Mul128' ( x , 'c.LowerHalf' ( A ) , 'c.LowerHalf' ( B ) ) , b" :=
-  (Output.LetBinop OPmulhwll (Output.Var A) (Output.Var B) (fun x => b))
-    (at level 200, b at level 200, A at level 0, B at level 0, format "'c.Mul128' ( x ,  'c.LowerHalf' ( A ) ,  'c.LowerHalf' ( B ) ) , '//' b").
-Notation "'c.Mul128' ( x , 'c.UpperHalf' ( A ) , 'c.LowerHalf' ( B ) ) , b" :=
-  (Output.LetBinop OPmulhwhl (Output.Var A) (Output.Var B) (fun x => b))
-    (at level 200, b at level 200, A at level 0, B at level 0, format "'c.Mul128' ( x ,  'c.UpperHalf' ( A ) ,  'c.LowerHalf' ( B ) ) , '//' b").
-Notation "'c.Mul128' ( x , 'c.UpperHalf' ( A ) , 'c.UpperHalf' ( B ) ) , b" :=
-  (Output.LetBinop OPmulhwhh (Output.Var A) (Output.Var B) (fun x => b))
-    (at level 200, b at level 200, A at level 0, B at level 0, format "'c.Mul128' ( x ,  'c.UpperHalf' ( A ) ,  'c.UpperHalf' ( B ) ) , '//' b").
-Notation "'let' x := 'c.LeftShifted' { A , B } 'in' b" :=
-  (Output.LetBinop OPshl (Output.Var A) (Output.Const B) (fun x => b))
-    (at level 200, b at level 200, format "'let'  x  :=  'c.LeftShifted' { A ,  B }  'in' '//' b").
-Notation "'let' x := 'c.RightShifted' { A , B } 'in' b" :=
-  (Output.LetBinop OPshr (Output.Var A) (Output.Const B) (fun x => b))
-    (at level 200, b at level 200, format "'let'  x  :=  'c.RightShifted' { A ,  B }  'in' '//' b").
-Notation "'clet' ( c , x ) := 'adc' A B C 'in' b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'adc'  A  B  C  'in' '//' b").
-Notation "'clet' ( c , x ) := 'subc' A B C 'in' b" :=
-  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Var C) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'subc'  A  B  C  'in' '//' b").
-Notation "'clet' ( c , x ) := 'add' A B 'in' b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => b))
-    (at level 200, b at level 200, format "'clet'  ( c ,  x )  :=  'add'  A  B  'in' '//' b").
-
-Notation "'c.Add' ( x , A , B ) , b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun _ x => b))
-    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' b").
-
-Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x' , A' , B' ) , b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => (Output.LetTrinop2Ret OPadc (Output.Var A') (Output.Var B') (Output.Var c) (fun _ x' => b))))
-    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x' ,  A' ,  B' ) , '//' b").
-
-Notation "'c.Add' ( x , A , B ) , 'c.Addc' ( x' , A' , B' ) , 'c.Selc' ( x'' , A'' , B'' ) , b" :=
-  (Output.LetTrinop2Ret OPadc (Output.Var A) (Output.Var B) (Output.Const false) (fun c x => (Output.LetTrinop2Ret OPadc (Output.Var A') (Output.Var B') (Output.Var c) (fun c' x' => (Output.LetTrinop OPselc (Output.Var c') (Output.Var A'') (Output.Var B'') (fun x'' => b))))))
-    (at level 200, b at level 200, format "'c.Add' ( x ,  A ,  B ) , '//' 'c.Addc' ( x' ,  A' ,  B' ) , '//' 'c.Selc' ( x'' ,  A'' ,  B'' ) , '//' b").
-
-Notation "'c.Sub' ( x , A , B ) , b" :=
-  (Output.LetTrinop2Ret OPsubc (Output.Var A) (Output.Var B) (Output.Const false) (fun _ x => b))
-    (at level 200, b at level 200, format "'c.Sub' ( x ,  A ,  B ) , '//' b").
-Print compiled_example.
-
-Theorem sanity : Output.Interp compiled_example = (fun x y => f (x, y)).
-Proof.
-  reflexivity.
-Qed.
-
-Infix "≡" := (ZUtil.Z.equiv_modulo modulus).
-Infix "≡₂₅₆" := (ZUtil.Z.equiv_modulo (2^256)) (at level 70).
-
-Theorem correctness
-        (R' : Z)
-        (Hmod : 2^256 * R' ≡ 1)
-        (Hmod' : modulus * m' ≡₂₅₆ -1)
-        (x y : fancy_machine.W)
-        (decoded_input := DoubleBounded.tuple_decoder (k:=2) (x, y))
-        (Hxy : 0 <= decoded_input <= 2^256 * modulus)
-        (res := fancy_machine.decode (Output.Interp compiled_example x y))
-  : res ≡ decoded_input * R'
-    /\ 0 <= res < modulus.
-Proof.
-  subst res decoded_input; rewrite sanity.
-  pose proof (@Montgomery.ZBounded.reduce_via_partial_correct _ _ _ props') as H'.
-  unfold ZBounded.decode_small, ZBounded.decode_large, ZLikeOps_of_ArchitectureBoundedOps in *.
-  unfold f, fst', snd', fst, snd in *.
-  eapply H'; eauto using Hm, Hm', @decode_range_bound.
-  { replace (fancy_machine.decode (ldi m')) with m'.
-    { assumption. }
-    { symmetry; apply (decode_load_immediate _ _), Hm'. } }
-  { exact I. }
-Qed.
-
-Print Assumptions correctness.
-
 Notation "'Return' x" := (cVar x) (at level 200).
 Notation "'c.Mul128' ( x , A , B ) , b" :=
   (cBind (cMul128 A B) (fun x => b))
@@ -679,9 +288,106 @@ Notation "'c.RightShifted' { x , v }" :=
 Notation "'λ'  x .. y , t" := (cAbs (fun x => .. (cAbs (fun y => t)) ..))
   (at level 200, x binder, y binder, right associativity).
 
-Print compiled_example_syn.
-(* compiled_example_syn =
-fun var : vartype -> Type =>
+Definition Syntax := forall var, @syntax var.
+
+Section assemble.
+  Context (ops : fancy_machine.instructions (2 * 128)).
+
+  Section with_var.
+    Context {var : base_type -> Type}.
+
+    Fixpoint assemble_syntax_const
+             {t}
+      : interp_flat_type_gen (interp_base_type _) t -> @syntax var
+      := match t return interp_flat_type_gen (interp_base_type _) t -> @syntax var with
+         | Tbase TZ => cConstZ
+         | Tbase Tbool => cConstBool
+         | Tbase t => fun _ => cINVALID t
+         | Prod A B => fun xy => cPair (@assemble_syntax_const A (fst xy))
+                                       (@assemble_syntax_const B (snd xy))
+         end.
+
+    Definition assemble_syntaxf_step
+               (assemble_syntaxf : forall {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t), @syntax var)
+               {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t) : @syntax var.
+    Proof.
+      refine match v return @syntax var with
+             | Syntax.Const t x => assemble_syntax_const x
+             | Syntax.Var _ x => x
+             | Syntax.Op t1 tR op args
+               => let v := @assemble_syntaxf t1 args in
+                  match op, v with
+                  | OPldi    , cConstZ 0 => RegZero
+                  | OPldi    , cConstZ v => cINVALID v
+                  | OPldi    , RegZero => RegZero
+                  | OPldi    , RegMod => RegMod
+                  | OPldi    , RegPInv => RegPInv
+                  | OPshrd   , _ => cINVALID op
+                  | OPshl    , cPair w (cConstZ n) => cLeftShifted w n
+                  | OPshr    , cPair w (cConstZ n) => cRightShifted w n
+                  | OPmkl    , _ => cINVALID op
+                  | OPadc    , cPair (cPair x y) (cVarC c) => cAddc c x y
+                  | OPadc    , cPair x (cPair y (cVarC c)) => cAddc c x y
+                  | OPadc    , cPair (cPair x y) (cConstBool false) => cAdd x y
+                  | OPadc    , cPair x (cPair y (cConstBool false)) => cAdd x y
+                  | OPsubc   , cPair (cPair x y) (cConstBool false) => cSub x y
+                  | OPsubc   , cPair x (cPair y (cConstBool false)) => cSub x y
+                  | OPmulhwll, cPair x y => cMul128 (cLowerHalf x) (cLowerHalf y)
+                  | OPmulhwhl, cPair x y => cMul128 (cUpperHalf x) (cLowerHalf y)
+                  | OPmulhwhh, cPair x y => cMul128 (cUpperHalf x) (cUpperHalf y)
+                  | OPselc   , cPair (cVarC c) (cPair x y) => cSelc c x y
+                  | OPselc   , cPair (cPair (cVarC c) x) y => cSelc c x y
+                  | OPaddm   , cPair x (cPair y RegMod) => cAddm x y
+                  | OPaddm   , cPair (cPair x y) RegMod => cAddm x y
+                  | _, _ => cINVALID op
+                  end
+             | Syntax.Let tx ex _ eC
+               => let ex' := @assemble_syntaxf _ ex in
+                 let eC' := fun x => @assemble_syntaxf _ (eC x) in
+                 let special := match ex' with
+                                | RegZero as ex'' | RegMod as ex'' | RegPInv as ex''
+                                | cUpperHalf _ as ex'' | cLowerHalf _ as ex''
+                                | cLeftShifted _ _ as ex''
+                                | cRightShifted _ _ as ex''
+                                  => Some ex''
+                                | _ => None
+                                end in
+                 match special, tx return (interp_flat_type_gen _ tx -> _) -> _ with
+                 | Some x, Tbase _ => fun eC' => eC' x
+                 | _, Tbase TW
+                   => fun eC' => cBind ex' (fun x => eC' (cVar x))
+                 | _, Prod (Tbase Tbool) (Tbase TW)
+                   => fun eC' => cBindCarry ex' (fun c x => eC' (cVarC c, cVar x))
+                 | _, _
+                   => fun _ => cINVALID (fun x : Prop => x)
+                 end eC'
+             | Syntax.Pair _ ex _ ey
+               => cPair (@assemble_syntaxf _ ex) (@assemble_syntaxf _ ey)
+             end.
+    Defined.
+
+    Fixpoint assemble_syntaxf {t} v {struct v} : @syntax var
+      := @assemble_syntaxf_step (@assemble_syntaxf) t v.
+    Fixpoint assemble_syntax {t} (v : @Syntax.expr base_type (interp_base_type _) op (fun _ => @syntax var) t) (args : list (@syntax var)) {struct v}
+      : @syntax var
+      := match v, args return @syntax var with
+         | Syntax.Return _ x, _ => assemble_syntaxf x
+         | Syntax.Abs _ _ f, nil => cAbs (fun x => @assemble_syntax _ (f (cVar x)) args)
+         | Syntax.Abs _ _ f, cons v vs => @assemble_syntax _ (f v) vs
+         end.
+  End with_var.
+
+  Definition AssembleSyntax {t} (v : Syntax.Expr _ _ _ t) (args : list Syntax) : Syntax
+    := fun var => @assemble_syntax var t (v _) (List.map (fun f => f var) args).
+End assemble.
+
+Definition compiled_syntax
+  := Eval vm_compute in
+      (fun ops => AssembleSyntax ops (rexpression_simple _) (@RegMod :: @RegPInv :: nil)%list).
+
+Print compiled_syntax.
+(* compiled_syntax =
+fun (_ : fancy_machine.instructions (2 * 128)) (var : base_type -> Type) =>
 λ x x0 : var TW,
 c.Mul128(x1, c.LowerHalf(x), c.LowerHalf(RegPInv)),
 c.Mul128(x2, c.UpperHalf(x), c.LowerHalf(RegPInv)),
@@ -702,5 +408,5 @@ c.Selc(x24, RegMod, RegZero),
 c.Sub(x26, x23, x24),
 c.Addm(x27, x26, RegZero),
 Return x27
-     : Syntax
- *)
+     : fancy_machine.instructions (2 * 128) -> forall var : base_type -> Type, syntax
+*)
