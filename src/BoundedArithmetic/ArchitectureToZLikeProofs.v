@@ -53,6 +53,9 @@ Section fancy_machine_p256_montgomery_foundation.
   Local Ltac post_t_step :=
     match goal with
     | _ => reflexivity
+    | [ |- context[let '(x, y) := ?e in _] ]
+      => rewrite (surjective_pairing e)
+    | _ => rewrite <- !surjective_pairing
     | _ => progress autorewrite with zsimplify_const
     | [ |- fst ?x = (?a <=? ?b) :> bool ]
       => cut (((if fst x then 1 else 0) = (if a <=? b then 1 else 0))%Z);

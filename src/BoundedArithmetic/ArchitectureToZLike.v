@@ -23,7 +23,7 @@ Section fancy_machine_p256_montgomery_foundation.
       DivBy_SmallBound v := snd v;
       DivBy_SmallerBound v := if smaller_bound_exp =? n
                               then snd v
-                              else shrd (snd v) (fst v) smaller_bound_exp;
+                              else let '(v0, v1) := v in shrd v1 v0 smaller_bound_exp;
       Mul x y := muldw x y;
       CarryAdd x y := adc x y false;
       CarrySubSmall x y := subc x y false;

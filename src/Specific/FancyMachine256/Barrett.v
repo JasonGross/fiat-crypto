@@ -43,12 +43,14 @@ Section expression.
 
   Local Arguments μ' / .
   Local Arguments ldi' / .
+  Local Arguments DoubleBounded.mul_double / .
 
   Definition expression'
     := Eval simpl in
         (fun v => proj1_sig (pre_f v)).
+  Local Transparent DoubleBounded.locked_let.
   Definition expression
-    := Eval cbv beta iota delta [expression' fst snd] in
+    := Eval cbv beta iota delta [expression' fst snd DoubleBounded.locked_let] in
         fun v => let RegMod := fancy_machine.ldi m in
                  let RegMu := fancy_machine.ldi μ in
                  let RegZero := fancy_machine.ldi 0 in
@@ -57,7 +59,7 @@ Section expression.
   Definition expression_eq v (H : 0 <= _ < _) : fancy_machine.decode (expression v) = _
     := proj1 (proj2_sig (pre_f v) H).
 End expression.
-
+Print expression.
 Section reflected.
   Context (ops : fancy_machine.instructions (2 * 128)).
   Definition rexpression : Syntax.Expr base_type (interp_base_type _) op (Arrow TZ (Arrow TZ (Arrow TW (Arrow TW (Tbase TW))))).

@@ -27,11 +27,13 @@ Section expression.
   Local Arguments pre_f / .
   Local Arguments ldi' / .
   Local Arguments reduce_via_partial / .
+  Local Arguments DoubleBounded.mul_double / .
 
   Definition expression'
     := Eval simpl in f.
+  Local Transparent DoubleBounded.locked_let.
   Definition expression
-    := Eval cbv beta delta [expression' fst snd] in
+    := Eval cbv beta delta [expression' fst snd DoubleBounded.locked_let] in
         fun v => let RegMod := fancy_machine.ldi modulus in
                  let RegPInv := fancy_machine.ldi m' in
                  let RegZero := fancy_machine.ldi 0 in
@@ -43,7 +45,7 @@ Section expression.
              v
              Hv
     : fancy_machine.decode (expression v) = _
-    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ props' (ldi' m') I Hm R' HR0 HR1 v I Hv.
+    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ props' (ldi' m') I Hm R' HR0 HR1 (fst v, snd v) I Hv.
 End expression.
 
 Section reflected.

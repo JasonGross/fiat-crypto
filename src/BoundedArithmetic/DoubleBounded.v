@@ -27,10 +27,10 @@ Section ripple_carry_definitions.
     : forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k
     := match k return forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k with
        | O => f
-       | S k' => fun xss yss carry => let '(xs, x) := eta xss in
-                                      let '(ys, y) := eta yss in
-                                      let '(carry, zs) := eta (@ripple_carry_tuple' _ f k' xs ys carry) in
-                                      let '(carry, z) := eta (f x y carry) in
+       | S k' => fun xss yss carry => let '(xs, x) := xss in
+                                      let '(ys, y) := yss in
+                                      let '(carry, zs) := (@ripple_carry_tuple' _ f k' xs ys carry) in
+                                      let '(carry, z) := (f x y carry) in
                                       (carry, (zs, z))
        end.
 
@@ -74,12 +74,17 @@ Section tuple2.
             {shr : shift_right_immediate W}
             {ldi : load_immediate W}.
 
+    Definition locked_let {A} (x : A) : bool * A := (true, x).
+    Definition unlock_let {A} (x : A) : locked_let x = (true, x) := eq_refl.
+
     Definition mul_double (a b : W) : tuple W 2
-      := let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
-         let tmp             := mulhwhl a b in
-         let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let tmp             := mulhwhl b a in
-         let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+      := let '(_, a)         := locked_let a in (* if [a] is complicated, don't duplicate it *)
+         let '(_, b)         := locked_let b in (* if [b] is complicated, don't duplicate it *)
+         let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
+         let '(_, tmp)       := locked_let (mulhwhl a b) in
+         let '(_, out)       := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+         let '(_, tmp)       := locked_let (mulhwhl b a) in
+         let '(_, out)       := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
          out.
 
     (** Require a dummy [decoder] for these instances to allow
@@ -100,3 +105,5 @@ Section tuple2.
 End tuple2.
 
 Global Arguments mul_double half_n {_ _ _ _ _ _ _} _ _.
+Global Opaque locked_let.
+Global Arguments locked_let : simpl never.

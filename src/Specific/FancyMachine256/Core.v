@@ -121,7 +121,7 @@ Ltac base_reify_type T ::=
 Ltac Reify' e := Reify.Reify' base_type (interp_base_type _) op e.
 Ltac Reify e :=
   let v := Reify.Reify base_type (interp_base_type _) op e in
-  constr:(CSE _ (InlineConst (Linearize v))).
+  constr:(InlineConst (Linearize v)).
 (*Ltac Reify_rhs := Reify.Reify_rhs base_type (interp_base_type _) op (interp_op _).*)
 
 (** ** Raw Syntax Trees *)
