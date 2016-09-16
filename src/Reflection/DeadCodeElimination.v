@@ -23,19 +23,21 @@ Section dead.
 
   Section with_var.
     Context {var : base_type_code -> Type}.
-    Local Notation lvart := (nat -> bool)%type.
-    Local Notation lvar t := lvart (only parsing).
-    Local Notation dvar t := (var t + interp_base_type t)%type.
-    Local Notation flvar := (fun _ : base_type_code => lvart).
-    Local Notation fdvar := (fun t : base_type_code => dvar t).
+    Local Notation precpsvar t := (forall tC, (interp_flat_type_gen var t -> @exprf var tC) -> @exprf var tC).
+    Local Notation cpsvar t := (forall tC, (interp_flat_type_gen var t -> @exprf var tC) -> @exprf var tC).
+    Local Notation fcpsvar := (fun t : base_type_code => cpsvar t).
 
-    Definition dcef_step
-               (dcef : forall {t} (vd : @exprf fdvar t) (vl : option (@exprf flvar t)) (base : nat),
-                   @exprf var t * lvart)
-               {t} (vd : @exprf fdvar t) (vl : option (@exprf flvar t)) (base : nat)
-      : @exprf var t * lvart.
-      refine match vd in @Syntax.exprf _ _ _ _ t, vl return exprf t * lvart with
-             | Let _ ex _ eC, Some (Let _ exl _ eCl)
+    Definition dead_code_eliminationf_step
+               (dead_code_eliminationf : forall {t} (v : @exprf fcpsvar t), cpsvar t)
+               {t} (v : @exprf fcpsvar t)
+      : cpsvar t.
+      refine match v in @Syntax.exprf _ _ _ _ t return cpsvar t with
+             | Let _ ex _ eC
+               => let ex' := @dead_code_eliminationf _ ex in
+                 @dead_code_eliminationf _ (eC _)
+             | _ => _
+             end.
+      Focus 4.
                => let '(vx,  := @find_live _ ex base in
                             @find_live _ (eC (SmartVal flvar (fun _ n => nat_beq n base || vx n)%bool _)) (S base)
              | _, _ => _
