@@ -6,6 +6,8 @@ Require Export Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Export Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Export Crypto.Util.Tuple.
 Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Reflection.Named.Syntax.
+Require Import Crypto.Reflection.Named.DeadCodeElimination.
 Require Export Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.Inline.
@@ -132,6 +134,20 @@ Ltac Reify e :=
     [string] identifiers and using them for pretty-printing...  It
     might also be possible to verify this layer, too, by adding a
     partial interpretation function... *)
+
+Local Set Decidable Equality Schemes.
+Local Set Boolean Equality Schemes.
+
+Inductive Register :=
+| RegPInv | RegMod | RegMuLow | RegZero
+| y | t1 | t2 | lo | hi | out | src1 | src2 | tmp | q | qHigh | x | xHigh
+| scratch | scratchplus (n : nat).
+
+Notation "'scratch+' n" := (scratchplus n) (format "'scratch+' n", at level 10).
+
+Definition syntax {ops : fancy_machine.instructions (2 * 128)}
+  := Named.expr base_type (interp_base_type ops) op Register.
+
 Section syn.
   Context {var : base_type -> Type}.
   Inductive syntax :=
