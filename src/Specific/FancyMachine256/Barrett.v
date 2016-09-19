@@ -100,7 +100,7 @@ End reflected.
 
 Definition compiled_syntax
   := Eval vm_compute in
-      (fun ops => AssembleSyntax ops (rexpression_simple _) (@RegMod :: @RegMuLow :: nil)%list).
+      (fun ops => (*AssembleSyntax ops*) (rexpression_simple ops) (*(@RegMod :: @RegMuLow :: nil)%list*)).
 
 Print compiled_syntax.
 (* compiled_syntax =

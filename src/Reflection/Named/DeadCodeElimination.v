@@ -29,7 +29,7 @@ Section language.
   Local Notation nexprf := (@Named.exprf base_type_code interp_base_type op Name).
   Local Notation nexpr := (@Named.expr base_type_code interp_base_type op Name).
 
-  Definition get_live_namesf (names : list Name) {t} (e : lexprf t) : list (option Name)
+  Definition get_live_namesf (names : list (option Name)) {t} (e : lexprf t) : list (option Name)
     := filter_live_namesf
          base_type_code interp_base_type op
          (option Name) None
@@ -38,8 +38,8 @@ Section language.
                      | _, Some y => Some y
                      | None, None => None
                      end)
-         nil (List.map (@Some _) names) e.
-  Definition get_live_names (names : list Name) {t} (e : lexpr t) : list (option Name)
+         nil names e.
+  Definition get_live_names (names : list (option Name)) {t} (e : lexpr t) : list (option Name)
     := filter_live_names
          base_type_code interp_base_type op
          (option Name) None
@@ -48,20 +48,20 @@ Section language.
                      | _, Some y => Some y
                      | None, None => None
                      end)
-         nil (List.map (@Some _) names) e.
+         nil names e.
 
   Definition compile_and_eliminate_dead_codef
-             {t} (e : exprf t) (e' : lexprf t) (ls : list Name)
+             {t} (e : exprf t) (e' : lexprf t) (ls : list (option Name))
     : option (nexprf t)
     := ocompilef e (get_live_namesf ls e').
 
   Definition compile_and_eliminate_dead_code
-             {t} (e : expr t) (e' : lexpr t) (ls : list Name)
+             {t} (e : expr t) (e' : lexpr t) (ls : list (option Name))
     : option (nexpr t)
     := ocompile e (get_live_names ls e').
 
   Definition CompileAndEliminateDeadCode
-             {t} (e : Expr t) (ls : list Name)
+             {t} (e : Expr t) (ls : list (option Name))
     : option (nexpr t)
     := compile_and_eliminate_dead_code (e _) (e _) ls.
 End language.

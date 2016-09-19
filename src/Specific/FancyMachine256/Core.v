@@ -1,11 +1,14 @@
 (** * A Fancy Machine with 256-bit registers *)
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
-Require Export Coq.ZArith.ZArith.
+Require Export Coq.ZArith.ZArith Coq.Lists.List.
 Require Export Crypto.BoundedArithmetic.Interface.
 Require Export Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Export Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Export Crypto.Util.Tuple.
 Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Reflection.Named.Syntax.
+Require Import Crypto.Reflection.Named.DeadCodeElimination.
+Require Import Crypto.Reflection.CountLets.
 Require Export Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.Inline.
@@ -13,6 +16,7 @@ Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Export Crypto.Reflection.Reify.
 Require Export Crypto.Util.ZUtil.
 Require Export Crypto.Util.Notations.
+Require Import Crypto.Util.ListUtil.
 
 Open Scope Z_scope.
 Local Notation eta x := (fst x, snd x).
@@ -94,6 +98,27 @@ Section reflection.
        end.
 
   Definition CSE {t} e := @CSE base_type SConstT op_code base_type_beq SConstT_beq op_code_beq internal_base_type_dec_bl interp_base_type op symbolicify_const symbolicify_op t e (fun _ => nil).
+
+  Inductive inline_option := opt_inline | opt_default | opt_noinline.
+
+  Definition postprocess var t (e : @exprf base_type interp_base_type op var t)
+    : @inline_directive base_type interp_base_type op var t
+    := let opt : inline_option
+           := match e with
+              | Op _ _ OPshl _ => opt_inline
+              | Op _ _ OPshr _ => opt_inline
+              | _ => opt_default
+              end in
+       match opt with
+       | opt_noinline => no_inline e
+       | opt_default => default_inline e
+       | opt_inline => match t as t' return exprf _ _ _ t' -> inline_directive t' with
+                       | Tbase _ => fun e => inline e
+                       | _ => fun e => default_inline e
+                       end e
+       end.
+
+  Definition Inline {t} e := @InlineConstGen base_type interp_base_type op postprocess t e.
 End reflection.
 
 Ltac base_reify_op op op_head ::=
@@ -121,7 +146,7 @@ Ltac base_reify_type T ::=
 Ltac Reify' e := Reify.Reify' base_type (interp_base_type _) op e.
 Ltac Reify e :=
   let v := Reify.Reify base_type (interp_base_type _) op e in
-  constr:(CSE _ (InlineConst (Linearize v))).
+  constr:(Inline _ (CSE _ (InlineConst (Linearize v)))).
 (*Ltac Reify_rhs := Reify.Reify_rhs base_type (interp_base_type _) op (interp_op _).*)
 
 (** ** Raw Syntax Trees *)
@@ -132,13 +157,49 @@ Ltac Reify e :=
     [string] identifiers and using them for pretty-printing...  It
     might also be possible to verify this layer, too, by adding a
     partial interpretation function... *)
+
+Local Set Decidable Equality Schemes.
+Local Set Boolean Equality Schemes.
+
+Inductive Register :=
+| RegPInv | RegMod | RegMuLow | RegZero
+| y | t1 | t2 | lo | hi | out | src1 | src2 | tmp | q | qHigh | x | xHigh
+| scratch | scratchplus (n : nat).
+
+Notation "'scratch+' n" := (scratchplus n) (format "'scratch+' n", at level 10).
+
+Definition syntax {ops : fancy_machine.instructions (2 * 128)}
+  := Named.expr base_type (interp_base_type ops) op Register.
+
+(** Assemble a well-typed easily interpretable expression into a
+    syntax tree we can use for pretty-printing. *)
+Section assemble.
+  Context {ops : fancy_machine.instructions (2 * 128)}.
+
+  Definition AssembleSyntax' {t} (e : Expr base_type (interp_base_type _) op t) (ls : list (option Register))
+    : option (syntax t)
+    := CompileAndEliminateDeadCode e ls.
+
+  Definition dummy_registers' (n : nat) : list Register
+    := List.map scratchplus (seq 0 n).
+  Definition dummy_registers (n : nat) : list (option Register)
+    := List.map (@Some _) (dummy_registers' n).
+  Definition DefaultRegisters' {t} (e : Expr base_type (interp_base_type _) op t) : list Register
+    := dummy_registers
+
+
+  Definition AssembleSyntax {t} e (res := @AssembleSyntax' t e)
+    := match res return match res with None => _ | _ => _ end with
+       | Some v => v
+       | None => I
+       end.
+*)
+End assemble.
+
 Section syn.
   Context {var : base_type -> Type}.
   Inductive syntax :=
-  | RegPInv
-  | RegMod
-  | RegMuLow
-  | RegZero
+  | Reg (_ : Register)
   | cConstZ : Z -> syntax
   | cConstBool : bool -> syntax
   | cLowerHalf : syntax -> syntax
@@ -161,6 +222,7 @@ Section syn.
   | cINVALID {T} (_ : T).
 End syn.
 
+Coercion Reg : Register >-> syntax.
 Notation "'Return' x" := (cVar x) (at level 200).
 Notation "'c.Mul128' ( x , A , B ) , b" :=
   (cBind (cMul128 A B) (fun x => b))
@@ -260,7 +322,7 @@ Definition Syntax := forall var, @syntax var.
 
 (** Assemble a well-typed easily interpretable expression into a
     syntax tree we can use for pretty-printing. *)
-Section assemble.
+(*Section assemble'.
   Context (ops : fancy_machine.instructions (2 * 128)).
 
   Section with_var.
@@ -290,12 +352,12 @@ Section assemble.
                     operators, in case we ever change the
                     associativity *)
                   match op, v with
-                  | OPldi    , cConstZ 0 => RegZero
+                  | OPldi    , cConstZ 0 => Reg RegZero
                   | OPldi    , cConstZ v => cINVALID v
-                  | OPldi    , RegZero => RegZero
-                  | OPldi    , RegMod => RegMod
-                  | OPldi    , RegMuLow => RegMuLow
-                  | OPldi    , RegPInv => RegPInv
+                  | OPldi    , Reg RegZero => Reg RegZero
+                  | OPldi    , Reg RegMod => Reg RegMod
+                  | OPldi    , Reg RegMuLow => Reg RegMuLow
+                  | OPldi    , Reg RegPInv => Reg RegPInv
                   | OPshrd   , cPair x (cPair y (cConstZ n)) => cRshi x y n
                   | OPshrd   , cPair (cPair x y) (cConstZ n) => cRshi x y n
                   | OPshl    , cPair w (cConstZ n) => cLeftShifted w n
@@ -312,15 +374,15 @@ Section assemble.
                   | OPmulhwhh, cPair x y => cMul128 (cUpperHalf x) (cUpperHalf y)
                   | OPselc   , cPair (cVarC c) (cPair x y) => cSelc c x y
                   | OPselc   , cPair (cPair (cVarC c) x) y => cSelc c x y
-                  | OPaddm   , cPair x (cPair y RegMod) => cAddm x y
-                  | OPaddm   , cPair (cPair x y) RegMod => cAddm x y
+                  | OPaddm   , cPair x (cPair y (Reg RegMod)) => cAddm x y
+                  | OPaddm   , cPair (cPair x y) (Reg RegMod) => cAddm x y
                   | _, _ => cINVALID op
                   end
              | Syntax.LetIn tx ex _ eC
                => let ex' := @assemble_syntaxf _ ex in
                  let eC' := fun x => @assemble_syntaxf _ (eC x) in
                  let special := match ex' with
-                                | RegZero as ex'' | RegMuLow as ex'' | RegMod as ex'' | RegPInv as ex''
+                                | Reg RegZero as ex'' | Reg RegMuLow as ex'' | Reg RegMod as ex'' | Reg RegPInv as ex''
                                 | cUpperHalf _ as ex'' | cLowerHalf _ as ex''
                                 | cLeftShifted _ _ as ex''
                                 | cRightShifted _ _ as ex''
@@ -355,3 +417,4 @@ Section assemble.
   Definition AssembleSyntax {t} (v : Syntax.Expr _ _ _ t) (args : list Syntax) : Syntax
     := fun var => @assemble_syntax var t (v _) (List.map (fun f => f var) args).
 End assemble.
+*)
