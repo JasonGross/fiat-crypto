@@ -148,6 +148,119 @@ Notation "'scratch+' n" := (scratchplus n) (format "'scratch+' n", at level 10).
 Definition syntax {ops : fancy_machine.instructions (2 * 128)}
   := Named.expr base_type (interp_base_type ops) op Register.
 
+(** Assemble a well-typed easily interpretable expression into a
+    syntax tree we can use for pretty-printing. *)
+Section assemble.
+  Context (ops : fancy_machine.instructions (2 * 128)).
+
+  Definition postprocess var t (e : exprf (var:=var) base_type (interp_base_type _) op t)
+    : @inline_directive base_type (interp_base_type _) op var t.
+
+    refine match e in exprf _ _ _ t return inline_directive t with
+           | Op _ t (OPshl as op) _
+           | Op _ t (OPshr as op) _
+             => inline (t:=t) (Op op _)
+           | _ => _
+           end.
+exprf base_type (interp_base_type ops) op t0 -> inline_directive t0
+
+  Definition AssembleSyntax {t} (e : Expr base_type (interp_base_type _) op t) : syntax t.
+    simple refine (let e := InlineConstGen _ e in _).
+
+  Section with_var.
+    Context {var : base_type -> Type}.
+
+    Fixpoint assemble_syntax_const
+             {t}
+      : interp_flat_type_gen (interp_base_type _) t -> @syntax var
+      := match t return interp_flat_type_gen (interp_base_type _) t -> @syntax var with
+         | Tbase TZ => cConstZ
+         | Tbase Tbool => cConstBool
+         | Tbase t => fun _ => cINVALID t
+         | Prod A B => fun xy => cPair (@assemble_syntax_const A (fst xy))
+                                       (@assemble_syntax_const B (snd xy))
+         end.
+
+    Definition assemble_syntaxf_step
+               (assemble_syntaxf : forall {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t), @syntax var)
+               {t} (v : @Syntax.exprf base_type (interp_base_type _) op (fun _ => @syntax var) t) : @syntax var.
+    Proof.
+      refine match v return @syntax var with
+             | Syntax.Const t x => assemble_syntax_const x
+             | Syntax.Var _ x => x
+             | Syntax.Op t1 tR op args
+               => let v := @assemble_syntaxf t1 args in
+                 (* handle both associativities of pairs in 3-ary
+                    operators, in case we ever change the
+                    associativity *)
+                  match op, v with
+                  | OPldi    , cConstZ 0 => RegZero
+                  | OPldi    , cConstZ v => cINVALID v
+                  | OPldi    , RegZero => RegZero
+                  | OPldi    , RegMod => RegMod
+                  | OPldi    , RegMuLow => RegMuLow
+                  | OPldi    , RegPInv => RegPInv
+                  | OPshrd   , cPair x (cPair y (cConstZ n)) => cRshi x y n
+                  | OPshrd   , cPair (cPair x y) (cConstZ n) => cRshi x y n
+                  | OPshl    , cPair w (cConstZ n) => cLeftShifted w n
+                  | OPshr    , cPair w (cConstZ n) => cRightShifted w n
+                  | OPmkl    , _ => cINVALID op
+                  | OPadc    , cPair (cPair x y) (cVarC c) => cAddc c x y
+                  | OPadc    , cPair x (cPair y (cVarC c)) => cAddc c x y
+                  | OPadc    , cPair (cPair x y) (cConstBool false) => cAdd x y
+                  | OPadc    , cPair x (cPair y (cConstBool false)) => cAdd x y
+                  | OPsubc   , cPair (cPair x y) (cConstBool false) => cSub x y
+                  | OPsubc   , cPair x (cPair y (cConstBool false)) => cSub x y
+                  | OPmulhwll, cPair x y => cMul128 (cLowerHalf x) (cLowerHalf y)
+                  | OPmulhwhl, cPair x y => cMul128 (cUpperHalf x) (cLowerHalf y)
+                  | OPmulhwhh, cPair x y => cMul128 (cUpperHalf x) (cUpperHalf y)
+                  | OPselc   , cPair (cVarC c) (cPair x y) => cSelc c x y
+                  | OPselc   , cPair (cPair (cVarC c) x) y => cSelc c x y
+                  | OPaddm   , cPair x (cPair y RegMod) => cAddm x y
+                  | OPaddm   , cPair (cPair x y) RegMod => cAddm x y
+                  | _, _ => cINVALID op
+                  end
+             | Syntax.LetIn tx ex _ eC
+               => let ex' := @assemble_syntaxf _ ex in
+                 let eC' := fun x => @assemble_syntaxf _ (eC x) in
+                 let special := match ex' with
+                                | RegZero as ex'' | RegMuLow as ex'' | RegMod as ex'' | RegPInv as ex''
+                                | cUpperHalf _ as ex'' | cLowerHalf _ as ex''
+                                | cLeftShifted _ _ as ex''
+                                | cRightShifted _ _ as ex''
+                                  => Some ex''
+                                | _ => None
+                                end in
+                 match special, tx return (interp_flat_type_gen _ tx -> _) -> _ with
+                 | Some x, Tbase _ => fun eC' => eC' x
+                 | _, Tbase TW
+                   => fun eC' => cBind ex' (fun x => eC' (cVar x))
+                 | _, Prod (Tbase Tbool) (Tbase TW)
+                   => fun eC' => cBindCarry ex' (fun c x => eC' (cVarC c, cVar x))
+                 | _, _
+                   => fun _ => cINVALID (fun x : Prop => x)
+                 end eC'
+             | Syntax.Pair _ ex _ ey
+               => cPair (@assemble_syntaxf _ ex) (@assemble_syntaxf _ ey)
+             end.
+    Defined.
+
+    Fixpoint assemble_syntaxf {t} v {struct v} : @syntax var
+      := @assemble_syntaxf_step (@assemble_syntaxf) t v.
+    Fixpoint assemble_syntax {t} (v : @Syntax.expr base_type (interp_base_type _) op (fun _ => @syntax var) t) (args : list (@syntax var)) {struct v}
+      : @syntax var
+      := match v, args return @syntax var with
+         | Syntax.Return _ x, _ => assemble_syntaxf x
+         | Syntax.Abs _ _ f, nil => cAbs (fun x => @assemble_syntax _ (f (cVar x)) args)
+         | Syntax.Abs _ _ f, cons v vs => @assemble_syntax _ (f v) vs
+         end.
+  End with_var.
+
+  Definition AssembleSyntax {t} (v : Syntax.Expr _ _ _ t) (args : list Syntax) : Syntax
+    := fun var => @assemble_syntax var t (v _) (List.map (fun f => f var) args).
+End assemble.
+
+
 Section syn.
   Context {var : base_type -> Type}.
   Inductive syntax :=
