@@ -101,7 +101,29 @@ End reflected.
 Definition compiled_syntax
   := Eval vm_compute in
       (fun ops => (*AssembleSyntax ops*) (rexpression_simple ops) (*(@RegMod :: @RegMuLow :: nil)%list*)).
+About compiled_syntax.
+Goal fancy_machine.instructions (2 * 128) -> True.
+  intros ops.
+  pose (DefaultAssembleSyntax (compiled_syntax ops)) as v.
+  unfold compiled_syntax in *.
+  set (v' := v) in *.
+  simpl in v'.
+  subst v; rename v' into v.
+  unfold DefaultAssembleSyntax in (value of v).
+  unfold AssembleSyntax in (value of v).
+  unfold AssembleSyntax' in (value of v).
+  unfold DeadCodeElimination.CompileAndEliminateDeadCode in (value of v).
+  unfold DeadCodeElimination.compile_and_eliminate_dead_code in (value of v).
+  set (k := DeadCodeElimination.get_live_names _ _ _ _ _ _) in (value of v).
+  vm_compute in k.
+  subst k.
+  unfold Compile.ocompile, Compile.ocompilef in (value of v).
+  unfold option_map at 6 in (value of v).
+  unfold NameUtil.split_onames in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  simpl @DeadCodeElimination.get_live_names in v.
 
+Compute (fun ops => DefaultAssembleSyntax (compiled_syntax ops)).
 Print compiled_syntax.
 (* compiled_syntax =
 fun (_ : fancy_machine.instructions (2 * 128)) (var : base_type -> Type) =>

@@ -179,23 +179,24 @@ Section assemble.
   Definition AssembleSyntax' {t} (e : Expr base_type (interp_base_type _) op t) (ls : list (option Register))
     : option (syntax t)
     := CompileAndEliminateDeadCode e ls.
+  Definition AssembleSyntax {t} e ls (res := @AssembleSyntax' t e ls)
+    := match res return match res with None => _ | _ => _ end with
+       | Some v => v
+       | None => I
+       end.
 
   Definition dummy_registers' (n : nat) : list Register
     := List.map scratchplus (seq 0 n).
   Definition dummy_registers (n : nat) : list (option Register)
     := List.map (@Some _) (dummy_registers' n).
   Definition DefaultRegisters' {t} (e : Expr base_type (interp_base_type _) op t) : list Register
-    := dummy_registers
+    := dummy_registers' (CountBinders e).
+  Definition DefaultRegisters {t} (e : Expr base_type (interp_base_type _) op t) : list (option Register)
+    := dummy_registers (CountBinders e).
 
-
-  Definition AssembleSyntax {t} e (res := @AssembleSyntax' t e)
-    := match res return match res with None => _ | _ => _ end with
-       | Some v => v
-       | None => I
-       end.
-*)
+  Definition DefaultAssembleSyntax {t} e := @AssembleSyntax t e (DefaultRegisters e).
 End assemble.
-
+(*
 Section syn.
   Context {var : base_type -> Type}.
   Inductive syntax :=
@@ -417,4 +418,5 @@ Definition Syntax := forall var, @syntax var.
   Definition AssembleSyntax {t} (v : Syntax.Expr _ _ _ t) (args : list Syntax) : Syntax
     := fun var => @assemble_syntax var t (v _) (List.map (fun f => f var) args).
 End assemble.
+*)
 *)
