@@ -22,25 +22,20 @@ Section language.
   Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
   Local Notation exprf := (@exprf base_type_code interp_base_type op (fun _ => Name)).
   Local Notation expr := (@expr base_type_code interp_base_type op (fun _ => Name)).
-  Local Notation oexprf := (@Syntax.exprf base_type_code interp_base_type op (fun _ => option Name)).
-  Local Notation oexpr := (@Syntax.expr base_type_code interp_base_type op (fun _ => option Name)).
   Local Notation nexprf := (@Named.exprf base_type_code interp_base_type op Name).
   Local Notation nexpr := (@Named.expr base_type_code interp_base_type op Name).
 
-  Fixpoint ocompilef {t} (e : oexprf t) (ls : list (option Name)) {struct e}
+  Fixpoint ocompilef {t} (e : exprf t) (ls : list (option Name)) {struct e}
     : option (nexprf t)
     := match e in @Syntax.exprf _ _ _ _ t return option (nexprf t) with
        | Const _ x => Some (Named.Const x)
-       | Var _ x => option_map Named.Var x
+       | Var _ x => Some (Named.Var x)
        | Op _ _ op args => option_map (Named.Op op) (@ocompilef _ args ls)
        | LetIn tx ex _ eC
          => match @ocompilef _ ex nil, split_onames tx ls with
             | Some x, (Some n, ls')%core
-              => option_map (fun C => Named.LetIn tx n x C) (@ocompilef _ (eC (SmartVarMap (fun _ => @Some _) n)) ls')
-            | None, (None, ls')%core
-            | None, (Some _, ls')%core
-            | Some _, (None, ls')%core
-              => @ocompilef _ (eC (SmartVal _ (fun _ => None) _)) ls'
+              => option_map (fun C => Named.LetIn tx n x C) (@ocompilef _ (eC n) ls')
+            | _, _ => None
             end
        | Pair _ ex _ ey => match @ocompilef _ ex nil, @ocompilef _ ey nil with
                            | Some x, Some y => Some (Named.Pair x y)
