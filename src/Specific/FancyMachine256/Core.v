@@ -1,6 +1,8 @@
 (** * A Fancy Machine with 256-bit registers *)
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+Require Import Coq.PArith.BinPos Coq.micromega.Psatz.
 Require Export Coq.ZArith.ZArith Coq.Lists.List.
+Require Import Crypto.Util.Decidable.
 Require Export Crypto.BoundedArithmetic.Interface.
 Require Export Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Export Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
@@ -9,6 +11,7 @@ Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.DeadCodeElimination.
 Require Import Crypto.Reflection.CountLets.
+Require Import Crypto.Reflection.Named.ContextOn.
 Require Export Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.Inline.
@@ -29,6 +32,8 @@ Section reflection.
   Local Set Boolean Equality Schemes.
   Local Set Decidable Equality Schemes.
   Inductive base_type := TZ | Tbool | TW.
+  Global Instance dec_base_type : DecidableRel (@eq base_type)
+    := base_type_eq_dec.
   Definition interp_base_type (v : base_type) : Type :=
     match v with
     | TZ => Z
@@ -168,6 +173,39 @@ Inductive Register :=
 
 Notation "'scratch+' n" := (scratchplus n) (format "'scratch+' n", at level 10).
 
+Definition pos_of_Register (r : Register) :=
+  match r with
+  | RegPInv => 1
+  | RegMod => 2
+  | RegMuLow => 3
+  | RegZero => 4
+  | y => 5
+  | t1 => 6
+  | t2 => 7
+  | lo => 8
+  | hi => 9
+  | out => 10
+  | src1 => 11
+  | src2 => 12
+  | tmp => 13
+  | q => 14
+  | qHigh => 15
+  | x => 16
+  | xHigh => 17
+  | scratch => 18
+  | scratchplus n => 18 + Pos.of_nat (S n)
+  end%positive.
+
+Lemma pos_of_Register_inj x y : pos_of_Register x = pos_of_Register y -> x = y.
+Proof.
+  unfold pos_of_Register; repeat break_match; subst;
+    try rewrite Pos.add_cancel_l; try rewrite Nat2Pos.inj_iff;
+      try solve [ simpl; congruence | intros; exfalso; lia ].
+Qed.
+
+Global Instance RegisterContext {var : base_type -> Type} : Context Register var
+  := ContextOn pos_of_Register (RegisterAssign.pos_context var).
+
 Definition syntax {ops : fancy_machine.instructions (2 * 128)}
   := Named.expr base_type (interp_base_type ops) op Register.
 
@@ -176,7 +214,7 @@ Definition syntax {ops : fancy_machine.instructions (2 * 128)}
 Section assemble.
   Context {ops : fancy_machine.instructions (2 * 128)}.
 
-  Definition AssembleSyntax' {t} (e : Expr base_type (interp_base_type _) op t) (ls : list (option Register))
+  Definition AssembleSyntax' {t} (e : Expr base_type (interp_base_type _) op t) (ls : list Register)
     : option (syntax t)
     := CompileAndEliminateDeadCode e ls.
   Definition AssembleSyntax {t} e ls (res := @AssembleSyntax' t e ls)
@@ -185,13 +223,9 @@ Section assemble.
        | None => I
        end.
 
-  Definition dummy_registers' (n : nat) : list Register
+  Definition dummy_registers (n : nat) : list Register
     := List.map scratchplus (seq 0 n).
-  Definition dummy_registers (n : nat) : list (option Register)
-    := List.map (@Some _) (dummy_registers' n).
-  Definition DefaultRegisters' {t} (e : Expr base_type (interp_base_type _) op t) : list Register
-    := dummy_registers' (CountBinders e).
-  Definition DefaultRegisters {t} (e : Expr base_type (interp_base_type _) op t) : list (option Register)
+  Definition DefaultRegisters {t} (e : Expr base_type (interp_base_type _) op t) : list Register
     := dummy_registers (CountBinders e).
 
   Definition DefaultAssembleSyntax {t} e := @AssembleSyntax t e (DefaultRegisters e).

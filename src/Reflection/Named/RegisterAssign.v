@@ -1,5 +1,4 @@
 (** * Reassign registers *)
-Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Coq.FSets.FMapPositive Coq.PArith.BinPos.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Named.Syntax.

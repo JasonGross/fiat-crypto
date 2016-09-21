@@ -102,24 +102,78 @@ Definition compiled_syntax
   := Eval vm_compute in
       (fun ops => (*AssembleSyntax ops*) (rexpression_simple ops) (*(@RegMod :: @RegMuLow :: nil)%list*)).
 About compiled_syntax.
+Local Open Scope positive_scope.
+
+Require Import Named.Syntax.
+Time Eval native_compute in (fun ops => DefaultAssembleSyntax (compiled_syntax ops)).
+Timeout 10 Time Eval vm_compute in (fun ops => DefaultAssembleSyntax (compiled_syntax ops)). (* estimated : 4.5 hours; comment this out to continue *)
 Goal fancy_machine.instructions (2 * 128) -> True.
   intros ops.
   pose (DefaultAssembleSyntax (compiled_syntax ops)) as v.
   unfold compiled_syntax in *.
-  set (v' := v) in *.
-  simpl in v'.
-  subst v; rename v' into v.
+  let T := type of v in set (T' := T) in *.
+  vm_compute in T'.
+  subst T'.
   unfold DefaultAssembleSyntax in (value of v).
   unfold AssembleSyntax in (value of v).
   unfold AssembleSyntax' in (value of v).
   unfold DeadCodeElimination.CompileAndEliminateDeadCode in (value of v).
-  unfold DeadCodeElimination.compile_and_eliminate_dead_code in (value of v).
-  set (k := DeadCodeElimination.get_live_names _ _ _ _ _ _) in (value of v).
+  set (k := List.map _ _) in (value of v).
   vm_compute in k.
   subst k.
-  unfold Compile.ocompile, Compile.ocompilef in (value of v).
-  unfold option_map at 6 in (value of v).
+  set (v' := Compile.compile _ _) in (value of v).
+  vm_compute in v'.
+subst v'.
+cbv beta iota in v.
+  set (k := EstablishLiveness.insert_dead_names _ _ _) in (value of v).
+  unfold EstablishLiveness.insert_dead_names in (value of k).
+  revert v.
+  set (l := EstablishLiveness.compute_liveness _ _ _) in (value of k); intro v.
+  revert k v; unfold EstablishLiveness.compute_liveness in (value of l); intros k v.
+  revert k v; set (c := extendb _ 4%positive _ ) in (value of l); intros k v.
+  vm_compute in c.
+  simpl @List.app in (value of l).
+  Notation hidden := (FMapPositive.PositiveMap.Node _ _ _).
+  revert v; set (n := DefaultRegisters _) in (value of k); intro v.
+  vm_compute in n.
+  (* HERE: change 14 to other values to see exponential behavior of vm_compute *)
+  do 14 (let m := fresh "c" in
+         unfold EstablishLiveness.compute_livenessf in (value of l); fold (@EstablishLiveness.compute_livenessf base_type (interp_base_type _) op positive _) in (value of l); unfold EstablishLiveness.compute_livenessf_step at 1 in (value of l);
+         revert k v; set (m := extend _ _ _) in (value of l); intros k v;
+         vm_compute in m;
+         subst c; rename m into c;
+         simpl @List.app in (value of l));
+    time vm_compute in v.
+
+  do 10 (unfold EstablishLiveness.compute_livenessf in (value of l); fold (@EstablishLiveness.compute_livenessf base_type (interp_base_type _) op positive _) in (value of l); unfold EstablishLiveness.compute_livenessf_step at 1 in (value of l);
+    let m := fresh "c" in
+    revert k v; set (m := extend _ _ _) in (value of l); intros k v;
+      vm_compute in m).
+Print rexpression_simple
+  vm_compute in l.
+  vm_compute in k.
+  vm_compute in v.
+  subst k.
+  unfold RegisterAssign.register_reassign in (value of v).
   unfold NameUtil.split_onames in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold fst, snd in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  unfold NameUtil.split_mnames at 1 in (value of v).
+  set (c := extendb _ 4%positive _ ) in (value of v).
+  vm_compute in v.
+  unfold NameUtil.split_mnames at 1 in (value of v).
   unfold NameUtil.split_mnames at 1 in (value of v).
   simpl @DeadCodeElimination.get_live_names in v.
 
