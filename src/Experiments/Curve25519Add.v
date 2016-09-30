@@ -61,6 +61,7 @@ Section EdDSA.
                            (Fadd:=lift_iso2 FtoK KtoF F.add)).
     eexists (Extended.eq).
     eexists.
+    Arguments Group.is_homomorphism : clear implicits.
     eexists (Extended.ref_phi).
     split; intros.
     { Notation "( a ; ! )" := (exist _ a _).
