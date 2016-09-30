@@ -95,11 +95,7 @@ Section EdDSA.
                            (Fadd:=lift_iso2 FtoK KtoF F.add)).
     eexists (Extended.eq).
     eexists.
-    eexists (fun x => Extended.ref_phi
-                        (F:=ten_Z)
-                        (Feq:=fun x y => Z10toF x = Z10toF y)
-                        (Extended.ref_phi x)).
-    Arguments Group.is_homomorphism : clear implicits.
+    eexists.
     eapply @homomorphism_from_redundant_representation
     with (phi':=fun x => Extended.ref_phi
                            (Feq:=fun x y => Z10toF x = Z10toF y)
@@ -119,6 +115,42 @@ Section EdDSA.
                               (Feq:=fun x y => KtoF x = KtoF y)
                               x));
       try exact _.
+    { shelve. }
+    { Arguments Extended.ref_phi {_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _} _ {_ _ _ _ _} _.
+      shelve. }
+    { (*Arguments Extended.point : clear implicits.*)
+      Infix "=" := Extended.eq : type_scope.
+      intros p q.
+      repeat match goal with
+             | [ |- context G[@Extended.ref_phi ?x1 ?x2 ?x3 ?x4 ?x5 ?x6 ?x7 ?x8 ?x9 ?x10 ?x11 ?x12 ?x13 ?x14 ?x15 ?x16 ?x17 ?x18 ?x19 ?x20 ?x21 ?x22 ?x23 ?x24 ?x25 ?x26 ?x27 ?x28 KtoZ10 ?y1 ?y2 ?y3 ?y4 ?y5] ]
+               => let ϕw := fresh "ϕw" in
+                  pose (@Extended.ref_phi x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 KtoZ10 y1 y2 y3 y4 y5) as ϕw;
+                    let G' := context G[ϕw] in
+                    change G'
+             end.
+      repeat match goal with
+             | [ |- context G[@Extended.ref_phi ?x1 ?x2 ?x3 ?x4 ?x5 ?x6 ?x7 ?x8 ?x9 ?x10 ?x11 ?x12 ?x13 ?x14 ?x15 ?x16 ?x17 ?x18 ?x19 ?x20 ?x21 ?x22 ?x23 ?x24 ?x25 ?x26 ?x27 ?x28 Z10toF ?y1 ?y2 ?y3 ?y4 ?y5] ]
+               => let ϕ := fresh "ϕℤ" in
+                  pose (@Extended.ref_phi x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 Z10toF y1 y2 y3 y4 y5) as ϕ;
+                    let G' := context G[ϕ] in
+                    change G'
+             end.
+      refine (transitivity (y:=ϕℤ (?[EZrepAdd] (ϕw p) (ϕw q))) _ _); cycle 1.
+      2:f_equiv.
+      set (pz := ϕw p).
+      set (qz := ϕw q).
+      pose (pz' := ϕw0 p); change (ϕw0 p) with pz'.
+      pose (qz' := ϕw1 q); change (ϕw1 q) with qz'.
+      (*** HERE *)
+
+
+      set (qℤ' := ϕw1 q).
+
+      Notation ϕℤ := (Extended.ref_phi Z10toF).
+
+    Arguments Group.is_homomorphism : clear implicits.
+    Arguments Extended.point : clear implicits.
+
     About Extended.ref_phi.
     Arguments Extended.ref_phi {_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _} _ {_ _ _ _ _} _.
     Print Extended.ref_phi.
