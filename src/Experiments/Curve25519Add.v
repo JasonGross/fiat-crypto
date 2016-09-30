@@ -16,6 +16,29 @@ Require Import Crypto.Util.Tuple.
 
 Import Notations.
 
+  Section HomomorphismComposition.
+    Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
+    Context {H eq op id inv} {groupH:@group H eq op id inv}.
+    Context {K eqK opK idK invK} {groupK:@group K eqK opK idK invK}.
+    Context {phi:G->H} {phi':H->K}
+            {Hphi:@is_homomorphism G EQ OP H eq op phi}
+            {Hphi':@is_homomorphism H eq op K eqK opK phi'}.
+    Lemma is_homomorphism_compose
+          {phi'':G->K}
+          (Hphi'' : forall x, eqK (phi' (phi x)) (phi'' x))
+      : @is_homomorphism G EQ OP K eqK opK phi''.
+    Proof.
+      split; repeat intro; rewrite <- !Hphi''.
+      { rewrite !homomorphism; reflexivity. }
+      { apply Hphi', Hphi; assumption. }
+    Qed.
+
+    Global Instance is_homomorphism_compose_refl
+      : @is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
+      := is_homomorphism_compose (fun x => reflexivity _).
+  End HomomorphismComposition.
+
+
 Section EdDSA.
   Import Group Ring Field.
   Local Notation F := (ModularArithmetic.F (2^255 - 19)).
@@ -29,15 +52,22 @@ Section EdDSA.
   Context {twice_d:F} {Htwice_d:twice_d = d + d}.
   Notation "T ^ n" := (tuple T n) : type_scope.
   Local Notation ten_words := ((word 32)^10)%type.
+  Local Notation ten_Z := (Z^10)%type.
   Axiom ten_words_are_bounded : ten_words -> Prop.
   Local Notation bounded_words := { words : ten_words | ten_words_are_bounded words }.
 
+  Definition Z10toF (k : ten_Z) : F
+    := ModularBaseSystem.decode k.
+  Definition KtoZ10 (k : bounded_words) : ten_Z
+    := Tuple.map (fun v => NtoZ (wordToN v)) (proj1_sig k).
   Definition KtoF (k : bounded_words) : F
-    := ModularBaseSystem.decode (Tuple.map (fun v => NtoZ (wordToN v)) (proj1_sig k)).
+    := Z10toF (KtoZ10 k).
 
   Axiom proof_admitted : False.
   Ltac admit := abstract case proof_admitted.
 
+  Definition FtoZ10 (v : F) : ten_Z
+    := ModularBaseSystem.encode v.
   Definition FtoK (v : F) : bounded_words.
   Proof.
     exists (Tuple.map (fun v => NToWord _ (ZtoN v)) (ModularBaseSystem.encode v)).
@@ -50,7 +80,9 @@ Section EdDSA.
   Definition lift_iso2 {A B} (to : A -> B) (from : B -> A) (f : A -> A -> A) : B -> B -> B
     := fun x y => to (f (from x) (from y)).
 
+
   Local Existing Instance Extended.extended_group.
+  Local Existing Instance Extended.Equivalence_eq.
 
   Goal sigT (fun Erep : _ => sigT (fun ErepEq : _ => sigT (fun ErepAdd : _ => sigT (fun EToRep : _ => @Group.is_homomorphism _ Extended.eq (Extended.add (a_eq_minus1:=a_eq_minus1) (Htwice_d:=Htwice_d)) Erep ErepEq ErepAdd EToRep)))).
   Proof.
@@ -63,11 +95,52 @@ Section EdDSA.
                            (Fadd:=lift_iso2 FtoK KtoF F.add)).
     eexists (Extended.eq).
     eexists.
-    eexists (Extended.ref_phi).
-    eapply @homomorphism_from_redundant_representation; try exact _.
+    eexists (fun x => Extended.ref_phi
+                        (F:=ten_Z)
+                        (Feq:=fun x y => Z10toF x = Z10toF y)
+                        (Extended.ref_phi x)).
     Arguments Group.is_homomorphism : clear implicits.
+    eapply @homomorphism_from_redundant_representation
+    with (phi':=fun x => Extended.ref_phi
+                           (Feq:=fun x y => Z10toF x = Z10toF y)
+                           (Fzero:=FtoZ10 F.zero)
+                           (Fone:=FtoZ10 F.one)
+                           (Fmul:=lift_iso2 FtoZ10 Z10toF F.mul)
+                           (Fdiv:=lift_iso2 FtoZ10 Z10toF F.div)
+                           (Fadd:=lift_iso2 FtoZ10 Z10toF F.add)
+                           (phi:=Z10toF)
+                           (Extended.ref_phi
+                              (phi:=KtoZ10)
+                              (Fzero:=FtoK F.zero)
+                              (Fone:=FtoK F.one)
+                              (Fmul:=lift_iso2 FtoK KtoF F.mul)
+                              (Fdiv:=lift_iso2 FtoK KtoF F.div)
+                              (Fadd:=lift_iso2 FtoK KtoF F.add)
+                              (Feq:=fun x y => KtoF x = KtoF y)
+                              x));
+      try exact _.
+    About Extended.ref_phi.
+    Arguments Extended.ref_phi {_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _} _ {_ _ _ _ _} _.
+    Print Extended.ref_phi.
+    Set Printing Implicit.
+    pose ?phi'.
     Arguments group : clear implicits.
     Arguments Extended.point : clear implicits.
+    Set Printing Implicit.
+    eapply @is_homomorphism_compose_refl with (phi:=Extended.ref_phi (F:=F)) (phi':=Extended.ref_phi).
+    Focus 4.
+    intro.
+    simple refine (reflexivity _).
+    eapply Extended.Equivalence_eq.
+    all:shelve_unifiable.
+    Set Printing Implicit.
+    exact _.
+    Print Extended.
+    exact _.
+    apply reflexivity.
+    4:reflexivity.
+
+    2:eapply @homomorphism_from_redundant_representation; try exact _.
     Print Extended.
     Print Extended.point.
     split; intros.
