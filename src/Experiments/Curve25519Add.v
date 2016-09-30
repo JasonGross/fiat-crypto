@@ -50,6 +50,8 @@ Section EdDSA.
   Definition lift_iso2 {A B} (to : A -> B) (from : B -> A) (f : A -> A -> A) : B -> B -> B
     := fun x y => to (f (from x) (from y)).
 
+  Local Existing Instance Extended.extended_group.
+
   Goal sigT (fun Erep : _ => sigT (fun ErepEq : _ => sigT (fun ErepAdd : _ => sigT (fun EToRep : _ => @Group.is_homomorphism _ Extended.eq (Extended.add (a_eq_minus1:=a_eq_minus1) (Htwice_d:=Htwice_d)) Erep ErepEq ErepAdd EToRep)))).
   Proof.
     exists (Extended.point (F:=bounded_words) (d:=FtoK d) (a:=FtoK a)
@@ -61,8 +63,13 @@ Section EdDSA.
                            (Fadd:=lift_iso2 FtoK KtoF F.add)).
     eexists (Extended.eq).
     eexists.
-    Arguments Group.is_homomorphism : clear implicits.
     eexists (Extended.ref_phi).
+    eapply @homomorphism_from_redundant_representation; try exact _.
+    Arguments Group.is_homomorphism : clear implicits.
+    Arguments group : clear implicits.
+    Arguments Extended.point : clear implicits.
+    Print Extended.
+    Print Extended.point.
     split; intros.
     { Notation "( a ; ! )" := (exist _ a _).
       cbv beta delta [Extended.add].
