@@ -160,7 +160,78 @@ Section x86.
     Context (ops : x86.instructions n) (props : x86.arithmetic ops).
     Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
     Time Definition barrett_reduce64'1 (x : tuple W 2) : W
-      := Eval cbv [barrett_reduce64' x86.eta_instructions] in @barrett_reduce64' (x86.eta_instructions ops) x.
+      := Eval cbv beta iota delta [barrett_reduce64' x86.eta_instructions Let_In] in @barrett_reduce64' (x86.eta_instructions ops) x. (* 8.8 s *)
+    Definition rexpression : Syntax.Expr base_type (interp_base_type _) op (Arrow TW (Arrow TW (Tbase TW))).
+    Proof.
+      Typeclasses eauto := debug.
+                      let
+                      '(CF, _) :=
+                       let y3 :=
+                         let (_, y3) :=
+                           let y3 := let (x0, _) := (x, y) in x0 in
+                           let y4 :=
+                             let (x0, _) :=
+                               let y4 :=
+                                 let (_, y4) :=
+                                   let y4 :=
+                                     let y4 := (x, y) in
+                                     (let (_, y5) :=
+                                        x86.shrdf
+                                          (let (x0, _) :=
+                                             let (x0, _) := let (_, y5) := y4 in y5 in x0 in
+                                           x0)
+                                          (let (_, y5) :=
+                                             let (_, y5) := let (x0, _) := y4 in x0 in y5 in
+                                           y5) 58 in
+                                      y5,
+                                     let (_, y5) :=
+                                       x86.shrdf
+                                         (let (_, y5) :=
+                                            let (x0, _) := let (_, y5) := y4 in y5 in x0 in
+                                          y5)
+                                         (let (x0, _) :=
+                                            let (x0, _) := let (_, y5) := y4 in y5 in x0 in
+                                          x0) 58 in
+                                     y5,
+                                     (let (_, y5) :=
+                                        x86.shrdf
+                                          (let (x0, _) :=
+                                             let (_, y5) := let (_, y5) := y4 in y5 in y5 in
+                                           x0)
+                                          (let (_, y5) :=
+                                             let (x0, _) := let (_, y5) := y4 in y5 in x0 in
+                                           y5) 58 in
+                                      y5,
+                                     let (_, y5) :=
+                                       x86.shrdf
+                                         (let (_, y5) :=
+                                            let (_, y5) := let (_, y5) := y4 in y5 in y5 in
+                                          y5)
+                                         (let (x0, _) :=
+                                            let (_, y5) := let (_, y5) := y4 in y5 in y5 in
+                                          x0) 58 in
+                                     y5)) in
+                                   let y5 := y1 in
+                                   let y6 :=
+                                     (let y6 := let (x0, _) := y4 in x0 in
+                                      let y7 := let (x0, _) := y5 in x0 in
+                                      let y8 :=
+                                        (let (_, y8) :=
+                                           x86.muldwf (let (x0, _) := y6 in x0)
+                                             (let (x0, _) := y7 in x0) in
+                                         y8,
+                                        let (_, y8) :=
+                                          x86.muldwf (let (_, y8) := y6 in y8)
+                                            (let (_, y8) := y7 in y8) in
+                                        y8) in
+
+      Time try let v := (eval cbv beta delta [barrett_reduce64'1] in (fun x y => barrett_reduce64'1 (x, y))) in
+           let v := Reify v in
+           exact v.
+    Defined.
+
+    Definition barrett_reduce64'2 (x : tuple W 2) : W.
+    Print barrett_reduce64'1.
     (* 25 s *)
 
     Print barrett_reduce64.
