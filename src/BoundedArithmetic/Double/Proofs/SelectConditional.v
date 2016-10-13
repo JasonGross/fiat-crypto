@@ -17,7 +17,7 @@ Section select_conditional.
     destruct n.
     { rewrite !(tuple_decoder_n_O (W:=W) 2); now destruct b. }
     { rewrite (tuple_decoder_2 x), (tuple_decoder_2 y), (tuple_decoder_2 (selc_double b x y))
-        by apply Zle_0_pos.
+        by apply Zle_0_pos; simpl @fst; simpl @snd.
       push_decode.
       now destruct b. }
     { rewrite !(tuple_decoder_n_neg (W:=W) 2); now destruct b. }

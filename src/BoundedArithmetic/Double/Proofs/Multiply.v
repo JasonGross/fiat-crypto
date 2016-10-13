@@ -118,15 +118,17 @@ Section tuple2.
       assert (0 < 2^n) by auto with zarith;
       assert (forall x y, 0 <= x < 2^n -> 0 <= y < 2^n -> 0 <= x * y < 2^n * 2^n) by auto with zarith;
       simpl @Interface.mulhwhh; simpl @Interface.mulhwhl; simpl @Interface.mulhwll;
-      rewrite decode_mul_double; autorewrite with simpl_tuple_decoder Zshift_to_pow zsimplify push_Zpow;
+      erewrite decode_mul_double; autorewrite with simpl_tuple_decoder Zshift_to_pow zsimplify push_Zpow;
       Z.rewrite_mod_small;
       try reflexivity.
 
     Global Instance mul_double_is_multiply_low_low : is_mul_low_low n mul_double_multiply_low_low.
-    Proof. t. Qed.
+    Proof. unfold mul_double_multiply_low_low; t. Qed.
     Global Instance mul_double_is_multiply_high_low : is_mul_high_low n mul_double_multiply_high_low.
-    Proof. t. Qed.
+    Proof. unfold mul_double_multiply_high_low; t. Qed.
     Global Instance mul_double_is_multiply_high_high : is_mul_high_high n mul_double_multiply_high_high.
-    Proof. t. Qed.
+    Proof. unfold mul_double_multiply_high_high; t. Qed.
   End half_from_full.
 End tuple2.
+
+Global Hint Extern 1 (is_mul_double mul_double_multiply) => eapply @mul_double_is_multiply_double : typeclass_instances. (* workaround what is probably bug #5138 *)

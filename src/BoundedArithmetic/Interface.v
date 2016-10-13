@@ -76,14 +76,12 @@ Section InstructionGallery.
           (Wdecoder : decoder n W).
   Local Notation imm := Z (only parsing). (* immediate (compile-time) argument *)
 
-  Class load_immediate := { ldi : imm -> W }.
-  Global Coercion ldi : load_immediate >-> Funclass.
+  Class load_immediate := ldi : imm -> W.
 
   Class is_load_immediate {ldi : load_immediate}  :=
     decode_load_immediate :> forall x, 0 <= x < 2^n -> decode (ldi x) =~> x.
 
-  Class shift_right_doubleword_immediate := { shrd : W -> W -> imm -> W }.
-  Global Coercion shrd : shift_right_doubleword_immediate >-> Funclass.
+  Class shift_right_doubleword_immediate := shrd : W -> W -> imm -> W.
 
   Class is_shift_right_doubleword_immediate (shrd : shift_right_doubleword_immediate) :=
     decode_shift_right_doubleword :>
@@ -105,8 +103,7 @@ Section InstructionGallery.
 
       We ignore the CF in the specification; we only have it so that
       we can ensure that the CF flag gets appropriately clobbered. *)
-  Class shift_right_doubleword_immediate_with_CF := { shrdf : W -> W -> imm -> bool * W }.
-  Global Coercion shrdf : shift_right_doubleword_immediate_with_CF >-> Funclass.
+  Class shift_right_doubleword_immediate_with_CF := shrdf : W -> W -> imm -> bool * W.
 
   Class is_shift_right_doubleword_immediate_with_CF (shrdf : shift_right_doubleword_immediate_with_CF) :=
     decode_snd_shift_right_doubleword_with_CF :>
@@ -114,8 +111,7 @@ Section InstructionGallery.
         0 <= count < n
         -> decode (snd (shrdf high low count)) <~=~> (((decode high << n) + decode low) >> count) mod 2^n.
 
-  Class shift_left_immediate := { shl : W -> imm -> W }.
-  Global Coercion shl : shift_left_immediate >-> Funclass.
+  Class shift_left_immediate := shl : W -> imm -> W.
 
   Class is_shift_left_immediate (shl : shift_left_immediate) :=
     decode_shift_left_immediate :>
@@ -134,29 +130,25 @@ Section InstructionGallery.
 
       We ignore the CF in the specification; we only have it so that
       we can ensure that the CF flag gets appropriately clobbered. *)
-  Class shift_left_immediate_with_CF := { shlf : W -> imm -> bool * W }.
-  Global Coercion shlf : shift_left_immediate_with_CF >-> Funclass.
+  Class shift_left_immediate_with_CF := shlf : W -> imm -> bool * W.
 
   Class is_shift_left_immediate_with_CF (shlf : shift_left_immediate_with_CF) :=
     decode_shift_left_immediate_with_CF :>
       forall r count, 0 <= count < n -> decode (snd (shlf r count)) <~=~> (decode r << count) mod 2^n.
 
-  Class shift_right_immediate := { shr : W -> imm -> W }.
-  Global Coercion shr : shift_right_immediate >-> Funclass.
+  Class shift_right_immediate := shr : W -> imm -> W.
 
   Class is_shift_right_immediate (shr : shift_right_immediate) :=
     decode_shift_right_immediate :>
       forall r count, 0 <= count < n -> decode (shr r count) <~=~> (decode r >> count).
 
-  Class shift_right_immediate_with_CF := { shrf : W -> imm -> bool * W }.
-  Global Coercion shrf : shift_right_immediate_with_CF >-> Funclass.
+  Class shift_right_immediate_with_CF := shrf : W -> imm -> bool * W.
 
   Class is_shift_right_immediate_with_CF (shrf : shift_right_immediate_with_CF) :=
     decode_shift_right_immediate_with_CF :>
       forall r count, 0 <= count < n -> decode (snd (shrf r count)) <~=~> (decode r >> count).
 
-  Class spread_left_immediate := { sprl : W -> imm -> tuple W 2 (* [(low, high)] *) }.
-  Global Coercion sprl : spread_left_immediate >-> Funclass.
+  Class spread_left_immediate := sprl : W -> imm -> tuple W 2 (* [(low, high)] *).
 
   Class is_spread_left_immediate (sprl : spread_left_immediate) :=
     {
@@ -169,15 +161,13 @@ Section InstructionGallery.
 
     }.
 
-  Class mask_keep_low := { mkl :> W -> imm -> W }.
-  Global Coercion mkl : mask_keep_low >-> Funclass.
+  Class mask_keep_low := mkl :> W -> imm -> W.
 
   Class is_mask_keep_low (mkl : mask_keep_low) :=
     decode_mask_keep_low :> forall r count,
       0 <= count < n -> decode (mkl r count) <~=~> decode r mod 2^count.
 
-  Class bitwise_and := { and : W -> W -> W }.
-  Global Coercion and : bitwise_and >-> Funclass.
+  Class bitwise_and := and : W -> W -> W.
 
   Class is_bitwise_and (and : bitwise_and) :=
     {
@@ -189,8 +179,7 @@ Section InstructionGallery.
       The OF and CF flags are cleared; the SF, ZF, and PF flags are set
       according to the result. The state of the AF flag is
       undefined. *)
-  Class bitwise_and_with_CF := { andf : W -> W -> bool * W }.
-  Global Coercion andf : bitwise_and_with_CF >-> Funclass.
+  Class bitwise_and_with_CF := andf : W -> W -> bool * W.
 
   Class is_bitwise_and_with_CF (andf : bitwise_and_with_CF) :=
     {
@@ -198,8 +187,7 @@ Section InstructionGallery.
       fst_bitwise_and_with_CF :> forall x y, fst (andf x y) =~> false
     }.
 
-  Class bitwise_or := { or : W -> W -> W }.
-  Global Coercion or : bitwise_or >-> Funclass.
+  Class bitwise_or := or : W -> W -> W.
 
   Class is_bitwise_or (or : bitwise_or) :=
     {
@@ -211,8 +199,7 @@ Section InstructionGallery.
       The OF or CF flags are cleared; the SF, ZF, or PF flags are set
       according to the result. The state of the AF flag is
       undefined. *)
-  Class bitwise_or_with_CF := { orf : W -> W -> bool * W }.
-  Global Coercion orf : bitwise_or_with_CF >-> Funclass.
+  Class bitwise_or_with_CF := orf : W -> W -> bool * W.
 
   Class is_bitwise_or_with_CF (orf : bitwise_or_with_CF) :=
     {
@@ -222,8 +209,7 @@ Section InstructionGallery.
 
   Local Notation bit b := (if b then 1 else 0).
 
-  Class add_with_carry := { adc : W -> W -> bool -> bool * W }.
-  Global Coercion adc : add_with_carry >-> Funclass.
+  Class add_with_carry := adc : W -> W -> bool -> bool * W.
 
   Class is_add_with_carry (adc : add_with_carry) :=
     {
@@ -231,8 +217,7 @@ Section InstructionGallery.
       decode_snd_add_with_carry :> forall x y c, decode (snd (adc x y c)) <~=~> (decode x + decode y + bit c) mod (2^n)
     }.
 
-  Class sub_with_carry := { subc : W -> W -> bool -> bool * W }.
-  Global Coercion subc : sub_with_carry >-> Funclass.
+  Class sub_with_carry := subc : W -> W -> bool -> bool * W.
 
   Class is_sub_with_carry (subc:W->W->bool->bool*W) :=
     {
@@ -240,20 +225,15 @@ Section InstructionGallery.
       decode_snd_sub_with_carry :> forall x y c, decode (snd (subc x y c)) <~=~> (decode x - decode y - bit c) mod 2^n
     }.
 
-  Class multiply := { mul : W -> W -> W }.
-  Global Coercion mul : multiply >-> Funclass.
+  Class multiply := mul : W -> W -> W.
 
   Class is_mul (mul : multiply) :=
     decode_mul :> forall x y, decode (mul x y) <~=~> (decode x * decode y).
 
-  Class multiply_low_low := { mulhwll : W -> W -> W }.
-  Global Coercion mulhwll : multiply_low_low >-> Funclass.
-  Class multiply_high_low := { mulhwhl : W -> W -> W }.
-  Global Coercion mulhwhl : multiply_high_low >-> Funclass.
-  Class multiply_high_high := { mulhwhh : W -> W -> W }.
-  Global Coercion mulhwhh : multiply_high_high >-> Funclass.
-  Class multiply_double := { muldw : W -> W -> tuple W 2 }.
-  Global Coercion muldw : multiply_double >-> Funclass.
+  Class multiply_low_low := mulhwll : W -> W -> W.
+  Class multiply_high_low := mulhwhl : W -> W -> W.
+  Class multiply_high_high := mulhwhh : W -> W -> W.
+  Class multiply_double := muldw : W -> W -> tuple W 2.
   (** Quoting http://www.felixcloutier.com/x86/MUL.html:
 
       The OF and CF flags are set to 0 if the upper half of the result
@@ -262,8 +242,7 @@ Section InstructionGallery.
 
       We ignore the CF in the specification; we only have it so that
       we can ensure that the CF flag gets appropriately clobbered. *)
-  Class multiply_double_with_CF := { muldwf : W -> W -> bool * tuple W 2 }.
-  Global Coercion muldwf : multiply_double_with_CF >-> Funclass.
+  Class multiply_double_with_CF := muldwf : W -> W -> bool * tuple W 2.
 
   Class is_mul_low_low (w:Z) (mulhwll : multiply_low_low) :=
     decode_mul_low_low :>
@@ -290,15 +269,13 @@ Section InstructionGallery.
         forall x y, decode (snd (snd (muldwf x y))) =~> (decode x * decode y) >> n
     }.
 
-  Class select_conditional := { selc : bool -> W -> W -> W }.
-  Global Coercion selc : select_conditional >-> Funclass.
+  Class select_conditional := selc : bool -> W -> W -> W.
 
   Class is_select_conditional (selc : select_conditional) :=
     decode_select_conditional :> forall b x y,
       decode (selc b x y) <~=~> if b then decode x else decode y.
 
-  Class add_modulo := { addm : W -> W -> W (* modulus *) -> W }.
-  Global Coercion addm : add_modulo >-> Funclass.
+  Class add_modulo := addm : W -> W -> W (* modulus *) -> W.
 
   Class is_add_modulo (addm : add_modulo) :=
     decode_add_modulo :> forall x y modulus,
@@ -306,6 +283,11 @@ Section InstructionGallery.
                                          then (decode x + decode y)
                                          else (decode x + decode y) - decode modulus).
 End InstructionGallery.
+
+Global Hint Extern 1 (@fst bool _ _ <~=~> _) => eapply @fst_sub_with_carry : typeclass_instances. (* work around bug #5138 *)
+Global Hint Extern 1 ((if @fst bool _ _ then 1 else 0) <~=~> _) => eapply @bit_fst_add_with_carry : typeclass_instances. (* work around bug #5138 *)
+Global Hint Extern 1 (decode (@snd bool _ _) <~=~> _) => eapply @decode_snd_sub_with_carry : typeclass_instances. (* work around bug #5138 *)
+Global Hint Extern 1 (decode (@snd bool _ _) <~=~> _) => eapply @decode_snd_add_with_carry : typeclass_instances. (* work around bug #5138 *)
 
 Global Arguments load_immediate : clear implicits.
 Global Arguments shift_right_doubleword_immediate : clear implicits.
