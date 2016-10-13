@@ -5,6 +5,7 @@ Require Import Crypto.EdDSARepChange.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.X86ToZLike.
 Require Import Crypto.BoundedArithmetic.X86ToZLikeProofs.
+Require Import Crypto.BoundedArithmetic.Eta.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZBounded.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
@@ -95,7 +96,7 @@ Section x86.
            barrett_reduce_function_bundled x.
     End gen.
 
-    Section x86_64.
+    (*Section x86_64.
       Local Notation n := 64%nat.
       Context (ops : x86.instructions n) (props : x86.arithmetic ops).
       Lemma n64_pos : (0 < n)%Z. Proof. vm_compute; intuition congruence. Qed.
@@ -106,9 +107,10 @@ Section x86.
       Local Arguments Z.pow_pos !_ !_ / .
       Local Arguments Z.div !_ !_ / .
       Local Arguments barrett_reduce_function_bundled : simpl never.
-      Local Opaque Let_In ldi_mod_inverse ldi_modulus.
+      Local Opaque Let_In.
       Time Definition barrett_reduce64 (x : tuple W 2) : W
-        := Eval simpl in @barrett_reduce 32 ops x.
+        := Eval cv in @barrett_reduce 32 ops x.
+      Eval cbv in barrett_reduce64.
       Definition barrett_reduce64'1 (x : tuple W 2) : W
         := Eval cbv [barrett_reduce64'0 tuple barrett_reduce_function_bundled barrett_reduce_function
                                         BarrettBundled.m BarrettBundled.b BarrettBundled.k BarrettBundled.offset BarrettBundled.μ' x86_25519_Barrett
@@ -144,14 +146,24 @@ Section x86.
                        Z.modulo Z.div Z.div_eucl Z.pos_div_eucl Z.ltb Z.leb Pos.ltb Pos.leb Pos.compare Pos.compare_cont Z.compare fst snd Z.mul Pos.mul Z.add Pos.add Z.sub Z.opp Z.pos_sub Z.double Z.succ_double Pos.pred_double Z.pred_double]
           in @barrett_reduce64'2 x.
       Local Arguments barrett_reduce64'3 / _ .
-    End x86_64.
+    End x86_64.*)
   End gen_modulus.
 
   Section x86_64.
     Local Notation n := 64%nat.
+    Section pre.
       Context (ops : x86.instructions n) (props : x86.arithmetic ops).
       Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
-      Print barrett_reduce64'3.
+      Time Definition barrett_reduce64' (x : tuple W 2) : W
+        := Eval cbv -[Let_In] in @barrett_reduce modulusv 32 ops x. (* 25 s *)
+    End pre.
+    Context (ops : x86.instructions n) (props : x86.arithmetic ops).
+    Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
+    Time Definition barrett_reduce64'1 (x : tuple W 2) : W
+      := Eval cbv [barrett_reduce64'] in @barrett_reduce64' (x86.eta_instructions ops) x.
+    (* 25 s *)
+
+    Print barrett_reduce64.
 
       Time Eval cbv -[Let_In] in @barrett_reduce64'1 n ops.
 
