@@ -107,7 +107,7 @@ Section x86.
       Local Arguments Z.div !_ !_ / .
       Local Arguments barrett_reduce_function_bundled : simpl never.
       Local Opaque Let_In ldi_mod_inverse ldi_modulus.
-      Definition barrett_reduce64'0 (x : tuple W 2) : W
+      Time Definition barrett_reduce64 (x : tuple W 2) : W
         := Eval simpl in @barrett_reduce 32 ops x.
       Definition barrett_reduce64'1 (x : tuple W 2) : W
         := Eval cbv [barrett_reduce64'0 tuple barrett_reduce_function_bundled barrett_reduce_function
@@ -126,7 +126,7 @@ Section x86.
       Definition barrett_reduce64'3 (x : tuple W 2) : W
         := Eval cbv [barrett_reduce64'2
                        tuple Core.repeated_tuple tuple'
-                       fst snd (*Interface.ldi Interface.muldw Interface.mulhwll Interface.mulhwhl Interface.mulhwhh Interface.shl Interface.shr Interface.or Interface.shrd Interface.adc Interface.subc Interface.selc Interface.adc Interface.subc*)
+                       fst snd Interface.ldi Interface.muldw Interface.mulhwll Interface.mulhwhl Interface.mulhwhh Interface.shl Interface.shr Interface.or Interface.shrd Interface.adc Interface.subc Interface.selc Interface.adc Interface.subc
                        Core.select_conditional_repeated_double Core.selc_double Core.select_conditional_double
                        Core.multiply_double_repeated_double Core.mul_double_multiply Core.mul_double Core.mul_double_multiply_low_low Core.mul_double_multiply_high_low Core.mul_double_multiply_high_high
                        Core.shift_right_doubleword_immediate_repeated_double Core.shift_right_doubleword_immediate_double Core.shrd_double
@@ -151,6 +151,10 @@ Section x86.
     Local Notation n := 64%nat.
       Context (ops : x86.instructions n) (props : x86.arithmetic ops).
       Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
+      Print barrett_reduce64'3.
+
+      Time Eval cbv -[Let_In] in @barrett_reduce64'1 n ops.
+
 
       Definition barrett_reduce64'4 (x : tuple W 2) : W.
       Proof.
