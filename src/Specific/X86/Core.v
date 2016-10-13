@@ -46,7 +46,6 @@ Section reflection.
   Local Notation tbool := (Tbase Tbool).
   Local Notation tW := (Tbase TW).
   Local Open Scope ctype_scope.
-  Print x86.instructions.
   Inductive op : flat_type base_type -> flat_type base_type -> Type :=
   | OPldi     : op tZ tW
   | OPshrd    : op (tW * tW * tZ) (tbool * tW)

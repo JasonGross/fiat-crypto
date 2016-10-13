@@ -160,7 +160,7 @@ Section x86.
     Context (ops : x86.instructions n) (props : x86.arithmetic ops).
     Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
     Time Definition barrett_reduce64'1 (x : tuple W 2) : W
-      := Eval cbv [barrett_reduce64'] in @barrett_reduce64' (x86.eta_instructions ops) x.
+      := Eval cbv [barrett_reduce64' x86.eta_instructions] in @barrett_reduce64' (x86.eta_instructions ops) x.
     (* 25 s *)
 
     Print barrett_reduce64.
