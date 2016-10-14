@@ -76,7 +76,7 @@ Section tuple2.
     Proof.
       assert (0 <= 2 * half_n) by eauto using decode_exponent_nonnegative.
       assert (0 <= half_n) by omega.
-      unfold mul_double, Let_In.
+      unfold mul_double, Let_In; eta_expand.
       push_decode; autorewrite with simpl_tuple_decoder; simplify_projections.
       autorewrite with zsimplify Zshift_to_pow push_Zpow.
       rewrite !spread_left_from_shift_half_correct.

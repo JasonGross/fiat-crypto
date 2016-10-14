@@ -29,8 +29,7 @@ Section x86.
             (modulus_in_range : 0 <= modulus < 2 ^ 256)
             (modulus_pos : 0 < modulus).
     Section gen.
-      Context (half_n : nat).
-      Local Notation n := (2 * half_n)%nat.
+      Context (n : nat).
       Context (ops : x86.instructions n) (props : x86.arithmetic ops)
               (n_pos : (0 < n)%Z)
               (n_pow_2 : (2^Nat.log2 (256 / n) = 256)%Z).
@@ -39,7 +38,7 @@ Section x86.
       Local Existing Instance ops'.
       Lemma full_width_pos : (0 < 256)%Z. Proof. omega. Qed.
       Let props' ldi_modulus ldi_0 Hldi_modulus Hldi_0 : ZBounded.ZLikeProperties (ops' ldi_modulus ldi_0)
-        := @ZLikeProperties_of_x86_gen_Factored half_n 256 ops modulus props ldi_modulus ldi_0 Hldi_modulus Hldi_0 modulus_in_range smaller_bound_exp smaller_bound_smaller n_pos full_width_pos.
+        := @ZLikeProperties_of_x86_gen_Factored n 256 ops modulus props ldi_modulus ldi_0 Hldi_modulus Hldi_0 modulus_in_range smaller_bound_exp smaller_bound_smaller n_pos full_width_pos.
       Local Existing Instance props'.
 
       Let offset'0 := Eval compute in ((256 - smaller_bound_exp) / 2)%Z.
@@ -87,6 +86,7 @@ Section x86.
       Local Existing Instance x86_25519_BarrettProofs.
       Definition ldi_modulus : Core.repeated_tuple x86.W 2 (Nat.log2 (256 / n)) := ldi modulus.
       Definition ldi_mod_inverse : Core.repeated_tuple x86.W 2 (Nat.log2 (256 / n)) := ldi (base^(2*k'0) / modulus).
+      Print barrett_reduce_function.
       Definition barrett_reduce (x : tuple (Core.repeated_tuple x86.W 2 (Nat.log2 (256 / n))) 2)
         : Core.repeated_tuple x86.W 2 (Nat.log2 (256 / n))
         := dlet ldi_modulus' := ldi_modulus in
@@ -155,77 +155,26 @@ Section x86.
       Context (ops : x86.instructions n) (props : x86.arithmetic ops).
       Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
       Time Definition barrett_reduce64' (x : tuple W 2) : W
-        := Eval cbv -[Let_In] in @barrett_reduce modulusv 32 ops x. (* 25 s *)
+        := Eval cbv -[Let_In] in @barrett_reduce modulusv n ops x. (* 25 s *)
     End pre.
     Context (ops : x86.instructions n) (props : x86.arithmetic ops).
     Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
     Time Definition barrett_reduce64'1 (x : tuple W 2) : W
       := Eval cbv beta iota delta [barrett_reduce64' x86.eta_instructions Let_In] in @barrett_reduce64' (x86.eta_instructions ops) x. (* 8.8 s *)
-    Definition rexpression : Syntax.Expr base_type (interp_base_type _) op (Arrow TW (Arrow TW (Tbase TW))).
+
+Eval cbv [ZBounded.SmallT ZBounded.LargeT ZLikeOps_of_x86_64 ZLikeOps_of_x86_64_Factored ZLikeOps_of_x86_gen_Factored Core.repeated_tuple Nat.div PeanoNat.Nat.divmod fst Nat.log2 Nat.pred Nat.log2_iter tuple tuple' ZBounded.Mul Core.multiply_double_repeated_double Core.mul_double_multiply Z.pow Z.of_nat Pos.of_succ_nat Pos.succ Z.pow_pos Z.mul Pos.iter Pos.mul Core.mul_double Interface.muldw Core.mul_double_multiply_low_low Core.mul_double_multiply_high_high Core.mul_double_multiply_high_low Interface.mulhwhh Interface.mulhwhl Interface.mulhwll StripCF.multiply_double_strip_CF] in
+    (fun modulus smaller_bound_exp ops x y => @ZBounded.Mul _ _ _ (@ZLikeOps_of_x86_64 ops modulus smaller_bound_exp) x y).
+Eval cbv [ZBounded.SmallT ZBounded.LargeT ZLikeOps_of_x86_64 ZLikeOps_of_x86_64_Factored ZLikeOps_of_x86_gen_Factored Core.repeated_tuple Nat.div PeanoNat.Nat.divmod fst Nat.log2 Nat.pred Nat.log2_iter tuple tuple' ZBounded.Mul Core.multiply_double_repeated_double Core.mul_double_multiply Z.pow Z.of_nat Pos.of_succ_nat Pos.succ Z.pow_pos Z.mul Pos.iter Pos.mul Core.mul_double Interface.muldw Core.mul_double_multiply_low_low Core.mul_double_multiply_high_high Core.mul_double_multiply_high_low Interface.mulhwhh Interface.mulhwhl Interface.mulhwll StripCF.multiply_double_strip_CF] in
+    (fun modulus smaller_bound_exp ops x y => @ZBounded.Mul _ _ _ (@ZLikeOps_of_x86_gen_Factored 256 64 ops modulus smaller_bound_exp (ldi modulus) (ldi 0)) x y).
+@ZLikeOps_of_x86_gen_Factored 256 n ops modulus smaller_bound_exp ldi_modulus ldi_0    Print barrett_reduce64'1.
+  End x86_64.
+End x86.
+Require Import ExtrOcamlBasic ExtrOcamlBigIntConv ExtrOcamlNatBigInt ExtrOcamlZBigInt ExtrOcamlString.
+Recursive Extraction barrett_reduce64'1.
+    Definition rexpression : Syntax.Expr base_type (interp_base_type _) op (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Tbase TW))))))))).
     Proof.
       Typeclasses eauto := debug.
-                      let
-                      '(CF, _) :=
-                       let y3 :=
-                         let (_, y3) :=
-                           let y3 := let (x0, _) := (x, y) in x0 in
-                           let y4 :=
-                             let (x0, _) :=
-                               let y4 :=
-                                 let (_, y4) :=
-                                   let y4 :=
-                                     let y4 := (x, y) in
-                                     (let (_, y5) :=
-                                        x86.shrdf
-                                          (let (x0, _) :=
-                                             let (x0, _) := let (_, y5) := y4 in y5 in x0 in
-                                           x0)
-                                          (let (_, y5) :=
-                                             let (_, y5) := let (x0, _) := y4 in x0 in y5 in
-                                           y5) 58 in
-                                      y5,
-                                     let (_, y5) :=
-                                       x86.shrdf
-                                         (let (_, y5) :=
-                                            let (x0, _) := let (_, y5) := y4 in y5 in x0 in
-                                          y5)
-                                         (let (x0, _) :=
-                                            let (x0, _) := let (_, y5) := y4 in y5 in x0 in
-                                          x0) 58 in
-                                     y5,
-                                     (let (_, y5) :=
-                                        x86.shrdf
-                                          (let (x0, _) :=
-                                             let (_, y5) := let (_, y5) := y4 in y5 in y5 in
-                                           x0)
-                                          (let (_, y5) :=
-                                             let (x0, _) := let (_, y5) := y4 in y5 in x0 in
-                                           y5) 58 in
-                                      y5,
-                                     let (_, y5) :=
-                                       x86.shrdf
-                                         (let (_, y5) :=
-                                            let (_, y5) := let (_, y5) := y4 in y5 in y5 in
-                                          y5)
-                                         (let (x0, _) :=
-                                            let (_, y5) := let (_, y5) := y4 in y5 in y5 in
-                                          x0) 58 in
-                                     y5)) in
-                                   let y5 := y1 in
-                                   let y6 :=
-                                     (let y6 := let (x0, _) := y4 in x0 in
-                                      let y7 := let (x0, _) := y5 in x0 in
-                                      let y8 :=
-                                        (let (_, y8) :=
-                                           x86.muldwf (let (x0, _) := y6 in x0)
-                                             (let (x0, _) := y7 in x0) in
-                                         y8,
-                                        let (_, y8) :=
-                                          x86.muldwf (let (_, y8) := y6 in y8)
-                                            (let (_, y8) := y7 in y8) in
-                                        y8) in
-
-      Time try let v := (eval cbv beta delta [barrett_reduce64'1] in (fun x y => barrett_reduce64'1 (x, y))) in
+      Time try let v := (eval cbv beta delta [barrett_reduce64'1] in (fun a b c d e f g h => barrett_reduce64'1 (((a, b), (c, d)), ((e, f), (g, h))))) in
            let v := Reify v in
            exact v.
     Defined.

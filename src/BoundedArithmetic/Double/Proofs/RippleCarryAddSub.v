@@ -20,14 +20,10 @@ Local Opaque tuple_decoder.
 
 Lemma ripple_carry_tuple_SS' {T} f k xss yss carry
   : @ripple_carry_tuple T f (S (S k)) xss yss carry
-    = dlet xss := xss in
-      dlet yss := yss in
-      let '(xs, x) := eta xss in
-      let '(ys, y) := eta yss in
-      dlet addv := (@ripple_carry_tuple _ f (S k) xs ys carry) in
-      let '(carry, zs) := eta addv in
-      dlet fxy := (f x y carry) in
-      let '(carry, z) := eta fxy in
+    = let (xs, x) := xss in
+      let (ys, y) := yss in
+      let (carry, zs) := (@ripple_carry_tuple _ f (S k) xs ys carry) in
+      let (carry, z) := (f x y carry) in
       (carry, (zs, z)).
 Proof. reflexivity. Qed.
 

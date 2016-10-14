@@ -29,14 +29,10 @@ Section ripple_carry_definitions.
     : forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k
     := match k return forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k with
        | O => f
-       | S k' => fun xss yss carry => dlet xss := xss in
-                                      dlet yss := yss in
-                                      let (xs, x) := eta xss in
-                                      let (ys, y) := eta yss in
-                                      dlet addv := (@ripple_carry_tuple' _ f k' xs ys carry) in
-                                      let (carry, zs) := eta addv in
-                                      dlet fxy := (f x y carry) in
-                                      let (carry, z) := eta fxy in
+       | S k' => fun xss yss carry => let (xs, x) := xss in
+                                      let (ys, y) := yss in
+                                      let (carry, zs) := (@ripple_carry_tuple' _ f k' xs ys carry) in
+                                      let (carry, z) := (f x y carry) in
                                       (carry, (zs, z))
        end.
 
@@ -224,11 +220,9 @@ Section tuple2.
          let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
          dlet out            := out in
          dlet tmp            := mulhwhl a b in
-         dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let (_, out)        := eta addv in
+         let (_, out)        := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
          dlet tmp            := mulhwhl b a in
-         dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let (_, out)        := eta addv in
+         let (_, out)        := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
          out.
 
     (** Require a dummy [decoder] for these instances to allow

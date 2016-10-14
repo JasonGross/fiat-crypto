@@ -22,8 +22,7 @@ Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 
 Section x86_gen_barrett_foundation.
-  Context {n_over_two : nat}.
-  Local Notation n := (2 * n_over_two)%nat.
+  Context {n : nat}.
   Context (full_width : nat) (ops : x86.instructions n) (modulus : Z).
   Local Notation W := (repeated_tuple x86.W 2 (Nat.log2 (full_width / n))). (* full_width-width words *)
 
@@ -47,9 +46,9 @@ Section x86_gen_barrett_foundation.
     progress unfold LargeT, SmallT, modulus_digits, decode_large, decode_small, Mod_SmallBound, DivBy_SmallBound, DivBy_SmallerBound, Mul, CarryAdd, CarrySubSmall, ConditionalSubtract, ConditionalSubtractModulus, ZLikeOps_of_x86_gen_Factored, ZLikeOps_of_x86_gen in *.
   Local Ltac saturate_context_step :=
     match goal with
-    | _ => unique assert (0 <= 2 * n_over_two) by solve [ eauto using decode_exponent_nonnegative with typeclass_instances | omega ]
+    (*| _ => unique assert (0 <= 2 * n_over_two) by solve [ eauto using decode_exponent_nonnegative with typeclass_instances | omega ]
     | _ => unique assert (0 <= n_over_two) by solve [ eauto using decode_exponent_nonnegative with typeclass_instances | omega ]
-    | _ => unique assert (0 <= 2 * (2 * n_over_two)) by (eauto using decode_exponent_nonnegative with typeclass_instances)
+    | _ => unique assert (0 <= 2 * (2 * n_over_two)) by (eauto using decode_exponent_nonnegative with typeclass_instances)*)
     | [ H : 0 <= ?x < _ |- _ ] => unique pose proof (proj1 H); unique pose proof (proj2 H)
     end.
   Local Ltac pre_t :=
@@ -149,7 +148,7 @@ Section x86_64_barrett_foundation.
          (smaller_bound_smaller : 0 <= smaller_bound_exp <= 256)
          (n_pos : 0 < n)
     : ZLikeProperties (@ZLikeOps_of_x86_64_Factored ops modulus smaller_bound_exp ldi_modulus ldi_0)
-    := @ZLikeProperties_of_x86_gen_Factored 32 256 _ _ arith _ _ Hldi_modulus Hldi_0 modulus_in_range _ smaller_bound_smaller n_pos _.
+    := @ZLikeProperties_of_x86_gen_Factored 64 256 _ _ arith _ _ Hldi_modulus Hldi_0 modulus_in_range _ smaller_bound_smaller n_pos _.
   Proof. clear; simpl; abstract omega. Defined.
   Global Instance ZLikeProperties_of_x86_64
          {arith : x86.arithmetic ops}
@@ -176,7 +175,7 @@ Section x86_32_barrett_foundation.
          (smaller_bound_smaller : 0 <= smaller_bound_exp <= 256)
          (n_pos : 0 < n)
     : ZLikeProperties (@ZLikeOps_of_x86_32_Factored ops modulus smaller_bound_exp ldi_modulus ldi_0)
-    := @ZLikeProperties_of_x86_gen_Factored 16 256 _ _ arith _ _ Hldi_modulus Hldi_0 modulus_in_range _ smaller_bound_smaller n_pos _.
+    := @ZLikeProperties_of_x86_gen_Factored 32 256 _ _ arith _ _ Hldi_modulus Hldi_0 modulus_in_range _ smaller_bound_smaller n_pos _.
   Proof. clear; simpl; abstract omega. Defined.
   Global Instance ZLikeProperties_of_x86_32
          {arith : x86.arithmetic ops}
