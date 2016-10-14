@@ -154,21 +154,16 @@ Section x86.
     Section pre.
       Context (ops : x86.instructions n) (props : x86.arithmetic ops).
       Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
+      Print barrett_reduce_function.
       Time Definition barrett_reduce64' (x : tuple W 2) : W
         := Eval cbv -[Let_In] in @barrett_reduce modulusv n ops x. (* 14 s *)
+      Set Printing Depth 1000000.
+      Print barrett_reduce64'.
     End pre.
     Context (ops : x86.instructions n) (props : x86.arithmetic ops).
     Local Notation W := (tuple (tuple x86.W 2) 2) (* 256-bit words *).
     Time Definition barrett_reduce64'1 (x : tuple W 2) : W
       := Eval cbv beta iota delta [barrett_reduce64' x86.eta_instructions Let_In] in @barrett_reduce64' (x86.eta_instructions ops) x. (* 3.2 s *)
-Print barrett_reduce64'1.
-Eval cbv [ZBounded.SmallT ZBounded.LargeT ZLikeOps_of_x86_64 ZLikeOps_of_x86_64_Factored ZLikeOps_of_x86_gen_Factored Core.repeated_tuple Nat.div PeanoNat.Nat.divmod fst Nat.log2 Nat.pred Nat.log2_iter tuple tuple' ZBounded.Mul Core.multiply_double_repeated_double Core.mul_double_multiply Z.pow Z.of_nat Pos.of_succ_nat Pos.succ Z.pow_pos Z.mul Pos.iter Pos.mul Core.mul_double Interface.muldw Core.mul_double_multiply_low_low Core.mul_double_multiply_high_high Core.mul_double_multiply_high_low Interface.mulhwhh Interface.mulhwhl Interface.mulhwll StripCF.multiply_double_strip_CF] in
-    (fun modulus smaller_bound_exp ops x y => @ZBounded.Mul _ _ _ (@ZLikeOps_of_x86_gen_Factored 256 64 ops modulus smaller_bound_exp (ldi modulus) (ldi 0)) x y).
-@ZLikeOps_of_x86_gen_Factored 256 n ops modulus smaller_bound_exp ldi_modulus ldi_0    Print barrett_reduce64'1.
-  End x86_64.
-End x86.
-Require Import ExtrOcamlBasic ExtrOcamlBigIntConv ExtrOcamlNatBigInt ExtrOcamlZBigInt ExtrOcamlString.
-Recursive Extraction barrett_reduce64'1.
     Definition rexpression : Syntax.Expr base_type (interp_base_type _) op (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Arrow TW (Tbase TW))))))))).
     Proof.
       Typeclasses eauto := debug.
