@@ -4,6 +4,7 @@ Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.ShiftLeftRightTactic.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.
 
 Local Open Scope Z_scope.
@@ -36,6 +37,7 @@ Section shrd.
     assert (forall x, 0 <= Z.pow2_mod x n < 2^n) by auto with zarith.
     assert (forall n' x, 2^n <= 2^n' -> 0 <= x < 2^n -> 0 <= x < 2^n') by auto with zarith.
     assert (forall n' x, n <= n' -> 0 <= x < 2^n -> 0 <= x < 2^n') by auto with zarith omega.
+    eta_expand.
     autorewrite with simpl_tuple_decoder; push_decode.
     shift_left_right_t.
   Qed.

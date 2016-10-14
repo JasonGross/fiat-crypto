@@ -3,6 +3,7 @@ Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.
 
 Local Open Scope Z_scope.
@@ -22,7 +23,8 @@ Section bitwise_or.
     { rewrite !(tuple_decoder_n_O (W:=W) 2); easy. }
     { assert (0 <= Z.lor (decode (fst x)) (decode (fst y)) < 2^Z.pos p) by auto with zarith.
       rewrite (tuple_decoder_2 x), (tuple_decoder_2 y), (tuple_decoder_2 (or_double x y))
-        by apply Zle_0_pos.
+        by apply Zle_0_pos; simpl @fst; simpl @snd.
+      unfold bitwise_or_double; eta_expand.
       push_decode.
       apply Z.bits_inj'; intros; autorewrite with Ztestbit.
       break_match; Z.ltb_to_lt; autorewrite with Ztestbit; reflexivity. }
