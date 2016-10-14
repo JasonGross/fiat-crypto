@@ -9,8 +9,6 @@ Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
-Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
-Arguments reify_var_for_in_is _ {T} _ _ {eT} _.
 
 (** [reify] assumes that operations can be reified via the [reify_op]
     typeclass, which gets passed the type family of operations, the
@@ -31,33 +29,14 @@ Ltac reify_type T :=
   | (?A -> ?B)%type
     => let a := reify_type A in
        let b := reify_type B in
-       constr:(@Arrow _ a b)
+       uconstr:(@Arrow _ a b)
   | prod ?A ?B
     => let a := reify_type A in
        let b := reify_type B in
-       constr:(@Prod _ a b)
+       uconstr:(@Prod _ a b)
   | _
     => let v := base_reify_type T in
-       constr:(Tbase v)
-  end.
-Ltac reify_base_type T :=
-  let t := reify_type T in
-  lazymatch t with
-  | Tbase ?t => t
-  | ?t => t
-  end.
-
-Ltac reifyf_var x mkVar :=
-  lazymatch goal with
-  | _ : reify_var_for_in_is _ x ?t ?v |- _ => mkVar t v
-  | _ => lazymatch x with
-         | fst ?x' => reifyf_var x' ltac:(fun t v => lazymatch t with
-                                                     | Prod ?A ?B => mkVar A (fst v)
-                                                     end)
-         | snd ?x' => reifyf_var x' ltac:(fun t v => lazymatch t with
-                                                     | Prod ?A ?B => mkVar B (snd v)
-                                                     end)
-         end
+       uconstr:(Tbase v)
   end.
 
 Inductive reify_result_helper :=
@@ -71,7 +50,7 @@ Ltac base_reify_op op op_head :=
   type of r.
 Ltac reify_op op op_head :=
   let t := base_reify_op op op_head in
-  constr:(op_info t).
+  uconstr:(op_info t).
 
 (** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
     more debugging. *)
@@ -106,25 +85,74 @@ Ltac debug_leave_reify_rec e :=
   | _ => idtac
   end.
 
+Local Set Primitive Projections.
+(** Reflective pairs for curried arguments *)
+Record rprod A B := rpair { rfst : A ; rsnd : B }.
+Arguments rfst {A B}%type _.
+Arguments rsnd {A B}%type _.
+Arguments rprod (A P)%type.
+Arguments rpair {A B}%type _ _.
+Add Printing Let rprod.
+Delimit Scope reify_scope with reify.
+Notation "A * B" := (rprod A%reify B%reify) : reify_scope.
+Notation "( x , y , .. , z )" := (rpair .. (rpair x%reify y%reify) .. z%reify) : reify_scope.
+
+Ltac reifyf_var x mkVar :=
+  lazymatch x with
+  | (fun arg : ?argT => fst (@?x' arg))
+    => reifyf_var x' ltac:(fun arg' argT' t v => lazymatch t with
+                                                 | Prod ?A ?B => mkVar arg' argT' A uconstr:(fst v)
+                                                 end)
+  | (fun arg : ?argT => snd (@?x' arg))
+    => reifyf_var x' ltac:(fun arg' argT' t v => lazymatch t with
+                                                 | Prod ?A ?B => mkVar arg' argT' B uconstr:(snd v)
+                                                 end)
+  | (fun arg : ?argT => rfst ?x')
+    => reifyf_var (x' ltac:(fun arg' argT' t v => mkVar t uconstr:(snd v)
+                                      end)
+    =>
+  lazymatch goal with
+  | _ : reify_var_for_in_is _ x ?t ?v |- _ => mkVar t v
+  | _ => lazymatch x with
+         | fst ?x' => reifyf_var x' ltac:(fun t v => lazymatch t with
+                                                     | Prod ?A ?B => mkVar A (fst v)
+                                                     end)
+         | snd ?x' => reifyf_var x' ltac:(fun t v => lazymatch t with
+                                                     | Prod ?A ?B => mkVar B (snd v)
+                                                     end)
+         end
+  end.
+
 Ltac reifyf base_type_code interp_base_type op var e :=
   let reify_rec e := reifyf base_type_code interp_base_type op var e in
-  let mkLetIn ex eC := constr:(LetIn (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex eC) in
-  let mkPair ex ey := constr:(Pair (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex ey) in
-  let mkVar T ex := constr:(Var (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
-  let mkConst T ex := constr:(Const (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
-  let mkOp T retT op_code args := constr:(Op (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t1:=T) (tR:=retT) op_code args) in
-  let mkMatchPair tC ex eC := constr:(MatchPair (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (tC:=tC) ex eC) in
-  let reify_tag := constr:(@exprf base_type_code interp_base_type op var) in
+  let mkLetIn arg argT ex eC := uconstr:(fun (arg : argT) => LetIn (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex eC) in
+  let mkPair ex ey := uconstr:(fun (arg : argT) => Pair (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex ey) in
+  let mkVar T ex := uconstr:(fun (arg : argT) => Var (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
+  let mkConst T ex := uconstr:(fun (arg : argT) => Const (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
+  let mkOp T retT op_code args := uconstr:(fun (arg : argT) => Op (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t1:=T) (tR:=retT) op_code args) in
+  let mkMatchPair tC ex eC := uconstr:(fun (arg : argT) => MatchPair (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (tC:=tC) ex eC) in
+  let reify_tag := uconstr:(@exprf base_type_code interp_base_type op var) in
   let dummy := debug_enter_reifyf e in
   lazymatch e with
-  | let x := ?ex in @?eC x =>
+  | (fun (arg1 : ?arg1T) (arg2 : ?arg2T) => ?f)
+    => let arg' := fresh arg1 in
+       let arg := fresh arg' in
+       reify_rec uconstr:(fun arg : rprod arg1T arg2T => match rfst arg, rsnd arg with
+                                                         | arg1, arg2 => f
+                                                         end)
+  | (fun arg : ?argT => let x := @?ex arg in @?eC arg x) =>
     let ex := reify_rec ex in
     let eC := reify_rec eC in
-    mkLetIn ex eC
-  | pair ?a ?b =>
+    mkLetIn arg argT ex eC
+  | (fun arg : ?argT => pair (@?a arg) (@?b arg)) =>
     let a := reify_rec a in
     let b := reify_rec b in
-    mkPair a b
+    mkPair arg argT a b
+  | (fun arg : ?argT => match @?ev arg with pair a b => @?eC arg a b end) =>
+    let t := (let T := match type of eC with _ -> _ -> _ -> ?T => T end in reify_type T) in
+    let v := reify_rec ev in
+    let C := reify_rec eC in
+    mkMatchPair arg argT t v C
   | (fun x : ?T => ?C) =>
     let t := reify_type T in
     (* Work around Coq 8.5 and 8.6 bug *)
@@ -136,11 +164,6 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                         (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
     with fun _ v _ => @?C v => C end
-  | match ?ev with pair a b => @?eC a b end =>
-    let t := (let T := match type of eC with _ -> _ -> ?T => T end in reify_type T) in
-    let v := reify_rec ev in
-    let C := reify_rec eC in
-    mkMatchPair t v C
   | ?x =>
     let t := lazymatch type of x with ?t => reify_type t end in
     let retv := match constr:(Set) with
