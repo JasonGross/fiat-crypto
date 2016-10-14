@@ -29,14 +29,10 @@ Section ripple_carry_definitions.
     : forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k
     := match k return forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k with
        | O => f
-       | S k' => fun xss yss carry => dlet xss := xss in
-                                      dlet yss := yss in
-                                      let (xs, x) := eta xss in
-                                      let (ys, y) := eta yss in
-                                      dlet addv := (@ripple_carry_tuple' _ f k' xs ys carry) in
-                                      let (carry, zs) := eta addv in
-                                      dlet fxy := (f x y carry) in
-                                      let (carry, z) := eta fxy in
+       | S k' => fun xss yss carry => let (xs, x) := xss in
+                                      let (ys, y) := yss in
+                                      let (carry, zs) := (@ripple_carry_tuple' _ f k' xs ys carry) in
+                                      let (carry, z) := (f x y carry) in
                                       (carry, (zs, z))
        end.
 
@@ -65,10 +61,8 @@ Section tuple2.
             {selc : select_conditional W}.
 
     Definition select_conditional_double (b : bool) (x : tuple W 2) (y : tuple W 2) : tuple W 2
-      := dlet x := x in
-         dlet y := y in
-         let (x1, x2) := eta x in
-         let (y1, y2) := eta y in
+      := let (x1, x2) := x in
+         let (y1, y2) := y in
          (selc b x1 y1, selc b x2 y2).
 
     Global Instance selc_double : select_conditional (tuple W 2)
@@ -93,10 +87,8 @@ Section tuple2.
             {or : bitwise_or W}.
 
     Definition bitwise_or_double (x : tuple W 2) (y : tuple W 2) : tuple W 2
-      := dlet x := x in
-         dlet y := y in
-         let (x1, x2) := eta x in
-         let (y1, y2) := eta y in
+      := let (x1, x2) := x in
+         let (y1, y2) := y in
          (or x1 y1, or x2 y2).
 
     Global Instance or_double : bitwise_or (tuple W 2)
@@ -108,10 +100,8 @@ Section tuple2.
             {and : bitwise_and W}.
 
     Definition bitwise_and_double (x : tuple W 2) (y : tuple W 2) : tuple W 2
-      := dlet x := x in
-         dlet y := y in
-         let (x1, x2) := eta x in
-         let (y1, y2) := eta y in
+      := let (x1, x2) := x in
+         let (y1, y2) := y in
          (and x1 y1, and x2 y2).
 
     Global Instance and_double : bitwise_and (tuple W 2)
@@ -142,8 +132,7 @@ Section tuple2.
             {or : bitwise_or W}.
 
     Definition shift_left_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
-      := dlet r := r in
-         let (r1, r2) := eta r in
+      := let (r1, r2) := r in
          (if count =? 0
           then r1
           else if count <? n
@@ -156,8 +145,7 @@ Section tuple2.
                else shl r1 (count - n)).
 
     Definition shift_right_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
-      := dlet r := r in
-         let (r1, r2) := eta r in
+      := let (r1, r2) := r in
          (if count =? 0
           then r1
           else if count <? n
@@ -183,10 +171,8 @@ Section tuple2.
             {shrd : shift_right_doubleword_immediate W}.
 
     Definition shift_right_doubleword_immediate_double (high low : tuple W 2) (count : Z) : tuple W 2
-      := dlet high := high in
-         dlet low := low in
-         let (high1, high2) := eta high in
-         let (low1, low2) := eta low in
+      := let (high1, high2) := high in
+         let (low1, low2) := low in
          (if count =? 0
           then low1
           else if count <? n
@@ -224,11 +210,9 @@ Section tuple2.
          let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
          dlet out            := out in
          dlet tmp            := mulhwhl a b in
-         dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let (_, out)        := eta addv in
+         let (_, out)        := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
          dlet tmp            := mulhwhl b a in
-         dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let (_, out)        := eta addv in
+         let (_, out)        := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
          out.
 
     (** Require a dummy [decoder] for these instances to allow
