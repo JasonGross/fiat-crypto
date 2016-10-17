@@ -111,7 +111,7 @@ Defined.
 
 Arguments chain {_ _ _} _.
 
-(* END precomputation *) 
+(* END precomputation *)
 
 (* Precompute constants *)
 Definition k_ := Eval compute in k.
@@ -564,3 +564,519 @@ Definition unpack (f : wire_digits) : fe25519 :=
 Definition unpack_correct (f : wire_digits)
   : unpack f = unpack_opt params25519 wire_widths_nonneg bits_eq f
   := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (unpack_sig f).
+
+
+Require Import Coq.omega.Omega Coq.micromega.Psatz.
+Require Import Coq.PArith.BinPos Coq.Lists.List.
+Require Import Crypto.Reflection.Named.Syntax.
+Require Import Crypto.Reflection.Named.Compile.
+Require Import Crypto.Reflection.Named.RegisterAssign.
+Require Import Crypto.Reflection.Syntax.
+Require Export Crypto.Reflection.Reify.
+Require Import Crypto.Reflection.InputSyntax.
+Require Import Crypto.Reflection.CommonSubexpressionElimination.
+Require Crypto.Reflection.Linearize Crypto.Reflection.Inline.
+Require Import Crypto.Reflection.WfReflective.
+Require Import Crypto.Reflection.Conversion.
+
+Print mul.
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
+Scheme Equality for Z.
+Inductive base_type := TZ.
+Definition interp_base_type (v : base_type) : Type :=
+  match v with
+  | TZ => Z
+  end.
+Local Notation tZ := (Tbase TZ).
+Inductive op : flat_type base_type -> flat_type base_type -> Type :=
+| Add : op (Prod tZ tZ) tZ
+| Mul : op (Prod tZ tZ) tZ
+| Sub : op (Prod tZ tZ) tZ
+| Shl : op (Prod tZ tZ) tZ
+| Shr : op (Prod tZ tZ) tZ
+| And : op (Prod tZ tZ) tZ.
+Definition interp_op src dst (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
+  := match f with
+     | Add => fun xy => fst xy + snd xy
+     | Mul => fun xy => fst xy * snd xy
+     | Sub => fun xy => fst xy - snd xy
+     | Shl => fun xy => fst xy << snd xy
+     | Shr => fun xy => fst xy >> snd xy
+     | And => fun xy => Z.land (fst xy) (snd xy)
+     end%Z.
+
+Ltac base_reify_op op op_head ::=
+     lazymatch op_head with
+     | @Z.add => constr:(reify_op op op_head 2 Add)
+     | @Z.mul => constr:(reify_op op op_head 2 Mul)
+     | @Z.sub => constr:(reify_op op op_head 2 Sub)
+     | @Z.shiftl => constr:(reify_op op op_head 2 Shl)
+     | @Z.shiftr => constr:(reify_op op op_head 2 Shr)
+     | @Z.land => constr:(reify_op op op_head 2 And)
+     end.
+Ltac base_reify_type T ::=
+     match T with
+     | Z => TZ
+     end.
+
+Require Import Crypto.Reflection.Linearize.
+Ltac Reify' e := Reify.Reify' base_type (interp_base_type _) op e.
+Ltac Reify e :=
+  let v := Reify.Reify base_type (interp_base_type) op e in
+  constr:((*Inline _*) ((*CSE _*) ((*InlineConst*) (Linearize v)))).
+Ltac Reify_rhs := Reify.Reify_rhs base_type (interp_base_type) op interp_op.
+Import ReifyDebugNotations.
+
+Local Transparent Let_In.
+Record BoundsOnZ := { lower : Z ; v : Z ; upper : Z }.
+Definition boundedZ := option { b : BoundsOnZ | 0 <= lower b /\ lower b <= v b <= upper b }.
+
+Definition bounded_interp_base_type (v : base_type) : Type :=
+  match v with
+  | TZ => boundedZ
+  end.
+Axiom admit : forall {T}, T.
+Definition bounded_add (x y : boundedZ) : boundedZ.
+Proof.
+  refine match x, y with
+         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | _, _ => None
+         end.
+  exists {| lower := lower x' + lower y' ; v := v x' + v y' ; upper := upper x' + upper y' |}.
+  simpl in *; omega.
+Defined.
+Definition bounded_mul (x y : boundedZ) : boundedZ.
+Proof.
+  refine match x, y with
+         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | _, _ => None
+         end.
+  exists {| lower := lower x' * lower y' ; v := v x' * v y' ; upper := upper x' * upper y' |}.
+  simpl in *; nia.
+Defined.
+Definition bounded_shl (x y : boundedZ) : boundedZ.
+Proof.
+  refine match x, y with
+         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | _, _ => None
+         end.
+  exists {| lower := lower x' << lower y' ; v := v x' << v y' ; upper := upper x' << upper y' |}.
+  simpl in *; autorewrite with Zshift_to_pow in *.
+  assert (0 <= 2^lower y' /\ 2^lower y' <= 2^v y' <= 2^upper y') by auto with zarith.
+  nia.
+Defined.
+Definition bounded_shr (x y : boundedZ) : boundedZ.
+Proof.
+  refine match x, y with
+         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | _, _ => None
+         end.
+  exists {| lower := lower x' >> upper y' ; v := v x' >> v y' ; upper := upper x' >> lower y' |}.
+  simpl in *; autorewrite with Zshift_to_pow in *.
+  assert (0 <= 2^lower y' /\ 2^lower y' <= 2^v y' <= 2^upper y') by auto with zarith.
+  assert (0 < 2^upper y') by zero_bounds.
+  assert (0 < 2^lower y') by zero_bounds.
+  assert (0 < 2^v y') by zero_bounds.
+  repeat split; auto with zarith.
+  { transitivity (v x' / 2^upper y').
+    { apply Z_div_le; omega. }
+    { apply Z.div_le_compat_l; omega. } }
+  { transitivity (upper x' / 2^v y').
+    { apply Z_div_le; omega. }
+    { apply Z.div_le_compat_l; omega. } }
+Defined.
+Definition bounded_and (x y : boundedZ) : boundedZ.
+Proof.
+  refine match x, y with
+         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | _, _ => None
+         end.
+  exists {| lower := 0 ; v := v x' &' v y' ; upper := Z.min (upper x') (upper y') |}.
+  simpl in *.
+  repeat split; try auto with zarith.
+  { apply Z.land_nonneg; omega. }
+  { Hint Resolve Z.land_upper_bound_l Z.land_upper_bound_r : zarith.
+    apply Z.min_case_strong; intros; etransitivity; eauto with zarith. }
+Defined.
+Definition bounded_sub (x y : boundedZ) : boundedZ.
+Proof.
+  refine match x, y with
+         | Some (exist x' xp), Some (exist y' yp) => _
+         | _, _ => None
+         end.
+  destruct (lower x' - upper y' <? 0) eqn:H.
+  { exact None. }
+  { apply Some.
+    exists {| lower := lower x' - upper y' ; v := v x' - v y' ; upper := upper x' - lower y' |}.
+    Z.ltb_to_lt.
+    simpl in *.
+    (** TODO: Debug: report anomaly on omega rather than lia *)
+    lia. }
+Defined.
+Definition bounded_interp_op src dst (f : op src dst) : interp_flat_type_gen bounded_interp_base_type src -> interp_flat_type_gen bounded_interp_base_type dst
+  := match f with
+     | Add => fun xy => bounded_add (fst xy) (snd xy)
+     | Mul => fun xy => bounded_mul (fst xy) (snd xy)
+     | Sub => fun xy => bounded_sub (fst xy) (snd xy)
+     | Shl => fun xy => bounded_shl (fst xy) (snd xy)
+     | Shr => fun xy => bounded_shr (fst xy) (snd xy)
+     | And => fun xy => bounded_and (fst xy) (snd xy)
+     end%Z.
+Require Import Crypto.Reflection.MapInterp.
+Definition f t : interp_base_type t -> bounded_interp_base_type t.
+Proof.
+  refine match t return interp_base_type t -> bounded_interp_base_type t with
+         | TZ => fun x => _
+         end.
+  destruct (x <? 0) eqn:H.
+  { apply None. }
+  { refine (Some (exist _ {| lower := x ; v := x ; upper := x |} _)).
+    Z.ltb_to_lt.
+    simpl in *; omega. }
+Defined.
+Print mul.
+Inductive Zv {A B} := TTT (e : A) (p : B).
+Notation "2^ e + p" := (TTT e p) (at level 10, format "2^ e  +  p").
+
+Definition rexprm : Syntax.Expr base_type interp_base_type op
+        (TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ -> TZ -> TZ -> TZ -> TZ -> TZ -> tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ)%ctype.
+Proof.
+  let v := (eval cbv beta iota delta [Let_In mul fe25519] in (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 => mul (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9)  (y0, y1, y2, y3, y4, y5, y6, y7, y8, y9))) in
+  let r := Reify v in
+  let r := (eval vm_compute in r) in
+  exact r.
+Defined.
+
+Definition mulh :=
+fun f g : fe25519 =>
+let (f0, g0) := f in
+let (f1, g1) := f0 in
+let (f2, g2) := f1 in
+let (f3, g3) := f2 in
+let (f4, g4) := f3 in
+let (f5, g5) := f4 in
+let (f6, g6) := f5 in
+let (f7, g7) := f6 in
+let (f8, g8) := f7 in
+let (f9, g9) := g in
+let (f10, g10) := f9 in
+let (f11, g11) := f10 in
+let (f12, g12) := f11 in
+let (f13, g13) := f12 in
+let (f14, g14) := f13 in
+let (f15, g15) := f14 in
+let (f16, g16) := f15 in
+let '(f17, g17) := f16 in
+dlet z := g0 * g9 +
+          19 *
+          (f8 * (g10 * 2) +
+           (g8 * g11 +
+            (g7 * (g12 * 2) +
+             (g6 * g13 +
+              (g5 * (g14 * 2) + (g4 * g15 + (g3 * (g16 * 2) + (g2 * g17 + g1 * (f17 * 2))))))))) in
+      dlet z0 := z >> 26 +
+           (g1 * g9 + g0 * g10 +
+            19 *
+            (f8 * g11 +
+             (g8 * g12 +
+              (g7 * g13 + (g6 * g14 + (g5 * g15 + (g4 * g16 + (g3 * g17 + g2 * f17)))))))) in
+dlet z1 := z0 >> 25 +
+           (g2 * g9 + (g1 * (g10 * 2) + g0 * g11) +
+            19 *
+            (f8 * (g12 * 2) +
+             (g8 * g13 +
+              (g7 * (g14 * 2) + (g6 * g15 + (g5 * (g16 * 2) + (g4 * g17 + g3 * (f17 * 2)))))))) in
+dlet z2 := z1 >> 26 +
+           (g3 * g9 + (g2 * g10 + (g1 * g11 + g0 * g12)) +
+            19 * (f8 * g13 + (g8 * g14 + (g7 * g15 + (g6 * g16 + (g5 * g17 + g4 * f17)))))) in
+dlet z3 := z2 >> 25 +
+           (g4 * g9 + (g3 * (g10 * 2) + (g2 * g11 + (g1 * (g12 * 2) + g0 * g13))) +
+            19 * (f8 * (g14 * 2) + (g8 * g15 + (g7 * (g16 * 2) + (g6 * g17 + g5 * (f17 * 2)))))) in
+dlet z4 := z3 >> 26 +
+           (g5 * g9 + (g4 * g10 + (g3 * g11 + (g2 * g12 + (g1 * g13 + g0 * g14)))) +
+            19 * (f8 * g15 + (g8 * g16 + (g7 * g17 + g6 * f17)))) in
+dlet z5 := z4 >> 25 +
+           (g6 * g9 +
+            (g5 * (g10 * 2) +
+             (g4 * g11 + (g3 * (g12 * 2) + (g2 * g13 + (g1 * (g14 * 2) + g0 * g15))))) +
+            19 * (f8 * (g16 * 2) + (g8 * g17 + g7 * (f17 * 2)))) in
+dlet z6 := z5 >> 26 +
+           (g7 * g9 +
+            (g6 * g10 + (g5 * g11 + (g4 * g12 + (g3 * g13 + (g2 * g14 + (g1 * g15 + g0 * g16)))))) +
+            19 * (f8 * g17 + g8 * f17)) in
+dlet z7 := z6 >> 25 +
+           (g8 * g9 +
+            (g7 * (g10 * 2) +
+             (g6 * g11 +
+              (g5 * (g12 * 2) +
+               (g4 * g13 + (g3 * (g14 * 2) + (g2 * g15 + (g1 * (g16 * 2) + g0 * g17))))))) +
+            19 * (f8 * (f17 * 2))) in
+dlet z8 := z7 >> 26 +
+           (f8 * g9 +
+            (g8 * g10 +
+             (g7 * g11 +
+              (g6 * g12 +
+               (g5 * g13 + (g4 * g14 + (g3 * g15 + (g2 * g16 + (g1 * g17 + g0 * f17))))))))) in
+dlet z9 := 19 * z8 >> 25 + (z &' 67108863) in
+dlet z10 := z9 >> 26 + (z0 &' 33554431) in
+(z0, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z8 &' 33554431, z7 &' 67108863, z6 &' 33554431, z5 &' 67108863, z4 &' 33554431,
+z3 &' 67108863, z2 &' 33554431, z10 >> 25 + (z1 &' 67108863), z10 &' 33554431,
+z9 &' 67108863).
+
+Definition rexprhm : Syntax.Expr base_type interp_base_type op
+        (TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ -> TZ -> TZ -> TZ -> TZ -> TZ -> tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ)%ctype.
+Proof.
+  let v := (eval cbv beta iota delta [Let_In mulh fe25519] in (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 => mulh (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9)  (y0, y1, y2, y3, y4, y5, y6, y7, y8, y9))) in
+  let r := Reify v in
+  let r := (eval vm_compute in r) in
+  exact r.
+Defined.
+
+Definition compute_boundshm (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 : Z * Z)
+  := fun vx0 vx1 vx2 vx3 vx4 vx5 vx6 vx7 vx8 vx9 vy0 vy1 vy2 vy3 vy4 vy5 vy6 vy7 vy8 vy9
+         pfx0 pfx1 pfx2 pfx3 pfx4 pfx5 pfx6 pfx7 pfx8 pfx9 pfy0 pfy1 pfy2 pfy3 pfy4 pfy5 pfy6 pfy7 pfy8 pfy9
+     =>
+       let x0 : boundedZ := Some (exist _ {| lower := fst x0 ; v := vx0 ; upper := snd x0 |} pfx0) in
+       let x1 : boundedZ := Some (exist _ {| lower := fst x1 ; v := vx1 ; upper := snd x1 |} pfx1) in
+       let x2 : boundedZ := Some (exist _ {| lower := fst x2 ; v := vx2 ; upper := snd x2 |} pfx2) in
+       let x3 : boundedZ := Some (exist _ {| lower := fst x3 ; v := vx3 ; upper := snd x3 |} pfx3) in
+       let x4 : boundedZ := Some (exist _ {| lower := fst x4 ; v := vx4 ; upper := snd x4 |} pfx4) in
+       let x5 : boundedZ := Some (exist _ {| lower := fst x5 ; v := vx5 ; upper := snd x5 |} pfx5) in
+       let x6 : boundedZ := Some (exist _ {| lower := fst x6 ; v := vx6 ; upper := snd x6 |} pfx6) in
+       let x7 : boundedZ := Some (exist _ {| lower := fst x7 ; v := vx7 ; upper := snd x7 |} pfx7) in
+       let x8 : boundedZ := Some (exist _ {| lower := fst x8 ; v := vx8 ; upper := snd x8 |} pfx8) in
+       let x9 : boundedZ := Some (exist _ {| lower := fst x9 ; v := vx9 ; upper := snd x9 |} pfx9) in
+       let y0 : boundedZ := Some (exist _ {| lower := fst y0 ; v := vy0 ; upper := snd y0 |} pfy0) in
+       let y1 : boundedZ := Some (exist _ {| lower := fst y1 ; v := vy1 ; upper := snd y1 |} pfy1) in
+       let y2 : boundedZ := Some (exist _ {| lower := fst y2 ; v := vy2 ; upper := snd y2 |} pfy2) in
+       let y3 : boundedZ := Some (exist _ {| lower := fst y3 ; v := vy3 ; upper := snd y3 |} pfy3) in
+       let y4 : boundedZ := Some (exist _ {| lower := fst y4 ; v := vy4 ; upper := snd y4 |} pfy4) in
+       let y5 : boundedZ := Some (exist _ {| lower := fst y5 ; v := vy5 ; upper := snd y5 |} pfy5) in
+       let y6 : boundedZ := Some (exist _ {| lower := fst y6 ; v := vy6 ; upper := snd y6 |} pfy6) in
+       let y7 : boundedZ := Some (exist _ {| lower := fst y7 ; v := vy7 ; upper := snd y7 |} pfy7) in
+       let y8 : boundedZ := Some (exist _ {| lower := fst y8 ; v := vy8 ; upper := snd y8 |} pfy8) in
+       let y9 : boundedZ := Some (exist _ {| lower := fst y9 ; v := vy9 ; upper := snd y9 |} pfy9) in
+       match Syntax.Interp bounded_interp_op (@MapInterp _ interp_base_type bounded_interp_base_type op f _ rexprhm) x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 with
+       | (Some (exist b0 _), Some (exist b1 _), Some (exist b2 _), Some (exist b3 _), Some (exist b4 _), Some (exist b5 _), Some (exist b6 _), Some (exist b7 _), Some (exist b8 _), Some (exist b9 _), Some (exist b10 _), Some (exist b11 _), Some (exist b12 _), Some (exist b13 _), Some (exist b14 _), Some (exist b15 _), Some (exist b16 _), Some (exist b17 _), Some (exist b18 _), Some (exist b19 _), Some (exist b20 _))
+         => let f b := (lower b, let u := upper b in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in u))) in
+            Some (f b0, f b1, f b2, f b3, f b4, f b5, f b6, f b7, f b8, f b9, f b10, f b11, f b12, f b13, f b14, f b15, f b16, f b17, f b18, f b19, f b20)
+       | _ => None
+       end.
+Notation be exp := (0, 2^exp + 2^exp / 10)%Z.
+(*Goal True.
+  pose mul.
+  cbv [mul] in f0.
+Compute compute_boundsm (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
+
+
+
+
+*)
+
+Definition rexprs : Syntax.Expr base_type interp_base_type op
+        (TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ -> TZ -> TZ -> TZ -> TZ -> TZ -> tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ)%ctype.
+Proof.
+  let v := (eval cbv beta iota delta [Let_In sub fe25519] in (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 => sub (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9)  (y0, y1, y2, y3, y4, y5, y6, y7, y8, y9))) in
+  let r := Reify v in
+  let r := (eval vm_compute in r) in
+  exact r.
+Defined.
+
+Definition rexpro : Syntax.Expr base_type interp_base_type op
+        (TZ ->
+         TZ ->
+         TZ ->
+         TZ ->
+         TZ -> TZ -> TZ -> TZ -> TZ -> TZ -> tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ * tZ)%ctype.
+Proof.
+  let v := (eval cbv beta iota delta [Let_In opp fe25519] in (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 => opp (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9))) in
+  let r := Reify v in
+  let r := (eval vm_compute in r) in
+  exact r.
+Defined.
+
+Definition compute_boundsm (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 : Z * Z)
+  := fun vx0 vx1 vx2 vx3 vx4 vx5 vx6 vx7 vx8 vx9 vy0 vy1 vy2 vy3 vy4 vy5 vy6 vy7 vy8 vy9
+         pfx0 pfx1 pfx2 pfx3 pfx4 pfx5 pfx6 pfx7 pfx8 pfx9 pfy0 pfy1 pfy2 pfy3 pfy4 pfy5 pfy6 pfy7 pfy8 pfy9
+     =>
+       let x0 : boundedZ := Some (exist _ {| lower := fst x0 ; v := vx0 ; upper := snd x0 |} pfx0) in
+       let x1 : boundedZ := Some (exist _ {| lower := fst x1 ; v := vx1 ; upper := snd x1 |} pfx1) in
+       let x2 : boundedZ := Some (exist _ {| lower := fst x2 ; v := vx2 ; upper := snd x2 |} pfx2) in
+       let x3 : boundedZ := Some (exist _ {| lower := fst x3 ; v := vx3 ; upper := snd x3 |} pfx3) in
+       let x4 : boundedZ := Some (exist _ {| lower := fst x4 ; v := vx4 ; upper := snd x4 |} pfx4) in
+       let x5 : boundedZ := Some (exist _ {| lower := fst x5 ; v := vx5 ; upper := snd x5 |} pfx5) in
+       let x6 : boundedZ := Some (exist _ {| lower := fst x6 ; v := vx6 ; upper := snd x6 |} pfx6) in
+       let x7 : boundedZ := Some (exist _ {| lower := fst x7 ; v := vx7 ; upper := snd x7 |} pfx7) in
+       let x8 : boundedZ := Some (exist _ {| lower := fst x8 ; v := vx8 ; upper := snd x8 |} pfx8) in
+       let x9 : boundedZ := Some (exist _ {| lower := fst x9 ; v := vx9 ; upper := snd x9 |} pfx9) in
+       let y0 : boundedZ := Some (exist _ {| lower := fst y0 ; v := vy0 ; upper := snd y0 |} pfy0) in
+       let y1 : boundedZ := Some (exist _ {| lower := fst y1 ; v := vy1 ; upper := snd y1 |} pfy1) in
+       let y2 : boundedZ := Some (exist _ {| lower := fst y2 ; v := vy2 ; upper := snd y2 |} pfy2) in
+       let y3 : boundedZ := Some (exist _ {| lower := fst y3 ; v := vy3 ; upper := snd y3 |} pfy3) in
+       let y4 : boundedZ := Some (exist _ {| lower := fst y4 ; v := vy4 ; upper := snd y4 |} pfy4) in
+       let y5 : boundedZ := Some (exist _ {| lower := fst y5 ; v := vy5 ; upper := snd y5 |} pfy5) in
+       let y6 : boundedZ := Some (exist _ {| lower := fst y6 ; v := vy6 ; upper := snd y6 |} pfy6) in
+       let y7 : boundedZ := Some (exist _ {| lower := fst y7 ; v := vy7 ; upper := snd y7 |} pfy7) in
+       let y8 : boundedZ := Some (exist _ {| lower := fst y8 ; v := vy8 ; upper := snd y8 |} pfy8) in
+       let y9 : boundedZ := Some (exist _ {| lower := fst y9 ; v := vy9 ; upper := snd y9 |} pfy9) in
+       match Syntax.Interp bounded_interp_op (@MapInterp _ interp_base_type bounded_interp_base_type op f _ rexprm) x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 with
+       | (Some (exist b0 _), Some (exist b1 _), Some (exist b2 _), Some (exist b3 _), Some (exist b4 _), Some (exist b5 _), Some (exist b6 _), Some (exist b7 _), Some (exist b8 _), Some (exist b9 _))
+         => let f b := (lower b, let u := upper b in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in u))) in
+            Some (f b0, f b1, f b2, f b3, f b4, f b5, f b6, f b7, f b8, f b9)
+       | _ => None
+       end.
+Definition compute_boundss (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 : Z * Z)
+  := fun vx0 vx1 vx2 vx3 vx4 vx5 vx6 vx7 vx8 vx9 vy0 vy1 vy2 vy3 vy4 vy5 vy6 vy7 vy8 vy9
+         pfx0 pfx1 pfx2 pfx3 pfx4 pfx5 pfx6 pfx7 pfx8 pfx9 pfy0 pfy1 pfy2 pfy3 pfy4 pfy5 pfy6 pfy7 pfy8 pfy9
+     =>
+       let x0 : boundedZ := Some (exist _ {| lower := fst x0 ; v := vx0 ; upper := snd x0 |} pfx0) in
+       let x1 : boundedZ := Some (exist _ {| lower := fst x1 ; v := vx1 ; upper := snd x1 |} pfx1) in
+       let x2 : boundedZ := Some (exist _ {| lower := fst x2 ; v := vx2 ; upper := snd x2 |} pfx2) in
+       let x3 : boundedZ := Some (exist _ {| lower := fst x3 ; v := vx3 ; upper := snd x3 |} pfx3) in
+       let x4 : boundedZ := Some (exist _ {| lower := fst x4 ; v := vx4 ; upper := snd x4 |} pfx4) in
+       let x5 : boundedZ := Some (exist _ {| lower := fst x5 ; v := vx5 ; upper := snd x5 |} pfx5) in
+       let x6 : boundedZ := Some (exist _ {| lower := fst x6 ; v := vx6 ; upper := snd x6 |} pfx6) in
+       let x7 : boundedZ := Some (exist _ {| lower := fst x7 ; v := vx7 ; upper := snd x7 |} pfx7) in
+       let x8 : boundedZ := Some (exist _ {| lower := fst x8 ; v := vx8 ; upper := snd x8 |} pfx8) in
+       let x9 : boundedZ := Some (exist _ {| lower := fst x9 ; v := vx9 ; upper := snd x9 |} pfx9) in
+       let y0 : boundedZ := Some (exist _ {| lower := fst y0 ; v := vy0 ; upper := snd y0 |} pfy0) in
+       let y1 : boundedZ := Some (exist _ {| lower := fst y1 ; v := vy1 ; upper := snd y1 |} pfy1) in
+       let y2 : boundedZ := Some (exist _ {| lower := fst y2 ; v := vy2 ; upper := snd y2 |} pfy2) in
+       let y3 : boundedZ := Some (exist _ {| lower := fst y3 ; v := vy3 ; upper := snd y3 |} pfy3) in
+       let y4 : boundedZ := Some (exist _ {| lower := fst y4 ; v := vy4 ; upper := snd y4 |} pfy4) in
+       let y5 : boundedZ := Some (exist _ {| lower := fst y5 ; v := vy5 ; upper := snd y5 |} pfy5) in
+       let y6 : boundedZ := Some (exist _ {| lower := fst y6 ; v := vy6 ; upper := snd y6 |} pfy6) in
+       let y7 : boundedZ := Some (exist _ {| lower := fst y7 ; v := vy7 ; upper := snd y7 |} pfy7) in
+       let y8 : boundedZ := Some (exist _ {| lower := fst y8 ; v := vy8 ; upper := snd y8 |} pfy8) in
+       let y9 : boundedZ := Some (exist _ {| lower := fst y9 ; v := vy9 ; upper := snd y9 |} pfy9) in
+       match Syntax.Interp bounded_interp_op (@MapInterp _ interp_base_type bounded_interp_base_type op f _ rexprs) x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 with
+       | (Some (exist b0 _), Some (exist b1 _), Some (exist b2 _), Some (exist b3 _), Some (exist b4 _), Some (exist b5 _), Some (exist b6 _), Some (exist b7 _), Some (exist b8 _), Some (exist b9 _))
+         => let f b := (lower b, let u := upper b in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in u))) in
+            Some (f b0, f b1, f b2, f b3, f b4, f b5, f b6, f b7, f b8, f b9)
+       | _ => None
+       end.
+Definition compute_boundso (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 : Z * Z)
+  := fun vx0 vx1 vx2 vx3 vx4 vx5 vx6 vx7 vx8 vx9
+         pfx0 pfx1 pfx2 pfx3 pfx4 pfx5 pfx6 pfx7 pfx8 pfx9
+     =>
+       let x0 : boundedZ := Some (exist _ {| lower := fst x0 ; v := vx0 ; upper := snd x0 |} pfx0) in
+       let x1 : boundedZ := Some (exist _ {| lower := fst x1 ; v := vx1 ; upper := snd x1 |} pfx1) in
+       let x2 : boundedZ := Some (exist _ {| lower := fst x2 ; v := vx2 ; upper := snd x2 |} pfx2) in
+       let x3 : boundedZ := Some (exist _ {| lower := fst x3 ; v := vx3 ; upper := snd x3 |} pfx3) in
+       let x4 : boundedZ := Some (exist _ {| lower := fst x4 ; v := vx4 ; upper := snd x4 |} pfx4) in
+       let x5 : boundedZ := Some (exist _ {| lower := fst x5 ; v := vx5 ; upper := snd x5 |} pfx5) in
+       let x6 : boundedZ := Some (exist _ {| lower := fst x6 ; v := vx6 ; upper := snd x6 |} pfx6) in
+       let x7 : boundedZ := Some (exist _ {| lower := fst x7 ; v := vx7 ; upper := snd x7 |} pfx7) in
+       let x8 : boundedZ := Some (exist _ {| lower := fst x8 ; v := vx8 ; upper := snd x8 |} pfx8) in
+       let x9 : boundedZ := Some (exist _ {| lower := fst x9 ; v := vx9 ; upper := snd x9 |} pfx9) in
+       match Syntax.Interp bounded_interp_op (@MapInterp _ interp_base_type bounded_interp_base_type op f _ rexpro) x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 with
+       | (Some (exist b0 _), Some (exist b1 _), Some (exist b2 _), Some (exist b3 _), Some (exist b4 _), Some (exist b5 _), Some (exist b6 _), Some (exist b7 _), Some (exist b8 _), Some (exist b9 _))
+         => let f b := (lower b, let u := upper b in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in u))) in
+            Some (f b0, f b1, f b2, f b3, f b4, f b5, f b6, f b7, f b8, f b9)
+       | _ => None
+       end.
+Definition compute_uboundsm (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 : Z * Z)
+  := fun vx0 vx1 vx2 vx3 vx4 vx5 vx6 vx7 vx8 vx9 vy0 vy1 vy2 vy3 vy4 vy5 vy6 vy7 vy8 vy9
+         pfx0 pfx1 pfx2 pfx3 pfx4 pfx5 pfx6 pfx7 pfx8 pfx9 pfy0 pfy1 pfy2 pfy3 pfy4 pfy5 pfy6 pfy7 pfy8 pfy9
+     =>
+       let x0 : boundedZ := Some (exist _ {| lower := fst x0 ; v := vx0 ; upper := snd x0 |} pfx0) in
+       let x1 : boundedZ := Some (exist _ {| lower := fst x1 ; v := vx1 ; upper := snd x1 |} pfx1) in
+       let x2 : boundedZ := Some (exist _ {| lower := fst x2 ; v := vx2 ; upper := snd x2 |} pfx2) in
+       let x3 : boundedZ := Some (exist _ {| lower := fst x3 ; v := vx3 ; upper := snd x3 |} pfx3) in
+       let x4 : boundedZ := Some (exist _ {| lower := fst x4 ; v := vx4 ; upper := snd x4 |} pfx4) in
+       let x5 : boundedZ := Some (exist _ {| lower := fst x5 ; v := vx5 ; upper := snd x5 |} pfx5) in
+       let x6 : boundedZ := Some (exist _ {| lower := fst x6 ; v := vx6 ; upper := snd x6 |} pfx6) in
+       let x7 : boundedZ := Some (exist _ {| lower := fst x7 ; v := vx7 ; upper := snd x7 |} pfx7) in
+       let x8 : boundedZ := Some (exist _ {| lower := fst x8 ; v := vx8 ; upper := snd x8 |} pfx8) in
+       let x9 : boundedZ := Some (exist _ {| lower := fst x9 ; v := vx9 ; upper := snd x9 |} pfx9) in
+       let y0 : boundedZ := Some (exist _ {| lower := fst y0 ; v := vy0 ; upper := snd y0 |} pfy0) in
+       let y1 : boundedZ := Some (exist _ {| lower := fst y1 ; v := vy1 ; upper := snd y1 |} pfy1) in
+       let y2 : boundedZ := Some (exist _ {| lower := fst y2 ; v := vy2 ; upper := snd y2 |} pfy2) in
+       let y3 : boundedZ := Some (exist _ {| lower := fst y3 ; v := vy3 ; upper := snd y3 |} pfy3) in
+       let y4 : boundedZ := Some (exist _ {| lower := fst y4 ; v := vy4 ; upper := snd y4 |} pfy4) in
+       let y5 : boundedZ := Some (exist _ {| lower := fst y5 ; v := vy5 ; upper := snd y5 |} pfy5) in
+       let y6 : boundedZ := Some (exist _ {| lower := fst y6 ; v := vy6 ; upper := snd y6 |} pfy6) in
+       let y7 : boundedZ := Some (exist _ {| lower := fst y7 ; v := vy7 ; upper := snd y7 |} pfy7) in
+       let y8 : boundedZ := Some (exist _ {| lower := fst y8 ; v := vy8 ; upper := snd y8 |} pfy8) in
+       let y9 : boundedZ := Some (exist _ {| lower := fst y9 ; v := vy9 ; upper := snd y9 |} pfy9) in
+       match Syntax.Interp bounded_interp_op (@MapInterp _ interp_base_type bounded_interp_base_type op f _ rexprm) x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 with
+       | (Some (exist b0 _), Some (exist b1 _), Some (exist b2 _), Some (exist b3 _), Some (exist b4 _), Some (exist b5 _), Some (exist b6 _), Some (exist b7 _), Some (exist b8 _), Some (exist b9 _))
+         => let f b := upper b in
+            Some (f b0, f b1, f b2, f b3, f b4, f b5, f b6, f b7, f b8, f b9)
+       | _ => None
+       end.
+Compute (2^26 - 67108862).
+Print sub.
+Compute (2^26 - (2^25 + (2^24 + 16777215))).
+Compute (2^25 - (2^24 + (2^23 + 8388607))).
+Notation be' exp := (0, 2^16 * (2^exp + 2^exp / 10))%Z.
+Compute compute_boundsm (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) .
+Compute compute_boundss (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
+Compute compute_boundso (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
+Compute compute_boundso (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
+
+Compute limb_widths.
+(*Goal True.
+  pose (compute_boundsm (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25)).
+  cbv beta in *.
+  let T := type of o in set (T' := T) in o.
+  cbv [compute_boundsm rex] in o.
+  set (k := MapInterp _ _) in (value of o).
+  vm_compute in k.
+  subst k.
+  set (
+  *)
+Compute compute_uboundsm (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
+Compute ModularBaseSystem.decode (31708953, 8053243, 3858785, 24159443, 9563049, 40265643, 15267313, 56371843, 20971578,
+                                  5370730).
+Compute (let u := 54711787839132925853401802710243160862021121027735374571861520038940806083434
+         in let u := modulus - u
+         in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in u))).
+(*    let u := Z.log2 54711787839132925853401802710243160862021121027735374571861520038940806083434 in 54711787839132925853401802710243160862021121027735374571861520038940806083434 54711787839132925853401802710243160862021121027735374571861520038940806083434 - 2^Z.log2 54711787839132925853401802710243160862021121027735374571861520038940806083434).**)
+Compute compute_boundss (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
+Compute compute_boundss (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
+Compute compute_boundso (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
+Compute compute_boundso (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
