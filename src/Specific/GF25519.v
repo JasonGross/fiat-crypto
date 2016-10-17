@@ -1053,30 +1053,6 @@ Print sub.
 Compute (2^26 - (2^25 + (2^24 + 16777215))).
 Compute (2^25 - (2^24 + (2^23 + 8388607))).
 Notation be' exp := (0, 2^16 * (2^exp + 2^exp / 10))%Z.
-Compute compute_boundsm (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) .
-Compute compute_boundss (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
-Compute compute_boundso (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
-Compute compute_boundso (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
-
-Compute limb_widths.
-(*Goal True.
-  pose (compute_boundsm (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25)).
-  cbv beta in *.
-  let T := type of o in set (T' := T) in o.
-  cbv [compute_boundsm rex] in o.
-  set (k := MapInterp _ _) in (value of o).
-  vm_compute in k.
-  subst k.
-  set (
-  *)
-Compute compute_uboundsm (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
-Compute ModularBaseSystem.decode (31708953, 8053243, 3858785, 24159443, 9563049, 40265643, 15267313, 56371843, 20971578,
-                                  5370730).
-Compute (let u := 54711787839132925853401802710243160862021121027735374571861520038940806083434
-         in let u := modulus - u
-         in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in let u' := Z.log2 u in TTT u' (let u := u - 2^u' in u))).
-(*    let u := Z.log2 54711787839132925853401802710243160862021121027735374571861520038940806083434 in 54711787839132925853401802710243160862021121027735374571861520038940806083434 54711787839132925853401802710243160862021121027735374571861520038940806083434 - 2^Z.log2 54711787839132925853401802710243160862021121027735374571861520038940806083434).**)
-Compute compute_boundss (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
-Compute compute_boundss (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
-Compute compute_boundso (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25).
-Compute compute_boundso (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24) (be 25) (be 24).
+Compute compute_boundsm (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) .
+Compute compute_boundss (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) .
+Compute compute_boundso (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26).
