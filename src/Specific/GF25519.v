@@ -629,8 +629,9 @@ Ltac Reify_rhs := Reify.Reify_rhs base_type (interp_base_type) op interp_op.
 Import ReifyDebugNotations.
 
 Local Transparent Let_In.
+Definition max := 2^64.
 Record BoundsOnZ := { lower : Z ; v : Z ; upper : Z }.
-Definition boundedZ := option { b : BoundsOnZ | 0 <= lower b /\ lower b <= v b <= upper b }.
+Definition boundedZ := option { b : BoundsOnZ | 0 <= lower b /\ lower b <= v b <= upper b /\ upper b < max }.
 
 Definition bounded_interp_base_type (v : base_type) : Type :=
   match v with
@@ -640,31 +641,43 @@ Axiom admit : forall {T}, T.
 Definition bounded_add (x y : boundedZ) : boundedZ.
 Proof.
   refine match x, y with
-         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | Some (exist x' xp), Some (exist y' yp) => _
          | _, _ => None
          end.
-  exists {| lower := lower x' + lower y' ; v := v x' + v y' ; upper := upper x' + upper y' |}.
-  simpl in *; omega.
+  destruct (upper x' + upper y' <? max) eqn:H.
+  { apply Some;
+      exists {| lower := lower x' + lower y' ; v := v x' + v y' ; upper := upper x' + upper y' |}.
+    Z.ltb_to_lt.
+    simpl in *; repeat split; try omega. }
+  { apply None. }
 Defined.
 Definition bounded_mul (x y : boundedZ) : boundedZ.
 Proof.
   refine match x, y with
-         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | Some (exist x' xp), Some (exist y' yp) => _
          | _, _ => None
          end.
-  exists {| lower := lower x' * lower y' ; v := v x' * v y' ; upper := upper x' * upper y' |}.
-  simpl in *; nia.
+  destruct (upper x' * upper y' <? max) eqn:H.
+  { apply Some;
+      exists {| lower := lower x' * lower y' ; v := v x' * v y' ; upper := upper x' * upper y' |}.
+    Z.ltb_to_lt.
+    simpl in *; nia. }
+  { apply None. }
 Defined.
 Definition bounded_shl (x y : boundedZ) : boundedZ.
 Proof.
   refine match x, y with
-         | Some (exist x' xp), Some (exist y' yp) => Some _
+         | Some (exist x' xp), Some (exist y' yp) => _
          | _, _ => None
          end.
-  exists {| lower := lower x' << lower y' ; v := v x' << v y' ; upper := upper x' << upper y' |}.
-  simpl in *; autorewrite with Zshift_to_pow in *.
-  assert (0 <= 2^lower y' /\ 2^lower y' <= 2^v y' <= 2^upper y') by auto with zarith.
-  nia.
+  destruct (upper x' << upper y' <? max) eqn:H.
+  { apply Some;
+      exists {| lower := lower x' << lower y' ; v := v x' << v y' ; upper := upper x' << upper y' |}.
+    Z.ltb_to_lt.
+    simpl in *; autorewrite with Zshift_to_pow in *.
+    assert (0 <= 2^lower y' /\ 2^lower y' <= 2^v y' <= 2^upper y') by auto with zarith.
+    nia. }
+  { apply None. }
 Defined.
 Definition bounded_shr (x y : boundedZ) : boundedZ.
 Proof.
@@ -685,6 +698,7 @@ Proof.
   { transitivity (upper x' / 2^v y').
     { apply Z_div_le; omega. }
     { apply Z.div_le_compat_l; omega. } }
+  { apply Zdiv_lt_upper_bound; nia. }
 Defined.
 Definition bounded_and (x y : boundedZ) : boundedZ.
 Proof.
@@ -698,6 +712,7 @@ Proof.
   { apply Z.land_nonneg; omega. }
   { Hint Resolve Z.land_upper_bound_l Z.land_upper_bound_r : zarith.
     apply Z.min_case_strong; intros; etransitivity; eauto with zarith. }
+  { apply Z.min_case_strong; auto with zarith. }
 Defined.
 Definition bounded_sub (x y : boundedZ) : boundedZ.
 Proof.
@@ -731,9 +746,11 @@ Proof.
          end.
   destruct (x <? 0) eqn:H.
   { apply None. }
-  { refine (Some (exist _ {| lower := x ; v := x ; upper := x |} _)).
-    Z.ltb_to_lt.
-    simpl in *; omega. }
+  { destruct (x <? max) eqn:H'.
+    { refine (Some (exist _ {| lower := x ; v := x ; upper := x |} _)).
+      Z.ltb_to_lt.
+      simpl in *; omega. }
+    { apply None. } }
 Defined.
 Print mul.
 Inductive Zv {A B} := TTT (e : A) (p : B).
@@ -1052,7 +1069,7 @@ Compute (2^26 - 67108862).
 Print sub.
 Compute (2^26 - (2^25 + (2^24 + 16777215))).
 Compute (2^25 - (2^24 + (2^23 + 8388607))).
-Notation be' exp := (0, 2^16 * (2^exp + 2^exp / 10))%Z.
-Compute compute_boundsm (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) .
+Notation be' exp := (0, 2^(exp+2) + 2^(exp) + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z.
+Compute compute_boundsm (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) (be' 25) (be' 26) .
 Compute compute_boundss (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) .
 Compute compute_boundso (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26) (be 25) (be 26).
