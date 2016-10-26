@@ -1488,9 +1488,8 @@ Ltac super_nsatz_internal nsatz_alternative :=
   prensatz_contradict;
   (* Each goal left over by [prensatz_contradict] is separate (and
      there might not be any), so we handle them all separately *)
-  [ try common_denominator_equality_inequality_all;
-    [ try nsatz_inequality_to_equality;
-      try first [ nsatz;
+  [ nsatz_strip_fractions_and_aggregate_inequalities;
+    [ try first [ nsatz;
                   (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
                   try super_nsatz_post_clean_inequalities
                 | nsatz_alternative ]
