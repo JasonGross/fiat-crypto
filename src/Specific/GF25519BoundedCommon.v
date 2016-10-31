@@ -291,8 +291,9 @@ Defined.
 
 Definition exist_fe25519 (x : Specific.GF25519.fe25519) : is_bounded x = true -> fe25519.
 Proof.
-  intro H.
-  let v := constr:(exist_fe25519' x H) in
+  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) as x := x return is_bounded x = true -> fe25519 in
+          fun H => _).
+  let v := constr:(exist_fe25519' (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) H) in
   let rec do_refine v :=
       first [ let v' := (eval cbv [exist_fe25519W fe25519ZToW exist_fe25519' proj_word Build_bounded_word Build_bounded_word' snd fst] in (proj_word v)) in
               refine (Build_bounded_word v' _); abstract exact (word_bounded v)
