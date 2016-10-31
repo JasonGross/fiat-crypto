@@ -45,6 +45,7 @@ Local Ltac define_unop_WireToFE f opW blem :=
   abstract bounded_wire_digits_t opW blem.
 
 Local Opaque Let_In.
+Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb.
 Local Arguments interp_radd / _ _.
 Local Arguments interp_rsub / _ _.
 Local Arguments interp_rmul / _ _.
@@ -95,8 +96,7 @@ Proof.
   intro x; intros; apply (fold_chain_opt_gen fe25519WToZ is_bounded [x]).
   { reflexivity. }
   { reflexivity. }
-  { intros; progress rewrite <- ?mul_correct,
-            <- ?(fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption.
+  { intros; progress rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption.
     apply mulW_correct_and_bounded; assumption. }
   { intros; rewrite (fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption; reflexivity. }
   { intros [|?]; autorewrite with simpl_nth_default;
@@ -199,7 +199,8 @@ Proof.
       apply Proper_Let_In_nd_changebody_eq; intros.
       set_evars.
       change sqrt_m1 with (fe25519WToZ sqrt_m1W).
-      rewrite <- !(fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
+      rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded a a X Y)),
+      <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
         by repeat match goal with
                   | _ => progress subst
                   | [ |- is_bounded (fe25519WToZ ?op) = true ]

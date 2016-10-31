@@ -45,14 +45,20 @@ Declare Reduction asm_interp
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
             radd rsub rmul ropp rfreeze rge_modulus rpack runpack
             curry_binop_fe25519W curry_unop_fe25519W curry_unop_wire_digitsW
-            Interp Word64.interp_op interp interp_flat_type Word64.interp_base_type interpf interp_flat_type fst snd].
+            Word64.interp_op Word64.interp_base_type
+            Z.interp_op Z.interp_base_type
+            Z.Syntax.interp_op Z.Syntax.interp_base_type
+            Interp interp interp_flat_type interpf interp_flat_type fst snd].
 Ltac asm_interp
   := cbv beta iota delta
          [id
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
             radd rsub rmul ropp rfreeze rge_modulus rpack runpack
             curry_binop_fe25519W curry_unop_fe25519W curry_unop_wire_digitsW
-            Interp Word64.interp_op interp interp_flat_type Word64.interp_base_type interpf interp_flat_type fst snd].
+            Word64.interp_op Word64.interp_base_type
+            Z.interp_op Z.interp_base_type
+            Z.Syntax.interp_op Z.Syntax.interp_base_type
+            Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
 Definition interp_radd : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_bexpr radd.
