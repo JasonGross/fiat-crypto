@@ -6,7 +6,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Export Crypto.Specific.GF25519.
-Require Import Crypto.Specific.GF25519BoundedCommonWord.
+Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapInterp.
@@ -54,36 +54,36 @@ Ltac asm_interp
             curry_binop_fe25519W curry_unop_fe25519W curry_unop_wire_digitsW
             Interp Word64.interp_op interp interp_flat_type Word64.interp_base_type interpf interp_flat_type fst snd].
 
-Definition interp_radd : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W
+Definition interp_radd : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_bexpr radd.
 (*Print interp_radd.*)
 Definition interp_radd_correct : interp_radd = interp_bexpr radd := eq_refl.
-Definition interp_rsub : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W
+Definition interp_rsub : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_bexpr rsub.
 (*Print interp_rsub.*)
 Definition interp_rsub_correct : interp_rsub = interp_bexpr rsub := eq_refl.
-Definition interp_rmul : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W
+Definition interp_rmul : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_bexpr rmul.
 (*Print interp_rmul.*)
 Definition interp_rmul_correct : interp_rmul = interp_bexpr rmul := eq_refl.
-Definition interp_ropp : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W
+Definition interp_ropp : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_uexpr ropp.
 (*Print interp_ropp.*)
 Definition interp_ropp_correct : interp_ropp = interp_uexpr ropp := eq_refl.
-Definition interp_rfreeze : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.fe25519W
+Definition interp_rfreeze : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_uexpr rfreeze.
 (*Print interp_rfreeze.*)
 Definition interp_rfreeze_correct : interp_rfreeze = interp_uexpr rfreeze := eq_refl.
 
-Definition interp_rge_modulus : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.word64
+Definition interp_rge_modulus : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.word64
   := Eval asm_interp in interp_uexpr_FEToZ rge_modulus.
 Definition interp_rge_modulus_correct : interp_rge_modulus = interp_uexpr_FEToZ rge_modulus := eq_refl.
 
-Definition interp_rpack : Specific.GF25519BoundedCommonWord.fe25519W -> Specific.GF25519BoundedCommonWord.wire_digitsW
+Definition interp_rpack : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.wire_digitsW
   := Eval asm_interp in interp_uexpr_FEToWire rpack.
 Definition interp_rpack_correct : interp_rpack = interp_uexpr_FEToWire rpack := eq_refl.
 
-Definition interp_runpack : Specific.GF25519BoundedCommonWord.wire_digitsW -> Specific.GF25519BoundedCommonWord.fe25519W
+Definition interp_runpack : Specific.GF25519BoundedCommon.wire_digitsW -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_uexpr_WireToFE runpack.
 Definition interp_runpack_correct : interp_runpack = interp_uexpr_WireToFE runpack := eq_refl.
 

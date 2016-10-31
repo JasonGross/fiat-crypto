@@ -57,17 +57,22 @@ Module Word64.
   Definition sub : word64 -> word64 -> word64 := @wminus _.
   Definition mul : word64 -> word64 -> word64 := @wmult _.
   Definition shl : word64 -> word64 -> word64
-    := fun x y => NToWord _ (Z.to_N (Z.shiftl (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
+    := fun x y => NToWord _ (N.shiftl (wordToN x) (wordToN x)).
   Definition shr : word64 -> word64 -> word64
-    := fun x y => NToWord _ (Z.to_N (Z.shiftr (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
+    := fun x y => NToWord _ (N.shiftr (wordToN x) (wordToN x)).
   Definition land : word64 -> word64 -> word64 := @wand _.
   Definition lor : word64 -> word64 -> word64 := @wor _.
   Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.neg (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
-  Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovne (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
+    := fun int_width b => if weqb b (NToWord _ 1)
+                          then if weqb int_width (NToWord _ (N.of_nat bit_width))
+                               then wones bit_width
+                               else NToWord _ (N.ones (wordToN int_width))
+                          else wzero _.
+  (*fun x y => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.neg (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).*)
+  Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64
+    := fun x y r1 r2 => if weqb x y then r1 else r2.
   Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovl (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
+    := fun x y r1 r2 => if (wordToN x <=? wordToN y)%N then r1 else r2.
   Infix "+" := add : word64_scope.
   Infix "-" := sub : word64_scope.
   Infix "*" := mul : word64_scope.

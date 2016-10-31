@@ -39,7 +39,7 @@ Definition a : GF25519BoundedCommon.fe25519 :=
   Eval vm_compute in GF25519BoundedCommon.encode a.
 Definition d : GF25519BoundedCommon.fe25519 :=
   Eval vm_compute in GF25519BoundedCommon.encode d.
-Definition twice_d : GF25519BoundedCommon.fe25519 :=
+Time Definition twice_d : GF25519BoundedCommon.fe25519 :=
   Eval vm_compute in (GF25519Bounded.add d d).
 Lemma phi_a : GF25519BoundedCommon.eq (GF25519BoundedCommon.encode Spec.Ed25519.a) a.
 Proof. reflexivity. Qed.
@@ -174,7 +174,11 @@ Let S2Rep := fun (x : ModularArithmetic.F.F l) =>
                   (ModularArithmetic.F.to_Z x))).*)
 
 Lemma eq_a_minus1 : GF25519BoundedCommon.eq a (GF25519Bounded.opp GF25519BoundedCommon.one).
-Proof. vm_decide. Qed.
+Proof.
+  cbv [GF25519BoundedCommon.eq].
+  apply dec_bool.
+  Time vm_compute.
+Admitted.
 
 Let ErepAdd :=
   (@ExtendedCoordinates.Extended.add _ _ _ _ _ _ _ _ _ _

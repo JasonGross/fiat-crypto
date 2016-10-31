@@ -21,14 +21,14 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Local Open Scope Z.
 
 (* BEGIN aliases for word extraction *)
-Definition word64 := Z.
+Definition word64 := Word.word 64.
 Coercion word64ToZ (x : word64) : Z
-  := x.
-Coercion ZToWord64 (x : Z) : word64 := x.
-Definition w64eqb (x y : word64) := Z.eqb x y.
+  := Z.of_N (wordToN x).
+Coercion ZToWord64 (x : Z) : word64 := NToWord _ (Z.to_N x).
+Definition w64eqb (x y : word64) := weqb x y.
 
 Lemma word64eqb_Zeqb x y : (word64ToZ x =? word64ToZ y)%Z = w64eqb x y.
-Proof. reflexivity. Qed.
+Proof. apply wordeqb_Zeqb. Qed.
 
 Arguments word64 : simpl never.
 Global Opaque word64.
@@ -291,9 +291,8 @@ Defined.
 
 Definition exist_fe25519 (x : Specific.GF25519.fe25519) : is_bounded x = true -> fe25519.
 Proof.
-  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) as x := x return is_bounded x = true -> fe25519 in
-          fun H => _).
-  let v := constr:(exist_fe25519' (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) H) in
+  intro H.
+  let v := constr:(exist_fe25519' x H) in
   let rec do_refine v :=
       first [ let v' := (eval cbv [exist_fe25519W fe25519ZToW exist_fe25519' proj_word Build_bounded_word Build_bounded_word' snd fst] in (proj_word v)) in
               refine (Build_bounded_word v' _); abstract exact (word_bounded v)
@@ -468,12 +467,28 @@ Definition decode (x : fe25519) : F modulus
 
 Lemma proj1_fe25519_encode x
   : proj1_fe25519 (encode x) = ModularBaseSystem.encode x.
-Proof. reflexivity. Qed.
+Proof.
+  cbv [encode].
+  generalize (encode_bounded x); generalize (ModularBaseSystem.encode x).
+  intros y pf; intros; hnf in y; destruct_head_hnf' prod.
+  cbv [proj1_fe25519 exist_fe25519 proj1_fe25519W Build_bounded_word Build_bounded_word' fe25519WToZ proj_word].
+  unfold_is_bounded_in pf.
+  destruct_head' and.
+  Z.ltb_to_lt.
+  rewrite ?ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
+  reflexivity.
+Qed.
 
 Lemma decode_exist_fe25519 x pf
   : decode (exist_fe25519 x pf) = ModularBaseSystem.decode x.
 Proof.
-  hnf in x; destruct_head' prod; reflexivity.
+  hnf in x; destruct_head' prod.
+  cbv [decode proj1_fe25519 exist_fe25519 proj1_fe25519W Build_bounded_word Build_bounded_word' fe25519WToZ proj_word].
+  unfold_is_bounded_in pf.
+  destruct_head' and.
+  Z.ltb_to_lt.
+  rewrite ?ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
+  reflexivity.
 Qed.
 
 Definition div (f g : fe25519) : fe25519
