@@ -117,10 +117,284 @@ Local Ltac start_correct_and_bounded_t op op_expr lem :=
   change op with op_expr;
   rewrite <- lem.
 
+Local Opaque Interp.
 Lemma radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.
 Proof.
   intros; hnf in *; destruct_head' prod; simpl in * |- .
   repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end.
+  change radd with (MapInterp (fun _ x => x) rcarry_addW).
+  pose proof rcarry_addW_correct_and_bounded_gen as Hbounds.
+  cbv zeta in Hbounds.
+  cbv [interp_bexpr curry_binop_fe25519W] in *.
+  pose proof (proj2_sig rcarry_addZ_sig) as Heq.
+  cbv beta iota delta [interp_type_gen_rel_pointwise uncurry_binop_fe25519 ExprBinOpT] in *.
+  simpl @fe25519WToZ.
+  rewrite <- Heq; clear Heq.
+  destruct Hbounds as [Heq Hbounds].
+  change interp_op with (@Z.interp_op) in *.
+  change interp_base_type with (@Z.interp_base_type) in *.
+  cbv beta iota delta [interp_type_gen_rel_pointwise uncurry_binop_fe25519 ExprBinOpT] in *.
+  rewrite <- Heq; clear Heq.
+  generalize dependent ((Interp (@Word64.interp_op)
+                                (MapInterp (fun (t : base_type) (x : Word64.interp_base_type t) => x) rcarry_addW))); intro rcarry_addWI; intros.
+  generalize dependent (Interp (@Z.interp_op) (MapInterp Word64.to_Z rcarry_addW));
+    intro rcarry_addZI; intros.
+  destruct Hbounds as [Hbounds0 [Hbounds1 Hbounds2] ].
+  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj_from_option2 _ _ Word64.to_Z pf Hbounds2 Hbounds0) as Hbounds_left.
+  specialize_by (intros; destruct_head' base_type; reflexivity).
+
+  apply Relations.uncurry_interp_type_rel_pointwise2_proj_option in Hbounds0.
+  apply Relations.uncurry_interp_type_rel_pointwise2_proj_option2 in Hbounds1.
+  apply Relations.uncurry_interp_type_rel_pointwise2_proj_option in Hbounds2.
+  hnf in Hbounds0, Hbounds1, Hbounds2.
+  cbv [Application.all_binders_for interp_flat_type interp_type Word64.interp_base_type] in *.
+  destruct_head' and.
+  Z.ltb_to_lt.
+  Set Printing Coercions.
+  Ltac args_to_bounded f so_far :=
+    lazymatch f with
+    | ?f' ?w
+      => lazymatch goal with
+         | [ H0 : ?l <= word64ToZ w, H1 : word64ToZ w <= ?u |- _ ]
+           => let bounds := constr:(fun p1 p2 =>
+                                      {| BoundedWord64.lower := l ; BoundedWord64.value := w ; BoundedWord64.upper := u ;
+                                         BoundedWord64.in_bounds := (conj p1 (conj (conj H0 H1) p2)) |}) in
+              let bounds := (eval cbv beta in (bounds (fun x => match x with eq_refl => I end) eq_refl)) in
+              let so_far := lazymatch so_far with
+                            | @None => bounds
+                            | ?rest => constr:((bounds, rest))
+                            end in
+              args_to_bounded f' so_far
+         end
+    | _ => so_far
+    end.
+  lazymatch goal with
+  | [ |- context[fe25519WToZ ?x] ]
+    => let v := args_to_bounded x (@None) in pose v as args
+  end.
+  move args at top.
+  specialize (Hbounds0 args).
+  specialize (Hbounds1 args).
+  specialize (Hbounds2 args).
+  lazymatch type of Hbounds0 with match ?e with _ => _ end => set (k := e) in * end.
+  let t := lazymatch type of rcarry_addWI with ?f ?t => t end in pose (Application.all_binders_for t) as t'.
+  compute in t'.
+  assert (Hbounds_left : SmartVarfMap Word64.to_Z (Application.ApplyInterpedAll rcarry_addWI (SmartVarfMap BoundedWord64.to_word64' (t:=t') args))
+          = Application.ApplyInterpedAll rcarry_addZI (SmartVarfMap BoundedWord64.to_Z' (t:=t') args)) by admit.
+  split.
+  { clear -Hbounds_left.
+    set (v0 := SmartVarfMap BoundedWord64.to_word64' (t:=t') args) in Hbounds_left.
+    set (v1 := SmartVarfMap _ (t:=t') args) in Hbounds_left.
+    Set Printing Coercions.
+    cbv [ BoundedWord64.to_word64' BoundedWord64.to_Z' interp_flat_type t' Z.interp_base_type interp_base_type Word64.interp_base_type BoundedWord64.boundedWordToWord64 SmartVarfMap smart_interp_flat_map BoundedWord64.value fst snd args (*args*)]  in v0, v1.
+    subst v0 v1.
+    cbv [Application.ApplyInterpedAll Application.fst_binder Application.snd_binder fst snd] in Hbounds_left.
+    change word64ToZ with (Word64.to_Z TZ) in *.
+    rewrite <- Hbounds_left.
+    clear.
+    match goal with
+    | [ |- fe25519WToZ ?x = SmartVarfMap _ ?x ]
+      => destruct x; destruct_head_hnf' prod; reflexivity
+    end.
+  }
+  { clear Hbounds_left.
+    clear Hbounds0.
+    move Hbounds1 at bottom.
+    match type of Hbounds1 with context[match ?e with _ => _ end] => tryif is_var e then fail else set (k' := e) in * end.
+    pose (match k' as b return match b with Some _ => _ | None => True end with
+          | Some v => v
+          | None => I
+          end) as k''.
+    let T := type of k'' in set (T' := T) in k''.
+    vm_compute in T'.
+    subst T'.
+    vm_compute in k''.
+    Print is_bounded_gen.
+    assert (Hbounds_right : interp_flat_type_rel_pointwise2 (fun _ (x : Word64.word64) (y : ZBounds.bounds) => let (lower, upper) := y in ((lower <= Word64.word64ToZ x) /\ (Word64.word64ToZ x <= upper))%Z%bool) (t:=(Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ)) (Application.ApplyInterpedAll rcarry_addWI (SmartVarfMap BoundedWord64.to_word64' (t:=t') args)) k'') by admit.
+    { clear -Hbounds_right.
+      cbv [ BoundedWord64.to_word64' BoundedWord64.to_Z' interp_flat_type t' Z.interp_base_type interp_base_type Word64.interp_base_type BoundedWord64.boundedWordToWord64 SmartVarfMap smart_interp_flat_map BoundedWord64.value fst snd args Application.ApplyInterpedAll Application.fst_binder Application.snd_binder fst snd] in Hbounds_right.
+      clear -Hbounds_right.
+      subst k''.
+      match goal with
+      | [ |- is_bounded (fe25519WToZ ?x) = true ]
+        => destruct x; destruct_head_hnf' prod
+      end.
+      cbv [interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop snd fst ] in Hbounds_right.
+      destruct_head' and.
+      change (Word64.word64ToZ) with word64ToZ in *.
+      Ltac unfold_is_bounded :=
+  unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ;
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths];
+  rewrite ?Bool.andb_true_iff.
+      unfold_is_bounded.
+      repeat apply conj; Z.ltb_to_lt; try omega; try reflexivity. }
+
+      cbv [is_bounded fe25519WToZ is_bounded_gen Tuple.map2 Tuple.on_tuple2 Tuple.to_list Tuple.to_list' length_fe25519 List.rev List.app ListUtil.map2 Tuple.from_list Tuple.from_list' bounds].
+      SearchAbout is_bounded
+      match goal with
+      | [ H : ?x = true |- context[?x] ] => rewrite H
+      end.
+    match k' as b return match b with Some _ => _ | None => True end with
+    | Some f' =>
+    assert (fold_right andb true (
+    match type of Hbounds1 with
+    | ?x = ?y => set (HL := x) in Hbounds1; set (HR := y) in Hbounds1
+    end.
+    move HL at bottom.
+    move HL at bottom.
+    vm_compute in HL.
+    move HR at bottom.
+
+
+    Print is_bounded.
+    Print is_bounded_gen.
+    Print SmartVarfMap.
+    Print fe25519WToZ.
+    cbv [
+    compute in v0.
+    compute in v1.
+    cbv [Application.ApplyInterpedAll] in Hbounds_left.
+  generalize dependent ( LiftOption.of'
+                           (Application.ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 rcarry_addW))
+                                                                             (LiftOption.to' (Some args)))).
+
+  set (k := SmartVarfMap (t:=_) BoundedWord64.to_word64') in *.
+  Timeout 2 hnf in Hbounds0.
+  Timeout 2 hnf in Hbounds1.
+  Timeout 2 hnf in Hbounds2.
+  specialize (Hbounds1 args).
+  Ltac specialize_by_A
+  cbv [Application.ApplyInterpedAll] in *.
+  (*** HERE *)
+  rewrite !Relations.uncurry_interp_type_rel_pointwise2 in Hbounds.
+  cbv [Relations.interp_type_rel_pointwise2_uncurried] in *.
+  simpl @interp_flat_type in *.
+  About Relations.related_Zi.
+  Definition related_word_Zi (t : base_type) : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
+    := match t with
+       | TZ => fun x y => Word64.word64ToZ x = y
+       end.
+  assert (Hboundseq : interp_type_rel_pointwise2 related_word_Zi
+              rcarry_addWI rcarry_addZI) by admit.
+  Definition related_word_boundsi (t : base_type) : Word64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
+    := match t with
+       | TZ => fun value b
+               => match b with
+                  | Some b
+                    => let (lower, upper) := b in
+                       (0 <= lower /\ lower <= Word64.word64ToZ value <= upper /\ Z.log2 upper < Z.of_nat Word64.bit_width)%Z
+                  | None => True
+                  end
+       end.
+  assert (Hboundsb : interp_type_rel_pointwise2 related_word_boundsi
+                                                rcarry_addWI (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 rcarry_addW))) by admit.
+  clear Hbounds.
+  cbv [interp_type_rel_pointwise2 interp_type_gen_rel_pointwise2  interp_type_gen_rel_pointwise2_hetero interp_type Word64.interp_base_type interp_type_gen interp_type_gen_hetero Morphisms.respectful_hetero BoundedWord64.t interp_base_type interp_flat_type_rel_pointwise2 Relations.related_word64i interp_flat_type_rel_pointwise2_gen_Prop Relations.related_Zi BoundedWord64.interp_base_type
+                                  related_word_Zi                                ZBounds.t ZBounds.interp_base_type Z.interp_base_type interp_flat_type Relations.related_boundsi Relations.related_Z Relations.lift_relation Relations.related'_Z Relations.related_word64 Relations.lift_relation Relations.related'_word64 Relations.related_bounds] in *.
+  move Hboundseq at bottom.
+  Ltac specialize_options H :=
+    let T := type of H in
+    lazymatch (eval hnf in T) with
+    | forall x : option ?T, _
+      => let x' := fresh x in
+         let x := fresh x' in
+         constr:(fun x : T => ltac:(let v := specialize_options (H (Some x)) in exact v))
+    | forall x : ?T, (True -> ?v = x) -> _
+      => specialize_options (H _ (fun _ => eq_refl))
+    | forall (x : ?T), (_ = x) -> _
+      => specialize_options (H _ eq_refl)
+    | forall x : ?T, _
+      => let x' := fresh x in
+         let x := fresh x' in
+         constr:(fun x : T => ltac:(let v := specialize_options (H x) in exact v))
+    | forall x : ?T, _
+      => let x' := fresh x in
+         let x := fresh x' in
+         constr:(fun x : T => ltac:(let v := specialize_options (H x) in exact v))
+    | _ => H
+    end.
+  repeat match goal with
+         | [ H : _ /\ _ |- _ ] => destruct H
+         | _ => progress cbv beta iota in *
+         | [ H : forall (x : option _), _ |- _ ]
+           => let v' := specialize_options H in
+              pose proof v'; clear H
+         | [ H : forall x y, _ = y -> _ |- _ ]
+           => let H' := fresh in
+              rename H into H';
+                let v' := specialize_options H' in
+                pose proof v' as H; clear H'
+         | [ H : forall x y, (True -> _ = y) -> _ |- _ ]
+           => specialize (fun x => H x _ (fun _ => eq_refl))
+         end.
+  specialize (Hboundseq w17 w18 w16 w15 w14 w13 w12 w11 w10 w9 w7 w8 w6 w5 w4 w3 w2 w1 w0 w).
+  (* lemma that shows fieldwise eq -> eq *)
+  split.
+  admit.
+  clear Hboundseq.
+  cbv [related_word_boundsi] in *.
+  cbv [is_bounded is_bounded_gen].
+  Z.ltb_to_lt.
+  move Hboundsb at bottom.
+  Ltac specialize_more Hboundsb w :=
+    specialize (fun l u => Hboundsb w (Some {| ZBounds.lower := l ; ZBounds.upper := u |})); cbv beta iota in *;
+    match goal with
+    | [ H0 : _ <= ?x, H1 : ?x <= _ |- _ ]
+      => specialize (fun p1 p2 => Hboundsb _ _ (conj p1 (conj (conj H0 H1) p2)))
+    end;
+    specialize_by (vm_compute; clear; congruence).
+  Ltac specialize_more_list Hboundsb t :=
+    lazymatch t with
+    | nil => idtac
+    | cons ?x ?xs => specialize_more Hboundsb x; specialize_more_list Hboundsb xs
+    end.
+  specialize_more_list Hboundsb [w17;w18;w16;w15;w14;w13;w12;w11;w10;w9;w7;w8;w6;w5;w4;w3;w2;w1;w0;w].
+  set (k := Interp _ _) in *.
+  set (k' := k _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) in *.
+  vm_compute in k'.
+  subst k'.
+  simpl @fst in *; simpl @snd in *; cbv beta iota in *.
+  Locate rcarry_addW_correct_and_bounded_gen.
+  (* use fieldwise in is_bounded *)
+  (* fill bounds by hand first, then automate *)
+  (*** HERE *)
+  Set Printing Depth 1000000.
+  pose (match fst ExprBinOp_bounds as x return match x with None => _ | _ => _ end with
+          | Some {| ZBounds.lower := l ; ZBounds.upper := u |} => (l, u)
+          | None => I
+        end) as bounds17.
+  compute in bounds17.
+  specialize (fun x0pf => H44 {| BoundedWord64.lower := fst bounds17 ; BoundedWord64.value := w17 ; BoundedWord64.upper := snd bounds17 ; BoundedWord64.in_bounds := x0pf |}).
+  Ltac specialize_via_bounded
+  cbv [] in *.
+  let v := specialize_options H1 in
+  idtac v.
+
+  cut (interp_type_rel_pointwise2
+         Relations.related_boundsi
+         (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 rcarry_addW))
+         (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 rcarry_addW))
+  pose (Application.ApplyInterped (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 rcarry_addW)) ExprBinOp_bounds).
+  destruct Hbounds
+  Lemma interp_related_Zi interp_bounded interp_Z
+    : interp_type_rel_pointwise2 Relations.related_Zi interp_bounded interp_Z
+      -> _ = interp_Z
+  Lemma interp_related_word64i interp_bounded interp_word
+    : interp_type_rel_pointwise2 Relations.related_word64i interp_bounded interp_word
+      ->
+              (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 rcarry_addW))
+              (Interp (@Word64.interp_op)
+                 (MapInterp (fun (t : base_type) (x : Word64.interp_base_type t) => x)
+                    rcarry_addW))
+  split. Focus 2.
+  {
+
+  cbv beta iota delta [interp_type_rel_pointwise2 interp_type_gen_rel_pointwise2 Morphisms.respectful_hetero interp_flat_type BoundedWord64.interp_base_type Z.interp_base_type interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop Relations.related_Zi Relations.related_Z Relations.lift_relation Relations.related'_Z] in Hbounds.
+  Set Printing Depth 100000.
+    Arguments proj1_sig : clear implicits.
+
+
+
 Admitted.
 Lemma rsub_correct_and_bounded : binop_correct_and_bounded rsub carry_sub.
 Proof.
