@@ -11,6 +11,8 @@ Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.Reflection.Z.Interpretations.
+Require Crypto.Reflection.Z.Interpretations.Relations.
+Require Import Crypto.Reflection.Z.Interpretations.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Specific.GF25519Reflective.Common.
@@ -140,9 +142,11 @@ Proof.
   generalize dependent (Interp (@Z.interp_op) (MapInterp Word64.to_Z rcarry_addW));
     intro rcarry_addZI; intros.
   destruct Hbounds as [Hbounds0 [Hbounds1 Hbounds2] ].
-  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj_from_option2 _ _ Word64.to_Z pf Hbounds2 Hbounds0) as Hbounds_left.
+  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj_from_option2 Word64.to_Z pf Hbounds2 Hbounds0) as Hbounds_left.
   specialize_by (intros; destruct_head' base_type; reflexivity).
-
+  refine (let v := fun R pf => Relations.uncurry_interp_type_rel_pointwise2_proj1_from_option2 R pf Hbounds1 Hbounds2 in _).
+  pose ().
+  Show Existentials.
   apply Relations.uncurry_interp_type_rel_pointwise2_proj_option in Hbounds0.
   apply Relations.uncurry_interp_type_rel_pointwise2_proj_option2 in Hbounds1.
   apply Relations.uncurry_interp_type_rel_pointwise2_proj_option in Hbounds2.
