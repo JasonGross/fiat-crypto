@@ -191,10 +191,7 @@ Proof.
     | [ |- fe25519WToZ ?x = _ /\ _ ]
       => destruct x; destruct_head_hnf' prod
     end.
-    Ltac unfold_is_bounded :=
-  unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths];
-  rewrite ?Bool.andb_true_iff.
+
       unfold_is_bounded.
       repeat apply conj; Z.ltb_to_lt; try omega; try reflexivity. }
 
