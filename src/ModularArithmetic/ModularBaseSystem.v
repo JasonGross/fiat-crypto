@@ -84,7 +84,7 @@ Section ModularBaseSystem.
   Definition eq (x y : digits) : Prop := decode x = decode y.
 
   Definition freeze int_width (x : digits) : digits :=
-    from_list (freeze int_width [[x]]) (length_freeze length_to_list).
+    from_list (freeze int_width [[x]] _ _) (length_freeze length_to_list).
 
   Definition eqb int_width (x y : digits) : bool := fieldwiseb Z.eqb (freeze int_width x) (freeze int_width y).
 

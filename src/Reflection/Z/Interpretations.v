@@ -775,8 +775,7 @@ Module BoundedWord64.
       admit.
       admit.*) }
     { unfold ZBounds.check_conditional_subtract_bounds in *.
-      destruct_head_hnf' prod.
-      destruct_head' BoundedWord.
+      destruct x, y, z.
       unfold List.nth_default in *.
       simpl @BoundedWordToBounds in *.
       rewrite !Tuple.map_S in H.
@@ -789,44 +788,13 @@ Module BoundedWord64.
       simpl @ZBounds.upper in *.
       rewrite !Bool.andb_true_iff in H.
       rewrite ListUtil.fold_right_andb_true_iff_fold_right_and_True in H.
-      SearchAbout List.map Tuple.to_list.
-      destruct_head' and; Z.ltb_to_lt.
-      SearchAbout List.fold_right andb true.
-      rewrite !Tuple.map2_S in H.
-      cbv beta iota in *.
-      unfold BoundedWordToBounds in *
-      simpl @BoundedWordToBounds in *.
-
-      { apply (fun x y z => proj1 (Z.sub_le_mono_l x y z)).
-        SearchAbout (
-      SearchAbout (_ - _ <= _ - _)%Z.
-      auto with zarith.
-      SearchAbout (
-      Focus 4.
-      SearchAbout (
-      move value2 at bottom.
-      move lower1 at bottom.
-      move value1 at bottom.
-      Focus 5.
-      match goal with
-      end.
-
-      SearchAbout (?x - ?y <= ?x).
-      SearchAbout Z.log2.
-      { .
-      SearchAbout (_ &' _ <= _)%Z.
-      autorewrite with zsimplify.
-      move value0 at bottom.
-      move upper0 at bottom.
-      move value1 at bottom.
-      SearchAbout (0 <= _ - _)%Z.
-      2:autorewrite with zsimplify.
-
-      auto with zarith omega.
-          .
-    unfold ZBounds.check_conditional_subtract_bounds in *.
-    destruct x.
-  Admitted.
+      destruct H as [? H'].
+      apply HList.fold_right_and_True_hlist in H'.
+      unfold conditional_subtract_modulus, ZBounds.conditional_subtract'.
+      rewrite <- !Tuple.map_S, !Tuple.map2_map in H'.
+      rewrite <- !Tuple.map_S, !Tuple.map2_map, ?Tuple.map2_map_fst, ?Tuple.map2_map_snd.
+      admit. }
+  Qed.
 
   Local Hint Resolve Word64.bit_width_pos : zarith.
   Local Hint Extern 1 (Z.log2 _ < _)%Z => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | eassumption ] : zarith.

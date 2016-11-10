@@ -974,6 +974,11 @@ Section CanonicalizationProofs.
            | |- _ => rewrite <-Z.add_opp_r, <-Z.mul_opp_l
            | |- _ => rewrite Z.mod_add by (pose proof prime_modulus; prime_bound)
            | |- _ => rewrite to_list_from_list
+           end.
+    change (from_list _ modulus_digits _) with modulus_digits_tuple.
+    Locate conditional_subtract_modulus_spec.
+    rewrite conditional_subtract_modulus_spec by
+                       (auto using Z.lt_le_incl, int_width_pos, int_width_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01).
            | |- _ => rewrite conditional_subtract_modulus_spec by
                        (auto using Z.lt_le_incl, int_width_pos, int_width_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01)
            end.
@@ -1139,6 +1144,6 @@ Section ConversionProofs.
     rewrite F.to_Z_of_Z.
     rewrite <-Conversion.convert_correct; auto using length_to_list.
   Qed.
-    
+
 
 End ConversionProofs.
