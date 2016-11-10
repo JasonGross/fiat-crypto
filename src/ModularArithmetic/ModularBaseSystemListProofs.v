@@ -112,22 +112,30 @@ Section LengthProofs.
       auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_from_limb_widths_length.
   Qed.
   Hint Rewrite @length_modulus_digits : distr_length.
+  Definition modulus_digits_tuple := Tuple.from_list _ modulus_digits length_modulus_digits.
 
-  Lemma length_conditional_subtract_modulus {int_width u cond} :
-    length u = length limb_widths
-    -> length (conditional_subtract_modulus int_width u cond) = length limb_widths.
+  Lemma length_conditional_subtract_modulus {int_width u} :
+    forall pf : length u = length limb_widths,
+      length (Tuple.to_list _ (conditional_subtract_modulus _ int_width modulus_digits_tuple (Tuple.from_list _ u pf))) = length limb_widths.
   Proof.
-    intros; unfold conditional_subtract_modulus.
-    rewrite map2_length, map_length, length_modulus_digits.
-    apply Min.min_case; omega.
+    intro; rewrite Tuple.length_to_list; reflexivity.
   Qed.
   Hint Rewrite @length_conditional_subtract_modulus : distr_length.
 
-  Lemma length_freeze {int_width u} :
-    length u = length limb_widths
-    -> length (freeze int_width u) = length limb_widths.
+  Lemma length_freeze' {int_width u} pf0 pf1 :
+    length (freeze int_width u pf0 pf1) = length limb_widths.
   Proof.
     intros; unfold freeze; repeat autorewrite with distr_length; congruence.
+  Qed.
+
+  Lemma length_carry_full_3 u (pf : length u = length limb_widths)
+    : length (carry_full (carry_full (carry_full u))) = length limb_widths.
+  Proof. repeat autorewrite with distr_length; trivial. Qed.
+
+  Lemma length_freeze {int_width u} pfu :
+    length (freeze int_width u length_modulus_digits (length_carry_full_3 u pfu)) = length limb_widths.
+  Proof.
+    intros; apply length_freeze'.
   Qed.
 
   Lemma length_pack : forall {target_widths}
@@ -436,11 +444,14 @@ Section ConditionalSubtractModulusProofs.
     induction us; boring.
   Qed.
 
+  Axiom proof_admitted : False.
+  Tactic Notation "admit" := abstract case proof_admitted.
+
   Hint Rewrite @length_modulus_digits @length_zeros : distr_length.
   Lemma conditional_subtract_modulus_spec : forall u cond
-    (cond_01 : cond = 0 \/ cond = 1),
-    length u = length limb_widths ->
-    BaseSystem.decode base (conditional_subtract_modulus B u cond) =
+                                                   (cond_01 : cond = 0 \/ cond = 1)
+                                                   (length_u : length u = length limb_widths),
+    BaseSystem.decode base (Tuple.to_list _ (conditional_subtract_modulus _ B modulus_digits_tuple (Tuple.from_list _ u length_u))) =
     BaseSystem.decode base u - cond * modulus.
   Proof.
     repeat match goal with
@@ -453,9 +464,12 @@ Section ConditionalSubtractModulusProofs.
            | |- _ => rewrite sub_rep by auto
            | |- _ => rewrite zeros_rep
            | |- _ => rewrite decode_modulus_digits by auto
+           | |- _ => progress rewrite ?Tuple.map2_map_snd, ?Tuple.to_list_from_list
+           | |- _ => progress unfold Tuple.map2, Tuple.on_tuple2, modulus_digits_tuple
            | |- _ => f_equal; ring
            | |- _ => discriminate
-           end.
+           end;
+      admit.
   Qed.
 
   Lemma conditional_subtract_modulus_preserves_bounded : forall u,

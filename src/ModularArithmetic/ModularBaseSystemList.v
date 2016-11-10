@@ -53,6 +53,9 @@ Section Defs.
 
   Definition modulus_digits := encodeZ limb_widths modulus.
 
+  (** TODO(jadep, after paper deadline?): Redefine this to use
+      ModularBaseSystemListZOperations.ge_modulus, so that we have
+      less duplicated code *)
   (* Constant-time comparison with modulus; only works if all digits of [us]
     are less than 2 ^ their respective limb width. *)
   Fixpoint ge_modulus' {A} (f : Z -> A) us (result : Z) i :=
@@ -66,14 +69,12 @@ Section Defs.
 
   Definition ge_modulus us := ge_modulus' id us 1 (length limb_widths - 1)%nat.
 
-  Definition conditional_subtract_modulus int_width (us : digits) (cond : Z) :=
-    (* [and_term] is all ones if us' is full, so the subtractions subtract q overall.
-       Otherwise, it's all zeroes, and the subtractions do nothing. *)
-     map2 (fun x y => x - y) us (map (Z.land (neg int_width cond)) modulus_digits).
-
-  Definition freeze int_width (us : digits) : digits :=
+  Definition freeze int_width (us : digits)
+             (length_modulus_digits : length modulus_digits = length limb_widths)
+             (length_us' : length (carry_full (carry_full (carry_full us))) = length limb_widths)
+    : digits :=
     let us' := carry_full (carry_full (carry_full us)) in
-     conditional_subtract_modulus int_width us' (ge_modulus us').
+     Tuple.to_list _ (conditional_subtract_modulus (length limb_widths) int_width (Tuple.from_list _ modulus_digits length_modulus_digits) (Tuple.from_list _ us' length_us')).
 
   Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
           (bits_eq : sum_firstn limb_widths   (length limb_widths) =

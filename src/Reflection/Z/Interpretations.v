@@ -418,9 +418,17 @@ Module ZBounds.
   (** TODO(jadep): Fill me in.  This should check that the modulus and
       value fit within int_width, that the modulus is of the right
       form, and that the value is small enough. *)
-  Axiom check_conditional_subtract_bounds
+  Definition check_conditional_subtract_bounds
     : forall (pred_n : nat) (int_width : bounds)
              (modulus value : Tuple.tuple bounds (S pred_n)), bool.
+  Proof.
+    (* compare each element of value with its soft bound; i.e.
+         0 <= u[0] < 2 ^ ceil(log2(modulus[0])) < 2^int_width
+         forall i, 0 < i <= pred_n -> 0 <= u[i] <= modulus[i] < 2^int_width
+
+
+
+ *)
   Definition conditional_subtract (pred_n : nat) (int_width : t)
              (modulus value : Tuple.tuple t (S pred_n))
     : Tuple.tuple t (S pred_n)
