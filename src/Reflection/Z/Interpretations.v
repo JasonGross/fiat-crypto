@@ -415,20 +415,41 @@ Module ZBounds.
              let (vl, vu) := value_bounds in
              {| lower := 0 ; upper := Z.max (Z.min vu mu) (vu - ml) |})
          modulus value.
-  (** TODO(jadep): Fill me in.  This should check that the modulus and
-      value fit within int_width, that the modulus is of the right
-      form, and that the value is small enough. *)
-  Definition check_conditional_subtract_bounds
-    : forall (pred_n : nat) (int_width : bounds)
-             (modulus value : Tuple.tuple bounds (S pred_n)), bool.
-  Proof.
-    (* compare each element of value with its soft bound; i.e.
+  (** TODO(jadep): Check that I filled this in correctly.  This should
+      check that the modulus and value fit within int_width, that the
+      modulus is of the right form, and that the value is small
+      enough. *)
+  (* compare each element of value with its soft bound; i.e.
          0 <= u[0] < 2 ^ ceil(log2(modulus[0])) < 2^int_width
          forall i, 0 < i <= pred_n -> 0 <= u[i] <= modulus[i] < 2^int_width
 
 
 
  *)
+  Definition check_conditional_subtract_bounds
+    : forall (pred_n : nat) (int_width : bounds)
+             (modulus value : Tuple.tuple bounds (S pred_n)), bool
+    := fun pred_n int_width modulus value
+       => let (lint_width, uint_width) := int_width in
+          let mod0 := (List.nth_default {| ZBounds.lower := 0 ; ZBounds.upper := 0 |} (Tuple.to_list _ modulus) 0) in
+          let val0 := (List.nth_default {| ZBounds.lower := 0 ; ZBounds.upper := 0 |} (Tuple.to_list _ value) 0) in
+          ((((0 <=? ZBounds.lower val0)
+               && (ZBounds.lower val0 <=? ZBounds.upper val0)
+               && (ZBounds.upper val0 <? 2^Z.log2_up (ZBounds.lower mod0))
+               && (ZBounds.lower mod0 <=? ZBounds.upper mod0)
+               && (Z.log2_up (ZBounds.upper mod0) <=? lint_width)
+               && (0 <? lint_width) && (lint_width <=? uint_width) && (uint_width <=? Word64.bit_width))%Z%bool)
+             && (List.fold_right
+                   andb true
+                   (Tuple.to_list
+                      _
+                      (Tuple.map2
+                         (fun modulus_bounds value_bounds : bounds
+                          => let (ml, mu) := modulus_bounds in
+                             let (vl, vu) := value_bounds in
+                             (((0 <=? ml) && (ml <=? mu) && (mu <? 2^uint_width))
+                                && (0 <=? vl) && (vl <=? vu) && (vu <=? ml))%Z%bool)
+                         modulus value))))%bool.
   Definition conditional_subtract (pred_n : nat) (int_width : t)
              (modulus value : Tuple.tuple t (S pred_n))
     : Tuple.tuple t (S pred_n)
@@ -556,6 +577,7 @@ Module BoundedWord64.
 
   Definition BoundedWordToBounds (x : BoundedWord) : ZBounds.bounds
     := {| ZBounds.lower := lower x ; ZBounds.upper := upper x |}.
+  Global Arguments BoundedWordToBounds !_ / .
 
   Definition to_bounds' : t -> ZBounds.t
     := option_map BoundedWordToBounds.
@@ -687,6 +709,8 @@ Module BoundedWord64.
                      => apply (Z.max_case_strong x y)
                    end ].
 
+  Axiom proof_admitted : False.
+  Tactic Notation "admit" := abstract case proof_admitted.
   (** TODO(jadep): Use the bounds lemma here to prove that if each
       component of [ret_val] is [Some (l, v, u)], then we can fill in
       [pf] and return the tuple of [{| lower := l ; value := v ; upper
@@ -711,7 +735,98 @@ Module BoundedWord64.
                     (ZBounds.conditional_subtract'
                        pred_n (BoundedWordToBounds x)
                        (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
-  Proof. Admitted.
+  Proof.
+    destruct pred_n as [|pred_n].
+    { simpl in *.
+      destruct x, y, z; simpl in *.
+      rewrite !Bool.andb_true_iff in H; destruct_head' and.
+      Z.ltb_to_lt.
+      repeat split; try omega;
+        unfold neg, ge_modulus, ge_modulus', LetIn.Let_In, id, cmovl, List.nth_default; simpl;
+            repeat match goal with
+                   | _ => omega
+                   | _ => progress Z.ltb_to_lt
+                   | _ => progress rewrite ?Z.land_0_l, ?Z.sub_0_r
+                   | [ |- (0 <= _ - _)%Z ] => apply Z.le_0_sub
+                   | _ => progress break_match
+                   | _ => progress break_match_hyps
+                   | [ |- context[Z.max _ _] ] => apply Z.max_case_strong; intros
+                   | [ |- context[Z.min _ _] ] => apply Z.min_case_strong; intros
+                   | _ => solve [ etransitivity; [ eapply Z.land_upper_bound_r; auto with zarith | omega ]
+                                | etransitivity; [ eapply Z.land_upper_bound_l; auto with zarith | omega ] ]
+                   | [ |- (Z.log2 (?x - ?y) < _)%Z ]
+                     => eapply (@Z.le_lt_trans _ (Z.log2 x) _); [ apply Z.log2_le_mono | ]; omega
+                   | [ H : context[Z.min ?x ?y] |- _ ]
+                     => first [ rewrite (Z.min_l x y) in H by omega
+                              | rewrite (Z.min_r x y) in H by omega ]
+                   end;
+            admit. (*
+      move value1 at bottom.
+      move value2 at bottom.
+      match goal with
+      | [ |- (?x - Z.land ?y ?z <= ?w)%Z ]
+        => first [ transitivity (x - y)%Z; [ | omega ]
+                 | transitivity (x - z)%Z; [ | omega ] ]
+      end.
+      move value0 at bottom.
+      move lower0 at bottom.
+      Hint Resolve (fun x y z => proj1 (Z.sub_le_mono_l x y z)) (fun x y z => proj1 (Z.sub_le_mono_r x y z)) : zarith.
+      admit.
+      admit.
+      admit.*) }
+    { unfold ZBounds.check_conditional_subtract_bounds in *.
+      destruct_head_hnf' prod.
+      destruct_head' BoundedWord.
+      unfold List.nth_default in *.
+      simpl @BoundedWordToBounds in *.
+      rewrite !Tuple.map_S in H.
+      rewrite !Tuple.map_S.
+      simpl @BoundedWordToBounds in *.
+      simpl @List.nth_error in *.
+      cbv beta iota in *.
+      simpl @value in *.
+      simpl @ZBounds.lower in *.
+      simpl @ZBounds.upper in *.
+      rewrite !Bool.andb_true_iff in H.
+      rewrite ListUtil.fold_right_andb_true_iff_fold_right_and_True in H.
+      SearchAbout List.map Tuple.to_list.
+      destruct_head' and; Z.ltb_to_lt.
+      SearchAbout List.fold_right andb true.
+      rewrite !Tuple.map2_S in H.
+      cbv beta iota in *.
+      unfold BoundedWordToBounds in *
+      simpl @BoundedWordToBounds in *.
+
+      { apply (fun x y z => proj1 (Z.sub_le_mono_l x y z)).
+        SearchAbout (
+      SearchAbout (_ - _ <= _ - _)%Z.
+      auto with zarith.
+      SearchAbout (
+      Focus 4.
+      SearchAbout (
+      move value2 at bottom.
+      move lower1 at bottom.
+      move value1 at bottom.
+      Focus 5.
+      match goal with
+      end.
+
+      SearchAbout (?x - ?y <= ?x).
+      SearchAbout Z.log2.
+      { .
+      SearchAbout (_ &' _ <= _)%Z.
+      autorewrite with zsimplify.
+      move value0 at bottom.
+      move upper0 at bottom.
+      move value1 at bottom.
+      SearchAbout (0 <= _ - _)%Z.
+      2:autorewrite with zsimplify.
+
+      auto with zarith omega.
+          .
+    unfold ZBounds.check_conditional_subtract_bounds in *.
+    destruct x.
+  Admitted.
 
   Local Hint Resolve Word64.bit_width_pos : zarith.
   Local Hint Extern 1 (Z.log2 _ < _)%Z => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | eassumption ] : zarith.
