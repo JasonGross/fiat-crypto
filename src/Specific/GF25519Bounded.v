@@ -203,6 +203,7 @@ Proof.
   change (freezeW f) with (postfreezeW (prefreezeW f)).
   destruct (prefreezeW_correct_and_bounded f H) as [H0 H1].
   destruct (postfreezeW_correct_and_bounded _ H1) as [H0' H1'].
+  change (@Tuple.map 1) with (fun A B (f : A -> B) xs => f xs) in *; cbv beta in *.
   rewrite H1', H0', H0; split; reflexivity.
 Qed.
 
@@ -308,7 +309,8 @@ Definition sqrtW_sig
 Proof.
   eexists.
   unfold GF25519sqrt, GF25519.sqrt.
-  intros.
+  repeat intro.
+  replace (@Tuple.map 1) with (fun A B (f : A -> B) xs => f xs) in * by reflexivity; cbv beta in *.
   rewrite ?fe25519ZToW_WToZ.
   split.
   { etransitivity.
