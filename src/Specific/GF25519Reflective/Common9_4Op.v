@@ -40,7 +40,7 @@ Lemma Expr9_4Op_correct_and_bounded
           let (Hx5, Hx678) := (eta_and Hx5678) in
           let (Hx6, Hx78) := (eta_and Hx678) in
           let (Hx7, Hx8) := (eta_and Hx78) in
-          let args := op9_args_to_bounded x012345678 Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8 in
+          let args := op9_args_to_bounded x012345678 (Hx0, (Hx1, (Hx2, (Hx3, (Hx4, (Hx5, (Hx6, (Hx7, Hx8)))))))) in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@BoundedWordW.interp_op) (MapInterp BoundedWordW.of_wordW ropW))
                                     (LiftOption.to' (Some args)))
@@ -77,7 +77,7 @@ Lemma Expr9_4Op_correct_and_bounded
           let (Hx5, Hx678) := (eta_and Hx5678) in
           let (Hx6, Hx78) := (eta_and Hx678) in
           let (Hx7, Hx8) := (eta_and Hx78) in
-          let args := op9_args_to_bounded x012345678 Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8 in
+          let args := op9_args_to_bounded x012345678 (Hx0, (Hx1, (Hx2, (Hx3, (Hx4, (Hx5, (Hx6, (Hx7, Hx8)))))))) in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWordW.BoundedWordToBounds) args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_wordW ropW)) (LiftOption.to' (Some x')))
@@ -103,6 +103,6 @@ Proof.
                  (conj Hx0 (conj Hx1 (conj Hx2 (conj Hx3 (conj Hx4 (conj Hx5 (conj Hx6 (conj Hx7 Hx8))))))))).
   specialize (H1 (x0', x1', x2', x3', x4', x5', x6', x7', x8')
                  (conj Hx0 (conj Hx1 (conj Hx2 (conj Hx3 (conj Hx4 (conj Hx5 (conj Hx6 (conj Hx7 Hx8))))))))).
-  let args := constr:(op9_args_to_bounded (x0', x1', x2', x3', x4', x5', x6', x7', x8') Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8) in
+  let args := constr:(op9_args_to_bounded (x0', x1', x2', x3', x4', x5', x6', x7', x8') (Hx0, (Hx1, (Hx2, (Hx3, (Hx4, (Hx5, (Hx6, (Hx7, Hx8))))))))) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.
