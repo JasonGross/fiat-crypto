@@ -11,9 +11,19 @@ Goal True.
   let T := type of e in
   vm_compute in e;
     change T in (type of e).
-  refine (let k := @map_interp_cast_with_cast_op
-                     base_type base_type interp_base_type  in _).
-
+  refine (let k := fun var
+                   => @map_interp_cast_with_cast_op
+                        base_type base_type interp_base_type Bounds.interp_base_type
+                        op op (@Bounds.interp_op)
+                        base_type_beq internal_base_type_dec_bl (fun _ => ZToInterp 0)
+                        (fun _ => Bounds.bounds_to_base_type)
+                        (fun _ _ v _ => cast_const v)
+                        (fun _ _ _ => Op (Cast _ _))
+                        (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+                        var
+          in _);
+    cbv beta in k.
+  simpl in k.
   let T := type of e in set (T' := T) in e.
 
 Definition raddW := Eval vm_compute in rword_of_Z raddZ_sig.

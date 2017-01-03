@@ -43,109 +43,120 @@ Module Import Bounds.
        | _ => None
        end%Z.
   Definition t_map2 (f : bounds -> bounds -> bounds) (x y : t)
-      := match x, y with
-         | Some x, Some y
-           => match f x y with
-              | Build_bounds l u
-                => SmartBuildBounds l u
-              end
-         | _, _ => None
-         end%Z.
-    Definition t_map4 (f : bounds -> bounds -> bounds -> bounds -> bounds) (x y z w : t)
-      := match x, y, z, w with
-         | Some x, Some y, Some z, Some w
-           => match f x y z w with
-              | Build_bounds l u
-                => SmartBuildBounds l u
-              end
-         | _, _, _, _ => None
-         end%Z.
-    Definition add' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx + ly ; upper := ux + uy |}.
-    Definition add : t -> t -> t := t_map2 add'.
-    Definition sub' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx - uy ; upper := ux - ly |}.
-    Definition sub : t -> t -> t := t_map2 sub'.
-    Definition mul' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx * ly ; upper := ux * uy |}.
-    Definition mul : t -> t -> t := t_map2 mul'.
-    Definition shl' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx << ly ; upper := ux << uy |}.
-    Definition shl : t -> t -> t := t_map2 shl'.
-    Definition shr' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx >> uy ; upper := ux >> ly |}.
-    Definition shr : t -> t -> t := t_map2 shr'.
-    Definition land' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := 0 ; upper := Z.min ux uy |}.
-    Definition land : t -> t -> t := t_map2 land'.
-    Definition lor' : bounds -> bounds -> bounds
-      := fun x y => let (lx, ux) := x in let (ly, uy) := y in
-                                         {| lower := Z.max lx ly;
-                                            upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}.
-    Definition lor : t -> t -> t := t_map2 lor'.
-    Definition neg' (int_width : Z) : bounds -> bounds
-      := fun v
-         => let (lb, ub) := v in
-            let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
-            let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
-            if must_be_one
-            then {| lower := Z.ones int_width ; upper := Z.ones int_width |}
-            else if might_be_one
-                 then {| lower := 0 ; upper := Z.ones int_width |}
-                 else {| lower := 0 ; upper := 0 |}.
-    Definition neg (int_width : Z) : t -> t
-      := fun v
-         => if ((0 <=? int_width) (*&& (int_width <=? WordW.bit_width)*))%Z%bool
-            then t_map1 (neg' int_width) v
-            else None.
-    Definition cmovne' (r1 r2 : bounds) : bounds
-      := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
-    Definition cmovne (x y r1 r2 : t) : t := t_map4 (fun _ _ => cmovne') x y r1 r2.
-    Definition cmovle' (r1 r2 : bounds) : bounds
-      := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
-    Definition cmovle (x y r1 r2 : t) : t := t_map4 (fun _ _ => cmovle') x y r1 r2.
+    := match x, y with
+       | Some x, Some y
+         => match f x y with
+            | Build_bounds l u
+              => SmartBuildBounds l u
+            end
+       | _, _ => None
+       end%Z.
+  Definition t_map4 (f : bounds -> bounds -> bounds -> bounds -> bounds) (x y z w : t)
+    := match x, y, z, w with
+       | Some x, Some y, Some z, Some w
+         => match f x y z w with
+            | Build_bounds l u
+              => SmartBuildBounds l u
+            end
+       | _, _, _, _ => None
+       end%Z.
+  Definition add' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx + ly ; upper := ux + uy |}.
+  Definition add : t -> t -> t := t_map2 add'.
+  Definition sub' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx - uy ; upper := ux - ly |}.
+  Definition sub : t -> t -> t := t_map2 sub'.
+  Definition mul' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx * ly ; upper := ux * uy |}.
+  Definition mul : t -> t -> t := t_map2 mul'.
+  Definition shl' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx << ly ; upper := ux << uy |}.
+  Definition shl : t -> t -> t := t_map2 shl'.
+  Definition shr' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx >> uy ; upper := ux >> ly |}.
+  Definition shr : t -> t -> t := t_map2 shr'.
+  Definition land' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := 0 ; upper := Z.min ux uy |}.
+  Definition land : t -> t -> t := t_map2 land'.
+  Definition lor' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in
+                                       {| lower := Z.max lx ly;
+                                          upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}.
+  Definition lor : t -> t -> t := t_map2 lor'.
+  Definition neg' (int_width : Z) : bounds -> bounds
+    := fun v
+       => let (lb, ub) := v in
+          let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
+          let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
+          if must_be_one
+          then {| lower := Z.ones int_width ; upper := Z.ones int_width |}
+          else if might_be_one
+               then {| lower := 0 ; upper := Z.ones int_width |}
+               else {| lower := 0 ; upper := 0 |}.
+  Definition neg (int_width : Z) : t -> t
+    := fun v
+       => if ((0 <=? int_width) (*&& (int_width <=? WordW.bit_width)*))%Z%bool
+          then t_map1 (neg' int_width) v
+          else None.
+  Definition cmovne' (r1 r2 : bounds) : bounds
+    := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
+  Definition cmovne (x y r1 r2 : t) : t := t_map4 (fun _ _ => cmovne') x y r1 r2.
+  Definition cmovle' (r1 r2 : bounds) : bounds
+    := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
+  Definition cmovle (x y r1 r2 : t) : t := t_map4 (fun _ _ => cmovle') x y r1 r2.
 
-    Module Export Notations.
-      Delimit Scope bounds_scope with bounds.
-      Notation "b[ l ~> u ]" := {| lower := l ; upper := u |} : bounds_scope.
-      Infix "+" := add : bounds_scope.
-      Infix "-" := sub : bounds_scope.
-      Infix "*" := mul : bounds_scope.
-      Infix "<<" := shl : bounds_scope.
-      Infix ">>" := shr : bounds_scope.
-      Infix "&'" := land : bounds_scope.
-    End Notations.
+  Module Export Notations.
+    Delimit Scope bounds_scope with bounds.
+    Notation "b[ l ~> u ]" := {| lower := l ; upper := u |} : bounds_scope.
+    Infix "+" := add : bounds_scope.
+    Infix "-" := sub : bounds_scope.
+    Infix "*" := mul : bounds_scope.
+    Infix "<<" := shl : bounds_scope.
+    Infix ">>" := shr : bounds_scope.
+    Infix "&'" := land : bounds_scope.
+  End Notations.
 
-    Definition interp_base_type (ty : base_type) : Set := t.
-    Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
-      := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-         | Add _ => fun xy => fst xy + snd xy
-         | Sub _ => fun xy => fst xy - snd xy
-         | Mul _ => fun xy => fst xy * snd xy
-         | Shl _ => fun xy => fst xy << snd xy
-         | Shr _ => fun xy => fst xy >> snd xy
-         | Land _ => fun xy => land (fst xy) (snd xy)
-         | Lor _ => fun xy => lor (fst xy) (snd xy)
-         | Neg _ int_width => fun x => neg int_width x
-         | Cmovne _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
-         | Cmovle _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-         end%bounds.
+  Definition interp_base_type (ty : base_type) : Set := t.
+  Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
+    := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
+       | Add _ => fun xy => fst xy + snd xy
+       | Sub _ => fun xy => fst xy - snd xy
+       | Mul _ => fun xy => fst xy * snd xy
+       | Shl _ => fun xy => fst xy << snd xy
+       | Shr _ => fun xy => fst xy >> snd xy
+       | Land _ => fun xy => land (fst xy) (snd xy)
+       | Lor _ => fun xy => lor (fst xy) (snd xy)
+       | Neg _ int_width => fun x => neg int_width x
+       | Cmovne _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
+       | Cmovle _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
+       | Cast _ _ => fun x => x
+       end%bounds.
 
-    (*Definition of_wordW ty : WordW.interp_base_type ty -> interp_base_type ty
+  (*Definition of_wordW ty : WordW.interp_base_type ty -> interp_base_type ty
       := match ty return WordW.interp_base_type ty -> interp_base_type ty with
          | TZ => wordWToBounds
          end.*)
 
-    Ltac inversion_bounds :=
-      let lower := (eval cbv [lower] in (fun x => lower x)) in
-      let upper := (eval cbv [upper] in (fun y => upper y)) in
-      repeat match goal with
-             | [ H : _ = _ :> bounds |- _ ]
-               => pose proof (f_equal lower H); pose proof (f_equal upper H); clear H;
-                  cbv beta iota in *
-             | [ H : _ = _ :> t |- _ ]
-               => unfold t in H; inversion_option
-             end.
+  Ltac inversion_bounds :=
+    let lower := (eval cbv [lower] in (fun x => lower x)) in
+    let upper := (eval cbv [upper] in (fun y => upper y)) in
+    repeat match goal with
+           | [ H : _ = _ :> bounds |- _ ]
+             => pose proof (f_equal lower H); pose proof (f_equal upper H); clear H;
+                cbv beta iota in *
+           | [ H : _ = _ :> t |- _ ]
+             => unfold t in H; inversion_option
+           end.
+
+  Definition bounds_to_base_type' (b : bounds) : base_type
+    := if (0 <=? lower b)%Z
+       then TWord (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b))))
+       else TZ.
+  Definition bounds_to_base_type (b : t) : base_type
+    := match b with
+       | None => TZ
+       | Some b' => bounds_to_base_type' b'
+       end.
 End Bounds.
 (*
 Module Import BoundedWord.

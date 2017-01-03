@@ -23,6 +23,20 @@ Definition interp_base_type (v : base_type) : Type :=
   | TWord logsz => wordT logsz
   end.
 
+
+Definition interpToZ {t} : interp_base_type t -> Z
+  := match t with
+     | TZ => fun x => x
+     | TWord _ => wordToZ
+     end.
+Definition ZToInterp {t} : Z -> interp_base_type t
+  := match t return Z -> interp_base_type t with
+     | TZ => fun x => x
+     | TWord _ => ZToWord
+     end.
+Definition cast_const {t1 t2} (v : interp_base_type t1) : interp_base_type t2
+  := ZToInterp (interpToZ v).
+
 Global Instance dec_eq_base_type : DecidableRel (@eq base_type)
   := base_type_eq_dec.
 Global Instance dec_eq_flat_type : DecidableRel (@eq (flat_type base_type)) := _.
@@ -43,8 +57,8 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Lor T : op (Tbase T * Tbase T) (Tbase T)
 | Neg T (int_width : Z) : op (Tbase T) (Tbase T)
 | Cmovne T : op (Tbase T * Tbase T * Tbase T * Tbase T) (Tbase T)
-| Cmovle T : op (Tbase T * Tbase T * Tbase T * Tbase T) (Tbase T).
-
+| Cmovle T : op (Tbase T * Tbase T * Tbase T * Tbase T) (Tbase T)
+| Cast T1 T2 : op (Tbase T1) (Tbase T2).
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
@@ -68,6 +82,7 @@ Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_typ
      | Neg _ int_width => fun x => ModularBaseSystemListZOperations.wneg int_width x
      | Cmovne _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in wcmovne x y z w
      | Cmovle _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in wcmovl x y z w
+     | Cast _ _ => cast_const
      end%Z.
 
 Definition base_type_eq_semidec_transparent (t1 t2 : base_type)
@@ -81,7 +96,7 @@ Proof.
   unfold base_type_eq_semidec_transparent; break_match; congruence.
 Qed.
 
-Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reified_Prop
+Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
   := match f, g return bool with
      | Add T1, Add T2
      | Sub T1, Sub T2
@@ -95,6 +110,8 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reifi
        => base_type_beq T1 T2
      | Neg T1 n, Neg T2 m
        => base_type_beq T1 T2 && Z.eqb n m
+     | Cast T1 T2, Cast T1' T2'
+       => base_type_beq T1 T1' && base_type_beq T2 T2'
      | Add _, _ => false
      | Sub _, _ => false
      | Mul _, _ => false
@@ -105,9 +122,10 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reifi
      | Neg _ _, _ => false
      | Cmovne _, _ => false
      | Cmovle _, _ => false
+     | Cast _ _, _ => false
      end%bool.
 
-Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
+Definition op_beq t1 tR (f g : op t1 tR) : bool
   := Eval cbv [op_beq_hetero] in op_beq_hetero f g.
 
 Definition op_beq_hetero_type_eq {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1' /\ tR = tR'.
@@ -121,9 +139,10 @@ Proof.
            | [ |- context[reified_Prop_of_bool ?b] ]
              => let H := fresh in destruct (Sumbool.sumbool_of_bool b) as [H|H]; rewrite H
            | [ H : nat_beq _ _ = true |- _ ] => apply internal_nat_dec_bl in H; subst
-           | [ H : andb (nat_beq ?x ?y) _ = true |- _ ]
-             => let b := constr:(nat_beq x y) in
-                destruct (Sumbool.sumbool_of_bool b); [ | destruct b; simpl in * ]
+           | [ H : andb ?x ?y = true |- _ ]
+             => assert (x = true /\ y = true) by (destruct x, y; simpl in *; repeat constructor; exfalso; clear -H; abstract congruence);
+                  clear H
+           | [ H : and _ _ |- _ ] => destruct H
            | [ H : false = true |- _ ] => exfalso; clear -H; abstract congruence
            | [ H : true = false |- _ ] => exfalso; clear -H; abstract congruence
            end.
