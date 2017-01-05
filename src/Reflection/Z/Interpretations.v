@@ -157,16 +157,46 @@ Module Import Bounds.
        | None => TZ
        | Some b' => bounds_to_base_type' b'
        end.
-  Definition
-  (forall (ovar : base_type -> Type) (src1 dst1 src2 dst2 : flat_type base_type),
-       op src1 dst1 ->
-       forall (opc2 : op src2 dst2) (args2 : exprf base_type Bounds.interp_base_type op src2),
-       option
-         {new_src : flat_type base_type &
-         exprf base_type interp_base_type op new_src ->
-         exprf base_type interp_base_type op
-           (SmartFlatTypeMap2 (fun (t : base_type) (v : Bounds.interp_base_type t) => Tbase (Bounds.bounds_to_base_type v))
-              (interpf (@Bounds.interp_op) (Op opc2 args2)))})
+  Definition bound_op {var}
+             {src1 dst1 src2 dst2}
+             (opc1 : op src1 dst1)
+             (opc2 : op src2 dst2)
+    : forall (args2 : exprf base_type interp_base_type op src2),
+      option
+        { new_src : flat_type base_type
+                    & exprf base_type interp_base_type op (var:=var) new_src
+                    -> exprf base_type interp_base_type op (var:=var)
+                             (SmartFlatTypeMap2
+                                (fun t v => Tbase (bounds_to_base_type v))
+                                (interpf (@interp_op) (Op opc2 args2))) }
+    := match opc1, opc2 return forall args2, option { new_src : _ & exprf _ _ _ new_src -> exprf _ _ _ (SmartFlatTypeMap2 _ (interpf _ (Op opc2 args2))) } with
+       | Add T1, Add T2 => fun _ => Some (existT _ _ (Op (Add _)))
+       | Sub T1, Sub T2 => fun _ => Some (existT _ _ (Op (Sub _)))
+       | Mul T1, Mul T2 => fun _ => Some (existT _ _ (Op (Mul _)))
+       | Shl T1, Shl T2 => fun _ => Some (existT _ _ (Op (Shl _)))
+       | Shr T1, Shr T2 => fun _ => Some (existT _ _ (Op (Shr _)))
+       | Land T1, Land T2 => fun _ => Some (existT _ _ (Op (Land _)))
+       | Lor T1, Lor T2 => fun _ => Some (existT _ _ (Op (Lor _)))
+       | Neg T1 int_width1, Neg T2 int_width2
+         => fun _ => if Z.eqb int_width1 int_width2
+                     then Some (existT _ _ (Op (Neg _ int_width1)))
+                     else None
+       | Cmovne T1, Cmovne T2 => fun _ => Some (existT _ _ (Op (Cmovne _)))
+       | Cmovle T1, Cmovle T2 => fun _ => Some (existT _ _ (Op (Cmovle _)))
+       | Cast A1 B1, Cast A2 B2 => fun _ => Some (existT _ _ (fun x => x))
+       | Add _, _
+       | Sub _, _
+       | Mul _, _
+       | Shl _, _
+       | Shr _, _
+       | Land _, _
+       | Lor _, _
+       | Neg _ _, _
+       | Cmovne _, _
+       | Cmovle _, _
+       | Cast _ _, _
+         => fun _ => None
+       end.
 End Bounds.
 (*
 Module Import BoundedWord.
