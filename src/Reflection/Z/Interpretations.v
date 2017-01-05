@@ -157,6 +157,16 @@ Module Import Bounds.
        | None => TZ
        | Some b' => bounds_to_base_type' b'
        end.
+  Definition
+  (forall (ovar : base_type -> Type) (src1 dst1 src2 dst2 : flat_type base_type),
+       op src1 dst1 ->
+       forall (opc2 : op src2 dst2) (args2 : exprf base_type Bounds.interp_base_type op src2),
+       option
+         {new_src : flat_type base_type &
+         exprf base_type interp_base_type op new_src ->
+         exprf base_type interp_base_type op
+           (SmartFlatTypeMap2 (fun (t : base_type) (v : Bounds.interp_base_type t) => Tbase (Bounds.bounds_to_base_type v))
+              (interpf (@Bounds.interp_op) (Op opc2 args2)))})
 End Bounds.
 (*
 Module Import BoundedWord.
