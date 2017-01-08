@@ -157,6 +157,7 @@ Module Import Bounds.
        | None => TZ
        | Some b' => bounds_to_base_type' b'
        end.
+
   Definition bound_op {var}
              {src1 dst1 src2 dst2}
              (opc1 : op src1 dst1)
@@ -164,8 +165,8 @@ Module Import Bounds.
     : forall (args2 : exprf base_type interp_base_type op src2),
       option
         { new_src : flat_type base_type
-                    & exprf base_type interp_base_type op (var:=var) new_src
-                    -> exprf base_type interp_base_type op (var:=var)
+                    & exprf base_type Syntax.interp_base_type op (var:=var) new_src
+                    -> exprf base_type Syntax.interp_base_type op (var:=var)
                              (SmartFlatTypeMap2
                                 (fun t v => Tbase (bounds_to_base_type v))
                                 (interpf (@interp_op) (Op opc2 args2))) }
@@ -197,6 +198,15 @@ Module Import Bounds.
        | Cast _ _, _
          => fun _ => None
        end.
+
+  Definition ZToBounds (z : Z) : bounds := {| lower := z ; upper := z |}.
+  Definition of_Z (z : Z) : t := Some (ZToBounds z).
+
+  Definition of_interp t (z : Syntax.interp_base_type t) : interp_base_type t
+    := Some (ZToBounds (match t return Syntax.interp_base_type t -> Z with
+                        | TZ => fun z => z
+                        | TWord logsz => FixedWordSizes.wordToZ
+                        end z)).
 End Bounds.
 (*
 Module Import BoundedWord.

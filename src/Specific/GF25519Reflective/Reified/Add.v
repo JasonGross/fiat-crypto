@@ -6,6 +6,7 @@ Definition raddZ_sig : rexpr_binop_sig add. Proof. reify_sig. Defined.
 Import Reflection.Syntax.
 Compute proj1_sig raddZ_sig.
 Require Import Reflection.MapCastWithCastOp.
+Require Import Reflection.MapInterp.
 Goal True.
   pose (proj1_sig raddZ_sig) as e.
   let T := type of e in
@@ -20,9 +21,17 @@ Goal True.
                         (fun _ _ v _ => cast_const v)
                         (fun _ _ _ => Op (Cast _ _))
                         (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+                        (@Bounds.bound_op)
                         var
+                        _ (e _)
+                        _ (MapInterp (@Bounds.of_interp) e _)
           in _);
     cbv beta in k.
+set (T := Application.interp_all_binders_for' _ _) in k.
+compute in T.
+unfold Application.interp_all_binders_for', ExprBinOpT in k.
+(MapInterp (@ZBounds.of_wordW) opW))
+  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_wordW) opW)) bounds)
   simpl in k.
   let T := type of e in set (T' := T) in e.
 

@@ -4,6 +4,7 @@ Require Export Crypto.Specific.GF25519.
 Require Export Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Z.Interpretations.
 (*Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
 Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.*)
@@ -91,7 +92,7 @@ Definition exprArgWire interp_base_type var : Type := expr base_type interp_base
 Definition exprArgRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgRevT.
 Definition exprArgWireRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireRevT.
 
-(*Local Ltac bounds_from_list_cps ls :=
+Local Ltac bounds_from_list_cps ls :=
   lazymatch (eval hnf in ls) with
   | (?x :: nil)%list => constr:(fun T (extra : T) => (Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, extra))
   | (?x :: ?xs)%list => let bs := bounds_from_list_cps xs in
@@ -116,30 +117,30 @@ Local Ltac make_bounds ls :=
   let v := (eval compute in v) in
   exact v.
 
-Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type.
+Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) Bounds.interp_base_type.
 Proof.
-  refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type with
+  refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) Bounds.interp_base_type with
          | 0 => tt
          | S n => let v := interp_all_binders_for_to' (Expr_nm_Op_bounds n count_out) in
                   interp_all_binders_for_of' _
          end; simpl.
   make_bounds_cps (Tuple.to_list _ bounds) v.
 Defined.
-Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type
+Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 2 1.
-Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type
+Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type
+Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type
+Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT ZBounds.interp_base_type
+Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 4 1.
-Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT ZBounds.interp_base_type
+Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 9 4.
-Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
+Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET Bounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
-
+(*
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := fun e => curry_binop_fe25519W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr : ExprUnOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
@@ -570,7 +571,7 @@ Module Export PrettyPrinting.
 
   Definition ZBounds_to_bounds_on
     := fun t : base_type
-       => match t return ZBounds.interp_base_type t -> match t with TZ => bounds_on end with
+       => match t return Bounds.interp_base_type t -> match t with TZ => bounds_on end with
           | TZ => fun x => match x with
                            | Some {| Bounds.lower := l ; Bounds.upper := u |}
                              => in_range l u
