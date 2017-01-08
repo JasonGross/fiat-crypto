@@ -296,11 +296,11 @@ Proof.
         destruct_head' and;
         Z.ltb_to_lt; auto
       ). }
-Defined.
+Defined.*)
 
 Definition assoc_right''
   := Eval cbv [Tuple.assoc_right' Tuple.rsnoc' fst snd] in @Tuple.assoc_right'.
-
+(*
 Definition args_to_bounded {n} v bounds pf
   := Eval cbv [args_to_bounded_helper assoc_right''] in
       @args_to_bounded_helper n _ v bounds pf (@assoc_right'' _ _).
@@ -395,7 +395,7 @@ Proof.
   let v := app_tuples (unop_args_to_bounded _ H0) v in
   exact v.
 Defined.
-
+*)
 Local Ltac make_bounds_prop bounds orig_bounds :=
   let bounds' := fresh "bounds'" in
   let bounds_bad := fresh "bounds_bad" in
@@ -417,20 +417,20 @@ Local Ltac make_bounds_prop bounds orig_bounds :=
              | None => false
              end).
 
-Definition unop_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpT)) : bool.
+Definition unop_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (remove_all_binders ExprUnOpT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
-Definition binop_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprBinOpT)) : bool.
+Definition binop_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (remove_all_binders ExprBinOpT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
-Definition unopFEToWire_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpFEToWireT)) : bool.
+Definition unopFEToWire_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (remove_all_binders ExprUnOpFEToWireT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOpWireToFE_bounds. Defined.
-Definition unopWireToFE_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpWireToFET)) : bool.
+Definition unopWireToFE_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (remove_all_binders ExprUnOpWireToFET)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
 (* TODO FIXME(jgross?, andreser?): Is every function returning a single Z a boolean function? *)
-Definition unopFEToZ_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpFEToZT)) : bool.
+Definition unopFEToZ_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (remove_all_binders ExprUnOpFEToZT)) : bool.
 Proof.
   refine (let (l, u) := bounds in ((0 <=? l) && (u <=? 1))%Z%bool).
 Defined.
-Definition op9_4_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders Expr9_4OpT)) : bool.
+Definition op9_4_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (remove_all_binders Expr9_4OpT)) : bool.
 Proof. make_bounds_prop bounds Expr4Op_bounds. Defined.
 
 Definition ApplyUnOp {interp_base_type var} (f : exprUnOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var
@@ -463,7 +463,7 @@ Definition ApplyUnOpFEToZ {interp_base_type var} (f : exprUnOpFEToZ interp_base_
 (* FIXME TODO(jgross): This is a horrible tactic.  We should unify the
     various kinds of correct and boundedness, and abstract in Gallina
     rather than Ltac *)
-
+(*
 Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   let Heq := fresh "Heq" in
   let Hbounds0 := fresh "Hbounds0" in
@@ -526,7 +526,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   cbv [fst snd
            binop_bounds_good unop_bounds_good unopFEToWire_bounds_good unopWireToFE_bounds_good unopFEToZ_bounds_good op9_4_bounds_good
            ExprUnOp_bounds ExprBinOp_bounds ExprUnOpFEToWire_bounds ExprUnOpFEToZ_bounds ExprUnOpWireToFE_bounds Expr9Op_bounds Expr4Op_bounds] in H1;
-  destruct_head' ZBounds.bounds;
+  destruct_head' Bounds.bounds;
   unfold_is_bounded_in H1;
   simpl @fe41417_32WToZ; simpl @wire_digitsWToZ;
   destruct_head' and;
@@ -536,7 +536,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   repeat split; unfold_is_bounded;
   Z.ltb_to_lt;
   try omega; try reflexivity.
-
+*)
 
 Ltac rexpr_correct :=
   let ropW' := fresh in
@@ -550,14 +550,14 @@ Ltac rexpr_correct :=
     [ | apply @RelWfMapInterp, wf_ropW ].. ];
   auto with interp_related.
 
-Notation rword_of_Z rexprZ_sig := (MapInterp WordW.of_Z (proj1_sig rexprZ_sig)) (only parsing).
+(*Notation rword_of_Z rexprZ_sig := (MapInterp WordW.of_Z (proj1_sig rexprZ_sig)) (only parsing).
 
 Definition rword64ize {t} (x : Expr t) : Expr t
   := MapInterp (fun t => match t with TZ => word64ize end) x.
 
 Notation compute_bounds opW bounds
-  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_wordW) opW)) bounds)
-       (only parsing).
+  := (ApplyInterpedAll (Interp (@Bounds.interp_op) (MapInterp (@Bounds.of_wordW) opW)) bounds)
+       (only parsing).*)
 
 
 Module Export PrettyPrinting.
@@ -569,24 +569,22 @@ Module Export PrettyPrinting.
 
   Inductive result := yes | no | borked.
 
-  Definition ZBounds_to_bounds_on
-    := fun t : base_type
-       => match t return Bounds.interp_base_type t -> match t with TZ => bounds_on end with
-          | TZ => fun x => match x with
-                           | Some {| Bounds.lower := l ; Bounds.upper := u |}
-                             => in_range l u
-                           | None
-                             => overflow
-                           end
+  Definition Bounds_to_bounds_on
+    := fun (t : base_type) (x : Bounds.interp_base_type t)
+       => match x with
+          | Some {| Bounds.lower := l ; Bounds.upper := u |}
+            => in_range l u
+          | None
+            => overflow
           end.
 
-  Fixpoint does_it_overflow {t} : interp_flat_type (fun t => match t with TZ => bounds_on end) t -> result
-    := match t return interp_flat_type (fun t => match t with TZ => bounds_on end) t -> result with
-       | Tbase TZ => fun v => match v with
-                              | overflow => yes
-                              | in_range _ _ => no
-                              | enlargen _ => borked
-                              end
+  Fixpoint does_it_overflow {t} : interp_flat_type (fun t : base_type => bounds_on) t -> result
+    := match t return interp_flat_type _ t -> result with
+       | Tbase _ => fun v => match v with
+                             | overflow => yes
+                             | in_range _ _ => no
+                             | enlargen _ => borked
+                             end
        | Prod x y => fun v => match @does_it_overflow _ (fst v), @does_it_overflow _ (snd v) with
                               | no, no => no
                               | yes, no | no, yes | yes, yes => yes
@@ -595,11 +593,10 @@ Module Export PrettyPrinting.
        end.
 
   (** This gives a slightly easier to read version of the bounds *)
-  Notation compute_bounds_for_display opW bounds
+  (*Notation compute_bounds_for_display opW bounds
     := (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) (only parsing).
   Notation sanity_compute opW bounds
     := (does_it_overflow (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds))) (only parsing).
   Notation sanity_check opW bounds
-    := (eq_refl (sanity_compute opW bounds) <: no = no) (only parsing).
+    := (eq_refl (sanity_compute opW bounds) <: no = no) (only parsing).*)
 End PrettyPrinting.
-*)

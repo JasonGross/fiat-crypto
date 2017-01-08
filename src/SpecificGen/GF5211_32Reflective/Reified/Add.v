@@ -3,7 +3,32 @@ Require Export Crypto.Reflection.Z.Interpretations.
 (*Require Import Crypto.SpecificGen.GF5211_32Reflective.CommonBinOp.*)
 
 Definition raddZ_sig : rexpr_binop_sig add. Proof. reify_sig. Defined.
-Import Reflection.Syntax.
+
+Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.MapCastWithCastOp.
+Require Import Crypto.Reflection.MapInterp.
+Time Definition raddW' : Expr base_type interp_base_type op _
+  := let e := proj1_sig raddZ_sig in
+     let k := fun var
+              => @map_interp_cast_with_cast_op
+                   base_type base_type interp_base_type Bounds.interp_base_type
+                   op op (@Bounds.interp_op)
+                   base_type_beq internal_base_type_dec_bl (fun _ => ZToInterp 0)
+                   (fun _ => Bounds.bounds_to_base_type)
+                   (fun _ _ v _ => cast_const v)
+                   (fun _ _ _ => Op (Cast _ _))
+                   (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+                   (@Bounds.bound_op)
+                   var
+                   _ (e _)
+                   _ (MapInterp (@Bounds.of_interp) e _)
+                   (Application.interp_all_binders_for_to' ExprBinOp_bounds) in
+     k.
+Time Definition raddW : Expr base_type interp_base_type op _
+  := Eval vm_compute in raddW'.
+
+
+(*Import Reflection.Syntax.
 Compute proj1_sig raddZ_sig.
 Require Import Reflection.MapCastWithCastOp.
 Require Import Reflection.MapInterp.
@@ -52,3 +77,4 @@ Local Open Scope string_scope.
 Compute ("Add", compute_bounds_for_display raddW ExprBinOp_bounds).
 Compute ("Add overflows? ", sanity_compute raddW ExprBinOp_bounds).
 Compute ("Add overflows (error if it does)? ", sanity_check raddW ExprBinOp_bounds).
+*)

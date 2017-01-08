@@ -3,7 +3,31 @@ Require Export Crypto.Reflection.Z.Interpretations.
 (*Require Import Crypto.SpecificGen.GF25519_32Reflective.CommonBinOp.*)
 
 Definition rmulZ_sig : rexpr_binop_sig mul. Proof. reify_sig. Time Defined.
-Import Reflection.Syntax.
+
+Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.MapCastWithCastOp.
+Require Import Crypto.Reflection.MapInterp.
+Time Definition rmulW' : Expr base_type interp_base_type op _
+  := let e := proj1_sig rmulZ_sig in
+     let k := fun var
+              => @map_interp_cast_with_cast_op
+                   base_type base_type interp_base_type Bounds.interp_base_type
+                   op op (@Bounds.interp_op)
+                   base_type_beq internal_base_type_dec_bl (fun _ => ZToInterp 0)
+                   (fun _ => Bounds.bounds_to_base_type)
+                   (fun _ _ v _ => cast_const v)
+                   (fun _ _ _ => Op (Cast _ _))
+                   (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+                   (@Bounds.bound_op)
+                   var
+                   _ (e _)
+                   _ (MapInterp (@Bounds.of_interp) e _)
+                   (Application.interp_all_binders_for_to' ExprBinOp_bounds) in
+     k.
+Time Definition rmulW : Expr base_type interp_base_type op _
+  := Eval vm_compute in rmulW'.
+
+(*Import Reflection.Syntax.
 Compute proj1_sig rmulZ_sig.
 Require Import Reflection.MapCastWithCastOp.
 Require Import Reflection.MapInterp.
@@ -54,3 +78,4 @@ Local Open Scope string_scope.
 Compute ("Mul", compute_bounds_for_display rmulW ExprBinOp_bounds).
 Compute ("Mul overflows? ", sanity_compute rmulW ExprBinOp_bounds).
 Compute ("Mul overflows (error if it does)? ", sanity_check rmulW ExprBinOp_bounds).
+*)
