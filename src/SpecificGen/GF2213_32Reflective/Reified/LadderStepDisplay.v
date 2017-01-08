@@ -1,0 +1,54 @@
+Require Import Crypto.SpecificGen.GF2213_32Reflective.Reified.LadderStep.
+Require Export Crypto.Reflection.Syntax.
+Require Export Bedrock.Word.
+Require Export Crypto.Util.Notations.
+
+Local Open Scope expr_scope.
+
+Notation "'slet' x : T := A 'in' b" := (LetIn (tx:=T) A (fun x => b))
+                                         (at level 200, b at level 200, format "'slet'  x  :  T  :=  A  'in' '//' b")
+                                       : expr_scope.
+Notation "T x = A ; b" := (LetIn (tx:=T) A (fun x => b))
+                                         (at level 200, b at level 200, format "T  x  =  A ; '//' b")
+                                       : expr_scope.
+(*Notation uint32_t := (_ (TWord 5)).
+Notation uint64_t := (_ (TWord 6)).
+Notation uint128_t := (_ (TWord 7)).*)
+Notation uint32_t := (Tbase (TWord 5)).
+Notation uint64_t := (Tbase (TWord 6)).
+Notation uint128_t := (Tbase (TWord 7)).
+Notation "'(uint32_t)' x" := (Op (Cast _ (TWord 5)) x) (at level 200, x at level 9).
+Notation "'(uint64_t)' x" := (Op (Cast _ (TWord 6)) x) (at level 200, x at level 9).
+Notation "'(uint128_t)' x" := (Op (Cast _ (TWord 7)) x) (at level 200, x at level 9).
+Notation "'(uint32_t)' x" := (Op (Cast _ (TWord 5)) (Var x)) (at level 200, x at level 9).
+Notation "'(uint64_t)' x" := (Op (Cast _ (TWord 6)) (Var x)) (at level 200, x at level 9).
+Notation "'(uint128_t)' x" := (Op (Cast _ (TWord 7)) (Var x)) (at level 200, x at level 9).
+Notation "x + y" := (Op (Add _) (Pair x y)).
+Notation "x + y" := (Op (Add _) (Pair (Var x) y)).
+Notation "x + y" := (Op (Add _) (Pair x (Var y))).
+Notation "x + y" := (Op (Add _) (Pair (Var x) (Var y))).
+Notation "x - y" := (Op (Sub _) (Pair x y)).
+Notation "x - y" := (Op (Sub _) (Pair (Var x) y)).
+Notation "x - y" := (Op (Sub _) (Pair x (Var y))).
+Notation "x - y" := (Op (Sub _) (Pair (Var x) (Var y))).
+Notation "x * y" := (Op (Mul _) (Pair x y)).
+Notation "x * y" := (Op (Mul _) (Pair (Var x) y)).
+Notation "x * y" := (Op (Mul _) (Pair x (Var y))).
+Notation "x * y" := (Op (Mul _) (Pair (Var x) (Var y))).
+Notation "x >> y" := (Op (Shr _) (Pair x y)).
+Notation "x >> y" := (Op (Shr _) (Pair (Var x) y)).
+Notation "x >> y" := (Op (Shr _) (Pair x (Var y))).
+Notation "x >> y" := (Op (Shr _) (Pair (Var x) (Var y))).
+Notation "x & y" := (Op (Land _) (Pair x y)) (at level 40).
+Notation "x & y" := (Op (Land _) (Pair (Var x) y)).
+Notation "x & y" := (Op (Land _) (Pair x (Var y))).
+Notation "x & y" := (Op (Land _) (Pair (Var x) (Var y))).
+Notation Return x := (Var x).
+Notation "'0b10'" := (Const WO~1~0). (* 2 *)
+Notation "'0b00010011'" := (Const WO~0~0~0~1~0~0~1~1). (* 19 *)
+Notation "'0b00011001'" := (Const WO~0~0~0~1~1~0~0~1). (* 25 *)
+Notation "'0b00011010'" := (Const WO~0~0~0~1~1~0~1~0). (* 26 *)
+Notation "'0b00000011111111111111111111111111'" := (Const WO~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1).
+Notation "'0b00000001111111111111111111111111'" := (Const WO~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1).
+Notation C_like := (Common.Expr _).
+Print rladderstepW.
