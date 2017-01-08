@@ -3,7 +3,7 @@ Require Export Crypto.Reflection.Z.Interpretations.
 (*Require Import Crypto.SpecificGen.GF25519_64Reflective.CommonBinOp.*)
 
 Definition rmulZ_sig : rexpr_binop_sig mul. Proof. reify_sig. Time Defined.
-Import Reflection.Syntax.
+(*Import Reflection.Syntax.
 Compute proj1_sig rmulZ_sig.
 Require Import Reflection.MapCastWithCastOp.
 Require Import Reflection.MapInterp.
@@ -54,3 +54,4 @@ Local Open Scope string_scope.
 Compute ("Mul", compute_bounds_for_display rmulW ExprBinOp_bounds).
 Compute ("Mul overflows? ", sanity_compute rmulW ExprBinOp_bounds).
 Compute ("Mul overflows (error if it does)? ", sanity_check rmulW ExprBinOp_bounds).
+*)

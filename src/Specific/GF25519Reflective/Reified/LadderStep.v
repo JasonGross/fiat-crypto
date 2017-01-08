@@ -6,9 +6,10 @@ Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Reflection.Z.Interpretations64.
+Require Import Crypto.Reflection.Z.Interpretations.
+(*Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.*)
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
@@ -20,7 +21,7 @@ Require Import Crypto.Spec.MxDH.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Add.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Sub.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Mul.
-Require Import Crypto.Specific.GF25519Reflective.Common9_4Op.
+(*Require Import Crypto.Specific.GF25519Reflective.Common9_4Op.*)
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.HList.

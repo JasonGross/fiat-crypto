@@ -3,7 +3,7 @@ Require Export Crypto.Reflection.Z.Interpretations.
 (*Require Import Crypto.Specific.GF25519Reflective.CommonBinOp.*)
 
 Definition raddZ_sig : rexpr_binop_sig add. Proof. reify_sig. Defined.
-Import Reflection.Syntax.
+(*Import Reflection.Syntax.
 Compute proj1_sig raddZ_sig.
 Require Import Reflection.MapCastWithCastOp.
 Require Import Reflection.MapInterp.
@@ -52,3 +52,4 @@ Local Open Scope string_scope.
 Compute ("Add", compute_bounds_for_display raddW ExprBinOp_bounds).
 Compute ("Add overflows? ", sanity_compute raddW ExprBinOp_bounds).
 Compute ("Add overflows (error if it does)? ", sanity_check raddW ExprBinOp_bounds).
+*)
