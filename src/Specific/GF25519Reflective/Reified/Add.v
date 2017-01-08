@@ -25,10 +25,18 @@ Goal True.
                         var
                         _ (e _)
                         _ (MapInterp (@Bounds.of_interp) e _)
+                        (Application.interp_all_binders_for_to' ExprBinOp_bounds)
           in _);
     cbv beta in k.
+let T' := type of k in set (T := MapCast.new_type _ _ _ _) in k.
+vm_compute in T.
+subst T.
+Timeout 5 let T := type of k in
+vm_compute in k;
+change T in (type of k).
 set (T := Application.interp_all_binders_for' _ _) in k.
 compute in T.
+pose ().
 unfold Application.interp_all_binders_for', ExprBinOpT in k.
 (MapInterp (@ZBounds.of_wordW) opW))
   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_wordW) opW)) bounds)
