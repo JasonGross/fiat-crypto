@@ -3,6 +3,8 @@ Require Export Crypto.Reflection.Syntax.
 Require Export Bedrock.Word.
 Require Export Crypto.Util.Notations.
 
+Local Open Scope expr_scope.
+
 Notation "'slet' x : T := A 'in' b" := (LetIn (tx:=T) A (fun x => b))
                                          (at level 200, b at level 200, format "'slet'  x  :  T  :=  A  'in' '//' b")
                                        : expr_scope.
@@ -15,6 +17,7 @@ Notation uint128_t := (_ (TWord 7)).*)
 Notation uint32_t := (Tbase (TWord 5)).
 Notation uint64_t := (Tbase (TWord 6)).
 Notation uint128_t := (Tbase (TWord 7)).
+Notation bool := (Tbase (TWord 0)).
 Notation "'(uint32_t)' x" := (Op (Cast _ (TWord 5)) x) (at level 200, x at level 9).
 Notation "'(uint64_t)' x" := (Op (Cast _ (TWord 6)) x) (at level 200, x at level 9).
 Notation "'(uint128_t)' x" := (Op (Cast _ (TWord 7)) x) (at level 200, x at level 9).
@@ -48,4 +51,5 @@ Notation "'0b00011001'" := (Const WO~0~0~0~1~1~0~0~1). (* 25 *)
 Notation "'0b00011010'" := (Const WO~0~0~0~1~1~0~1~0). (* 26 *)
 Notation "'0b00000011111111111111111111111111'" := (Const WO~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1).
 Notation "'0b00000001111111111111111111111111'" := (Const WO~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1).
+Notation C_like := (Common.Expr _).
 Print rmulW.
