@@ -2,7 +2,7 @@ Require Export Crypto.Specific.GF25519Reflective.Common.
 Require Export Crypto.Reflection.Z.Interpretations.
 (*Require Import Crypto.Specific.GF25519Reflective.CommonBinOp.*)
 
-Definition rmulZ_sig : rexpr_binop_sig mul. Proof. reify_sig. Defined.
+Definition rmulZ_sig : rexpr_binop_sig mul. Proof. reify_sig. Time Defined.
 Import Reflection.Syntax.
 Compute proj1_sig rmulZ_sig.
 Require Import Reflection.MapCastWithCastOp.
@@ -33,8 +33,13 @@ vm_compute in T.
 subst T.
 Timeout 5 let T := type of k in
 vm_compute in k;
-change T in (type of k).
-
+  change T in (type of k).
+Require Import Bedrock.Word.
+Notation "a '*64' b" := (Op (Mul (TWord 6)) (Pair a b)) (at level 50).
+Notation "a '*32' b" := (Op (Mul (TWord 5)) (Pair a b)) (at level 50).
+Notation "'(uint32_t)' x" := (Op (Cast _ (TWord 5)) x) (at level 0).
+Notation "'(uint64_t)' x" := (Op (Cast _ (TWord 6)) x) (at level 0).
+Infix "*32" := (Op (Mul (TWord 5))) (at level 50).
 Definition rmulW := Eval vm_compute in rword_of_Z rmulZ_sig.
 Lemma rmulW_correct_and_bounded_gen : correct_and_bounded_genT rmulW rmulZ_sig.
 Proof. rexpr_correct. Qed.
