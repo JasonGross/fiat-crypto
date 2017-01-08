@@ -170,12 +170,41 @@ Module Import Bounds.
                              (SmartFlatTypeMap2
                                 (fun t v => Tbase (bounds_to_base_type v))
                                 (interpf (@interp_op) (Op opc2 args2))) }
-    := match opc1, opc2 return forall args2, option { new_src : _ & exprf _ _ _ new_src -> exprf _ _ _ (SmartFlatTypeMap2 _ (interpf _ (Op opc2 args2))) } with
+    := match opc1, opc2
+             return (forall args2,
+                        option { new_src : _
+                                           & exprf _ Syntax.interp_base_type op new_src
+                                           -> exprf _ Syntax.interp_base_type op (SmartFlatTypeMap2
+                                                                                    (fun t v => Tbase (bounds_to_base_type v))
+                                                                                    (interpf (@interp_op) (Op opc2 args2))) })
+       with
        | Add T1, Add T2 => fun _ => Some (existT _ _ (Op (Add _)))
-       | Sub T1, Sub T2 => fun _ => Some (existT _ _ (Op (Sub _)))
+       | Sub T1, Sub T2 as opc2'
+         => fun args2
+            => let TR := bounds_to_base_type (interpf (@interp_op) (Op opc2' args2) (t:=Tbase _)) in
+               let T := base_type_max (base_type_max T1 T2) TR in
+               Some (if base_type_beq T TR
+                        return { new_src : _
+                                           & exprf _ Syntax.interp_base_type op new_src
+                                           -> exprf _ Syntax.interp_base_type op (SmartFlatTypeMap2
+                                                                                    (fun t v => Tbase (bounds_to_base_type v))
+                                                                                    (interpf (@interp_op) (Op opc2' args2))) }
+                     then existT _ _ (Op (Sub _))
+                     else existT _ _ (fun x => Op (Cast T TR) (Op (Sub T) x)))
        | Mul T1, Mul T2 => fun _ => Some (existT _ _ (Op (Mul _)))
        | Shl T1, Shl T2 => fun _ => Some (existT _ _ (Op (Shl _)))
-       | Shr T1, Shr T2 => fun _ => Some (existT _ _ (Op (Shr _)))
+       | Shr T1, Shr T2 as opc2'
+         => fun args2
+            => let TR := bounds_to_base_type (interpf (@interp_op) (Op opc2' args2) (t:=Tbase _)) in
+               let T := base_type_max (base_type_max T1 T2) TR in
+               Some (if base_type_beq T TR
+                        return { new_src : _
+                                           & exprf _ Syntax.interp_base_type op new_src
+                                           -> exprf _ Syntax.interp_base_type op (SmartFlatTypeMap2
+                                                                                    (fun t v => Tbase (bounds_to_base_type v))
+                                                                                    (interpf (@interp_op) (Op opc2' args2))) }
+                     then existT _ _ (Op (Shr _))
+                     else existT _ _ (fun x => Op (Cast T TR) (Op (Shr T) x)))
        | Land T1, Land T2 => fun _ => Some (existT _ _ (Op (Land _)))
        | Lor T1, Lor T2 => fun _ => Some (existT _ _ (Op (Lor _)))
        | Neg T1 int_width1, Neg T2 int_width2

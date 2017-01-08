@@ -23,6 +23,12 @@ Definition interp_base_type (v : base_type) : Type :=
   | TWord logsz => wordT logsz
   end.
 
+Definition base_type_max (v1 v2 : base_type) : base_type
+  := match v1, v2 with
+     | TZ, _ => TZ
+     | _, TZ => TZ
+     | TWord logsz1, TWord logsz2 => TWord (max logsz1 logsz2)
+     end.
 
 Definition interpToZ {t} : interp_base_type t -> Z
   := match t with
