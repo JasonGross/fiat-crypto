@@ -158,16 +158,24 @@ Module Import Bounds.
        | Some b' => bounds_to_base_type' b'
        end.
 
+  Definition SmartCast_base {var A A'} (x : exprf base_type Syntax.interp_base_type op (var:=var) (Tbase A))
+    : exprf base_type Syntax.interp_base_type op (var:=var) (Tbase A')
+    := match base_type_eq_dec A A' with
+       | left pf => match pf with
+                    | eq_refl => x
+                    end
+       | right _ => Op (Cast _ A') x
+       end.
   Definition PairCast {var A B A' B'} (x : exprf base_type Syntax.interp_base_type op (var:=var) (Tbase A * Tbase B))
     : exprf base_type Syntax.interp_base_type op (var:=var) (Tbase A' * Tbase B')
     := match x in exprf _ _ _ T'
              return exprf base_type Syntax.interp_base_type op (Tbase A' * Tbase B')%ctype
                     -> exprf base_type Syntax.interp_base_type op (Tbase A' * Tbase B')%ctype
        with
-       | Pair (Tbase _) x1 (Tbase _) x2
-         => fun _ => Pair (Op (Cast _ A') x1) (Op (Cast _ B') x2)
+       | Pair (Tbase A0) x1 (Tbase B0) x2
+         => fun _ => Pair (SmartCast_base x1) (SmartCast_base x2)
        | _ => fun x => x
-       end (LetIn x (fun xy => Pair (Op (Cast _ A') (Var (fst xy))) (Op (Cast _ B') (Var (snd xy))))).
+       end (LetIn x (fun xy => Pair (SmartCast_base (Var (fst xy))) (SmartCast_base (Var (snd xy))))).
 
   Definition bound_op {var}
              {src1 dst1 src2 dst2}
