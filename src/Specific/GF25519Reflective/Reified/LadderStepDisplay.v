@@ -52,7 +52,7 @@ Notation "x * y" := (Op (Mul _) (Pair x (Var y))).
 Notation "x * y" := (Op (Mul _) (Pair (Var x) (Var y))).
 (* python:
 <<
-for opn, op in (('*', 'Mul'), ('+', 'Add')):
+for opn, op in (('*', 'Mul'), ('+', 'Add'), ('&', 'Land')):
     for lgwordsz in (5, 6, 7):
         for side in ('l', 'r'):
             for v1 in (False, True):
@@ -123,6 +123,30 @@ Notation "x & y" := (Op (Land _) (Pair x y)) (at level 40).
 Notation "x & y" := (Op (Land _) (Pair (Var x) y)).
 Notation "x & y" := (Op (Land _) (Pair x (Var y))).
 Notation "x & y" := (Op (Land _) (Pair (Var x) (Var y))).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair (Op (Cast _ (TWord 5)) x) y)).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair (Op (Cast _ (TWord 5)) x) (Var y))).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair (Op (Cast _ (TWord 5)) (Var x)) y)).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair (Op (Cast _ (TWord 5)) (Var x)) (Var y))).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair x (Op (Cast _ (TWord 5)) y))).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair x (Op (Cast _ (TWord 5)) (Var y)))).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair (Var x) (Op (Cast _ (TWord 5)) y))).
+Notation "x & y" := (Op (Land (TWord 5)) (Pair (Var x) (Op (Cast _ (TWord 5)) (Var y)))).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair (Op (Cast _ (TWord 6)) x) y)).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair (Op (Cast _ (TWord 6)) x) (Var y))).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair (Op (Cast _ (TWord 6)) (Var x)) y)).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair (Op (Cast _ (TWord 6)) (Var x)) (Var y))).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair x (Op (Cast _ (TWord 6)) y))).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair x (Op (Cast _ (TWord 6)) (Var y)))).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair (Var x) (Op (Cast _ (TWord 6)) y))).
+Notation "x & y" := (Op (Land (TWord 6)) (Pair (Var x) (Op (Cast _ (TWord 6)) (Var y)))).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair (Op (Cast _ (TWord 7)) x) y)).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair (Op (Cast _ (TWord 7)) x) (Var y))).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair (Op (Cast _ (TWord 7)) (Var x)) y)).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair (Op (Cast _ (TWord 7)) (Var x)) (Var y))).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) y))).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) (Var y)))).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) y))).
+Notation "x & y" := (Op (Land (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) (Var y)))).
 Notation Return x := (Var x).
 Notation "'0b10'" := (Const WO~1~0). (* 2 *)
 Notation "'0b00010011'" := (Const WO~0~0~0~1~0~0~1~1). (* 19 *)
