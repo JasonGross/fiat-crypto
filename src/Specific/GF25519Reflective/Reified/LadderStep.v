@@ -187,6 +187,7 @@ Time Definition rladderstepW' : Expr base_type interp_base_type op _
      k.
 Time Definition rladderstepW : Expr base_type interp_base_type op _
   := Eval vm_compute in rladderstepW'.
+(* Finished transaction in 123.31 secs (123.199u,0.136s) (successful) *)
 
 (*Time Definition rladderstepW := Eval vm_compute in rword_of_Z rladderstepZ_sig.
 Lemma rladderstepW_correct_and_bounded_gen : correct_and_bounded_genT rladderstepW rladderstepZ_sig.
