@@ -52,15 +52,16 @@ Notation "x * y" := (Op (Mul _) (Pair x (Var y))).
 Notation "x * y" := (Op (Mul _) (Pair (Var x) (Var y))).
 (* python:
 <<
-for lgwordsz in (5, 6, 7):
-    for side in ('l', 'r'):
-        for v1 in (False, True):
-            for v2 in (False, True):
-                lhs = ('x' if not v1 else '(Var x)')
-                lhs = (lhs if side != 'l' else '(Op (Cast _ (TWord %d)) %s)' % (lgwordsz, lhs))
-                rhs = ('y' if not v2 else '(Var y)')
-                rhs = (rhs if side != 'r' else '(Op (Cast _ (TWord %d)) %s)' % (lgwordsz, rhs))
-                print('Notation "x * y" := (Op (Mul (TWord %d)) (Pair %s %s)).' % (lgwordsz, lhs, rhs))
+for opn, op in (('*', 'Mul'), ('+', 'Add')):
+    for lgwordsz in (5, 6, 7):
+        for side in ('l', 'r'):
+            for v1 in (False, True):
+                for v2 in (False, True):
+                    lhs = ('x' if not v1 else '(Var x)')
+                    lhs = (lhs if side != 'l' else '(Op (Cast _ (TWord %d)) %s)' % (lgwordsz, lhs))
+                    rhs = ('y' if not v2 else '(Var y)')
+                    rhs = (rhs if side != 'r' else '(Op (Cast _ (TWord %d)) %s)' % (lgwordsz, rhs))
+                    print('Notation "x %s y" := (Op (%s (TWord %d)) (Pair %s %s)).' % (opn, op, lgwordsz, lhs, rhs))
 >> *)
 Notation "x * y" := (Op (Mul (TWord 5)) (Pair (Op (Cast _ (TWord 5)) x) y)).
 Notation "x * y" := (Op (Mul (TWord 5)) (Pair (Op (Cast _ (TWord 5)) x) (Var y))).
@@ -86,6 +87,30 @@ Notation "x * y" := (Op (Mul (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) y))).
 Notation "x * y" := (Op (Mul (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) (Var y)))).
 Notation "x * y" := (Op (Mul (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) y))).
 Notation "x * y" := (Op (Mul (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) (Var y)))).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair (Op (Cast _ (TWord 5)) x) y)).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair (Op (Cast _ (TWord 5)) x) (Var y))).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair (Op (Cast _ (TWord 5)) (Var x)) y)).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair (Op (Cast _ (TWord 5)) (Var x)) (Var y))).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair x (Op (Cast _ (TWord 5)) y))).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair x (Op (Cast _ (TWord 5)) (Var y)))).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair (Var x) (Op (Cast _ (TWord 5)) y))).
+Notation "x + y" := (Op (Add (TWord 5)) (Pair (Var x) (Op (Cast _ (TWord 5)) (Var y)))).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair (Op (Cast _ (TWord 6)) x) y)).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair (Op (Cast _ (TWord 6)) x) (Var y))).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair (Op (Cast _ (TWord 6)) (Var x)) y)).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair (Op (Cast _ (TWord 6)) (Var x)) (Var y))).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair x (Op (Cast _ (TWord 6)) y))).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair x (Op (Cast _ (TWord 6)) (Var y)))).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair (Var x) (Op (Cast _ (TWord 6)) y))).
+Notation "x + y" := (Op (Add (TWord 6)) (Pair (Var x) (Op (Cast _ (TWord 6)) (Var y)))).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair (Op (Cast _ (TWord 7)) x) y)).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair (Op (Cast _ (TWord 7)) x) (Var y))).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair (Op (Cast _ (TWord 7)) (Var x)) y)).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair (Op (Cast _ (TWord 7)) (Var x)) (Var y))).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) y))).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) (Var y)))).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) y))).
+Notation "x + y" := (Op (Add (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) (Var y)))).
 Notation "x >> y" := (Op (Shr _) (Pair x y)).
 Notation "x >> y" := (Op (Shr _) (Pair (Var x) y)).
 Notation "x >> y" := (Op (Shr _) (Pair x (Var y))).
