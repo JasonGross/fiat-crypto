@@ -17,7 +17,6 @@ Notation uint128_t := (_ (TWord 7)).*)
 Notation uint32_t := (Tbase (TWord 5)).
 Notation uint64_t := (Tbase (TWord 6)).
 Notation uint128_t := (Tbase (TWord 7)).
-Notation bool := (Tbase (TWord 0)).
 Notation "'(uint32_t)' x" := (Op (Cast _ (TWord 5)) x) (at level 200, x at level 9).
 Notation "'(uint64_t)' x" := (Op (Cast _ (TWord 6)) x) (at level 200, x at level 9).
 Notation "'(uint128_t)' x" := (Op (Cast _ (TWord 7)) x) (at level 200, x at level 9).
