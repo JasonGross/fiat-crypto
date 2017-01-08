@@ -4,9 +4,10 @@ Require Export Crypto.SpecificGen.GF25519_32.
 Require Export Crypto.SpecificGen.GF25519_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.Z.Interpretations64.
+Require Import Crypto.Reflection.Z.Interpretations.
+(*Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.*)
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
@@ -21,7 +22,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
-Notation Expr := (Expr base_type WordW.interp_base_type op).
+Notation Expr := (Expr base_type interp_base_type op).
 
 Local Ltac make_type_from' T :=
   let T := (eval compute in T) in
@@ -116,30 +117,30 @@ Local Ltac make_bounds ls :=
   let v := (eval compute in v) in
   exact v.
 
-Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type.
+Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) Bounds.interp_base_type.
 Proof.
-  refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type with
+  refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) Bounds.interp_base_type with
          | 0 => tt
          | S n => let v := interp_all_binders_for_to' (Expr_nm_Op_bounds n count_out) in
                   interp_all_binders_for_of' _
          end; simpl.
   make_bounds_cps (Tuple.to_list _ bounds) v.
 Defined.
-Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type
+Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 2 1.
-Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type
+Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type
+Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type
+Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT ZBounds.interp_base_type
+Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 4 1.
-Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT ZBounds.interp_base_type
+Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT Bounds.interp_base_type
   := Eval compute in Expr_nm_Op_bounds 9 4.
-Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
+Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET Bounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
-
+(*
 Definition interp_bexpr : ExprBinOp -> SpecificGen.GF25519_32BoundedCommon.fe25519_32W -> SpecificGen.GF25519_32BoundedCommon.fe25519_32W -> SpecificGen.GF25519_32BoundedCommon.fe25519_32W
   := fun e => curry_binop_fe25519_32W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr : ExprUnOp -> SpecificGen.GF25519_32BoundedCommon.fe25519_32W -> SpecificGen.GF25519_32BoundedCommon.fe25519_32W
@@ -175,7 +176,7 @@ Notation unop_WireToFE_correct_and_bounded rop op
   := (iunop_WireToFE_correct_and_bounded (interp_uexpr_WireToFE rop) op) (only parsing).
 Notation op9_4_correct_and_bounded rop op
   := (i9top_correct_and_bounded 4 (interp_9_4expr rop) op) (only parsing).
-
+*)
 Ltac rexpr_cbv :=
   lazymatch goal with
   | [ |- { rexpr | interp_type_gen_rel_pointwise _ (Interp _ (t:=?T) rexpr) (?uncurry ?oper) } ]
@@ -184,7 +185,7 @@ Ltac rexpr_cbv :=
        try cbv delta [T]; try cbv delta [oper];
        try cbv beta iota delta [uncurryf]
   end;
-  cbv beta iota delta [interp_flat_type Z.interp_base_type interp_base_type zero_].
+  cbv beta iota delta [interp_flat_type interp_base_type zero_].
 
 Ltac reify_sig :=
   rexpr_cbv; eexists; Reify_rhs; reflexivity.
@@ -200,7 +201,7 @@ Notation rexpr_unop_FEToZ_sig op := (rexpr_sig ExprUnOpFEToZT (uncurry_unop_fe25
 Notation rexpr_unop_FEToWire_sig op := (rexpr_sig ExprUnOpFEToWireT (uncurry_unop_fe25519_32 op)) (only parsing).
 Notation rexpr_unop_WireToFE_sig op := (rexpr_sig ExprUnOpWireToFET (uncurry_unop_wire_digits op)) (only parsing).
 Notation rexpr_9_4op_sig op := (rexpr_sig Expr9_4OpT (uncurry_9op_fe25519_32 op)) (only parsing).
-
+(*
 Notation correct_and_bounded_genT ropW'v ropZ_sigv
   := (let ropW' := ropW'v in
       let ropZ_sig := ropZ_sigv in
@@ -213,7 +214,7 @@ Notation correct_and_bounded_genT ropW'v ropZ_sigv
       /\ interp_type_rel_pointwise2 Relations.related_bounds (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@ZBounds.interp_op) ropBounds)
       /\ interp_type_rel_pointwise2 Relations.related_wordW (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@WordW.interp_op) ropW))
        (only parsing).
-
+*)
 Ltac app_tuples x y :=
   let tx := type of x in
   lazymatch (eval hnf in tx) with
@@ -224,7 +225,7 @@ Ltac app_tuples x y :=
 
 Local Arguments Tuple.map2 : simpl never.
 Local Arguments Tuple.map : simpl never.
-
+(*
 Fixpoint args_to_bounded_helperT {n}
          (v : Tuple.tuple' WordW.wordW n)
          (bounds : Tuple.tuple' (Z * Z) n)
@@ -303,7 +304,7 @@ Definition assoc_right''
 Definition args_to_bounded {n} v bounds pf
   := Eval cbv [args_to_bounded_helper assoc_right''] in
       @args_to_bounded_helper n _ v bounds pf (@assoc_right'' _ _).
-
+*)
 Local Ltac get_len T :=
   match (eval hnf in T) with
   | prod ?A ?B
@@ -339,7 +340,7 @@ Definition unop_make_args {interp_base_type var} (x : exprArg interp_base_type v
 Proof. make_args x. Defined.
 Definition unop_wire_make_args {interp_base_type var} (x : exprArgWire interp_base_type var) : exprArgWireRev interp_base_type var.
 Proof. make_args x. Defined.
-
+(*
 Local Ltac args_to_bounded x H :=
   let x' := fresh in
   set (x' := x);
@@ -570,7 +571,7 @@ Module Export PrettyPrinting.
 
   Definition ZBounds_to_bounds_on
     := fun t : base_type
-       => match t return ZBounds.interp_base_type t -> match t with TZ => bounds_on end with
+       => match t return Bounds.interp_base_type t -> match t with TZ => bounds_on end with
           | TZ => fun x => match x with
                            | Some {| Bounds.lower := l ; Bounds.upper := u |}
                              => in_range l u
@@ -601,3 +602,4 @@ Module Export PrettyPrinting.
   Notation sanity_check opW bounds
     := (eq_refl (sanity_compute opW bounds) <: no = no) (only parsing).
 End PrettyPrinting.
+*)
