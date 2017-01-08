@@ -165,7 +165,30 @@ Proof.
   apply rladderstepZ_sigP.
 Defined.
 
-Time Definition rladderstepW := Eval vm_compute in rword_of_Z rladderstepZ_sig.
+Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.MapCastWithCastOp.
+Require Import Crypto.Reflection.MapInterp.
+Time Definition rladderstepW' : Expr base_type interp_base_type op _
+  := let e := proj1_sig rladderstepZ_sig in
+     let k := fun var
+              => @map_interp_cast_with_cast_op
+                   base_type base_type interp_base_type Bounds.interp_base_type
+                   op op (@Bounds.interp_op)
+                   base_type_beq internal_base_type_dec_bl (fun _ => ZToInterp 0)
+                   (fun _ => Bounds.bounds_to_base_type)
+                   (fun _ _ v _ => cast_const v)
+                   (fun _ _ _ => Op (Cast _ _))
+                   (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+                   (@Bounds.bound_op)
+                   var
+                   _ (e _)
+                   _ (MapInterp (@Bounds.of_interp) e _)
+                   (Application.interp_all_binders_for_to' Expr9Op_bounds) in
+     k.
+Time Definition rladderstepW : Expr base_type interp_base_type op _
+  := Eval vm_compute in rladderstepW'.
+
+(*Time Definition rladderstepW := Eval vm_compute in rword_of_Z rladderstepZ_sig.
 Lemma rladderstepW_correct_and_bounded_gen : correct_and_bounded_genT rladderstepW rladderstepZ_sig.
 Proof. Time rexpr_correct. Time Qed.
 Definition rladderstep_output_bounds := Eval vm_compute in compute_bounds rladderstepW Expr9Op_bounds.
@@ -181,3 +204,4 @@ Local Open Scope string_scope.
 Compute ("Ladderstep", compute_bounds_for_display rladderstepW Expr9Op_bounds).
 Compute ("Ladderstep overflows? ", sanity_compute rladderstepW Expr9Op_bounds).
 Compute ("Ladderstep overflows (error if it does)? ", sanity_check rladderstepW Expr9Op_bounds).
+*)
