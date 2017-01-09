@@ -8,6 +8,7 @@ Reserved Notation "'(int)' x" (at level 200, x at level 9).
 Reserved Notation "'(long)' x" (at level 200, x at level 9).
 Reserved Notation "'(uint128_t)' x" (at level 200, x at level 9).
 Reserved Notation "x & y" (at level 40).
+(* N.B. M32 is 0xFFFFFFFFL, and is how to cast a 64-bit thing to a 32-bit thing in Java *)
 Reserved Notation "'M32' & x" (at level 200, x at level 9).
 
 Global Open Scope expr_scope.
