@@ -3,6 +3,8 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
+Require Import Crypto.Reflection.MapCastWithCastOp.
+Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
@@ -293,6 +295,26 @@ Module Import Bounds.
                         | TZ => fun z => z
                         | TWord logsz => FixedWordSizes.wordToZ
                         end z)).
+
+  Definition MapBounds {t} (e : Expr base_type Syntax.interp_base_type op t) input_bounds
+    : Expr
+        base_type Syntax.interp_base_type op
+        (MapCast.new_type (fun _ => bounds_to_base_type) t (interp_all_binders_for_to' input_bounds)
+                          (interp (@interp_op) (MapInterp of_interp e interp_base_type)))
+    := fun var
+       => @map_interp_cast_with_cast_op
+            base_type base_type Syntax.interp_base_type Bounds.interp_base_type
+            op op (@Bounds.interp_op)
+            base_type_beq internal_base_type_dec_bl (fun _ => ZToInterp 0)
+            (fun _ => Bounds.bounds_to_base_type)
+            (fun _ _ v _ => cast_const v)
+            (fun _ _ _ => Op (Cast _ _))
+            (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+            (@Bounds.bound_op)
+            var
+            _ (e _)
+            _ (MapInterp (@Bounds.of_interp) e _)
+            (Application.interp_all_binders_for_to' input_bounds).
 End Bounds.
 (*
 Module Import BoundedWord.
