@@ -1,6 +1,6 @@
 Require Export Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Z.Syntax.
-Require Import Bedrock.Word.
+Require Export Bedrock.Word.
 Require Export Crypto.Util.Notations.
 
 Reserved Notation "T x = A ; b" (at level 200, b at level 200, format "T  x  =  A ; '//' b").
