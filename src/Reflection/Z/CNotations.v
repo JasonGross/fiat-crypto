@@ -13,7 +13,7 @@ Reserved Notation "'(uint64_t)' x" (at level 200, x at level 9).
 Reserved Notation "'(uint128_t)' x" (at level 200, x at level 9).
 Reserved Notation "x & y" (at level 40).
 
-Local Open Scope expr_scope.
+Global Open Scope expr_scope.
 
 Notation "T x = A ; b" := (LetIn (tx:=T) A (fun x => b)) : expr_scope.
 (*Notation uint32_t := (_ (TWord 5)).
