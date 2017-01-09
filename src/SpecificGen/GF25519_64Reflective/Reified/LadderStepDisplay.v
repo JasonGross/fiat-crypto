@@ -12,7 +12,7 @@ Notation "T x = A ; b" := (LetIn (tx:=T) A (fun x => b))
                                          (at level 200, b at level 200, format "T  x  =  A ; '//' b")
                                        : expr_scope.
 (*Notation uint32_t := (_ (TWord 5)).
-Notation uint128_t := (_ (TWord 6)).
+Notation uint64_t := (_ (TWord 6)).
 Notation uint128_t := (_ (TWord 7)).*)
 Notation bool := (Tbase (TWord 0)).
 Notation "'unsigned' 'short'" := (Tbase (TWord 1)).
