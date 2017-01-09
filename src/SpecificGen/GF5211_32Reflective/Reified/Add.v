@@ -4,29 +4,18 @@ Require Export Crypto.Reflection.Z.Interpretations.
 
 Definition raddZ_sig : rexpr_binop_sig add. Proof. reify_sig. Defined.
 
-Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.MapCastWithCastOp.
-Require Import Crypto.Reflection.MapInterp.
-Time Definition raddW' : Expr base_type interp_base_type op _
-  := let e := proj1_sig raddZ_sig in
-     let k := fun var
-              => @map_interp_cast_with_cast_op
-                   base_type base_type interp_base_type Bounds.interp_base_type
-                   op op (@Bounds.interp_op)
-                   base_type_beq internal_base_type_dec_bl (fun _ => ZToInterp 0)
-                   (fun _ => Bounds.bounds_to_base_type)
-                   (fun _ _ v _ => cast_const v)
-                   (fun _ _ _ => Op (Cast _ _))
-                   (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
-                   (@Bounds.bound_op)
-                   var
-                   _ (e _)
-                   _ (MapInterp (@Bounds.of_interp) e _)
-                   (Application.interp_all_binders_for_to' ExprBinOp_bounds) in
-     k.
-Time Definition raddW : Expr base_type interp_base_type op _
-  := Eval vm_compute in raddW'.
+Notation bounded_sig rexprZ_sig expr_bounds
+  := { expr : Syntax.Expr _ _ _ _ | expr = Bounds.MapBounds (proj1_sig rexprZ_sig) expr_bounds }.
+Notation make_bounded_sig rexprZ_sig expr_bounds
+  := (let k := Bounds.MapBounds (proj1_sig rexprZ_sig) expr_bounds in
+      exist (fun expr => expr = k) k eq_refl).
+Notation compute_bounds rexprZ_sig expr_bounds
+  := (Bounds.ComputeBounds (proj1_sig rexprZ_sig) ExprBinOp_bounds).
 
+Time Definition raddBounds_sig : bounded_sig raddZ_sig ExprBinOp_bounds
+  := Eval vm_compute in make_bounded_sig raddZ_sig ExprBinOp_bounds.
+Definition raddW : Expr _ := Eval cbv [proj1_sig raddBounds_sig] in proj1_sig raddBounds_sig.
+Definition radd_output_bounds := Eval vm_compute in compute_bounds raddZ_sig ExprBinOp_bounds.
 
 (*Import Reflection.Syntax.
 Compute proj1_sig raddZ_sig.
