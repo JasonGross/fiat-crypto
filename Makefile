@@ -56,6 +56,8 @@ MEDIUM_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF5211_32%,$(SPECIFIC_GEN
 SMALL_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF41417_32%,$(MEDIUM_SPECIFIC_GEN_VO))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
 DISPLAY_VO := $(filter src/Specific/%Display.vo src/SpecificGen/%Display.vo,$(VOFILES))
+DISPLAY_JAVA_VO := $(filter src/Specific/%JavaDisplay.vo src/SpecificGen/%JavaDisplay.vo,$(DISPLAY_VO))
+DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 
 specific: $(SPECIFIC_VO) coqprime
 specific-gen: $(SPECIFIC_GEN_VO) coqprime
@@ -95,9 +97,13 @@ Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'|^\(-include.*\)$$|ifneq ($$(filter-out $(FAST_TARGETS),$$(MAKECMDGOALS)),)~\1~else~ifeq ($$(MAKECMDGOALS),)~\1~endif~endif|g' | tr '~' '\n' | sed s'/^clean:$$/clean::/g' | sed s'/^Makefile: /Makefile-old: /g' | sed s'/^printenv:$$/printenv::/g' > $@
 
-$(DISPLAY_VO:.vo=.log) : %Display.log : $(subst Java,,%).vo %Display.v src/Reflection/Z/CNotations.vo
+$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Reflection/Z/CNotations.vo
 	$(SHOW)"COQC $*Display > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@.tmp && mv -f $@.tmp $@
+
+$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Reflection/Z/CNotations.vo
+	$(SHOW)"COQC $*JavaDisplay > $@"
+	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v > $@.tmp && mv -f $@.tmp $@
 
 src/Experiments/Ed25519_noimports.hs: src/Experiments/Ed25519Extraction.vo src/Experiments/Ed25519Extraction.v
 
