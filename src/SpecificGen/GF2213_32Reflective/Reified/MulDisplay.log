@@ -22,17 +22,9 @@ uint64_t x32 = x23 + x31;
 uint64_t x33 = x21 + x32;
 uint64_t x34 = x19 + x33;
 uint64_t x35 = x17 + x34;
-uint64_t x36 = Const (Word.WS true (Word.WS true Word.WO)) * x35;
+uint64_t x36 = Const WO~1~1 * x35;
 uint64_t x37 = x15 + x36;
-uint64_t x38 = x37 >>
-               Const
-                 (Word.WS false
-                    (Word.WS false
-                       (Word.WS true
-                          (Word.WS true
-                             (Word.WS true
-                                (Word.WS false
-                                   (Word.WS false (Word.WS false Word.WO))))))));
+uint64_t x38 = x37 >> Const WO~0~0~0~1~1~1~0~0;
 uint64_t x39 = ((uint64_t) x5) * x14;
 uint64_t x40 = ((uint64_t) x6) * x13;
 uint64_t x41 = x39 + x40;
@@ -51,18 +43,10 @@ uint64_t x53 = x48 + x52;
 uint64_t x54 = x46 + x53;
 uint64_t x55 = x44 + x54;
 uint64_t x56 = x43 + x55;
-uint64_t x57 = Const (Word.WS true (Word.WS true Word.WO)) * x56;
+uint64_t x57 = Const WO~1~1 * x56;
 uint64_t x58 = x41 + x57;
 uint64_t x59 = x38 + x58;
-uint64_t x60 = x59 >>
-               Const
-                 (Word.WS false
-                    (Word.WS false
-                       (Word.WS true
-                          (Word.WS true
-                             (Word.WS true
-                                (Word.WS false
-                                   (Word.WS false (Word.WS false Word.WO))))))));
+uint64_t x60 = x59 >> Const WO~0~0~0~1~1~1~0~0;
 uint64_t x61 = ((uint64_t) x4) * x14;
 uint64_t x62 = ((uint64_t) x5) * x13;
 uint64_t x63 = ((uint64_t) x6) * x12;
@@ -78,18 +62,10 @@ uint64_t x72 = x70 + x71;
 uint64_t x73 = x69 + x72;
 uint64_t x74 = x67 + x73;
 uint64_t x75 = x66 + x74;
-uint64_t x76 = Const (Word.WS true (Word.WS true Word.WO)) * x75;
+uint64_t x76 = Const WO~1~1 * x75;
 uint64_t x77 = x65 + x76;
 uint64_t x78 = x60 + x77;
-uint64_t x79 = x78 >>
-               Const
-                 (Word.WS true
-                    (Word.WS true
-                       (Word.WS false
-                          (Word.WS true
-                             (Word.WS true
-                                (Word.WS false
-                                   (Word.WS false (Word.WS false Word.WO))))))));
+uint64_t x79 = x78 >> Const WO~0~0~0~1~1~0~1~1;
 uint64_t x80 = ((uint64_t) x3) * x14;
 uint32_t x81 = x13 * 0b10;
 uint64_t x82 = ((uint64_t) x4) * x81;
@@ -110,18 +86,10 @@ uint64_t x96 = ((uint64_t) x2) * x95;
 uint64_t x97 = x94 + x96;
 uint64_t x98 = x92 + x97;
 uint64_t x99 = x90 + x98;
-uint64_t x100 = Const (Word.WS true (Word.WS true Word.WO)) * x99;
+uint64_t x100 = Const WO~1~1 * x99;
 uint64_t x101 = x88 + x100;
 uint64_t x102 = x79 + x101;
-uint64_t x103 = x102 >>
-                Const
-                  (Word.WS false
-                     (Word.WS false
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS false
-                                    (Word.WS false (Word.WS false Word.WO))))))));
+uint64_t x103 = x102 >> Const WO~0~0~0~1~1~1~0~0;
 uint64_t x104 = ((uint64_t) x2) * x14;
 uint64_t x105 = ((uint64_t) x3) * x13;
 uint32_t x106 = x12 * 0b10;
@@ -139,19 +107,10 @@ uint32_t x117 = x7 * 0b10;
 uint64_t x118 = ((uint64_t) x1) * x117;
 uint64_t x119 = x116 + x118;
 uint64_t x120 = x115 + x119;
-uint64_t x121 = Const (Word.WS true (Word.WS true Word.WO)) * x120;
+uint64_t x121 = Const WO~1~1 * x120;
 uint64_t x122 = x113 + x121;
 uint64_t x123 = x103 + x122;
-uint32_t x124 = (uint32_t) (x123 >>
-                            Const
-                              (Word.WS false
-                                 (Word.WS false
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS false
-                                                (Word.WS false
-                                                 (Word.WS false Word.WO)))))))));
+uint32_t x124 = (uint32_t) (x123 >> Const WO~0~0~0~1~1~1~0~0);
 uint64_t x125 = ((uint64_t) x1) * x14;
 uint64_t x126 = ((uint64_t) x2) * x13;
 uint64_t x127 = ((uint64_t) x3) * x12;
@@ -166,18 +125,10 @@ uint64_t x135 = x125 + x134;
 uint64_t x136 = ((uint64_t) x) * x8;
 uint64_t x137 = ((uint64_t) x0) * x7;
 uint64_t x138 = x136 + x137;
-uint64_t x139 = Const (Word.WS true (Word.WS true Word.WO)) * x138;
+uint64_t x139 = Const WO~1~1 * x138;
 uint64_t x140 = x135 + x139;
 uint64_t x141 = x124 + x140;
-uint64_t x142 = x141 >>
-                Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS false
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS false
-                                    (Word.WS false (Word.WS false Word.WO))))))));
+uint64_t x142 = x141 >> Const WO~0~0~0~1~1~0~1~1;
 uint64_t x143 = ((uint64_t) x0) * x14;
 uint32_t x144 = x13 * 0b10;
 uint64_t x145 = ((uint64_t) x1) * x144;
@@ -197,19 +148,10 @@ uint64_t x158 = x145 + x157;
 uint64_t x159 = x143 + x158;
 uint32_t x160 = x7 * 0b10;
 uint64_t x161 = ((uint64_t) x) * x160;
-uint64_t x162 = Const (Word.WS true (Word.WS true Word.WO)) * x161;
+uint64_t x162 = Const WO~1~1 * x161;
 uint64_t x163 = x159 + x162;
 uint64_t x164 = x142 + x163;
-uint32_t x165 = (uint32_t) (x164 >>
-                            Const
-                              (Word.WS false
-                                 (Word.WS false
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS false
-                                                (Word.WS false
-                                                 (Word.WS false Word.WO)))))))));
+uint32_t x165 = (uint32_t) (x164 >> Const WO~0~0~0~1~1~1~0~0);
 uint64_t x166 = ((uint64_t) x) * x14;
 uint64_t x167 = ((uint64_t) x0) * x13;
 uint32_t x168 = x12 * 0b10;
@@ -228,271 +170,43 @@ uint64_t x180 = x169 + x179;
 uint64_t x181 = x167 + x180;
 uint64_t x182 = x166 + x181;
 uint64_t x183 = x165 + x182;
-uint32_t x184 = (uint32_t) (x183 >>
-                            Const
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS false
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS false
-                                                (Word.WS false
-                                                 (Word.WS false Word.WO)))))))));
-uint64_t x185 = ((uint64_t) (Const (Word.WS true (Word.WS true Word.WO)))) *
-                x184;
+uint32_t x184 = (uint32_t) (x183 >> Const WO~0~0~0~1~1~0~1~1);
+uint64_t x185 = ((uint64_t) (Const WO~1~1)) * x184;
 uint32_t x186 = x37 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint64_t x187 = x185 + x186;
-uint8_t x188 = (uint8_t) (x187 >>
-                          Const
-                            (Word.WS false
-                               (Word.WS false
-                                  (Word.WS true
-                                     (Word.WS true
-                                        (Word.WS true
-                                           (Word.WS false
-                                              (Word.WS false
-                                                 (Word.WS false Word.WO)))))))));
+uint8_t x188 = (uint8_t) (x187 >> Const WO~0~0~0~1~1~1~0~0);
 uint32_t x189 = x59 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x190 = x188 + x189;
 uint32_t x191 = x183 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x192 = x164 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x193 = x141 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x194 = x123 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x195 = x102 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
-bool x196 = (bool) (x190 >>
-                    Const
-                      (Word.WS false
-                         (Word.WS false
-                            (Word.WS true
-                               (Word.WS true
-                                  (Word.WS true
-                                     (Word.WS false
-                                        (Word.WS false
-                                           (Word.WS false Word.WO)))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
+bool x196 = (bool) (x190 >> Const WO~0~0~0~1~1~1~0~0);
 uint32_t x197 = x78 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x198 = x196 + x197;
 uint32_t x199 = x190 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 uint32_t x200 = x187 &
                 Const
-                  (Word.WS true
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS true
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true (...))))))))))))))))))))));
+                  WO~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1;
 (Return x191, Return x192, Return x193, Return x194, 
 Return x195, Return x198, Return x199, Return x200)
      : C_like

@@ -52,10 +52,7 @@ uint64_t x131 = x111 + x130;
 uint64_t x132 = x108 + x131;
 uint64_t x133 = x105 + x132;
 uint64_t x134 = x102 + x133;
-unsigned short x135 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x135 = Const WO~1~0~0~1;
 uint64_t x136 = x135 * x134;
 uint64_t x137 = x99 + x136;
 uint8_t x138 = 0b00011010;
@@ -78,10 +75,7 @@ uint64_t x154 = x146 + x153;
 uint64_t x155 = x145 + x154;
 uint64_t x156 = x144 + x155;
 uint64_t x157 = x143 + x156;
-unsigned short x158 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x158 = Const WO~1~0~0~1;
 uint64_t x159 = x158 * x157;
 uint64_t x160 = x142 + x159;
 uint64_t x161 = x139 + x160;
@@ -107,10 +101,7 @@ uint64_t x180 = x174 + x179;
 uint64_t x181 = x173 + x180;
 uint64_t x182 = x172 + x181;
 uint64_t x183 = x171 + x182;
-unsigned short x184 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x184 = Const WO~1~0~0~1;
 uint64_t x185 = x184 * x183;
 uint64_t x186 = x170 + x185;
 uint64_t x187 = x163 + x186;
@@ -138,10 +129,7 @@ uint64_t x208 = x204 + x207;
 uint64_t x209 = x203 + x208;
 uint64_t x210 = x202 + x209;
 uint64_t x211 = x201 + x210;
-unsigned short x212 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x212 = Const WO~1~0~0~1;
 uint64_t x213 = x212 * x211;
 uint64_t x214 = x200 + x213;
 uint64_t x215 = x189 + x214;
@@ -171,10 +159,7 @@ uint64_t x238 = x236 + x237;
 uint64_t x239 = x235 + x238;
 uint64_t x240 = x234 + x239;
 uint64_t x241 = x233 + x240;
-unsigned short x242 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x242 = Const WO~1~0~0~1;
 uint64_t x243 = x242 * x241;
 uint64_t x244 = x232 + x243;
 uint64_t x245 = x217 + x244;
@@ -206,10 +191,7 @@ uint64_t x270 = ((uint64_t) x92) * x89;
 uint64_t x271 = x269 + x270;
 uint64_t x272 = x268 + x271;
 uint64_t x273 = x267 + x272;
-unsigned short x274 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x274 = Const WO~1~0~0~1;
 uint64_t x275 = x274 * x273;
 uint64_t x276 = x266 + x275;
 uint64_t x277 = x247 + x276;
@@ -243,10 +225,7 @@ uint64_t x304 = ((uint64_t) x90) * x90;
 uint64_t x305 = ((uint64_t) x91) * x89;
 uint64_t x306 = x304 + x305;
 uint64_t x307 = x303 + x306;
-unsigned short x308 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x308 = Const WO~1~0~0~1;
 uint64_t x309 = x308 * x307;
 uint64_t x310 = x302 + x309;
 uint64_t x311 = x279 + x310;
@@ -282,10 +261,7 @@ uint64_t x340 = x314 + x339;
 uint64_t x341 = ((uint64_t) x89) * x90;
 uint64_t x342 = ((uint64_t) x90) * x89;
 uint64_t x343 = x341 + x342;
-unsigned short x344 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x344 = Const WO~1~0~0~1;
 uint64_t x345 = x344 * x343;
 uint64_t x346 = x340 + x345;
 uint64_t x347 = x313 + x346;
@@ -323,10 +299,7 @@ uint64_t x378 = x356 + x377;
 uint64_t x379 = x353 + x378;
 uint64_t x380 = x350 + x379;
 uint64_t x381 = ((uint64_t) x89) * x89;
-unsigned short x382 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x382 = Const WO~1~0~0~1;
 uint64_t x383 = x382 * x381;
 uint64_t x384 = x380 + x383;
 uint64_t x385 = x349 + x384;
@@ -370,10 +343,7 @@ uint64_t x422 = x388 + x421;
 uint64_t x423 = x387 + x422;
 uint8_t x424 = 0b00011001;
 uint32_t x425 = (uint32_t) (x423 >> x424);
-unsigned short x426 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x426 = Const WO~1~0~0~1;
 uint64_t x427 = ((uint64_t) x426) * x425;
 uint32_t x428 = 0b00000011111111111111111111111111;
 uint32_t x429 = x137 & x428;
@@ -434,28 +404,7 @@ uint32_t x483 = 0b00000011111111111111111111111110;
 uint32_t x484 = x483 + x57;
 uint32_t x485 = x484 - x67;
 uint32_t x486 = Const
-                  (Word.WS false
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS false
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true ...))))))))))))))))))))));
+                  WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0;
 uint32_t x487 = x486 + x58;
 uint32_t x488 = x487 - x68;
 uint64_t x489 = ((uint64_t) x488) * x488;
@@ -494,10 +443,7 @@ uint64_t x521 = x501 + x520;
 uint64_t x522 = x498 + x521;
 uint64_t x523 = x495 + x522;
 uint64_t x524 = x492 + x523;
-unsigned short x525 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x525 = Const WO~1~0~0~1;
 uint64_t x526 = x525 * x524;
 uint64_t x527 = x489 + x526;
 uint8_t x528 = 0b00011010;
@@ -520,10 +466,7 @@ uint64_t x544 = x536 + x543;
 uint64_t x545 = x535 + x544;
 uint64_t x546 = x534 + x545;
 uint64_t x547 = x533 + x546;
-unsigned short x548 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x548 = Const WO~1~0~0~1;
 uint64_t x549 = x548 * x547;
 uint64_t x550 = x532 + x549;
 uint64_t x551 = x529 + x550;
@@ -549,10 +492,7 @@ uint64_t x570 = x564 + x569;
 uint64_t x571 = x563 + x570;
 uint64_t x572 = x562 + x571;
 uint64_t x573 = x561 + x572;
-unsigned short x574 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x574 = Const WO~1~0~0~1;
 uint64_t x575 = x574 * x573;
 uint64_t x576 = x560 + x575;
 uint64_t x577 = x553 + x576;
@@ -580,10 +520,7 @@ uint64_t x598 = x594 + x597;
 uint64_t x599 = x593 + x598;
 uint64_t x600 = x592 + x599;
 uint64_t x601 = x591 + x600;
-unsigned short x602 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x602 = Const WO~1~0~0~1;
 uint64_t x603 = x602 * x601;
 uint64_t x604 = x590 + x603;
 uint64_t x605 = x579 + x604;
@@ -613,10 +550,7 @@ uint64_t x628 = x626 + x627;
 uint64_t x629 = x625 + x628;
 uint64_t x630 = x624 + x629;
 uint64_t x631 = x623 + x630;
-unsigned short x632 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x632 = Const WO~1~0~0~1;
 uint64_t x633 = x632 * x631;
 uint64_t x634 = x622 + x633;
 uint64_t x635 = x607 + x634;
@@ -648,10 +582,7 @@ uint64_t x660 = ((uint64_t) x470) * x461;
 uint64_t x661 = x659 + x660;
 uint64_t x662 = x658 + x661;
 uint64_t x663 = x657 + x662;
-unsigned short x664 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x664 = Const WO~1~0~0~1;
 uint64_t x665 = x664 * x663;
 uint64_t x666 = x656 + x665;
 uint64_t x667 = x637 + x666;
@@ -685,10 +616,7 @@ uint64_t x694 = ((uint64_t) x464) * x464;
 uint64_t x695 = ((uint64_t) x467) * x461;
 uint64_t x696 = x694 + x695;
 uint64_t x697 = x693 + x696;
-unsigned short x698 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x698 = Const WO~1~0~0~1;
 uint64_t x699 = x698 * x697;
 uint64_t x700 = x692 + x699;
 uint64_t x701 = x669 + x700;
@@ -724,10 +652,7 @@ uint64_t x730 = x704 + x729;
 uint64_t x731 = ((uint64_t) x461) * x464;
 uint64_t x732 = ((uint64_t) x464) * x461;
 uint64_t x733 = x731 + x732;
-unsigned short x734 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x734 = Const WO~1~0~0~1;
 uint64_t x735 = x734 * x733;
 uint64_t x736 = x730 + x735;
 uint64_t x737 = x703 + x736;
@@ -765,10 +690,7 @@ uint64_t x768 = x746 + x767;
 uint64_t x769 = x743 + x768;
 uint64_t x770 = x740 + x769;
 uint64_t x771 = ((uint64_t) x461) * x461;
-unsigned short x772 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x772 = Const WO~1~0~0~1;
 uint64_t x773 = x772 * x771;
 uint64_t x774 = x770 + x773;
 uint64_t x775 = x739 + x774;
@@ -812,10 +734,7 @@ uint64_t x812 = x778 + x811;
 uint64_t x813 = x777 + x812;
 uint8_t x814 = 0b00011001;
 uint64_t x815 = x813 >> x814;
-unsigned short x816 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x816 = Const WO~1~0~0~1;
 uint64_t x817 = x816 * x815;
 uint32_t x818 = 0b00000011111111111111111111111111;
 uint32_t x819 = x527 & x818;
@@ -876,28 +795,7 @@ uint32_t x873 = 0b00000011111111111111111111111110;
 uint32_t x874 = x873 + x456;
 uint32_t x875 = x874 - x846;
 uint32_t x876 = Const
-                  (Word.WS false
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS false
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true ...))))))))))))))))))))));
+                  WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0;
 uint32_t x877 = x876 + x458;
 uint32_t x878 = x877 - x848;
 uint32_t x879 = x69 + x79;
@@ -938,28 +836,7 @@ uint32_t x913 = 0b00000011111111111111111111111110;
 uint32_t x914 = x913 + x77;
 uint32_t x915 = x914 - x87;
 uint32_t x916 = Const
-                  (Word.WS false
-                     (Word.WS true
-                        (Word.WS true
-                           (Word.WS true
-                              (Word.WS false
-                                 (Word.WS true
-                                    (Word.WS true
-                                       (Word.WS true
-                                          (Word.WS true
-                                             (Word.WS true
-                                                (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true ...))))))))))))))))))))));
+                  WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0;
 uint32_t x917 = x916 + x78;
 uint32_t x918 = x917 - x88;
 uint64_t x919 = ((uint64_t) x918) * x98;
@@ -998,10 +875,7 @@ uint64_t x951 = x931 + x950;
 uint64_t x952 = x928 + x951;
 uint64_t x953 = x925 + x952;
 uint64_t x954 = x922 + x953;
-unsigned short x955 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x955 = Const WO~1~0~0~1;
 uint64_t x956 = x955 * x954;
 uint64_t x957 = x919 + x956;
 uint8_t x958 = 0b00011010;
@@ -1024,10 +898,7 @@ uint64_t x974 = x966 + x973;
 uint64_t x975 = x965 + x974;
 uint64_t x976 = x964 + x975;
 uint64_t x977 = x963 + x976;
-unsigned short x978 = Const
-                        (Word.WS true
-                           (Word.WS false
-                              (Word.WS false (Word.WS true Word.WO))));
+unsigned short x978 = Const WO~1~0~0~1;
 uint64_t x979 = x978 * x977;
 uint64_t x980 = x962 + x979;
 uint64_t x981 = x959 + x980;
@@ -1053,10 +924,7 @@ uint64_t x1000 = x994 + x999;
 uint64_t x1001 = x993 + x1000;
 uint64_t x1002 = x992 + x1001;
 uint64_t x1003 = x991 + x1002;
-unsigned short x1004 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1004 = Const WO~1~0~0~1;
 uint64_t x1005 = x1004 * x1003;
 uint64_t x1006 = x990 + x1005;
 uint64_t x1007 = x983 + x1006;
@@ -1084,10 +952,7 @@ uint64_t x1028 = x1024 + x1027;
 uint64_t x1029 = x1023 + x1028;
 uint64_t x1030 = x1022 + x1029;
 uint64_t x1031 = x1021 + x1030;
-unsigned short x1032 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1032 = Const WO~1~0~0~1;
 uint64_t x1033 = x1032 * x1031;
 uint64_t x1034 = x1020 + x1033;
 uint64_t x1035 = x1009 + x1034;
@@ -1117,10 +982,7 @@ uint64_t x1058 = x1056 + x1057;
 uint64_t x1059 = x1055 + x1058;
 uint64_t x1060 = x1054 + x1059;
 uint64_t x1061 = x1053 + x1060;
-unsigned short x1062 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1062 = Const WO~1~0~0~1;
 uint64_t x1063 = x1062 * x1061;
 uint64_t x1064 = x1052 + x1063;
 uint64_t x1065 = x1037 + x1064;
@@ -1152,10 +1014,7 @@ uint64_t x1090 = ((uint64_t) x900) * x89;
 uint64_t x1091 = x1089 + x1090;
 uint64_t x1092 = x1088 + x1091;
 uint64_t x1093 = x1087 + x1092;
-unsigned short x1094 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1094 = Const WO~1~0~0~1;
 uint64_t x1095 = x1094 * x1093;
 uint64_t x1096 = x1086 + x1095;
 uint64_t x1097 = x1067 + x1096;
@@ -1189,10 +1048,7 @@ uint64_t x1124 = ((uint64_t) x894) * x90;
 uint64_t x1125 = ((uint64_t) x897) * x89;
 uint64_t x1126 = x1124 + x1125;
 uint64_t x1127 = x1123 + x1126;
-unsigned short x1128 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1128 = Const WO~1~0~0~1;
 uint64_t x1129 = x1128 * x1127;
 uint64_t x1130 = x1122 + x1129;
 uint64_t x1131 = x1099 + x1130;
@@ -1228,10 +1084,7 @@ uint64_t x1160 = x1134 + x1159;
 uint64_t x1161 = ((uint64_t) x891) * x90;
 uint64_t x1162 = ((uint64_t) x894) * x89;
 uint64_t x1163 = x1161 + x1162;
-unsigned short x1164 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1164 = Const WO~1~0~0~1;
 uint64_t x1165 = x1164 * x1163;
 uint64_t x1166 = x1160 + x1165;
 uint64_t x1167 = x1133 + x1166;
@@ -1269,10 +1122,7 @@ uint64_t x1198 = x1176 + x1197;
 uint64_t x1199 = x1173 + x1198;
 uint64_t x1200 = x1170 + x1199;
 uint64_t x1201 = ((uint64_t) x891) * x89;
-unsigned short x1202 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1202 = Const WO~1~0~0~1;
 uint64_t x1203 = x1202 * x1201;
 uint64_t x1204 = x1200 + x1203;
 uint64_t x1205 = x1169 + x1204;
@@ -1316,10 +1166,7 @@ uint64_t x1242 = x1208 + x1241;
 uint64_t x1243 = x1207 + x1242;
 uint8_t x1244 = 0b00011001;
 uint64_t x1245 = x1243 >> x1244;
-unsigned short x1246 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1246 = Const WO~1~0~0~1;
 uint64_t x1247 = x1246 * x1245;
 uint32_t x1248 = 0b00000011111111111111111111111111;
 uint32_t x1249 = x957 & x1248;
@@ -1388,10 +1235,7 @@ uint64_t x1311 = x1291 + x1310;
 uint64_t x1312 = x1288 + x1311;
 uint64_t x1313 = x1285 + x1312;
 uint64_t x1314 = x1282 + x1313;
-unsigned short x1315 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1315 = Const WO~1~0~0~1;
 uint64_t x1316 = x1315 * x1314;
 uint64_t x1317 = x1279 + x1316;
 uint8_t x1318 = 0b00011010;
@@ -1414,10 +1258,7 @@ uint64_t x1334 = x1326 + x1333;
 uint64_t x1335 = x1325 + x1334;
 uint64_t x1336 = x1324 + x1335;
 uint64_t x1337 = x1323 + x1336;
-unsigned short x1338 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1338 = Const WO~1~0~0~1;
 uint64_t x1339 = x1338 * x1337;
 uint64_t x1340 = x1322 + x1339;
 uint64_t x1341 = x1319 + x1340;
@@ -1443,10 +1284,7 @@ uint64_t x1360 = x1354 + x1359;
 uint64_t x1361 = x1353 + x1360;
 uint64_t x1362 = x1352 + x1361;
 uint64_t x1363 = x1351 + x1362;
-unsigned short x1364 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1364 = Const WO~1~0~0~1;
 uint64_t x1365 = x1364 * x1363;
 uint64_t x1366 = x1350 + x1365;
 uint64_t x1367 = x1343 + x1366;
@@ -1474,10 +1312,7 @@ uint64_t x1388 = x1384 + x1387;
 uint64_t x1389 = x1383 + x1388;
 uint64_t x1390 = x1382 + x1389;
 uint64_t x1391 = x1381 + x1390;
-unsigned short x1392 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1392 = Const WO~1~0~0~1;
 uint64_t x1393 = x1392 * x1391;
 uint64_t x1394 = x1380 + x1393;
 uint64_t x1395 = x1369 + x1394;
@@ -1507,10 +1342,7 @@ uint64_t x1418 = x1416 + x1417;
 uint64_t x1419 = x1415 + x1418;
 uint64_t x1420 = x1414 + x1419;
 uint64_t x1421 = x1413 + x1420;
-unsigned short x1422 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1422 = Const WO~1~0~0~1;
 uint64_t x1423 = x1422 * x1421;
 uint64_t x1424 = x1412 + x1423;
 uint64_t x1425 = x1397 + x1424;
@@ -1542,10 +1374,7 @@ uint64_t x1450 = ((uint64_t) x882) * x461;
 uint64_t x1451 = x1449 + x1450;
 uint64_t x1452 = x1448 + x1451;
 uint64_t x1453 = x1447 + x1452;
-unsigned short x1454 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1454 = Const WO~1~0~0~1;
 uint64_t x1455 = x1454 * x1453;
 uint64_t x1456 = x1446 + x1455;
 uint64_t x1457 = x1427 + x1456;
@@ -1579,10 +1408,7 @@ uint64_t x1484 = ((uint64_t) x880) * x464;
 uint64_t x1485 = ((uint64_t) x881) * x461;
 uint64_t x1486 = x1484 + x1485;
 uint64_t x1487 = x1483 + x1486;
-unsigned short x1488 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1488 = Const WO~1~0~0~1;
 uint64_t x1489 = x1488 * x1487;
 uint64_t x1490 = x1482 + x1489;
 uint64_t x1491 = x1459 + x1490;
@@ -1618,10 +1444,7 @@ uint64_t x1520 = x1494 + x1519;
 uint64_t x1521 = ((uint64_t) x879) * x464;
 uint64_t x1522 = ((uint64_t) x880) * x461;
 uint64_t x1523 = x1521 + x1522;
-unsigned short x1524 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1524 = Const WO~1~0~0~1;
 uint64_t x1525 = x1524 * x1523;
 uint64_t x1526 = x1520 + x1525;
 uint64_t x1527 = x1493 + x1526;
@@ -1659,10 +1482,7 @@ uint64_t x1558 = x1536 + x1557;
 uint64_t x1559 = x1533 + x1558;
 uint64_t x1560 = x1530 + x1559;
 uint64_t x1561 = ((uint64_t) x879) * x461;
-unsigned short x1562 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1562 = Const WO~1~0~0~1;
 uint64_t x1563 = x1562 * x1561;
 uint64_t x1564 = x1560 + x1563;
 uint64_t x1565 = x1529 + x1564;
@@ -1706,10 +1526,7 @@ uint64_t x1602 = x1568 + x1601;
 uint64_t x1603 = x1567 + x1602;
 uint8_t x1604 = 0b00011001;
 uint64_t x1605 = x1603 >> x1604;
-unsigned short x1606 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1606 = Const WO~1~0~0~1;
 uint64_t x1607 = x1606 * x1605;
 uint32_t x1608 = 0b00000011111111111111111111111111;
 uint32_t x1609 = x1317 & x1608;
@@ -1798,10 +1615,7 @@ uint64_t x1691 = x1671 + x1690;
 uint64_t x1692 = x1668 + x1691;
 uint64_t x1693 = x1665 + x1692;
 uint64_t x1694 = x1662 + x1693;
-unsigned short x1695 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1695 = Const WO~1~0~0~1;
 uint64_t x1696 = x1695 * x1694;
 uint64_t x1697 = x1659 + x1696;
 uint8_t x1698 = 0b00011010;
@@ -1824,10 +1638,7 @@ uint64_t x1714 = x1706 + x1713;
 uint64_t x1715 = x1705 + x1714;
 uint64_t x1716 = x1704 + x1715;
 uint64_t x1717 = x1703 + x1716;
-unsigned short x1718 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1718 = Const WO~1~0~0~1;
 uint64_t x1719 = x1718 * x1717;
 uint64_t x1720 = x1702 + x1719;
 uint64_t x1721 = x1699 + x1720;
@@ -1853,10 +1664,7 @@ uint64_t x1740 = x1734 + x1739;
 uint64_t x1741 = x1733 + x1740;
 uint64_t x1742 = x1732 + x1741;
 uint64_t x1743 = x1731 + x1742;
-unsigned short x1744 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1744 = Const WO~1~0~0~1;
 uint64_t x1745 = x1744 * x1743;
 uint64_t x1746 = x1730 + x1745;
 uint64_t x1747 = x1723 + x1746;
@@ -1884,10 +1692,7 @@ uint64_t x1768 = x1764 + x1767;
 uint64_t x1769 = x1763 + x1768;
 uint64_t x1770 = x1762 + x1769;
 uint64_t x1771 = x1761 + x1770;
-unsigned short x1772 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1772 = Const WO~1~0~0~1;
 uint64_t x1773 = x1772 * x1771;
 uint64_t x1774 = x1760 + x1773;
 uint64_t x1775 = x1749 + x1774;
@@ -1917,10 +1722,7 @@ uint64_t x1798 = x1796 + x1797;
 uint64_t x1799 = x1795 + x1798;
 uint64_t x1800 = x1794 + x1799;
 uint64_t x1801 = x1793 + x1800;
-unsigned short x1802 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1802 = Const WO~1~0~0~1;
 uint64_t x1803 = x1802 * x1801;
 uint64_t x1804 = x1792 + x1803;
 uint64_t x1805 = x1777 + x1804;
@@ -1952,10 +1754,7 @@ uint64_t x1830 = ((uint64_t) x1642) * x1649;
 uint64_t x1831 = x1829 + x1830;
 uint64_t x1832 = x1828 + x1831;
 uint64_t x1833 = x1827 + x1832;
-unsigned short x1834 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1834 = Const WO~1~0~0~1;
 uint64_t x1835 = x1834 * x1833;
 uint64_t x1836 = x1826 + x1835;
 uint64_t x1837 = x1807 + x1836;
@@ -1989,10 +1788,7 @@ uint64_t x1864 = ((uint64_t) x1640) * x1650;
 uint64_t x1865 = ((uint64_t) x1641) * x1649;
 uint64_t x1866 = x1864 + x1865;
 uint64_t x1867 = x1863 + x1866;
-unsigned short x1868 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1868 = Const WO~1~0~0~1;
 uint64_t x1869 = x1868 * x1867;
 uint64_t x1870 = x1862 + x1869;
 uint64_t x1871 = x1839 + x1870;
@@ -2028,10 +1824,7 @@ uint64_t x1900 = x1874 + x1899;
 uint64_t x1901 = ((uint64_t) x1639) * x1650;
 uint64_t x1902 = ((uint64_t) x1640) * x1649;
 uint64_t x1903 = x1901 + x1902;
-unsigned short x1904 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1904 = Const WO~1~0~0~1;
 uint64_t x1905 = x1904 * x1903;
 uint64_t x1906 = x1900 + x1905;
 uint64_t x1907 = x1873 + x1906;
@@ -2069,10 +1862,7 @@ uint64_t x1938 = x1916 + x1937;
 uint64_t x1939 = x1913 + x1938;
 uint64_t x1940 = x1910 + x1939;
 uint64_t x1941 = ((uint64_t) x1639) * x1649;
-unsigned short x1942 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1942 = Const WO~1~0~0~1;
 uint64_t x1943 = x1942 * x1941;
 uint64_t x1944 = x1940 + x1943;
 uint64_t x1945 = x1909 + x1944;
@@ -2116,10 +1906,7 @@ uint64_t x1982 = x1948 + x1981;
 uint64_t x1983 = x1947 + x1982;
 uint8_t x1984 = 0b00011001;
 uint32_t x1985 = (uint32_t) (x1983 >> x1984);
-unsigned short x1986 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x1986 = Const WO~1~0~0~1;
 uint64_t x1987 = ((uint64_t) x1986) * x1985;
 uint32_t x1988 = 0b00000011111111111111111111111111;
 uint32_t x1989 = x1697 & x1988;
@@ -2180,28 +1967,7 @@ uint32_t x2043 = 0b00000011111111111111111111111110;
 uint32_t x2044 = x2043 + x1276;
 uint32_t x2045 = x2044 - x1636;
 uint32_t x2046 = Const
-                   (Word.WS false
-                      (Word.WS true
-                         (Word.WS true
-                            (Word.WS true
-                               (Word.WS false
-                                  (Word.WS true
-                                     (Word.WS true
-                                        (Word.WS true
-                                           (Word.WS true
-                                              (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true ...))))))))))))))))))))));
+                   WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0;
 uint32_t x2047 = x2046 + x1278;
 uint32_t x2048 = x2047 - x1638;
 uint32_t x2049 = 0b00000011111111111111111111111110;
@@ -2232,28 +1998,7 @@ uint32_t x2073 = 0b00000011111111111111111111111110;
 uint32_t x2074 = x2073 + x1276;
 uint32_t x2075 = x2074 - x1636;
 uint32_t x2076 = Const
-                   (Word.WS false
-                      (Word.WS true
-                         (Word.WS true
-                            (Word.WS true
-                               (Word.WS false
-                                  (Word.WS true
-                                     (Word.WS true
-                                        (Word.WS true
-                                           (Word.WS true
-                                              (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true
-                                                 (Word.WS true ...))))))))))))))))))))));
+                   WO~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0;
 uint32_t x2077 = x2076 + x1278;
 uint32_t x2078 = x2077 - x1638;
 uint64_t x2079 = ((uint64_t) x2048) * x2078;
@@ -2292,10 +2037,7 @@ uint64_t x2111 = x2091 + x2110;
 uint64_t x2112 = x2088 + x2111;
 uint64_t x2113 = x2085 + x2112;
 uint64_t x2114 = x2082 + x2113;
-unsigned short x2115 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2115 = Const WO~1~0~0~1;
 uint64_t x2116 = x2115 * x2114;
 uint64_t x2117 = x2079 + x2116;
 uint8_t x2118 = 0b00011010;
@@ -2318,10 +2060,7 @@ uint64_t x2134 = x2126 + x2133;
 uint64_t x2135 = x2125 + x2134;
 uint64_t x2136 = x2124 + x2135;
 uint64_t x2137 = x2123 + x2136;
-unsigned short x2138 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2138 = Const WO~1~0~0~1;
 uint64_t x2139 = x2138 * x2137;
 uint64_t x2140 = x2122 + x2139;
 uint64_t x2141 = x2119 + x2140;
@@ -2347,10 +2086,7 @@ uint64_t x2160 = x2154 + x2159;
 uint64_t x2161 = x2153 + x2160;
 uint64_t x2162 = x2152 + x2161;
 uint64_t x2163 = x2151 + x2162;
-unsigned short x2164 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2164 = Const WO~1~0~0~1;
 uint64_t x2165 = x2164 * x2163;
 uint64_t x2166 = x2150 + x2165;
 uint64_t x2167 = x2143 + x2166;
@@ -2378,10 +2114,7 @@ uint64_t x2188 = x2184 + x2187;
 uint64_t x2189 = x2183 + x2188;
 uint64_t x2190 = x2182 + x2189;
 uint64_t x2191 = x2181 + x2190;
-unsigned short x2192 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2192 = Const WO~1~0~0~1;
 uint64_t x2193 = x2192 * x2191;
 uint64_t x2194 = x2180 + x2193;
 uint64_t x2195 = x2169 + x2194;
@@ -2411,10 +2144,7 @@ uint64_t x2218 = x2216 + x2217;
 uint64_t x2219 = x2215 + x2218;
 uint64_t x2220 = x2214 + x2219;
 uint64_t x2221 = x2213 + x2220;
-unsigned short x2222 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2222 = Const WO~1~0~0~1;
 uint64_t x2223 = x2222 * x2221;
 uint64_t x2224 = x2212 + x2223;
 uint64_t x2225 = x2197 + x2224;
@@ -2446,10 +2176,7 @@ uint64_t x2250 = ((uint64_t) x2030) * x2051;
 uint64_t x2251 = x2249 + x2250;
 uint64_t x2252 = x2248 + x2251;
 uint64_t x2253 = x2247 + x2252;
-unsigned short x2254 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2254 = Const WO~1~0~0~1;
 uint64_t x2255 = x2254 * x2253;
 uint64_t x2256 = x2246 + x2255;
 uint64_t x2257 = x2227 + x2256;
@@ -2483,10 +2210,7 @@ uint64_t x2284 = ((uint64_t) x2024) * x2054;
 uint64_t x2285 = ((uint64_t) x2027) * x2051;
 uint64_t x2286 = x2284 + x2285;
 uint64_t x2287 = x2283 + x2286;
-unsigned short x2288 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2288 = Const WO~1~0~0~1;
 uint64_t x2289 = x2288 * x2287;
 uint64_t x2290 = x2282 + x2289;
 uint64_t x2291 = x2259 + x2290;
@@ -2522,10 +2246,7 @@ uint64_t x2320 = x2294 + x2319;
 uint64_t x2321 = ((uint64_t) x2021) * x2054;
 uint64_t x2322 = ((uint64_t) x2024) * x2051;
 uint64_t x2323 = x2321 + x2322;
-unsigned short x2324 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2324 = Const WO~1~0~0~1;
 uint64_t x2325 = x2324 * x2323;
 uint64_t x2326 = x2320 + x2325;
 uint64_t x2327 = x2293 + x2326;
@@ -2563,10 +2284,7 @@ uint64_t x2358 = x2336 + x2357;
 uint64_t x2359 = x2333 + x2358;
 uint64_t x2360 = x2330 + x2359;
 uint64_t x2361 = ((uint64_t) x2021) * x2051;
-unsigned short x2362 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2362 = Const WO~1~0~0~1;
 uint64_t x2363 = x2362 * x2361;
 uint64_t x2364 = x2360 + x2363;
 uint64_t x2365 = x2329 + x2364;
@@ -2610,10 +2328,7 @@ uint64_t x2402 = x2368 + x2401;
 uint64_t x2403 = x2367 + x2402;
 uint8_t x2404 = 0b00011001;
 uint64_t x2405 = x2403 >> x2404;
-unsigned short x2406 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2406 = Const WO~1~0~0~1;
 uint64_t x2407 = x2406 * x2405;
 uint32_t x2408 = 0b00000011111111111111111111111111;
 uint32_t x2409 = x2117 & x2408;
@@ -2682,10 +2397,7 @@ uint64_t x2471 = x2451 + x2470;
 uint64_t x2472 = x2448 + x2471;
 uint64_t x2473 = x2445 + x2472;
 uint64_t x2474 = x2442 + x2473;
-unsigned short x2475 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2475 = Const WO~1~0~0~1;
 uint64_t x2476 = x2475 * x2474;
 uint64_t x2477 = x2439 + x2476;
 uint8_t x2478 = 0b00011010;
@@ -2708,10 +2420,7 @@ uint64_t x2494 = x2486 + x2493;
 uint64_t x2495 = x2485 + x2494;
 uint64_t x2496 = x2484 + x2495;
 uint64_t x2497 = x2483 + x2496;
-unsigned short x2498 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2498 = Const WO~1~0~0~1;
 uint64_t x2499 = x2498 * x2497;
 uint64_t x2500 = x2482 + x2499;
 uint64_t x2501 = x2479 + x2500;
@@ -2737,10 +2446,7 @@ uint64_t x2520 = x2514 + x2519;
 uint64_t x2521 = x2513 + x2520;
 uint64_t x2522 = x2512 + x2521;
 uint64_t x2523 = x2511 + x2522;
-unsigned short x2524 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2524 = Const WO~1~0~0~1;
 uint64_t x2525 = x2524 * x2523;
 uint64_t x2526 = x2510 + x2525;
 uint64_t x2527 = x2503 + x2526;
@@ -2768,10 +2474,7 @@ uint64_t x2548 = x2544 + x2547;
 uint64_t x2549 = x2543 + x2548;
 uint64_t x2550 = x2542 + x2549;
 uint64_t x2551 = x2541 + x2550;
-unsigned short x2552 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2552 = Const WO~1~0~0~1;
 uint64_t x2553 = x2552 * x2551;
 uint64_t x2554 = x2540 + x2553;
 uint64_t x2555 = x2529 + x2554;
@@ -2801,10 +2504,7 @@ uint64_t x2578 = x2576 + x2577;
 uint64_t x2579 = x2575 + x2578;
 uint64_t x2580 = x2574 + x2579;
 uint64_t x2581 = x2573 + x2580;
-unsigned short x2582 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2582 = Const WO~1~0~0~1;
 uint64_t x2583 = x2582 * x2581;
 uint64_t x2584 = x2572 + x2583;
 uint64_t x2585 = x2557 + x2584;
@@ -2836,10 +2536,7 @@ uint64_t x2610 = ((uint64_t) x42) * x2417;
 uint64_t x2611 = x2609 + x2610;
 uint64_t x2612 = x2608 + x2611;
 uint64_t x2613 = x2607 + x2612;
-unsigned short x2614 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2614 = Const WO~1~0~0~1;
 uint64_t x2615 = x2614 * x2613;
 uint64_t x2616 = x2606 + x2615;
 uint64_t x2617 = x2587 + x2616;
@@ -2873,10 +2570,7 @@ uint64_t x2644 = ((uint64_t) x40) * x2419;
 uint64_t x2645 = ((uint64_t) x41) * x2417;
 uint64_t x2646 = x2644 + x2645;
 uint64_t x2647 = x2643 + x2646;
-unsigned short x2648 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2648 = Const WO~1~0~0~1;
 uint64_t x2649 = x2648 * x2647;
 uint64_t x2650 = x2642 + x2649;
 uint64_t x2651 = x2619 + x2650;
@@ -2912,10 +2606,7 @@ uint64_t x2680 = x2654 + x2679;
 uint64_t x2681 = ((uint64_t) x39) * x2419;
 uint64_t x2682 = ((uint64_t) x40) * x2417;
 uint64_t x2683 = x2681 + x2682;
-unsigned short x2684 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2684 = Const WO~1~0~0~1;
 uint64_t x2685 = x2684 * x2683;
 uint64_t x2686 = x2680 + x2685;
 uint64_t x2687 = x2653 + x2686;
@@ -2953,10 +2644,7 @@ uint64_t x2718 = x2696 + x2717;
 uint64_t x2719 = x2693 + x2718;
 uint64_t x2720 = x2690 + x2719;
 uint64_t x2721 = ((uint64_t) x39) * x2417;
-unsigned short x2722 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2722 = Const WO~1~0~0~1;
 uint64_t x2723 = x2722 * x2721;
 uint64_t x2724 = x2720 + x2723;
 uint64_t x2725 = x2689 + x2724;
@@ -3000,10 +2688,7 @@ uint64_t x2762 = x2728 + x2761;
 uint64_t x2763 = x2727 + x2762;
 uint8_t x2764 = 0b00011001;
 uint32_t x2765 = (uint32_t) (x2763 >> x2764);
-unsigned short x2766 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2766 = Const WO~1~0~0~1;
 uint64_t x2767 = ((uint64_t) x2766) * x2765;
 uint32_t x2768 = 0b00000011111111111111111111111111;
 uint32_t x2769 = x2477 & x2768;
@@ -3072,10 +2757,7 @@ uint64_t x2831 = x2811 + x2830;
 uint64_t x2832 = x2808 + x2831;
 uint64_t x2833 = x2805 + x2832;
 uint64_t x2834 = x2802 + x2833;
-unsigned short x2835 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2835 = Const WO~1~0~0~1;
 uint64_t x2836 = x2835 * x2834;
 uint64_t x2837 = x2799 + x2836;
 uint8_t x2838 = 0b00011010;
@@ -3098,10 +2780,7 @@ uint64_t x2854 = x2846 + x2853;
 uint64_t x2855 = x2845 + x2854;
 uint64_t x2856 = x2844 + x2855;
 uint64_t x2857 = x2843 + x2856;
-unsigned short x2858 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2858 = Const WO~1~0~0~1;
 uint64_t x2859 = x2858 * x2857;
 uint64_t x2860 = x2842 + x2859;
 uint64_t x2861 = x2839 + x2860;
@@ -3127,10 +2806,7 @@ uint64_t x2880 = x2874 + x2879;
 uint64_t x2881 = x2873 + x2880;
 uint64_t x2882 = x2872 + x2881;
 uint64_t x2883 = x2871 + x2882;
-unsigned short x2884 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2884 = Const WO~1~0~0~1;
 uint64_t x2885 = x2884 * x2883;
 uint64_t x2886 = x2870 + x2885;
 uint64_t x2887 = x2863 + x2886;
@@ -3158,10 +2834,7 @@ uint64_t x2908 = x2904 + x2907;
 uint64_t x2909 = x2903 + x2908;
 uint64_t x2910 = x2902 + x2909;
 uint64_t x2911 = x2901 + x2910;
-unsigned short x2912 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2912 = Const WO~1~0~0~1;
 uint64_t x2913 = x2912 * x2911;
 uint64_t x2914 = x2900 + x2913;
 uint64_t x2915 = x2889 + x2914;
@@ -3191,10 +2864,7 @@ uint64_t x2938 = x2936 + x2937;
 uint64_t x2939 = x2935 + x2938;
 uint64_t x2940 = x2934 + x2939;
 uint64_t x2941 = x2933 + x2940;
-unsigned short x2942 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2942 = Const WO~1~0~0~1;
 uint64_t x2943 = x2942 * x2941;
 uint64_t x2944 = x2932 + x2943;
 uint64_t x2945 = x2917 + x2944;
@@ -3226,10 +2896,7 @@ uint64_t x2970 = ((uint64_t) x443) * x827;
 uint64_t x2971 = x2969 + x2970;
 uint64_t x2972 = x2968 + x2971;
 uint64_t x2973 = x2967 + x2972;
-unsigned short x2974 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x2974 = Const WO~1~0~0~1;
 uint64_t x2975 = x2974 * x2973;
 uint64_t x2976 = x2966 + x2975;
 uint64_t x2977 = x2947 + x2976;
@@ -3263,10 +2930,7 @@ uint64_t x3004 = ((uint64_t) x439) * x829;
 uint64_t x3005 = ((uint64_t) x441) * x827;
 uint64_t x3006 = x3004 + x3005;
 uint64_t x3007 = x3003 + x3006;
-unsigned short x3008 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3008 = Const WO~1~0~0~1;
 uint64_t x3009 = x3008 * x3007;
 uint64_t x3010 = x3002 + x3009;
 uint64_t x3011 = x2979 + x3010;
@@ -3302,10 +2966,7 @@ uint64_t x3040 = x3014 + x3039;
 uint64_t x3041 = ((uint64_t) x437) * x829;
 uint64_t x3042 = ((uint64_t) x439) * x827;
 uint64_t x3043 = x3041 + x3042;
-unsigned short x3044 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3044 = Const WO~1~0~0~1;
 uint64_t x3045 = x3044 * x3043;
 uint64_t x3046 = x3040 + x3045;
 uint64_t x3047 = x3013 + x3046;
@@ -3343,10 +3004,7 @@ uint64_t x3078 = x3056 + x3077;
 uint64_t x3079 = x3053 + x3078;
 uint64_t x3080 = x3050 + x3079;
 uint64_t x3081 = ((uint64_t) x437) * x827;
-unsigned short x3082 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3082 = Const WO~1~0~0~1;
 uint64_t x3083 = x3082 * x3081;
 uint64_t x3084 = x3080 + x3083;
 uint64_t x3085 = x3049 + x3084;
@@ -3390,10 +3048,7 @@ uint64_t x3122 = x3088 + x3121;
 uint64_t x3123 = x3087 + x3122;
 uint8_t x3124 = 0b00011001;
 uint32_t x3125 = (uint32_t) (x3123 >> x3124);
-unsigned short x3126 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3126 = Const WO~1~0~0~1;
 uint64_t x3127 = ((uint64_t) x3126) * x3125;
 uint32_t x3128 = 0b00000011111111111111111111111111;
 uint32_t x3129 = x2837 & x3128;
@@ -3462,10 +3117,7 @@ uint64_t x3191 = x3171 + x3190;
 uint64_t x3192 = x3168 + x3191;
 uint64_t x3193 = x3165 + x3192;
 uint64_t x3194 = x3162 + x3193;
-unsigned short x3195 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3195 = Const WO~1~0~0~1;
 uint64_t x3196 = x3195 * x3194;
 uint64_t x3197 = x3159 + x3196;
 uint8_t x3198 = 0b00011010;
@@ -3488,10 +3140,7 @@ uint64_t x3214 = x3206 + x3213;
 uint64_t x3215 = x3205 + x3214;
 uint64_t x3216 = x3204 + x3215;
 uint64_t x3217 = x3203 + x3216;
-unsigned short x3218 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3218 = Const WO~1~0~0~1;
 uint64_t x3219 = x3218 * x3217;
 uint64_t x3220 = x3202 + x3219;
 uint64_t x3221 = x3199 + x3220;
@@ -3517,10 +3166,7 @@ uint64_t x3240 = x3234 + x3239;
 uint64_t x3241 = x3233 + x3240;
 uint64_t x3242 = x3232 + x3241;
 uint64_t x3243 = x3231 + x3242;
-unsigned short x3244 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3244 = Const WO~1~0~0~1;
 uint64_t x3245 = x3244 * x3243;
 uint64_t x3246 = x3230 + x3245;
 uint64_t x3247 = x3223 + x3246;
@@ -3548,10 +3194,7 @@ uint64_t x3268 = x3264 + x3267;
 uint64_t x3269 = x3263 + x3268;
 uint64_t x3270 = x3262 + x3269;
 uint64_t x3271 = x3261 + x3270;
-unsigned short x3272 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3272 = Const WO~1~0~0~1;
 uint64_t x3273 = x3272 * x3271;
 uint64_t x3274 = x3260 + x3273;
 uint64_t x3275 = x3249 + x3274;
@@ -3581,10 +3224,7 @@ uint64_t x3298 = x3296 + x3297;
 uint64_t x3299 = x3295 + x3298;
 uint64_t x3300 = x3294 + x3299;
 uint64_t x3301 = x3293 + x3300;
-unsigned short x3302 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3302 = Const WO~1~0~0~1;
 uint64_t x3303 = x3302 * x3301;
 uint64_t x3304 = x3292 + x3303;
 uint64_t x3305 = x3277 + x3304;
@@ -3616,10 +3256,7 @@ uint64_t x3330 = ((uint64_t) x32) * x851;
 uint64_t x3331 = x3329 + x3330;
 uint64_t x3332 = x3328 + x3331;
 uint64_t x3333 = x3327 + x3332;
-unsigned short x3334 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3334 = Const WO~1~0~0~1;
 uint64_t x3335 = x3334 * x3333;
 uint64_t x3336 = x3326 + x3335;
 uint64_t x3337 = x3307 + x3336;
@@ -3653,10 +3290,7 @@ uint64_t x3364 = ((uint64_t) x30) * x854;
 uint64_t x3365 = ((uint64_t) x31) * x851;
 uint64_t x3366 = x3364 + x3365;
 uint64_t x3367 = x3363 + x3366;
-unsigned short x3368 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3368 = Const WO~1~0~0~1;
 uint64_t x3369 = x3368 * x3367;
 uint64_t x3370 = x3362 + x3369;
 uint64_t x3371 = x3339 + x3370;
@@ -3692,10 +3326,7 @@ uint64_t x3400 = x3374 + x3399;
 uint64_t x3401 = ((uint64_t) x29) * x854;
 uint64_t x3402 = ((uint64_t) x30) * x851;
 uint64_t x3403 = x3401 + x3402;
-unsigned short x3404 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3404 = Const WO~1~0~0~1;
 uint64_t x3405 = x3404 * x3403;
 uint64_t x3406 = x3400 + x3405;
 uint64_t x3407 = x3373 + x3406;
@@ -3733,10 +3364,7 @@ uint64_t x3438 = x3416 + x3437;
 uint64_t x3439 = x3413 + x3438;
 uint64_t x3440 = x3410 + x3439;
 uint64_t x3441 = ((uint64_t) x29) * x851;
-unsigned short x3442 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3442 = Const WO~1~0~0~1;
 uint64_t x3443 = x3442 * x3441;
 uint64_t x3444 = x3440 + x3443;
 uint64_t x3445 = x3409 + x3444;
@@ -3780,10 +3408,7 @@ uint64_t x3482 = x3448 + x3481;
 uint64_t x3483 = x3447 + x3482;
 uint8_t x3484 = 0b00011001;
 uint32_t x3485 = (uint32_t) (x3483 >> x3484);
-unsigned short x3486 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3486 = Const WO~1~0~0~1;
 uint64_t x3487 = ((uint64_t) x3486) * x3485;
 uint32_t x3488 = 0b00000011111111111111111111111111;
 uint32_t x3489 = x3197 & x3488;
@@ -3862,10 +3487,7 @@ uint64_t x3561 = x3541 + x3560;
 uint64_t x3562 = x3538 + x3561;
 uint64_t x3563 = x3535 + x3562;
 uint64_t x3564 = x3532 + x3563;
-unsigned short x3565 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3565 = Const WO~1~0~0~1;
 uint64_t x3566 = x3565 * x3564;
 uint64_t x3567 = x3529 + x3566;
 uint8_t x3568 = 0b00011010;
@@ -3888,10 +3510,7 @@ uint64_t x3584 = x3576 + x3583;
 uint64_t x3585 = x3575 + x3584;
 uint64_t x3586 = x3574 + x3585;
 uint64_t x3587 = x3573 + x3586;
-unsigned short x3588 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3588 = Const WO~1~0~0~1;
 uint64_t x3589 = x3588 * x3587;
 uint64_t x3590 = x3572 + x3589;
 uint64_t x3591 = x3569 + x3590;
@@ -3917,10 +3536,7 @@ uint64_t x3610 = x3604 + x3609;
 uint64_t x3611 = x3603 + x3610;
 uint64_t x3612 = x3602 + x3611;
 uint64_t x3613 = x3601 + x3612;
-unsigned short x3614 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3614 = Const WO~1~0~0~1;
 uint64_t x3615 = x3614 * x3613;
 uint64_t x3616 = x3600 + x3615;
 uint64_t x3617 = x3593 + x3616;
@@ -3948,10 +3564,7 @@ uint64_t x3638 = x3634 + x3637;
 uint64_t x3639 = x3633 + x3638;
 uint64_t x3640 = x3632 + x3639;
 uint64_t x3641 = x3631 + x3640;
-unsigned short x3642 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3642 = Const WO~1~0~0~1;
 uint64_t x3643 = x3642 * x3641;
 uint64_t x3644 = x3630 + x3643;
 uint64_t x3645 = x3619 + x3644;
@@ -3981,10 +3594,7 @@ uint64_t x3668 = x3666 + x3667;
 uint64_t x3669 = x3665 + x3668;
 uint64_t x3670 = x3664 + x3669;
 uint64_t x3671 = x3663 + x3670;
-unsigned short x3672 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3672 = Const WO~1~0~0~1;
 uint64_t x3673 = x3672 * x3671;
 uint64_t x3674 = x3662 + x3673;
 uint64_t x3675 = x3647 + x3674;
@@ -4016,10 +3626,7 @@ uint64_t x3700 = ((uint64_t) x860) * x3519;
 uint64_t x3701 = x3699 + x3700;
 uint64_t x3702 = x3698 + x3701;
 uint64_t x3703 = x3697 + x3702;
-unsigned short x3704 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3704 = Const WO~1~0~0~1;
 uint64_t x3705 = x3704 * x3703;
 uint64_t x3706 = x3696 + x3705;
 uint64_t x3707 = x3677 + x3706;
@@ -4053,10 +3660,7 @@ uint64_t x3734 = ((uint64_t) x854) * x3520;
 uint64_t x3735 = ((uint64_t) x857) * x3519;
 uint64_t x3736 = x3734 + x3735;
 uint64_t x3737 = x3733 + x3736;
-unsigned short x3738 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3738 = Const WO~1~0~0~1;
 uint64_t x3739 = x3738 * x3737;
 uint64_t x3740 = x3732 + x3739;
 uint64_t x3741 = x3709 + x3740;
@@ -4092,10 +3696,7 @@ uint64_t x3770 = x3744 + x3769;
 uint64_t x3771 = ((uint64_t) x851) * x3520;
 uint64_t x3772 = ((uint64_t) x854) * x3519;
 uint64_t x3773 = x3771 + x3772;
-unsigned short x3774 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3774 = Const WO~1~0~0~1;
 uint64_t x3775 = x3774 * x3773;
 uint64_t x3776 = x3770 + x3775;
 uint64_t x3777 = x3743 + x3776;
@@ -4133,10 +3734,7 @@ uint64_t x3808 = x3786 + x3807;
 uint64_t x3809 = x3783 + x3808;
 uint64_t x3810 = x3780 + x3809;
 uint64_t x3811 = ((uint64_t) x851) * x3519;
-unsigned short x3812 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3812 = Const WO~1~0~0~1;
 uint64_t x3813 = x3812 * x3811;
 uint64_t x3814 = x3810 + x3813;
 uint64_t x3815 = x3779 + x3814;
@@ -4180,10 +3778,7 @@ uint64_t x3852 = x3818 + x3851;
 uint64_t x3853 = x3817 + x3852;
 uint8_t x3854 = 0b00011001;
 uint32_t x3855 = (uint32_t) (x3853 >> x3854);
-unsigned short x3856 = Const
-                         (Word.WS true
-                            (Word.WS false
-                               (Word.WS false (Word.WS true Word.WO))));
+unsigned short x3856 = Const WO~1~0~0~1;
 uint64_t x3857 = ((uint64_t) x3856) * x3855;
 uint32_t x3858 = 0b00000011111111111111111111111111;
 uint32_t x3859 = x3567 & x3858;
