@@ -9,10 +9,13 @@ Notation bounded_sig rexprZ_sig expr_bounds
 Notation make_bounded_sig rexprZ_sig expr_bounds
   := (let k := Bounds.MapBounds (proj1_sig rexprZ_sig) expr_bounds in
       exist (fun expr => expr = k) k eq_refl).
+Notation compute_bounds rexprZ_sig expr_bounds
+  := (Bounds.ComputeBounds (proj1_sig rexprZ_sig) ExprBinOp_bounds).
 
 Time Definition raddBounds_sig : bounded_sig raddZ_sig ExprBinOp_bounds
   := Eval vm_compute in make_bounded_sig raddZ_sig ExprBinOp_bounds.
-Definition raddW := Eval cbv [proj1_sig raddBounds_sig] in proj1_sig raddBounds_sig.
+Definition raddW : Expr _ := Eval cbv [proj1_sig raddBounds_sig] in proj1_sig raddBounds_sig.
+Definition radd_output_bounds := Eval vm_compute in compute_bounds raddZ_sig ExprBinOp_bounds.
 
 (*Import Reflection.Syntax.
 Compute proj1_sig raddZ_sig.
