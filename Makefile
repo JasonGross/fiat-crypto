@@ -97,7 +97,7 @@ Makefile.coq: Makefile _CoqProject
 
 $(DISPLAY_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Reflection/Z/CNotations.vo
 	$(SHOW)"COQC $*Display > $@"
-	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@
+	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@.tmp && mv -f $@.tmp $@
 
 src/Experiments/Ed25519_noimports.hs: src/Experiments/Ed25519Extraction.vo src/Experiments/Ed25519Extraction.v
 
