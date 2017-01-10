@@ -319,4 +319,38 @@ Module Import Bounds.
              (input_bounds : interp_all_binders_for t interp_base_type)
     : interp_flat_type interp_base_type (remove_all_binders t)
     := Application.ApplyInterpedAll (interp (@interp_op) (MapInterp of_interp e interp_base_type)) input_bounds.
+
+  (*Definition mapf_interpToZ_T (T : flat_type base_type) : flat_type base_type
+    :=
+*)
+  Definition mapf_interpToZ {T} : interp_flat_type Syntax.interp_base_type T -> interp_flat_type (fun _ => Z) T
+    := SmartVarfMap (fun _ => interpToZ).
+
+  Fixpoint Zis_bounded_by {T1 T2} : interp_flat_type (fun _ : base_type => Z) T1 -> interp_flat_type interp_base_type T2 -> bool
+    := match T1, T2 return interp_flat_type (fun _ => Z) T1 -> interp_flat_type interp_base_type T2 -> bool with
+       | Tbase T1, Tbase T2
+         => fun val bounds
+            => match bounds with
+               | Some bounds'
+                 => (lower bounds' <=? val) && (val <=? upper bounds')
+               | None => false
+               end
+       | Prod A1 B1, Prod A2 B2
+         => fun x y => @Zis_bounded_by A1 A2 (fst x) (fst y) && @Zis_bounded_by B1 B2 (snd x) (snd y)
+       | Tbase _, _
+       | Prod _ _, _
+         => fun _ _ => false
+       end%bool%Z.
+  Definition is_bounded_by {T1 T2} : interp_flat_type Syntax.interp_base_type T1 -> interp_flat_type interp_base_type T2 -> bool
+    := fun x y => Zis_bounded_by (mapf_interpToZ x) y.
+(*
+  Definition is_bounded_and_correct {T1 T2 TB}
+             (interpreted_val : interp_flat_type Syntax.interp_base_type T1)
+             (orig_val : interp_flat_type Syntax.interp_base_type T2)
+             (bounds : interp_flat_type interp_base_type TB)
+    : Prop
+    := mapf_interpToZ interpreted_val = orig_val
+
+  (((Tuple.map (n:=k) fe25519WToZ irop = op)
+       /\ HList.hlistP (fun v => is_bounded v = true) (Tuple.map (n:=k) fe25519WToZ irop))%type)*)
 End Bounds.
