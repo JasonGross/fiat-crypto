@@ -33,7 +33,6 @@ Section language.
            | [ |- Prod _ _ = Prod _ _ ] => apply f_equal2
            | [ |- Arrow _ _ = Arrow _ _ ] => apply f_equal2
            | [ |- Tbase _ = Tbase _ ] => apply f_equal
-           | [ |- Tflat _ = Tflat _ ] => apply f_equal
            | [ H : forall Y, _ = true -> _ = Y |- _ = ?Y' ]
              => is_var Y'; apply H; solve [ t ]
            | [ H : forall X Y, X = Y -> _ = true |- _ = true ]
@@ -59,13 +58,9 @@ Section language.
        | right pf => right (fun pf' => let pf'' := eq_sym (flat_type_dec_lb _ _ pf') in
                                        Bool.diff_true_false (eq_trans pf'' pf))
        end.
-  Fixpoint type_beq (X Y : type) {struct X} : bool
+  Definition type_beq (X Y : type) : bool
     := match X, Y with
-       | Tflat T, Tflat T0 => flat_type_beq T T0
-       | Arrow A B, Arrow A0 B0 => (eq_base_type_code A A0 && type_beq B B0)%bool
-       | Tflat _, _
-       | Arrow _ _, _
-         => false
+       | Arrow A B, Arrow A0 B0 => (flat_type_beq A A0 && flat_type_beq B B0)%bool
        end.
   Lemma type_dec_bl X : forall Y, type_beq X Y = true -> X = Y.
   Proof. clear base_type_code_lb; pose proof flat_type_dec_bl; induction X, Y; t. Defined.
@@ -143,36 +138,18 @@ Section encode_decode.
   Proof. intro p; specialize (f (flat_type_encode p)); destruct t1, p; exact f. Defined.
 
   Definition type_code (t1 t2 : type)
-    := match t1, t2 with
-       | Tflat T1, Tflat T2 => T1 = T2
-       | Arrow A1 B1, Arrow A2 B2 => A1 = A2 /\ B1 = B2
-       | Tflat _, _
-       | Arrow _ _, _
-         => False
-       end.
+    := domain t1 = domain t2 /\ codomain t1 = codomain t2.
   Definition type_encode {t1 t2} : t1 = t2 -> type_code t1 t2
-    := match t1, t2 return t1 = t2 -> type_code t1 t2 with
-       | Tflat T1, Tflat T2 => fun H => match H with eq_refl => eq_refl end
-       | Arrow A1 B1, Arrow A2 B2
-         => fun H => conj (match H with eq_refl => eq_refl end)
-                          (match H with eq_refl => eq_refl end)
-       | Tflat _, _
-       | Arrow _ _, _
-         => fun H => match H with eq_refl => I end
-       end.
+    := fun H => conj (f_equal _ H) (f_equal _ H).
   Definition type_decode {t1 t2} : type_code t1 t2 -> t1 = t2
     := match t1, t2 return type_code t1 t2 -> t1 = t2 with
-       | Tflat T1, Tflat T2 => fun H => f_equal Tflat H
        | Arrow A1 B1, Arrow A2 B2
          => fun H => f_equal2 Arrow (let (a, b) := H in a) (let (a, b) := H in b)
-       | Tflat _, _
-       | Arrow _ _, _
-         => fun H : False => match H with end
        end.
   Lemma type_endecode {t1 t2} H : type_decode (@type_encode t1 t2 H) = H.
   Proof. subst t2; destruct t1; reflexivity. Defined.
   Lemma type_deencode {t1 t2} H : type_encode (@type_decode t1 t2 H) = H.
-  Proof. destruct t1, t2; destruct H; subst; reflexivity. Defined.
+  Proof. destruct t1, t2; destruct H; simpl in *; subst; reflexivity. Defined.
 
   Definition path_type_rect {t1 t2 : type} (P : t1 = t2 -> Type)
              (f : forall p, P (type_decode p))
@@ -209,10 +186,6 @@ Ltac inversion_flat_type := repeat inversion_flat_type_step.
 
 Ltac inversion_type_step :=
   lazymatch goal with
-  | [ H : _ = Tflat _ |- _ ]
-    => induction_type_in_using H @path_type_rect
-  | [ H : Tflat _ = _ |- _ ]
-    => induction_type_in_using H @path_type_rect
   | [ H : _ = Arrow _ _ |- _ ]
     => induction_type_in_using H @path_type_rect
   | [ H : Arrow _ _ = _ |- _ ]

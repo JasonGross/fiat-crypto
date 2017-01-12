@@ -3,7 +3,6 @@ Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Relations.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.Z.InterpretationsGen.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Import Crypto.Reflection.Z.Interpretations64.Relations.
@@ -25,7 +24,7 @@ Module Relations.
          | Arrow A B
            => fun f g
               => forall x y, interp_flat_type_rel_pointwise2 R x y
-                             -> interp_flat_type_rel_pointwise2 R (ApplyInterpedAll f x) (ApplyInterpedAll g y)
+                             -> interp_flat_type_rel_pointwise2 R (f x) (g y)
          end.
 
     Lemma uncurry_interp_type_rel_pointwise2
@@ -60,8 +59,8 @@ Module Relations.
            => fun f g
               => forall x : interp_flat_type interp_base_type1 (all_binders_for (Arrow A B)),
                   let y := SmartVarfMap proj x in
-                  let fx := ApplyInterpedAll f x in
-                  let gy := ApplyInterpedAll g y in
+                  let fx := f x in
+                  let gy := g y in
                   @R _ fx gy
          end.
 
@@ -111,8 +110,8 @@ Module Relations.
            => fun f g
               => forall x : interp_flat_type (fun _ => interp_base_type1) (all_binders_for (Arrow A B)),
                   let y := SmartVarfMap proj_option x in
-                  let fx := ApplyInterpedAll f (LiftOption.to' (Some x)) in
-                  let gy := ApplyInterpedAll g y in
+                  let fx := f (LiftOption.to' (Some x)) in
+                  let gy := g y in
                   @R _ fx gy
          end.
 
@@ -171,8 +170,8 @@ Module Relations.
            => fun f g
               => forall x : interp_flat_type (fun _ => interp_base_type1) (all_binders_for (Arrow A B)),
                   let y := SmartVarfMap (fun _ => proj) x in
-                  let fx := ApplyInterpedAll f (LiftOption.to' (Some x)) in
-                  let gy := ApplyInterpedAll g (LiftOption.to' (Some y)) in
+                  let fx := f (LiftOption.to' (Some x)) in
+                  let gy := g (LiftOption.to' (Some y)) in
                   @R _ fx gy
          end.
 
@@ -230,9 +229,9 @@ Module Relations.
               => forall x : interp_flat_type (fun _ => interp_base_type0) (all_binders_for (Arrow A B)),
                   let x' := SmartVarfMap proj01 x in
                   let y' := SmartVarfMap proj x' in
-                  let fx := ApplyInterpedAll f x' in
-                  let gy := ApplyInterpedAll g y' in
-                  let f0x := LiftOption.of' (ApplyInterpedAll f0 (LiftOption.to' (Some x))) in
+                  let fx := f x' in
+                  let gy := g y' in
+                  let f0x := LiftOption.of' (f0 (LiftOption.to' (Some x))) in
                   match f0x with
                   | Some _ => True
                   | None => False
@@ -298,9 +297,9 @@ Module Relations.
               => forall x : interp_flat_type (fun _ => interp_base_type0) (all_binders_for (Arrow A B)),
                   let x' := SmartVarfMap (fun _ => proj01) x in
                   let y' := SmartVarfMap proj02 x in
-                  let fx := LiftOption.of' (ApplyInterpedAll f (LiftOption.to' (Some x'))) in
-                  let gy := ApplyInterpedAll g y' in
-                  let f0x := LiftOption.of' (ApplyInterpedAll f0 (LiftOption.to' (Some x))) in
+                  let fx := LiftOption.of' (f (LiftOption.to' (Some x'))) in
+                  let gy := g y' in
+                  let f0x := LiftOption.of' (f0 (LiftOption.to' (Some x))) in
                   match f0x with
                   | Some _ => True
                   | None => False

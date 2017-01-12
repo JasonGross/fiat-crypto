@@ -48,21 +48,10 @@ Section language.
   Definition preinvert_Arrow (P : type base_type_code -> Type) (Q : forall A B, P (Arrow A B) -> Type)
     : (forall t (p : P t), match t return P t -> Type with
                            | Arrow A B => Q A B
-                           | _ => fun _ => True
                            end p)
       -> forall A B p, Q A B p.
   Proof.
     intros H A B p; specialize (H _ p); assumption.
-  Defined.
-
-  Definition preinvert_Tflat (P : type base_type_code -> Type) (Q : forall T, P (Tflat T) -> Type)
-    : (forall t (p : P t), match t return P t -> Type with
-                           | Tflat T => Q T
-                           | _ => fun _ => True
-                           end p)
-      -> forall T p, Q T p.
-  Proof.
-    intros H T p; specialize (H _ p); assumption.
   Defined.
 End language.
 
@@ -99,11 +88,6 @@ Ltac preinvert_one_type e :=
   | ?P Unit
     => revert dependent e;
        refine (preinvert_Unit P _ _)
-  | ?P (Tflat ?T)
-    => is_var T;
-       move e at top;
-       revert dependent T;
-       refine (preinvert_Tflat P _ _)
   | ?P (Arrow ?A ?B)
     => is_var A; is_var B;
        move e at top; revert dependent A; intros A e;

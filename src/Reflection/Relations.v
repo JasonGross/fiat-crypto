@@ -13,27 +13,6 @@ Section language.
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
 
-  Section type.
-    Context (interp_flat_type : flat_type -> Type)
-            (R : forall t, interp_flat_type t -> interp_flat_type t -> Prop).
-    Local Notation interp_type_gen := (interp_type_gen interp_flat_type).
-    Fixpoint interp_type_gen_rel_pointwise (t : type)
-      : interp_type_gen t -> interp_type_gen t -> Prop :=
-      match t with
-      | Tflat t => R t
-      | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
-      end.
-    Global Instance interp_type_gen_rel_pointwise_Reflexive {H : forall t, Reflexive (R t)}
-      : forall t, Reflexive (interp_type_gen_rel_pointwise t).
-    Proof. induction t; repeat intro; reflexivity. Qed.
-    Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
-      : forall t, Symmetric (interp_type_gen_rel_pointwise t).
-    Proof. induction t; simpl; repeat intro; symmetry; eauto. Qed.
-    Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
-      : forall t, Transitive (interp_type_gen_rel_pointwise t).
-    Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
-  End type.
-
   Section flat_type0.
     Context {interp_base_type : base_type_code -> Type}
             (R : forall t, interp_base_type t -> Prop).
@@ -60,54 +39,39 @@ Section language.
       | Prod _ _ => fun x y => interp_flat_type_rel_pointwise _ (fst x) (fst y)
                                /\ interp_flat_type_rel_pointwise _ (snd x) (snd y)
       end.
-    Definition interp_type_rel_pointwise
-      := interp_type_gen_rel_pointwise _ interp_flat_type_rel_pointwise.
   End flat_type.
 
   Section rel_pointwise2.
     Section type.
       Section hetero_hetero.
-        Context (interp_src1 interp_src2 : base_type_code -> Type)
+        Context (interp_src1 interp_src2 : flat_type -> Type)
                 (interp_dst1 interp_dst2 : flat_type -> Type)
                 (Rsrc : forall t1 t2, interp_src1 t1 -> interp_src2 t2 -> Prop)
                 (Rdst : forall t1 t2, interp_dst1 t1 -> interp_dst2 t2 -> Prop).
 
-        Fixpoint interp_type_gen_rel_pointwise2_hetero_hetero (t1 t2 : type)
+        Definition interp_type_gen_rel_pointwise2_hetero_hetero (t1 t2 : type)
           : interp_type_gen_hetero interp_src1 interp_dst1 t1
             -> interp_type_gen_hetero interp_src2 interp_dst2 t2
             -> Prop
-          := match t1, t2 with
-             | Tflat t1, Tflat t2 => Rdst t1 t2
-             | Arrow src1 dst1, Arrow src2 dst2
-               => @respectful_hetero _ _ _ _ (Rsrc src1 src2) (fun _ _ => interp_type_gen_rel_pointwise2_hetero_hetero dst1 dst2)
-             | Tflat _, _
-             | Arrow _ _, _
-               => fun _ _ => False
-             end.
+          := @respectful_hetero _ _ _ _ (Rsrc _ _) (fun _ _ => Rdst _ _).
         Global Arguments interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ / .
       End hetero_hetero.
       Section hetero.
-        Context (interp_src1 interp_src2 : base_type_code -> Type)
+        Context (interp_src1 interp_src2 : flat_type -> Type)
                 (interp_dst1 interp_dst2 : flat_type -> Type)
                 (Rsrc : forall t, interp_src1 t -> interp_src2 t -> Prop)
                 (Rdst : forall t, interp_dst1 t -> interp_dst2 t -> Prop).
 
-        Fixpoint interp_type_gen_rel_pointwise2_hetero (t : type)
+        Definition interp_type_gen_rel_pointwise2_hetero (t : type)
           : interp_type_gen_hetero interp_src1 interp_dst1 t
             -> interp_type_gen_hetero interp_src2 interp_dst2 t
             -> Prop
-          := match t with
-             | Tflat t => Rdst t
-             | Arrow src dst => @respectful_hetero _ _ _ _ (Rsrc src) (fun _ _ => interp_type_gen_rel_pointwise2_hetero dst)
-             end.
+          := @respectful_hetero _ _ _ _ (Rsrc _) (fun _ _ => Rdst _).
         Global Arguments interp_type_gen_rel_pointwise2_hetero _ _ _ / .
       End hetero.
       Section homogenous.
         Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
                 (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
-
-        Let Tbase := (@Tbase base_type_code).
-        Local Coercion Tbase : base_type_code >-> flat_type.
 
         Definition interp_type_gen_rel_pointwise2
           : forall t,
@@ -117,6 +81,7 @@ Section language.
           := interp_type_gen_rel_pointwise2_hetero interp_flat_type1 interp_flat_type2
                                                    interp_flat_type1 interp_flat_type2
                                                    R R.
+        Global Arguments interp_type_gen_rel_pointwise2 _ _ _ / .
       End homogenous.
       Global Arguments interp_type_gen_rel_pointwise2 _ _ _ _ _ _ / .
     End type.
@@ -171,16 +136,11 @@ Section language.
           <-> interp_flat_type_rel_pointwise2_hetero R t t x y.
       Proof. induction t; simpl; rewrite_hyp ?*; reflexivity. Qed.
 
-      Section with_coercion.
-        Let Tbase := (@Tbase base_type_code).
-        Local Coercion Tbase : base_type_code >-> flat_type.
-
-        Definition interp_type_rel_pointwise2_hetero R
-          : forall t1 t2, interp_type interp_base_type1 t1
-                          -> interp_type interp_base_type2 t2
-                          -> Prop
-          := interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ (interp_flat_type_rel_pointwise2_hetero R) (interp_flat_type_rel_pointwise2_hetero R).
-      End with_coercion.
+      Definition interp_type_rel_pointwise2_hetero R
+        : forall t1 t2, interp_type interp_base_type1 t1
+                        -> interp_type interp_base_type2 t2
+                        -> Prop
+        := interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ (interp_flat_type_rel_pointwise2_hetero R) (interp_flat_type_rel_pointwise2_hetero R).
       Global Arguments interp_type_rel_pointwise2_hetero _ !_ !_ _ _ / .
 
       Definition interp_type_rel_pointwise2 R
@@ -246,6 +206,30 @@ Section language.
             t x y
           <-> SmartVarfMap f x = y.
       Proof. rewrite lift_interp_flat_type_rel_pointwise2_f_eq, SmartVarfMap_id; reflexivity. Qed.
+      Lemma lift_interp_type_rel_pointwise2_f_eq {T} (f g : forall t, _ -> T t) t x y
+        : interp_type_rel_pointwise2
+            interp_base_type1 interp_base_type2
+            (fun t x y => f t x = g t y)
+            t x y
+          <-> (forall a b, SmartVarfMap f a = SmartVarfMap g b -> SmartVarfMap f (x a) = SmartVarfMap g (y b)).
+      Proof.
+        destruct t; simpl; unfold interp_type_rel_pointwise2, respectful_hetero.
+        setoid_rewrite lift_interp_flat_type_rel_pointwise2_f_eq; reflexivity.
+      Qed.
+      Lemma lift_interp_type_rel_pointwise2_f_eq_id1 (f : forall t, _ -> _) t x y
+        : interp_type_rel_pointwise2
+            interp_base_type1 interp_base_type2
+            (fun t x y => x = f t y)
+            t x y
+          <-> (forall a, x (SmartVarfMap f a) = SmartVarfMap f (y a)).
+      Proof. rewrite lift_interp_type_rel_pointwise2_f_eq; setoid_rewrite SmartVarfMap_id; firstorder (subst; eauto). Qed.
+      Lemma lift_interp_type_rel_pointwise2_f_eq_id2 (f : forall t, _ -> _) t x y
+        : interp_type_rel_pointwise2
+            interp_base_type1 interp_base_type2
+            (fun t x y => f t x = y)
+            t x y
+          <-> (forall a, SmartVarfMap f (x a) = y (SmartVarfMap f a)).
+      Proof. rewrite lift_interp_type_rel_pointwise2_f_eq; setoid_rewrite SmartVarfMap_id; firstorder (subst; eauto). Qed.
     End flat_type2.
   End lifting.
 
@@ -283,7 +267,4 @@ Global Arguments interp_flat_type_rel_pointwise2_hetero_gen_Prop {_ _ _ P} and T
 Global Arguments interp_flat_type_rel_pointwise2_hetero {_ _ _} R {t1 t2} _ _.
 Global Arguments interp_flat_type_rel_pointwise0 {_ _} R {t} _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
-Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
-Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
-Global Arguments interp_type_gen_rel_pointwise {_ _} _ {_} _ _.
 Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.

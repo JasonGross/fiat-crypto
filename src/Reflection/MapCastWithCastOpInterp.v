@@ -1,0 +1,666 @@
+Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
+Require Import Crypto.Reflection.SmartMap.
+Require Import Crypto.Reflection.ExprInversion.
+Require Import Crypto.Reflection.MapCastWithCastOp.
+Require Import Crypto.Reflection.MapCastInterp.
+Require Import Crypto.Reflection.Relations.
+Require Import Crypto.Reflection.WfProofs.
+Require Import Crypto.Reflection.WfInversion.
+Require Import Crypto.Reflection.Equality.
+Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Sumbool.
+Require Import Crypto.Util.Equality.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
+
+Local Open Scope ctype_scope.
+Local Open Scope expr_scope.
+Section language.
+  Context {base_type_code : Type}
+          {interp_base_type1 : base_type_code -> Type}
+          {interp_base_type2 : base_type_code -> Type}
+          {op : flat_type base_type_code -> flat_type base_type_code -> Type}
+          (interp_op1 : forall src dst, op src dst -> interp_flat_type interp_base_type1 src -> interp_flat_type interp_base_type1 dst)
+          (interp_op2 : forall src dst, op src dst -> interp_flat_type interp_base_type2 src -> interp_flat_type interp_base_type2 dst)
+          (base_type_code_beq : base_type_code -> base_type_code -> bool)
+          (base_type_code_bl : forall x y, base_type_code_beq x y = true -> x = y)
+          (base_type_code_lb : forall x y, x = y -> base_type_code_beq x y = true)
+          (failv : forall {var t}, @exprf base_type_code op var (Tbase t))
+          (new_base_type : forall t, interp_base_type2 t -> base_type_code)
+          (Cast : forall var t1 t2, @exprf base_type_code op var (Tbase t1)
+                                    -> @exprf base_type_code op var (Tbase t2))
+          (is_cast : forall t1 t2, op t1 t2 -> bool).
+  Local Notation new_flat_type (*: forall t, interp_flat_type interp_base_type2 t -> flat_type base_type_code1*)
+    := (@SmartFlatTypeMap2 _ _ interp_base_type2 (fun t v => Tbase (new_base_type t v))).
+  Context (new_op : forall ovar src1 dst1 src2 dst2 (opc1 : op src1 dst1) (opc2 : op src2 dst2)
+                           args2,
+              option { new_src : _ & (@exprf base_type_code op ovar new_src
+                                      -> @exprf base_type_code op ovar (new_flat_type (interpf interp_op2 (Op opc2 args2))))%type }).
+  Context (R' : forall t1 t2, interp_base_type1 t1 -> interp_base_type2 t2 -> Prop).
+  Local Notation Rt t1 t2 x y (*t1 t2 (x : interp_flat_type interp_base_type1 t1) (y : interp_flat_type interp_base_type2 t2)*)
+    := (interp_flat_type_rel_pointwise2_hetero (t1:=t1) (t2:=t2) R' x y).
+  Local Notation R x y := (Rt _ _ x y).
+  Local Notation RTt t1 t2 x y
+    := (interp_type_rel_pointwise2_hetero (t1:=t1) (t2:=t2) R' x y).
+  Local Notation RT x y := (RTt _ _ x y).
+
+  Local Notation mapf_interp_cast_with_cast_op
+    := (@mapf_interp_cast_with_cast_op
+          base_type_code base_type_code interp_base_type2
+          op op interp_op2
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast new_op).
+  Local Notation map_interp_cast_with_cast_op
+    := (@map_interp_cast_with_cast_op
+          base_type_code base_type_code interp_base_type2
+          op op interp_op2
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast new_op).
+  Local Notation bound_op
+    := (@bound_op
+          base_type_code base_type_code interp_base_type2
+          op op interp_op2
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast new_op).
+  Local Notation bound_var
+    := (@bound_var
+          base_type_code
+          op
+          base_type_code_beq base_type_code_bl
+          failv Cast is_cast).
+  Local Notation bound_var1
+    := (@bound_var1
+          base_type_code base_type_code interp_base_type2
+          op
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast).
+  Local Notation bound_var2
+    := (@bound_var2
+          base_type_code base_type_code interp_base_type2
+          op op interp_op2
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast).
+  (*Local Notation interp_flat_type_ivarf_wff G a b
+    := (forall t x y,
+           List.In (existT _ t (x, y)%core) (flatten_binding_list base_type_code a b)
+           -> wff G x y)
+         (only parsing).*)
+  Local Notation interp_flat_type_ivarf_Rb a b
+    := (forall t x y,
+           List.In (existT _ t (x, y)%core) (flatten_binding_list a b)
+           -> Rt _ (Tbase _) (interpf interp_op1 x) y)
+         (only parsing).
+  Local Notation interp_flat_type_ivarf_R a b
+    := (forall t x y,
+           List.In (existT _ t (x, y)%core) (flatten_binding_list a b)
+           -> R (interpf interp_op1 x) y)
+         (only parsing).
+  Local Notation interp_flat_type_ivarf_R2b a b
+    := (forall t1 t2 x y,
+           List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
+           -> Rt _ (Tbase _) (interpf interp_op1 (bound_var1 _ _ x y)) y)
+         (only parsing).
+  (*Local Notation interp_flat_type_ivarf_R2 a b
+    := (forall t1 t2 x y,
+           List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
+           -> R (interpf interp_op1 x) y)
+         (only parsing).*)
+  Context (bound_is_good : forall t, interp_base_type2 t -> Prop).
+  Local Notation bounds_are_good
+    := (@interp_flat_type_rel_pointwise0 _ _ bound_is_good).
+  Local Notation bounds_are_recursively_good
+    := (@bounds_are_recursively_good
+          base_type_code interp_base_type2 op interp_op2
+          bound_is_good).
+
+  Context (good_bounds_monotone : forall src dst opc args,
+              bounds_are_good (interp_op2 src dst opc args)
+              -> bounds_are_good args).
+
+  Context (Rinterp_op : forall src dst opc args1 args2,
+              bounds_are_good args2
+              -> bounds_are_good (interp_op2 src dst opc args2)
+              -> R args1 args2
+              -> R (interp_op1 src dst opc args1) (interp_op2 src dst opc args2))
+          (Rnew_op
+           : forall src dst opc args2 new_src f,
+              new_op interp_base_type1 src dst src dst opc opc args2 = Some (existT _ new_src f)
+              -> forall v,
+                bounds_are_good (interpf interp_op2 args2)
+                -> bounds_are_good (interpf interp_op2 (Op opc args2))
+                -> R (interpf interp_op1 v) (interpf interp_op2 args2)
+                -> R (interpf interp_op1 (f v)) (interpf interp_op2 (Op opc args2))).
+  (*(RCast : forall t1 t2,
+
+            (Cast : forall var t1 t2, @exprf base_type_code op var (Tbase t1)
+                                    -> @exprf base_type_code op var (Tbase t2))*)
+  Local Notation ivar t := (@exprf base_type_code op interp_base_type1 (Tbase t)) (only parsing).
+  Local Notation ivarf := (fun t => ivar t).
+
+  (*Lemma interpf_SmartBound_good_bounds T1 T1' T2
+        (args' : exprf base_type_code op T1)
+        (args2 : interp_flat_type interp_base_type2 T2)
+        (Hgood : bounds_are_good args2)
+        (HR : R (interpf interp_op1 args') args2)
+    : R (interpf interp_op1 (SmartBound (t2:=T1') base_type_code_beq base_type_code_bl failv Cast is_cast args'))
+        args2.
+  Proof.
+*)
+  (*Lemma interpf_SmartBound src dst src' dst' args2 opc
+        (Hc : is_cast src dst opc = true)
+    : forall args',
+      Rt  (interpf interp_op1 args') (interpf interp_op2 args2)
+      -> Rt dst' _
+            (interpf interp_op1 (SmartBound base_type_code_beq base_type_code_bl failv Cast is_cast args'))
+            (interpf interp_op2 (Op opc args2)).
+  Rt' (new_flat_type (interpf interp_op2 args2)) src (interpf interp_op1 args') (interpf interp_op2 args2) ->
+  Rt' (new_flat_type (interpf interp_op2 (Op opc args2))) dst
+    (interpf interp_op1 (SmartBound base_type_code_beq base_type_code_bl failv Cast is_cast args'))
+    (interpf interp_op2 (Op opc args2))
+
+*)
+
+  Lemma interpf_bound_var
+        tx1 tx1' tx2 tC1 tC2
+        (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
+        (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
+        v1 v2
+        (Hv2_good : bounds_are_good v2)
+        (Hg_good : bounds_are_good (g v2))
+        (Hfg : forall a,
+            interp_flat_type_ivarf_R2b a v2
+            -> R (interpf interp_op1 (f a)) (g v2))
+        (Hv : interp_flat_type_ivarf_R2b v1 v2)
+    : R (interpf interp_op1 (@bound_var _ tx1 tx2 tC1 f v1))
+        (g v2).
+  Proof.
+    revert dependent tx1'; intro tx1'; revert dependent tx1; intro tx1; revert tx1 tx1'.
+    induction tx2;
+      repeat match goal with
+             | _ => progress break_match_step ltac:(fun _ => idtac)
+             | _ => progress simpl in *
+             | _ => intro
+             end.
+  Admitted.
+
+  Local Hint Resolve interpf_bound_var.
+
+  Lemma var_cast_helper var t1 t2 (H : Tbase t1 = Tbase t2) v
+    : match H in (_ = y) return @exprf base_type_code op var y with
+      | eq_refl => Var (op:=op) v
+      end
+      = Var (op:=op) match H in (_ = y) return interp_flat_type _ y with
+                     | eq_refl => v
+                     end.
+  Proof.
+    inversion_flat_type; subst; reflexivity.
+  Qed.
+
+  Lemma interpf_bound_var2
+        tx1 tC' ex' eC' f v
+        (Hgood : bounds_are_good (interpf interp_op2 (eC' ex')))
+        (HR : R v ex')
+        (Hfg : forall a,
+            interp_flat_type_ivarf_R2b a ex'
+            -> R (interpf interp_op1 (f a)) (interpf interp_op2 (eC' ex')))
+    : R (interpf interp_op1 (@bound_var2 _ tx1 tx1 tC' ex' eC' f v))
+        (interpf interp_op2 (eC' ex')).
+  Proof.
+    revert dependent tC'.
+    induction tx1;
+      repeat match goal with
+             | _ => progress break_match_step ltac:(fun _ => idtac)
+             | _ => progress simpl in *
+             | _ => intro
+             end;
+      [ apply Hfg; clear Hfg
+      | apply Hfg; clear Hfg
+      | ];
+      [ cbv [bound_var2 bound_var1 bound_var]; simpl;
+        repeat match goal with
+               | _ => intro
+               | _ => assumption
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress inversion_option
+               | _ => progress inversion_sumbool
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => rewrite var_cast_helper
+               | _ => rewrite concat_pV
+               | [ |- context[base_type_code_beq ?x ?y] ]
+                 => first [ is_var x; fail 1
+                          | let H := fresh in
+                            destruct (Sumbool.sumbool_of_bool (id (base_type_code_beq x y))) as [H|H];
+                            [ apply base_type_code_bl in H
+                            | unfold id in H ];
+                            generalize dependent x ]
+               | [ |- context[Sumbool.sumbool_of_bool ?b] ]
+                 => destruct (Sumbool.sumbool_of_bool b) eqn:?
+               | _ => congruence
+               end..
+      | ].
+    admit.
+    admit.
+    { unfold bound_var2.
+
+      pose (SmartVarfMap (t:=Prod _ _) (fun t : base_type_code => Var (op:=op)) v) as v'.
+      simpl in v'.
+      change (interp_
+      unfold ivarf in *.
+      specialize (Hfg (SmartVarfMap (t:=Prod _ _) (fun t : base_type_code => Var) v)).
+    { repeat match goal with
+             | _ => intro
+             | _ => assumption
+             | [ H : False |- _ ] => exfalso; assumption
+             | _ => progress inversion_sigma
+             | _ => progress inversion_prod
+             | _ => progress inversion_option
+             | _ => progress inversion_sumbool
+             | _ => progress subst
+             | _ => progress simpl in *
+             | _ => progress destruct_head' or
+             | _ => rewrite var_cast_helper
+             | _ => rewrite concat_pV
+             | [ |- context[base_type_code_beq ?x ?y] ]
+               => first [ is_var x; fail 1
+                        | let H := fresh in
+                          destruct (Sumbool.sumbool_of_bool (id (base_type_code_beq x y))) as [H|H];
+                          [ apply base_type_code_bl in H
+                          | unfold id in H ];
+                          generalize dependent x ]
+             | [ |- context[Sumbool.sumbool_of_bool ?b] ]
+               => destruct (Sumbool.sumbool_of_bool b) eqn:?
+             | _ => congruence
+             end. }
+
+    {
+
+
+      unfold SmartBound.
+
+      rewrite
+
+      induction Heqs as [Heqs] using path_sumbool_rect;
+        try match type of Heqs with
+      | False => exfalso; exact H
+      end.
+inversion_sumbool_step.
+
+      lazymatch goal with
+      end.
+      lazymatch goal with
+      | [ |- context[Sumbool.sumbool_of_bool ?b] ]
+        => destruct b eqn:?; unfold Sumbool.sumbool_of_bool
+      end.
+      { break_match_step ltac:(fun _ => idtac);
+          repeat match goal with
+                 | _ => intro
+                 | [ H : False |- _ ] => exfalso; assumption
+                 | _ => progress inversion_sigma
+                 | _ => progress inversion_prod
+                 | _ => progress subst
+                 | _ => progress simpl in *
+                 | _ => progress destruct_head' or
+                 | _ => rewrite var_cast_helper
+                 end.
+      { match goal with
+        | [ |- context[base_type_code_bl ?x ?y ?H] ]
+          => pose proof (base_type_code_bl x y H); generalize dependent x
+        end.
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => rewrite var_cast_helper
+               | _ => rewrite concat_pV
+               end.
+
+        break_match_step ltac:(fun _ => idtac);
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => rewrite var_cast_helper
+               | _ => rewrite concat_pV
+               end.
+        { rewrite !concat_pV; simpl.
+          simpl.
+        rewrite
+        b
+      SearchAbout sumbool.
+      repeat match goal with
+
+      intros ????; simpl.
+      break_match.
+      { rewrite var_cast_helper.
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               end.
+        { match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | [ |- context G[match ?H as H' in (_ = y) return @?P y H' with eq_refl => Var (op:=?op) ?v end] ]
+                 => let m := fresh "m" in
+                    set (m := match H as H' in (_ = y) return P y H' with eq_refl => Var (op:=op) v end);
+                      let G' := context G[m] in
+                      change G';
+                        let m' := fresh "m'" in
+                        pose (Var (op:=op) match H as H' in (_ = y) return interp_flat_type _ y with eq_refl => v end) as m';
+                          replace m with m'; subst m m'; [ | clear ]
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+          end.
+          Focus 2.
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | [ |- context G[match ?H as H' in (_ = y) return @?P y H' with eq_refl => Var (op:=?op) ?v end] ]
+                 => let m := fresh "m" in
+                    set (m := match H as H' in (_ = y) return P y H' with eq_refl => Var (op:=op) v end);
+                      let G' := context G[m] in change G'
+               end.
+
+        Focus 2.
+        intro e; clear.
+        generalize depe
+        break_match.
+        generalize dependent  (
+        2:subst m'.
+        Focus 2.
+        intro e; case e.
+
+        match goal with
+        end.
+          let rep := fresh "orig" in
+             pose (let H' := H in Var (op:=op) match H' in (_ = y) return interp_flat_type _ y with eq_refl => v end) as rep;
+             let G' := context G[rep] in
+             cut G'; cbv zeta in *
+        end.
+        pattern rep.
+        match goal with
+        | [
+
+
+
+               | [ |- context[@f_equal _ _ _ ?a ?b ?H] ]
+                 => first [ is_var H; fail 1 | generalize H; generalize dependent a ]
+        generalize dependent (new_base_type t2 ex').
+        { repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+                 end.
+          break_match.
+        match goal with
+        end.
+        Set Printing Implicit.
+        simpl in *.
+
+    simpl in *. =
+
+  Admitted.
+
+  Local Hint Resolve interpf_bound_var2.
+
+  Lemma interpf_bound_op
+        src dst opc args2
+    : forall args',
+      bounds_are_good (interpf interp_op2 args2)
+      -> bounds_are_good (interpf interp_op2 (Op opc args2))
+      -> R (interpf interp_op1 args') (interpf interp_op2 args2)
+      -> R (interpf interp_op1 (@bound_op _ src dst src dst opc opc args2 args'))
+           (interpf interp_op2 (Op opc args2)).
+  Proof.
+    specialize (Rnew_op src dst opc args2).
+    unfold bound_op; break_match_step ltac:(fun _ => idtac).
+    Focus 2.
+    { simpl in *.
+      break_match; destruct_head sigT.
+      specialize (Rnew_op _ _ eq_refl).
+      simpl.
+      { intros; apply Rnew_op; eauto.
+        admit. }
+  Admitted.
+
+  Local Hint Resolve interpf_bound_op.
+
+  Lemma interp_map_interp_cast_with_cast_op
+        {t1} e1 ebounds args
+        (Hgood : bounds_are_recursively_good (invert_Abs ebounds args))
+        (Hwf : wf e1 ebounds)
+    : forall v,
+      R v args
+      -> R (interp interp_op1 (@map_interp_cast_with_cast_op interp_base_type1 t1 e1 t1 ebounds args) v)
+           (interp interp_op2 ebounds args).
+  Proof.
+    eapply interp_map_interp_cast; eauto.
+  Qed.
+
+
+  Local Notation ivar t := (@exprf base_type_code op interp_base_type1 (Tbase t)) (only parsing).
+  Local Notation ivarf := (fun t => ivar t).
+  Section with_var.
+    Context (transfer_var : forall tx1 tx2 tC1
+                                   (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=interp_base_type1) tC1)
+                                   (v : interp_flat_type ivarf tx2),
+                exprf base_type_code op (var:=interp_base_type1) tC1).
+
+    Context (R_transfer_var
+             : forall tx1 tx1' tx2 tC1 tC2
+                      (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
+                      (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
+                      v1 v2,
+                (forall a,
+                    interp_flat_type_ivarf_R2b a v2
+                    -> R (interpf interp_op1 (f a)) (g v2))
+                -> interp_flat_type_ivarf_R2b v1 v2
+                -> R (interpf interp_op1 (@transfer_var tx1 tx2 tC1 f v1))
+                     (g v2)).
+
+    Local Notation mapf_interp_cast
+      := (@mapf_interp_cast
+            base_type_code base_type_code interp_base_type2
+            op op interp_op2 failv new_base_type
+            transfer_op).
+    Local Notation map_interp_cast
+      := (@map_interp_cast
+            base_type_code base_type_code interp_base_type2
+            op op interp_op2 failv new_base_type
+            transfer_op).
+
+    (* Local *) Hint Resolve <- List.in_app_iff.
+
+    Local Ltac break_t
+      := first [ progress subst
+               | progress inversion_wf
+               | progress invert_expr_subst
+               | progress inversion_sigma
+               | progress inversion_prod
+               | progress destruct_head sig
+               | progress destruct_head sigT
+               | progress destruct_head ex
+               | progress destruct_head and
+               | progress destruct_head prod
+               | progress break_match_hyps ].
+
+    Local Ltac fin_False :=
+      lazymatch goal with
+      | [ H : False |- _ ] => exfalso; assumption
+      end.
+
+    Local Ltac fin_t0 :=
+      solve [ constructor; eauto
+            | eauto
+            | auto
+            | hnf; auto ].
+
+    Local Ltac fin_t1 :=
+      solve [ lazymatch goal with
+              | [ |- R' _ _ _ _ ] => eapply interp_flat_type_rel_pointwise2_hetero_flatten_binding_list2; eauto
+              end ].
+
+    Local Ltac handle_transfer_var_t :=
+      match goal with
+      | [ |- R (interpf _ (transfer_var _ _ _ _ _)) _ ]
+        => apply R_transfer_var
+      | [ |- R (interpf _ (transfer_var _ _ _ _ _)) (interpf ?interp_op (?e _)) ]
+        => apply R_transfer_var with (g := fun v => interpf interp_op (e v))
+      | [ |- R' ?t1 ?t2 (interpf _ (transfer_var ?tx1 ?tx2 ?tC1 (fun x => x) ?v1)) ?v2 ]
+        => apply (R_transfer_var tx1 (Tbase _) tx2 tC1 (Tbase _) (fun x => x) (fun x => x))
+      | [ H : _ |- R (interpf _ (mapf_interp_cast _ _ _)) (interpf _ _) ]
+        => apply H
+      end.
+
+    Local Ltac handle_list_t :=
+      match goal with
+      | _ => progress cbv [LetIn.Let_In duplicate_types] in *
+      | [ H : List.In _ (_ ++ _) |- _ ] => apply List.in_app_or in H
+      | [ H : List.In _ (List.map _ _) |- _ ]
+        => rewrite List.in_map_iff in H
+      | _ => rewrite <- flatten_binding_list_flatten_binding_list2
+      | [ H : appcontext[flatten_binding_list2] |- _ ]
+        => rewrite <- flatten_binding_list_flatten_binding_list2 in H
+      | [ H : context[flatten_binding_list _ (SmartVarfMap _ _) (SmartVarfMap _ _)] |- _ ]
+        => rewrite flatten_binding_list_SmartVarfMap in H
+      | [ H : context[flatten_binding_list2 _ (SmartVarfMap _ _) (SmartVarfMap _ _)] |- _ ]
+        => rewrite flatten_binding_list2_SmartVarfMap in H
+      | [ H : context[flatten_binding_list2 _ (SmartVarfMap _ _) _] |- _ ]
+        => rewrite flatten_binding_list2_SmartVarfMap1 in H
+      | [ H : context[flatten_binding_list2 _ _ (SmartVarfMap _ _)] |- _ ]
+        => rewrite flatten_binding_list2_SmartVarfMap2 in H
+      | _ => rewrite <- flatten_binding_list_flatten_binding_list2
+      | _ => rewrite List.in_map_iff
+      end.
+
+    Local Ltac wff_t :=
+      match goal with
+      | [ |- wff _ _ _ ] => constructor
+      | [ H : _ |- wff _ (mapf_interp_cast _ _ _) (mapf_interp_cast _ _ _) ]
+        => eapply H; eauto; []; clear H
+      | _ => solve [ eauto using wff_in_impl_Proper ]
+      end.
+
+    Local Ltac misc_t :=
+      match goal with
+      | [ H : _ |- R' _ _ (interpf _ ?x) ?y ]
+        => is_var x; is_var y; apply H
+      | [ |- exists _, _ ]
+        => eexists (existT _ _ _)
+      | [ |- _ /\ _ ] => split
+      end.
+
+    Local Ltac t_step :=
+      first [ intro
+            | fin_False
+            | progress break_t
+            | fin_t0
+            | progress simpl in *
+            | wff_t
+            | handle_list_t
+            | progress destruct_head' or
+            | fin_t1
+            | handle_transfer_var_t
+            | misc_t ].
+
+    Lemma interpf_mapf_interp_cast
+          G
+          (HG : forall t x y,
+              List.In (existT _ t (x, y)%core) G
+              -> R' (new_base_type t y) t
+                    (interpf interp_op1
+                             (transfer_var (Tbase _) (Tbase _) (Tbase _)
+                                           (fun k => k) x))
+                    y)
+          {t1} e1 ebounds
+          (Hwf : wff G e1 ebounds)
+      : R (interpf interp_op1 (@mapf_interp_cast interp_base_type1 transfer_var t1 e1 t1 ebounds))
+          (interpf interp_op2 ebounds).
+    Proof. induction Hwf; repeat t_step. Qed.
+
+    Local Hint Resolve interpf_mapf_interp_cast.
+
+    Lemma interp_map_interp_cast
+          {t1} e1 ebounds
+          args2
+          (Hwf : wf e1 ebounds)
+      : forall v,
+        R v args2
+        -> R (interp interp_op1 (@map_interp_cast interp_base_type1 transfer_var t1 e1 t1 ebounds args2) v)
+             (interp interp_op2 ebounds args2).
+    Proof.
+      destruct Hwf;
+        repeat match goal with
+               | _ => t_step
+               | [ |- R (interpf _ (mapf_interp_cast _ _ _)) (interpf _ _) ]
+                 => eapply interpf_mapf_interp_cast
+               end.
+    Qed.
+  End with_var.
+
+  Section gen.
+    Context (transfer_var : forall ovar tx1 tx2 tC1
+                                   (ivarf := fun t => @exprf base_type_code op ovar (Tbase t))
+                                   (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=ovar) tC1)
+                                   (v : interp_flat_type ivarf tx2),
+                exprf base_type_code op (var:=ovar) tC1).
+    Context (R_transfer_var
+             : forall tx1 tx1' tx2 tC1 tC2
+                      (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
+                      (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
+                      v1 v2,
+                (forall a,
+                    interp_flat_type_ivarf_R2b a v2
+                    -> R (interpf interp_op1 (f a)) (g v2))
+                -> interp_flat_type_ivarf_R2b v1 v2
+                -> R (interpf interp_op1 (@transfer_var _ tx1 tx2 tC1 f v1))
+                     (g v2)).
+
+    Local Notation MapInterpCast
+      := (@MapInterpCast
+            base_type_code interp_base_type2
+            op interp_op2 failv new_base_type
+            transfer_op transfer_var).
+
+    Lemma InterpMapInterpCast
+          {t} e
+          args
+          (Hwf : Wf e)
+      : forall v,
+        R v args
+        -> R (Interp interp_op1 (@MapInterpCast t e args) v)
+             (Interp interp_op2 e args).
+    Proof. apply interp_map_interp_cast; auto. Qed.
+  End gen.
+End language.

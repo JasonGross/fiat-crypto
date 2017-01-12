@@ -1,8 +1,8 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Equality.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.MapCast.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
@@ -17,9 +17,7 @@ Section language.
           (interp_op2 : forall src dst, op2 src dst -> interp_flat_type interp_base_type2 src -> interp_flat_type interp_base_type2 dst)
           (base_type_code1_beq : base_type_code1 -> base_type_code1 -> bool)
           (base_type_code1_bl : forall x y, base_type_code1_beq x y = true -> x = y)
-          (base_type_code1_lb : forall x y, x = y -> base_type_code1_beq x y = true)
           (failv : forall {var t}, @exprf base_type_code1 op1 var (Tbase t))
-          (new_base_type : forall t, interp_base_type2 t -> base_type_code1)
           (Cast : forall var t1 t2, @exprf base_type_code1 op1 var (Tbase t1)
                                     -> @exprf base_type_code1 op1 var (Tbase t2))
           (is_cast : forall t1 t2, op1 t1 t2 -> bool).
@@ -34,6 +32,13 @@ Section language.
     := (SmartValf _ (@failv _)).
   Local Notation failf t (* {t} : @exprf base_type_code1 op1 ovar t*)
     := (SmartPairf (SmartFail t)).
+
+  Let base_type_code1_bl' x y H
+    := eq_trans (base_type_code1_bl x y H)
+                (eq_sym match Sumbool.sumbool_of_bool (base_type_code1_beq y y) with
+                        | left pf => base_type_code1_bl _ _ pf
+                        | right _ => eq_refl
+                        end).
 
   Fixpoint VarBound {var} T1 T2 : interp_flat_type var T1 -> exprf _ op1 (var:=var) T2
     := match T1, T2 return interp_flat_type var T1 -> exprf _ _ T2 with
@@ -50,7 +55,7 @@ Section language.
   Fixpoint SmartBound {var t1 t2} (v : @exprf _ op1 var t1) : @exprf _ op1 var t2.
   Proof.
     refine match Sumbool.sumbool_of_bool (flat_type_beq _ base_type_code1_beq t1 t2) with
-           | left pf => match flat_type_dec_bl _ _ base_type_code1_bl _ _ pf in (_ = y) return exprf _ _ y with
+           | left pf => match flat_type_dec_bl _ _ base_type_code1_bl' _ _ pf in (_ = y) return exprf _ _ y with
                         | eq_refl => v
                         end
            | right _ => _
@@ -112,6 +117,19 @@ Section language.
            => fun f _ => f (SmartValf _ (fun t => failf _) _)
          end.
 
+    Definition bound_var1 tx1 tx2
+               (v1 : ivar tx1)
+               (v2 : interp_base_type2 tx2)
+      : exprf base_type_code1 op1 (var:=ovar) (Tbase (new_base_type tx2 v2))
+      := bound_var (Tbase _) (Tbase _) (Tbase _) (fun x => x) v1.
+    Definition bound_var2 tx1 tx' tC'
+               (ex' : interp_flat_type interp_base_type2 tx')
+               (eC' : interp_flat_type interp_base_type2 tx' -> exprf base_type_code2 op2 tC')
+               (f : interp_flat_type ivarf tx1 -> exprf base_type_code1 op1 (var:=ovar) (new_flat_type (interpf interp_op2 (eC' ex'))))
+               (v : interp_flat_type ovar (new_flat_type ex'))
+      : exprf base_type_code1 op1 (var:=ovar) (new_flat_type (interpf interp_op2 (eC' ex')))
+      := bound_var _ _ _ f (SmartVarfMap (fun t => Var) v).
+
     Definition mapf_interp_cast_with_cast_op
                {t1} (e1 : @exprf base_type_code1 op1 ivarf t1)
                {t2} (e2 : @exprf base_type_code2 op2 interp_base_type2 t2)
@@ -119,17 +137,17 @@ Section language.
       := @mapf_interp_cast
            base_type_code1 base_type_code2 interp_base_type2 op1 op2
            interp_op2 (@failv) new_base_type bound_op
-           ovar bound_var
+           ovar bound_var1 bound_var2
            t1 e1 t2 e2.
     Definition map_interp_cast_with_cast_op
              {t1} (e1 : @expr base_type_code1 op1 ivarf t1)
              {t2} (e2 : @expr base_type_code2 op2 interp_base_type2 t2)
-      : forall (args2 : interp_all_binders_for' t2 interp_base_type2),
+      : forall (args2 : interp_flat_type interp_base_type2 (domain t2)),
         @expr base_type_code1 op1 ovar (@new_type _ args2 (interp interp_op2 e2))
       := @map_interp_cast
            base_type_code1 base_type_code2 interp_base_type2 op1 op2
            interp_op2 (@failv) new_base_type bound_op
-           ovar bound_var
+           ovar bound_var1 bound_var2
            t1 e1 t2 e2.
   End with_var.
 End language.
@@ -152,7 +170,7 @@ Section homogenous.
           (is_cast : forall t1 t2, op t1 t2 -> bool).
   Definition MapInterpCastWithCastOp
              new_op
-             {t} (e : Expr base_type_code op t) args
+             {t} (e : Expr base_type_code op t) (args : interp_flat_type interp_base_type2 (domain t))
     : Expr base_type_code op (new_type (@new_base_type) args (Interp interp_op2 e))
     := fun var => map_interp_cast_with_cast_op base_type_code_beq base_type_code_bl (@failv) Cast is_cast new_op (e _) (e _) args.
 End homogenous.
