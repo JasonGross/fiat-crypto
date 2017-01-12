@@ -1,0 +1,29 @@
+raddW = 
+fun var : base_type -> Type =>
+λ
+x x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20
+ x21 x22 x23 x24 x25 x26 x27 x28 x29 x30 x31 x32 x33 x34 : 
+ var (TWord 5),
+uint32_t x35 = x + x17;
+uint32_t x36 = x0 + x18;
+uint32_t x37 = x1 + x19;
+uint32_t x38 = x2 + x20;
+uint32_t x39 = x3 + x21;
+uint32_t x40 = x4 + x22;
+uint32_t x41 = x5 + x23;
+uint32_t x42 = x6 + x24;
+uint32_t x43 = x7 + x25;
+uint32_t x44 = x8 + x26;
+uint32_t x45 = x9 + x27;
+uint32_t x46 = x10 + x28;
+uint32_t x47 = x11 + x29;
+uint32_t x48 = x12 + x30;
+uint32_t x49 = x13 + x31;
+uint32_t x50 = x14 + x32;
+uint32_t x51 = x15 + x33;
+uint32_t x52 = x16 + x34;
+(Return x35, Return x36, Return x37, Return x38, Return x39, 
+Return x40, Return x41, Return x42, Return x43, Return x44, 
+Return x45, Return x46, Return x47, Return x48, Return x49, 
+Return x50, Return x51, Return x52)
+     : C_like

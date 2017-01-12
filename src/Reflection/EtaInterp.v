@@ -37,11 +37,26 @@ Section language.
 
     (* Local *) Hint Rewrite @eq_interp_flat_type_eta_gen.
 
+    Section gen_type.
+      Context (exprf_eta : forall {t} (e : exprf t), exprf t)
+              (eq_interp_exprf_eta : forall t e, interpf (@interp_op) (@exprf_eta t e) = interpf (@interp_op) e).
+      Lemma interp_expr_eta_gen {t e}
+        : forall x,
+          interp (@interp_op) (expr_eta_gen eta exprf_eta (t:=t) e) x = interp (@interp_op) e x.
+      Proof. t. Qed.
+    End gen_type.
+    (* Local *) Hint Rewrite @interp_expr_eta_gen.
+
     Lemma interpf_exprf_eta_gen {t e}
       : interpf (@interp_op) (exprf_eta_gen eta (t:=t) e) = interpf (@interp_op) e.
     Proof. induction e; t. Qed.
+
+    Lemma InterpExprEtaGen {t e}
+      : forall x, Interp (@interp_op) (ExprEtaGen eta (t:=t) e) x = Interp (@interp_op) e x.
+    Proof. apply interp_expr_eta_gen; intros; apply interpf_exprf_eta_gen. Qed.
   End gen_flat_type.
   (* Local *) Hint Rewrite @eq_interp_flat_type_eta_gen.
+  (* Local *) Hint Rewrite @interp_expr_eta_gen.
   (* Local *) Hint Rewrite @interpf_exprf_eta_gen.
 
   Lemma eq_interp_flat_type_eta {var t T f} x
@@ -60,4 +75,16 @@ Section language.
     : interpf (@interp_op) (exprf_eta' (t:=t) e) = interpf (@interp_op) e.
   Proof. t. Qed.
   (* Local *) Hint Rewrite @interpf_exprf_eta'.
+  Lemma interp_expr_eta {t e}
+    : forall x, interp (@interp_op) (expr_eta (t:=t) e) x = interp (@interp_op) e x.
+  Proof. t. Qed.
+  Lemma interp_expr_eta' {t e}
+    : forall x, interp (@interp_op) (expr_eta' (t:=t) e) x = interp (@interp_op) e x.
+  Proof. t. Qed.
+  Lemma InterpExprEta {t e}
+    : forall x, Interp (@interp_op) (ExprEta (t:=t) e) x = Interp (@interp_op) e x.
+  Proof. apply interp_expr_eta. Qed.
+  Lemma InterpExprEta' {t e}
+    : forall x, Interp (@interp_op) (ExprEta' (t:=t) e) x = Interp (@interp_op) e x.
+  Proof. apply interp_expr_eta'. Qed.
 End language.

@@ -117,7 +117,7 @@ Section language.
                | _ => progress simpl in *
                | _ => progress destruct_head' or
                | _ => solve [ eauto with nocore ]
-               | _ => progress inversion_wff
+               | _ => progress inversion_wf
                end.
     Qed.
   End with_var.

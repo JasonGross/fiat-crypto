@@ -7,16 +7,18 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.ExprInversion.
+Require Import Crypto.Reflection.Tuple.
 Require Import Crypto.Reflection.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.
+Require Import Crypto.Reflection.Z.Interpretations.
+(*Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.*)
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Z.Syntax.Equality.
 Require Import Crypto.Reflection.InterpWfRel.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.WfReflective.
+Require Import Crypto.Util.Curry.
 Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil.
@@ -43,30 +45,24 @@ Defined.
 Definition Expr_n_OpT (count_out : nat) : flat_type base_type
   := Eval cbv [Syntax.tuple Syntax.tuple' fe25519T] in
       Syntax.tuple fe25519T count_out.
-Fixpoint Expr_nm_OpT (count_in count_out : nat) : type base_type
-  := match count_in with
-     | 0 => Expr_n_OpT count_out
-     | S n => SmartArrow fe25519T (Expr_nm_OpT n count_out)
-     end.
+Definition Expr_nm_OpT (count_in count_out : nat) : type base_type
+  := Eval cbv [Syntax.tuple Syntax.tuple' fe25519T Expr_n_OpT] in
+      Arrow (Syntax.tuple fe25519T count_in) (Expr_n_OpT count_out).
 Definition ExprBinOpT : type base_type := Eval compute in Expr_nm_OpT 2 1.
 Definition ExprUnOpT : type base_type := Eval compute in Expr_nm_OpT 1 1.
 Definition ExprUnOpFEToZT : type base_type.
-Proof. make_type_from (uncurry_unop_fe25519 ge_modulus). Defined.
+Proof. make_type_from ge_modulus. Defined.
 Definition ExprUnOpWireToFET : type base_type.
-Proof. make_type_from (uncurry_unop_wire_digits unpack). Defined.
+Proof. make_type_from unpack. Defined.
 Definition ExprUnOpFEToWireT : type base_type.
-Proof. make_type_from (uncurry_unop_fe25519 pack). Defined.
+Proof. make_type_from pack. Defined.
 Definition Expr4OpT : type base_type := Eval compute in Expr_nm_OpT 4 1.
 Definition Expr9_4OpT : type base_type := Eval compute in Expr_nm_OpT 9 4.
 Definition ExprArgT : flat_type base_type
-  := Eval compute in remove_all_binders ExprUnOpT.
+  := Eval compute in domain ExprUnOpT.
 Definition ExprArgWireT : flat_type base_type
-  := Eval compute in remove_all_binders ExprUnOpFEToWireT.
-Definition ExprArgRevT : flat_type base_type
-  := Eval compute in all_binders_for ExprUnOpT.
-Definition ExprArgWireRevT : flat_type base_type
-  := Eval compute in all_binders_for ExprUnOpWireToFET.
-Definition ExprZ : Type := Expr (Tbase TZ).
+  := Eval compute in domain ExprUnOpWireToFET.
+Definition ExprZ : Type := Expr (Arrow Unit (Tbase TZ)).
 Definition ExprUnOpFEToZ : Type := Expr ExprUnOpFEToZT.
 Definition ExprUnOpWireToFE : Type := Expr ExprUnOpWireToFET.
 Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
@@ -75,99 +71,68 @@ Definition ExprBinOp : Type := Expr ExprBinOpT.
 Definition ExprUnOp : Type := Expr ExprUnOpT.
 Definition Expr4Op : Type := Expr Expr4OpT.
 Definition Expr9_4Op : Type := Expr Expr9_4OpT.
-Definition ExprArg : Type := Expr ExprArgT.
-Definition ExprArgWire : Type := Expr ExprArgWireT.
-Definition ExprArgRev : Type := Expr ExprArgRevT.
-Definition ExprArgWireRev : Type := Expr ExprArgWireRevT.
+Definition ExprArg : Type := Expr (Arrow Unit ExprArgT).
+Definition ExprArgWire : Type := Expr (Arrow Unit ExprArgWireT).
 Definition expr_nm_Op count_in count_out var : Type
   := expr base_type op (var:=var) (Expr_nm_OpT count_in count_out).
 Definition exprBinOp var : Type := expr base_type op (var:=var) ExprBinOpT.
 Definition exprUnOp var : Type := expr base_type op (var:=var) ExprUnOpT.
 Definition expr4Op var : Type := expr base_type op (var:=var) Expr4OpT.
 Definition expr9_4Op var : Type := expr base_type op (var:=var) Expr9_4OpT.
-Definition exprZ var : Type := expr base_type op (var:=var) (Tbase TZ).
+Definition exprZ var : Type := expr base_type op (var:=var) (Arrow Unit (Tbase TZ)).
 Definition exprUnOpFEToZ var : Type := expr base_type op (var:=var) ExprUnOpFEToZT.
 Definition exprUnOpWireToFE var : Type := expr base_type op (var:=var) ExprUnOpWireToFET.
 Definition exprUnOpFEToWire var : Type := expr base_type op (var:=var) ExprUnOpFEToWireT.
-Definition exprArg var : Type := expr base_type op (var:=var) ExprArgT.
-Definition exprArgWire var : Type := expr base_type op (var:=var) ExprArgWireT.
-Definition exprArgRev var : Type := expr base_type op (var:=var) ExprArgRevT.
-Definition exprArgWireRev var : Type := expr base_type op (var:=var) ExprArgWireRevT.
+Definition exprArg var : Type := expr base_type op (var:=var) (Arrow Unit ExprArgT).
+Definition exprArgWire var : Type := expr base_type op (var:=var) (Arrow Unit ExprArgWireT).
 
-Local Ltac bounds_from_list_cps ls :=
-  lazymatch (eval hnf in ls) with
-  | (?x :: nil)%list => constr:(fun T (extra : T) => (Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, extra))
-  | (?x :: ?xs)%list => let bs := bounds_from_list_cps xs in
-                        constr:(fun T extra => (Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, bs T extra))
-  end.
+Definition make_bound (x : Z * Z) : Bounds.t
+  := Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}.
 
-Local Ltac make_bounds_cps ls extra :=
-  let v := bounds_from_list_cps (List.rev ls) in
-  let v := (eval compute in v) in
-  exact (v _ extra).
-
-Local Ltac bounds_from_list ls :=
-  lazymatch (eval hnf in ls) with
-  | (?x :: nil)%list => constr:(Some {| Bounds.lower := fst x ; Bounds.upper := snd x |})
-  | (?x :: ?xs)%list => let bs := bounds_from_list xs in
-                        constr:((Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, bs))
-  end.
-
-Local Ltac make_bounds ls :=
-  compute;
-  let v := bounds_from_list (List.rev ls) in
-  let v := (eval compute in v) in
-  exact v.
-
-Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type.
-Proof.
-  refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type with
-         | 0 => tt
-         | S n => let v := interp_all_binders_for_to' (Expr_nm_Op_bounds n count_out) in
-                  interp_all_binders_for_of' _
-         end; simpl.
-  make_bounds_cps (Tuple.to_list _ bounds) v.
-Defined.
-Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type
+Fixpoint Expr_nm_Op_bounds count_in count_out {struct count_in} : interp_flat_type Bounds.interp_base_type (domain (Expr_nm_OpT count_in count_out))
+  := match count_in return interp_flat_type _ (domain (Expr_nm_OpT count_in count_out)) with
+     | 0 => tt
+     | S n
+       => let b := (Tuple.map make_bound bounds) in
+          let bs := Expr_nm_Op_bounds n count_out in
+          match n return interp_flat_type _ (domain (Expr_nm_OpT n _)) -> interp_flat_type _ (domain (Expr_nm_OpT (S n) _)) with
+          | 0 => fun _ => b
+          | S n' => fun bs => (bs, b)
+          end bs
+     end.
+Definition ExprBinOp_bounds : interp_flat_type Bounds.interp_base_type (domain ExprBinOpT)
   := Eval compute in Expr_nm_Op_bounds 2 1.
-Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type
+Definition ExprUnOp_bounds : interp_flat_type Bounds.interp_base_type (domain ExprUnOpT)
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type
+Definition ExprUnOpFEToZ_bounds : interp_flat_type Bounds.interp_base_type (domain ExprUnOpFEToZT)
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type
+Definition ExprUnOpFEToWire_bounds : interp_flat_type Bounds.interp_base_type (domain ExprUnOpFEToWireT)
   := Eval compute in Expr_nm_Op_bounds 1 1.
-Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT ZBounds.interp_base_type
+Definition Expr4Op_bounds : interp_flat_type Bounds.interp_base_type (domain Expr4OpT)
   := Eval compute in Expr_nm_Op_bounds 4 1.
-Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT ZBounds.interp_base_type
+Definition Expr9Op_bounds : interp_flat_type Bounds.interp_base_type (domain Expr9_4OpT)
   := Eval compute in Expr_nm_Op_bounds 9 4.
-Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
-Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
+Definition ExprUnOpWireToFE_bounds : interp_flat_type Bounds.interp_base_type (domain ExprUnOpWireToFET)
+  := Tuple.map make_bound wire_digit_bounds.
 
-Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
-  := fun e => curry_binop_fe25519W (Interp (@WordW.interp_op) e).
+(*
+Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W * Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := fun e => Interp (@WordW.interp_op) e.
 Definition interp_uexpr : ExprUnOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
-  := fun e => curry_unop_fe25519W (Interp (@WordW.interp_op) e).
+  := fun e => Interp (@WordW.interp_op) e.
 Definition interp_uexpr_FEToZ : ExprUnOpFEToZ -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.word64
-  := fun e => curry_unop_fe25519W (Interp (@WordW.interp_op) e).
+  := fun e => Interp (@WordW.interp_op) e.
 Definition interp_uexpr_FEToWire : ExprUnOpFEToWire -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.wire_digitsW
-  := fun e => curry_unop_fe25519W (Interp (@WordW.interp_op) e).
+  := fun e => Interp (@WordW.interp_op) e.
 Definition interp_uexpr_WireToFE : ExprUnOpWireToFE -> Specific.GF25519BoundedCommon.wire_digitsW -> Specific.GF25519BoundedCommon.fe25519W
-  := fun e => curry_unop_wire_digitsW (Interp (@WordW.interp_op) e).
+  := fun e => Interp (@WordW.interp_op) e.
 Definition interp_9_4expr : Expr9_4Op
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
-                            -> Specific.GF25519BoundedCommon.fe25519W
+                            -> Tuple.tuple Specific.GF25519BoundedCommon.fe25519W 9
                             -> Tuple.tuple Specific.GF25519BoundedCommon.fe25519W 4
-  := fun e => curry_9op_fe25519W (Interp (@WordW.interp_op) e).
+  := fun e => Interp (@WordW.interp_op) e.
 
 Notation binop_correct_and_bounded rop op
-  := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
+  := (ibinop_correct_and_bounded (interp_bexpr rop) (curry2 op)) (only parsing).
 Notation unop_correct_and_bounded rop op
   := (iunop_correct_and_bounded (interp_uexpr rop) op) (only parsing).
 Notation unop_FEToZ_correct rop op
@@ -178,45 +143,44 @@ Notation unop_WireToFE_correct_and_bounded rop op
   := (iunop_WireToFE_correct_and_bounded (interp_uexpr_WireToFE rop) op) (only parsing).
 Notation op9_4_correct_and_bounded rop op
   := (i9top_correct_and_bounded 4 (interp_9_4expr rop) op) (only parsing).
-
+*)
 Ltac rexpr_cbv :=
   lazymatch goal with
-  | [ |- { rexpr | interp_type_gen_rel_pointwise _ (Interp _ (t:=?T) rexpr) (?uncurry ?oper) } ]
+  | [ |- { rexpr | forall x, Interp _ (t:=?T) rexpr x = ?uncurry ?oper x } ]
     => let operf := head oper in
        let uncurryf := head uncurry in
        try cbv delta [T]; try cbv delta [oper];
        try cbv beta iota delta [uncurryf]
+  | [ |- { rexpr | forall x, Interp _ (t:=?T) rexpr x = ?oper x } ]
+    => let operf := head oper in
+       try cbv delta [T]; try cbv delta [oper]
   end;
-  cbv beta iota delta [interp_flat_type Z.interp_base_type interp_base_type zero_].
+  cbv beta iota delta [interp_flat_type interp_base_type zero_ GF25519.fe25519 GF25519.wire_digits].
 
 Ltac reify_sig :=
   rexpr_cbv; eexists; Reify_rhs; reflexivity.
 
 Local Notation rexpr_sig T uncurried_op :=
   { rexprZ
-  | interp_type_gen_rel_pointwise (fun _ => Logic.eq) (Interp interp_op (t:=T) rexprZ) uncurried_op }
+  | forall x, Interp interp_op (t:=T) rexprZ x = uncurried_op x }
     (only parsing).
 
-Notation rexpr_binop_sig op := (rexpr_sig ExprBinOpT (uncurry_binop_fe25519 op)) (only parsing).
-Notation rexpr_unop_sig op := (rexpr_sig ExprUnOpT (uncurry_unop_fe25519 op)) (only parsing).
-Notation rexpr_unop_FEToZ_sig op := (rexpr_sig ExprUnOpFEToZT (uncurry_unop_fe25519 op)) (only parsing).
-Notation rexpr_unop_FEToWire_sig op := (rexpr_sig ExprUnOpFEToWireT (uncurry_unop_fe25519 op)) (only parsing).
-Notation rexpr_unop_WireToFE_sig op := (rexpr_sig ExprUnOpWireToFET (uncurry_unop_wire_digits op)) (only parsing).
-Notation rexpr_9_4op_sig op := (rexpr_sig Expr9_4OpT (uncurry_9op_fe25519 op)) (only parsing).
-
+Notation rexpr_binop_sig op := (rexpr_sig ExprBinOpT (curry2 op)) (only parsing).
+Notation rexpr_unop_sig op := (rexpr_sig ExprUnOpT op) (only parsing).
+Notation rexpr_unop_FEToZ_sig op := (rexpr_sig ExprUnOpFEToZT op) (only parsing).
+Notation rexpr_unop_FEToWire_sig op := (rexpr_sig ExprUnOpFEToWireT op) (only parsing).
+Notation rexpr_unop_WireToFE_sig op := (rexpr_sig ExprUnOpWireToFET op) (only parsing).
+Notation rexpr_9_4op_sig op := (rexpr_sig Expr9_4OpT op) (only parsing).
+(*
 Notation correct_and_bounded_genT ropW'v ropZ_sigv
   := (let ropW' := ropW'v in
       let ropZ_sig := ropZ_sigv in
-      let ropW := ropW' in
-      let ropZ := ropW' in
-      let ropBounds := ropW' in
-      let ropBoundedWordW := ropW' in
-      ropZ = proj1_sig ropZ_sig
-      /\ interp_type_rel_pointwise2 Relations.related_Z (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@Z.interp_op) ropZ)
-      /\ interp_type_rel_pointwise2 Relations.related_bounds (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@ZBounds.interp_op) ropBounds)
-      /\ interp_type_rel_pointwise2 Relations.related_wordW (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@WordW.interp_op) ropW))
+      ropW' = proj1_sig ropZ_sig
+      /\ interp_type_rel_pointwise Relations.related_Z (Interp (@BoundedWordW.interp_op) ropW') (Interp (@Z.interp_op) ropW')
+      /\ interp_type_rel_pointwise Relations.related_bounds (Interp (@BoundedWordW.interp_op) ropW') (Interp (@Bounds.interp_op) ropW')
+      /\ interp_type_rel_pointwise Relations.related_wordW (Interp (@BoundedWordW.interp_op) ropW') (Interp (@WordW.interp_op) ropW'))
        (only parsing).
-
+*)
 Ltac app_tuples x y :=
   let tx := type of x in
   lazymatch (eval hnf in tx) with
@@ -227,7 +191,7 @@ Ltac app_tuples x y :=
 
 Local Arguments Tuple.map2 : simpl never.
 Local Arguments Tuple.map : simpl never.
-
+(*
 Fixpoint args_to_bounded_helperT {n}
          (v : Tuple.tuple' WordW.wordW n)
          (bounds : Tuple.tuple' (Z * Z) n)
@@ -299,14 +263,15 @@ Proof.
         Z.ltb_to_lt; auto
       ). }
 Defined.
+*)
 
 Definition assoc_right''
   := Eval cbv [Tuple.assoc_right' Tuple.rsnoc' fst snd] in @Tuple.assoc_right'.
-
+(*
 Definition args_to_bounded {n} v bounds pf
   := Eval cbv [args_to_bounded_helper assoc_right''] in
       @args_to_bounded_helper n _ v bounds pf (@assoc_right'' _ _).
-
+*)
 Local Ltac get_len T :=
   match (eval hnf in T) with
   | prod ?A ?B
@@ -326,7 +291,7 @@ Ltac assoc_right_tuple x so_far :=
          | _ => constr:((x, so_far))
          end
   end.
-
+(*
 Local Ltac make_args x :=
   let x' := fresh "x'" in
   compute in x |- *;
@@ -337,12 +302,8 @@ Local Ltac make_args x :=
   intro x'';
   let xv := assoc_right_tuple x'' (@None) in
   refine (SmartVarf (xv : interp_flat_type _ t')).
-
-Definition unop_make_args {var} (x : exprArg var) : exprArgRev var.
-Proof. make_args x. Defined.
-Definition unop_wire_make_args {var} (x : exprArgWire var) : exprArgWireRev var.
-Proof. make_args x. Defined.
-
+*)
+(*
 Local Ltac args_to_bounded x H :=
   let x' := fresh in
   set (x' := x);
@@ -358,8 +319,8 @@ Local Ltac args_to_bounded x H :=
         solve [ reflexivity
               | refine (fun v => match v with eq_refl => I end) ]
       ).
-
-Definition unop_args_to_bounded (x : fe25519W) (H : is_bounded (fe25519WToZ x) = true)
+*)
+(*Definition unop_args_to_bounded (x : fe25519W) (H : is_bounded (fe25519WToZ x) = true)
   : interp_flat_type (fun _ => BoundedWordW.BoundedWord) (all_binders_for ExprUnOpT).
 Proof. args_to_bounded x H. Defined.
 
@@ -397,7 +358,7 @@ Proof.
   let v := app_tuples (unop_args_to_bounded _ H0) v in
   exact v.
 Defined.
-
+*)
 Local Ltac make_bounds_prop bounds orig_bounds :=
   let bounds' := fresh "bounds'" in
   let bounds_bad := fresh "bounds_bad" in
@@ -405,37 +366,38 @@ Local Ltac make_bounds_prop bounds orig_bounds :=
   let boundsv := assoc_right_tuple bounds_bad (@None) in
   pose boundsv as bounds;
   pose orig_bounds as bounds';
-  repeat (refine (match fst bounds' with
-                  | Some bounds' => let (l, u) := fst bounds in
-                                    let (l', u') := bounds' in
-                                    ((l' <=? l) && (u <=? u'))%Z%bool
-                  | None => false
-                  end && _)%bool;
-          destruct bounds' as [_ bounds'], bounds as [_ bounds]);
+  repeat (refine (_ &&
+                    match snd bounds' with
+                    | Some bounds' => let (l, u) := snd bounds in
+                                      let (l', u') := bounds' in
+                                      ((l' <=? l) && (u <=? u'))%Z%bool
+                    | None => false
+                    end)%bool;
+          destruct bounds' as [bounds' _], bounds as [bounds _]);
   try exact (match bounds' with
              | Some bounds' => let (l, u) := bounds in
                                let (l', u') := bounds' in
                                ((l' <=? l) && (u <=? u'))%Z%bool
              | None => false
              end).
-
-Definition unop_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpT)) : bool.
+(*
+Definition unop_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (codomain ExprUnOpT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
-Definition binop_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprBinOpT)) : bool.
+Definition binop_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (codomain ExprBinOpT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
-Definition unopFEToWire_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpFEToWireT)) : bool.
+Definition unopFEToWire_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (codomain ExprUnOpFEToWireT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOpWireToFE_bounds. Defined.
-Definition unopWireToFE_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpWireToFET)) : bool.
+Definition unopWireToFE_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (codomain ExprUnOpWireToFET)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
 (* TODO FIXME(jgross?, andreser?): Is every function returning a single Z a boolean function? *)
-Definition unopFEToZ_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpFEToZT)) : bool.
+Definition unopFEToZ_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (codomain ExprUnOpFEToZT)) : bool.
 Proof.
   refine (let (l, u) := bounds in ((0 <=? l) && (u <=? 1))%Z%bool).
 Defined.
-Definition op9_4_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders Expr9_4OpT)) : bool.
+Definition op9_4_bounds_good (bounds : interp_flat_type (fun _ => Bounds.bounds) (codomain Expr9_4OpT)) : bool.
 Proof. make_bounds_prop bounds Expr4Op_bounds. Defined.
-
-Definition ApplyUnOp {var} (f : exprUnOp var) : exprArg var -> exprArg var
+*)
+(*Definition ApplyUnOp {var} (f : exprUnOp var) : exprArg var -> exprArg var
   := fun x
      => LetIn (invert_Return (unop_make_args x))
               (fun k => invert_Return (Apply length_fe25519 f k)).
@@ -460,12 +422,12 @@ Definition ApplyUnOpFEToZ {var} (f : exprUnOpFEToZ var) : exprArg var -> exprZ v
   := fun x
      => LetIn (invert_Return (unop_make_args x))
               (fun k => invert_Return (Apply length_fe25519 f k)).
-
+*)
 
 (* FIXME TODO(jgross): This is a horrible tactic.  We should unify the
     various kinds of correct and boundedness, and abstract in Gallina
     rather than Ltac *)
-
+(*
 Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   let Heq := fresh "Heq" in
   let Hbounds0 := fresh "Hbounds0" in
@@ -487,8 +449,8 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   change interp_base_type with (@Z.interp_base_type) in *;
   rewrite <- Heq; clear Heq;
   destruct Hbounds as [ Hbounds0 [Hbounds1 Hbounds2] ];
-  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj_from_option2 WordW.to_Z pf Hbounds2 Hbounds0) as Hbounds_left;
-  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj1_from_option2 Relations.related_wordW_boundsi' pf Hbounds1 Hbounds2) as Hbounds_right;
+  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise_proj_from_option2 WordW.to_Z pf Hbounds2 Hbounds0) as Hbounds_left;
+  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise_proj1_from_option2 Relations.related_wordW_boundsi' pf Hbounds1 Hbounds2) as Hbounds_right;
   specialize_by repeat first [ progress intros
                              | reflexivity
                              | assumption
@@ -509,7 +471,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   repeat match goal with x := _ |- _ => subst x end;
   cbv [id
          binop_args_to_bounded unop_args_to_bounded unopWireToFE_args_to_bounded op9_args_to_bounded
-         Relations.proj_eq_rel interp_flat_type_rel_pointwise SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Application.ApplyInterpedAll Application.ApplyInterpedAll' Application.interp_all_binders_for_of' Application.interp_all_binders_for_to' Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise_gen_Prop Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower Application.remove_all_binders WordW.to_Z] in Hbounds_left, Hbounds_right;
+         Relations.proj_eq_rel interp_flat_type_rel_pointwise SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Application.ApplyInterpedAll Application.ApplyInterpedAll' Application.interp_all_binders_for_of' Application.interp_all_binders_for_to' Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise_gen_Prop Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower Application.codomain WordW.to_Z] in Hbounds_left, Hbounds_right;
   lazymatch goal with
   | [ |- fe25519WToZ ?x = _ /\ _ ]
     => generalize dependent x; intros
@@ -520,7 +482,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   | [ |- _ = _ ]
     => exact Hbounds_left
   end;
-  cbv [interp_type interp_type_gen interp_type_gen_hetero interp_flat_type WordW.interp_base_type remove_all_binders] in *;
+  cbv [interp_type interp_type_gen interp_type_gen_hetero interp_flat_type WordW.interp_base_type codomain] in *;
   destruct_head' prod;
   change word64ToZ with WordW.wordWToZ in *;
   (split; [ exact Hbounds_left | ]);
@@ -528,7 +490,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   cbv [fst snd
            binop_bounds_good unop_bounds_good unopFEToWire_bounds_good unopWireToFE_bounds_good unopFEToZ_bounds_good op9_4_bounds_good
            ExprUnOp_bounds ExprBinOp_bounds ExprUnOpFEToWire_bounds ExprUnOpFEToZ_bounds ExprUnOpWireToFE_bounds Expr9Op_bounds Expr4Op_bounds] in H1;
-  destruct_head' ZBounds.bounds;
+  destruct_head' Bounds.bounds;
   unfold_is_bounded_in H1;
   simpl @fe25519WToZ; simpl @wire_digitsWToZ;
   destruct_head' and;
@@ -538,7 +500,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   repeat split; unfold_is_bounded;
   Z.ltb_to_lt;
   try omega; try reflexivity.
-
+*)
 
 Ltac rexpr_correct :=
   let ropW' := fresh in
@@ -553,11 +515,27 @@ Ltac rexpr_correct :=
   auto with interp_related.
 
 Notation rword_of_Z rexprZ_sig := (proj1_sig rexprZ_sig) (only parsing).
+(*
+Definition rword64ize {t} (x : Expr t) : Expr t
+  := MapInterp (fun t => match t with TZ => word64ize end) x.
+*)
 
-Notation compute_bounds opW bounds
-  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) opW) bounds)
+Notation rexpr_wfT e := (Wf.Wf e) (only parsing).
+
+Ltac prove_rexpr_wfT
+  := reflect_Wf Equality.base_type_eq_semidec_is_dec Equality.op_beq_bl.
+
+Notation rexpr_select_word_sizes rexprZ rexpr_bounds
+  := (Bounds.MapBounds rexprZ rexpr_bounds)
        (only parsing).
 
+Notation rexpr_correct_and_bounded rexprZ rexprZ_Wf rexpr_bounds
+  := (Bounds.MapBounds_correct_and_bounded_bool
+        rexprZ rexprZ_Wf rexpr_bounds _).
+
+Notation compute_bounds rexpr rexpr_bounds
+  := (@Bounds.ComputeBounds _ rexpr rexpr_bounds)
+       (only parsing).
 
 Module Export PrettyPrinting.
   (* We add [enlargen] to force [bounds_on] to be in [Type] in 8.4 and
@@ -568,24 +546,22 @@ Module Export PrettyPrinting.
 
   Inductive result := yes | no | borked.
 
-  Definition ZBounds_to_bounds_on
-    := fun t : base_type
-       => match t return ZBounds.interp_base_type t -> match t with TZ => bounds_on end with
-          | TZ => fun x => match x with
-                           | Some {| Bounds.lower := l ; Bounds.upper := u |}
-                             => in_range l u
-                           | None
-                             => overflow
-                           end
+  Definition Bounds_to_bounds_on
+    := fun (t : base_type) (x : Bounds.interp_base_type t)
+       => match x with
+          | Some {| Bounds.lower := l ; Bounds.upper := u |}
+            => in_range l u
+          | None
+            => overflow
           end.
 
-  Fixpoint does_it_overflow {t} : interp_flat_type (fun t => match t with TZ => bounds_on end) t -> result
-    := match t return interp_flat_type (fun t => match t with TZ => bounds_on end) t -> result with
-       | Tbase TZ => fun v => match v with
-                              | overflow => yes
-                              | in_range _ _ => no
-                              | enlargen _ => borked
-                              end
+  Fixpoint does_it_overflow {t} : interp_flat_type (fun t : base_type => bounds_on) t -> result
+    := match t return interp_flat_type _ t -> result with
+       | Tbase _ => fun v => match v with
+                             | overflow => yes
+                             | in_range _ _ => no
+                             | enlargen _ => borked
+                             end
        | Unit => fun _ => no
        | Prod x y => fun v => match @does_it_overflow _ (fst v), @does_it_overflow _ (snd v) with
                               | no, no => no
@@ -596,9 +572,9 @@ Module Export PrettyPrinting.
 
   (** This gives a slightly easier to read version of the bounds *)
   Notation compute_bounds_for_display opW bounds
-    := (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) (only parsing).
+    := (SmartVarfMap Bounds_to_bounds_on (compute_bounds opW bounds)) (only parsing).
   Notation sanity_compute opW bounds
-    := (does_it_overflow (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds))) (only parsing).
+    := (does_it_overflow (SmartVarfMap Bounds_to_bounds_on (compute_bounds opW bounds))) (only parsing).
   Notation sanity_check opW bounds
     := (eq_refl (sanity_compute opW bounds) <: no = no) (only parsing).
 End PrettyPrinting.

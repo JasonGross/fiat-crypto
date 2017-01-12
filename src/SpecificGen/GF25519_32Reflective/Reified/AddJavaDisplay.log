@@ -1,0 +1,18 @@
+raddW = 
+fun var : base_type -> Type =>
+λ
+x x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
+ x18 : var (TWord 5),
+int x19 = x + x9;
+int x20 = x0 + x10;
+int x21 = x1 + x11;
+int x22 = x2 + x12;
+int x23 = x3 + x13;
+int x24 = x4 + x14;
+int x25 = x5 + x15;
+int x26 = x6 + x16;
+int x27 = x7 + x17;
+int x28 = x8 + x18;
+(Return x19, Return x20, Return x21, Return x22, Return x23, 
+Return x24, Return x25, Return x26, Return x27, Return x28)
+     : Java_like
