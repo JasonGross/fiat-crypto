@@ -83,12 +83,14 @@ Section language.
              (Rwf : wf G e1 e2)
     : interp_type_rel_pointwise2 R (interp1 e1) (interp2 e2).
     Proof.
-      induction Rwf; simpl; repeat intro; simpl in *; eauto.
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; intros; progress destruct_head' or; [ | solve [ eauto ] ]
-      end.
-      inversion_sigma; inversion_prod; repeat subst; simpl; auto.
+      destruct Rwf; simpl; repeat intro; simpl in *; eauto.
+      eapply interpf_wff; [ | eauto ].
+      repeat match goal with
+             | _ => intro
+             | [ H : List.In _ (_ ++ _) |- _ ] => apply List.in_app_or in H
+             | _ => progress destruct_head' or
+             | _ => solve [ eauto ]
+             end.
     Qed.
 
     Lemma InterpWf

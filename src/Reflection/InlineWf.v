@@ -77,15 +77,13 @@ Section language.
           (Hwf : wf G' e1 e2)
       : @wf var1 var2 G t (inline_const is_const e1) (inline_const is_const e2).
     Proof.
-      revert dependent G; induction Hwf; simpl; constructor; intros;
-        [ eapply (wff_inline_constf is_const); [ | solve [ eauto ] ] | ];
-        match goal with
-        | [ H : _ |- _ ]
-          => apply H; simpl; intros; progress destruct_head' or
-        end;
-        inversion_sigma; inversion_prod; repeat subst; simpl.
-      { constructor; left; reflexivity. }
-      { eauto. }
+      destruct Hwf; simpl; constructor; intros.
+      eapply (wff_inline_constf is_const); [ | solve [ eauto ] ]; intros.
+      repeat match goal with
+             | [ H : List.In _ (_ ++ _) |- _ ] => apply List.in_app_or in H
+             | _ => progress destruct_head or
+             | _ => solve [ eauto ]
+             end.
     Qed.
   End with_var.
 

@@ -2,7 +2,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Relations.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.Z.InterpretationsGen.
 Require Import Crypto.Reflection.Z.Interpretations128.
 Require Import Crypto.Reflection.Z.Interpretations128.Relations.
@@ -13,35 +12,24 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.
 
 Module Relations.
-  Section lift.
-    Context {interp_base_type1 interp_base_type2 : base_type -> Type}
-            (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
-
-    Definition interp_type_rel_pointwise2_uncurried
-               {t : type base_type}
-      := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> _ with
-         | Tflat T => fun f g => interp_flat_type_rel_pointwise2 (t:=T) R f g
-         | Arrow A B
-           => fun f g
-              => forall x y, interp_flat_type_rel_pointwise2 R x y
-                             -> interp_flat_type_rel_pointwise2 R (ApplyInterpedAll f x) (ApplyInterpedAll g y)
-         end.
-
-    Lemma uncurry_interp_type_rel_pointwise2
-          {t f g}
-      : interp_type_rel_pointwise2 (t:=t) R f g
-        <-> interp_type_rel_pointwise2_uncurried (t:=t) f g.
-    Proof.
-      unfold interp_type_rel_pointwise2_uncurried.
-      induction t as [|A B IHt]; [ reflexivity | ].
-      { simpl; unfold Morphisms.respectful_hetero in *; destruct B.
-        { reflexivity. }
-        { setoid_rewrite IHt; clear IHt.
-          split; intro H; intros.
-          { destruct_head_hnf' prod; simpl in *; intuition. }
-          { eapply (H (_, _) (_, _)); simpl in *; intuition. } } }
-    Qed.
-  End lift.
+  Local Ltac t_proj_step R :=
+    match goal with
+    | _ => progress simpl in *
+    | _ => reflexivity
+    | _ => progress destruct_head unit
+    | _ => progress destruct_head and
+    | _ => progress inversion_option
+    | _ => progress inversion_prod
+    | _ => progress subst
+    | [ H : forall _ _, _ <-> _ |- _ ] => rewrite H
+    | _ => progress unfold R
+    | _ => intro
+    | [ |- _ <-> _ ] => split
+    | [ |- _ /\ _ ] => split
+    | _ => progress destruct_head prod
+    | _ => progress unfold LiftOption.of' in *
+    end.
+  Local Ltac t_proj R := repeat t_proj_step R.
 
   Section proj.
     Context {interp_base_type1 interp_base_type2}
@@ -50,43 +38,37 @@ Module Relations.
     Let R {t : flat_type base_type} f g :=
       SmartVarfMap (t:=t) proj f = g.
 
-    Definition interp_type_rel_pointwise2_uncurried_proj
+    Definition interp_type_rel_pointwise2_proj
                {t : type base_type}
       : interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop
-      := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop  with
-         | Tflat T => @R _
+      := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop with
          | Arrow A B
            => fun f g
-              => forall x : interp_flat_type interp_base_type1 (all_binders_for (Arrow A B)),
+              => forall x : interp_flat_type interp_base_type1 A,
                   let y := SmartVarfMap proj x in
-                  let fx := ApplyInterpedAll f x in
-                  let gy := ApplyInterpedAll g y in
+                  let fx := f x in
+                  let gy := g y in
                   @R _ fx gy
          end.
 
-    Lemma uncurry_interp_type_rel_pointwise2_proj
+    Lemma interp_flat_type_rel_pointwise2_proj_iff
+          {t : flat_type base_type}
+          {f : interp_flat_type interp_base_type1 t}
+          {g}
+      : interp_flat_type_rel_pointwise2 (t:=t) (fun t => @R (Tbase _)) f g
+        <-> R f g.
+    Proof. induction t; t_proj (@R). Qed.
+
+    Lemma interp_type_rel_pointwise2_proj_iff
           {t : type base_type}
           {f : interp_type interp_base_type1 t}
           {g}
-      : interp_type_rel_pointwise2 (t:=t) (fun t => @R _) f g
-        -> interp_type_rel_pointwise2_uncurried_proj (t:=t) f g.
+      : interp_type_rel_pointwise2 (t:=t) (fun t => @R (Tbase _)) f g
+        <-> interp_type_rel_pointwise2_proj (t:=t) f g.
     Proof.
-      unfold interp_type_rel_pointwise2_uncurried_proj.
-      induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
-      { induction t as [t| |A IHA B IHB]; simpl; destruct_head_hnf' unit;
-          [ solve [ trivial | reflexivity ] | reflexivity | ].
-        intros [HA HB].
-        specialize (IHA _ _ HA); specialize (IHB _ _ HB).
-        unfold R in *.
-        repeat first [ progress destruct_head_hnf' prod
-                     | progress simpl in *
-                     | progress subst
-                     | reflexivity ]. }
-      { destruct B; intros H ?; apply IHt, H; clear IHt;
-          repeat first [ reflexivity
-                       | progress simpl in *
-                       | progress unfold R, LiftOption.of' in *
-                       | progress break_match ]. }
+      destruct t; simpl; unfold Morphisms.respectful_hetero.
+      setoid_rewrite interp_flat_type_rel_pointwise2_proj_iff; unfold R.
+      split; intros; subst; auto.
     Qed.
   End proj.
 
@@ -101,20 +83,46 @@ Module Relations.
       | None => True
       end.
 
-    Definition interp_type_rel_pointwise2_uncurried_proj_option
+    Definition interp_type_rel_pointwise2_proj_option
                {t : type base_type}
       : interp_type (LiftOption.interp_base_type' interp_base_type1) t -> interp_type interp_base_type2 t -> Prop
       := match t return interp_type (LiftOption.interp_base_type' interp_base_type1) t -> interp_type interp_base_type2 t -> Prop  with
-         | Tflat T => @R _
          | Arrow A B
            => fun f g
-              => forall x : interp_flat_type (fun _ => interp_base_type1) (all_binders_for (Arrow A B)),
+              => forall x : interp_flat_type (fun _ => interp_base_type1) A,
                   let y := SmartVarfMap proj_option x in
-                  let fx := ApplyInterpedAll f (LiftOption.to' (Some x)) in
-                  let gy := ApplyInterpedAll g y in
+                  let fx := f (LiftOption.to' (Some x)) in
+                  let gy := g y in
                   @R _ fx gy
          end.
 
+    Lemma interp_flat_type_rel_pointwise2_proj_option_iff
+          {t : flat_type base_type}
+          {f : interp_flat_type (LiftOption.interp_base_type' interp_base_type1) t}
+          {g}
+      : interp_flat_type_rel_pointwise2 (t:=t) (fun t => @R (Tbase _)) f g
+        <-> R f g.
+    Proof. induction t; t_proj (@R);
+             repeat (break_match; t_proj (@R);
+               break_match_hyps; t_proj (@R)).
+
+           repeat break_innermost_match.
+           unfold LiftOption.of'; simpl.
+           unfold LiftOption.of' in *.
+           t_proj (@R).
+    Qed.
+
+    Lemma uncurry_interp_type_rel_pointwise2_proj
+          {t : type base_type}
+          {f : interp_type interp_base_type1 t}
+          {g}
+      : interp_type_rel_pointwise2 (t:=t) (fun t => @R (Tbase _)) f g
+        <-> interp_type_rel_pointwise2_proj (t:=t) f g.
+    Proof.
+      destruct t; simpl; unfold Morphisms.respectful_hetero.
+      setoid_rewrite uncurry_interp_flat_type_rel_pointwise2_proj; unfold R.
+      split; intros; subst; auto.
+    Qed.
     Lemma uncurry_interp_type_rel_pointwise2_proj_option
           {t : type base_type}
           {f : interp_type (LiftOption.interp_base_type' interp_base_type1) t}
@@ -170,8 +178,8 @@ Module Relations.
            => fun f g
               => forall x : interp_flat_type (fun _ => interp_base_type1) (all_binders_for (Arrow A B)),
                   let y := SmartVarfMap (fun _ => proj) x in
-                  let fx := ApplyInterpedAll f (LiftOption.to' (Some x)) in
-                  let gy := ApplyInterpedAll g (LiftOption.to' (Some y)) in
+                  let fx := f (LiftOption.to' (Some x)) in
+                  let gy := g (LiftOption.to' (Some y)) in
                   @R _ fx gy
          end.
 
@@ -229,9 +237,9 @@ Module Relations.
               => forall x : interp_flat_type (fun _ => interp_base_type0) (all_binders_for (Arrow A B)),
                   let x' := SmartVarfMap proj01 x in
                   let y' := SmartVarfMap proj x' in
-                  let fx := ApplyInterpedAll f x' in
-                  let gy := ApplyInterpedAll g y' in
-                  let f0x := LiftOption.of' (ApplyInterpedAll f0 (LiftOption.to' (Some x))) in
+                  let fx := f x' in
+                  let gy := g y' in
+                  let f0x := LiftOption.of' (f0 (LiftOption.to' (Some x))) in
                   match f0x with
                   | Some _ => True
                   | None => False
@@ -297,9 +305,9 @@ Module Relations.
               => forall x : interp_flat_type (fun _ => interp_base_type0) (all_binders_for (Arrow A B)),
                   let x' := SmartVarfMap (fun _ => proj01) x in
                   let y' := SmartVarfMap proj02 x in
-                  let fx := LiftOption.of' (ApplyInterpedAll f (LiftOption.to' (Some x'))) in
-                  let gy := ApplyInterpedAll g y' in
-                  let f0x := LiftOption.of' (ApplyInterpedAll f0 (LiftOption.to' (Some x))) in
+                  let fx := LiftOption.of' (f (LiftOption.to' (Some x'))) in
+                  let gy := g y' in
+                  let f0x := LiftOption.of' (f0 (LiftOption.to' (Some x))) in
                   match f0x with
                   | Some _ => True
                   | None => False

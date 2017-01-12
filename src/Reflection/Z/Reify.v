@@ -39,7 +39,7 @@ Ltac prove_InlineConst_Linearize_Compile_correct :=
   fun _
   => intros;
      lazymatch goal with
-     | [ |- ?R (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (InlineConst ?is_const (Linearize _))) _ ]
+     | [ |- ?R (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (InlineConst ?is_const (Linearize _)) ?x) _ ]
        => etransitivity;
           [ apply (@Interp_InlineConst base_type_code interp_base_type op interp_op is_const t);
             reflect_Wf base_type_eq_semidec_is_dec op_beq_bl

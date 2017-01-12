@@ -176,7 +176,7 @@ Section language.
     { t. }
     { t. }
   Qed.
-  Fixpoint reflect_wf (G : list (sigT (fun t => var1 t * var2 t)%type))
+  Definition reflect_wf (G : list (sigT (fun t => var1 t * var2 t)%type))
            {t1 t2 : type}
            (e1 : @expr (fun t => nat * var1 t)%type t1) (e2 : @expr (fun t => nat * var2 t)%type t2)
     : let reflective_obligation := reflect_wfT (duplicate_type G) e1 e2 in
@@ -187,22 +187,18 @@ Section language.
       | None => True
       end.
   Proof.
-    destruct e1 as [ t1 e1 | tx tR f ],
-                   e2 as [ t2 e2 | tx' tR' f' ]; simpl; try solve [ exact I ];
-      [ clear reflect_wf;
-        pose proof (@reflect_wff G t1 t2 e1 e2)
-      | pose proof (fun x x'
-                    => match preflatten_binding_list2 (Tbase tx) (Tbase tx') as v return match v with Some _ => _ | None => True end with
-                      | Some G0
-                        => reflect_wf
-                            (G0 x x' ++ G)%list _ _
-                            (f (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
-                            (f' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
-                      | None => I
-                      end);
-        clear reflect_wf ].
-    { t. }
-    { t. }
+    destruct e1 as [ tx tR f ],
+                   e2 as [ tx' tR' f' ]; simpl; try solve [ exact I ].
+    pose proof (fun x x'
+                => match preflatten_binding_list2 tx tx' as v return match v with Some _ => _ | None => True end with
+                   | Some G0
+                     => reflect_wff
+                          (G0 x x' ++ G)%list
+                          (f (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
+                          (f' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
+                   | None => I
+                   end).
+    t.
   Qed.
 End language.
 

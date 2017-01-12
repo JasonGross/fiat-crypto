@@ -2,7 +2,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.Application.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
@@ -68,6 +68,13 @@ Module InterpretationsGen (Bit : BitSize).
                              end)
              t.
 
+      Lemma of'_pair {A B} x
+        : @of' (A * B) x = match of' (fst x), of' (snd x) with
+                           | Some x', Some y' => Some (x', y')
+                           | _, _ => None
+                           end.
+      Proof. reflexivity. Qed.
+
       Fixpoint to' {t} : interp_flat_type t -> Syntax.interp_flat_type interp_base_type' t
         := match t return interp_flat_type t -> Syntax.interp_flat_type interp_base_type' t with
            | Tbase TZ => fun x => x
@@ -76,13 +83,55 @@ Module InterpretationsGen (Bit : BitSize).
                                    @to' B (option_map (@snd _ _) x))
            end.
 
-      Definition lift_relation {interp_base_type2}
-                 (R : forall t, T -> interp_base_type2 t -> Prop)
-        : forall t, interp_base_type' t -> interp_base_type2 t -> Prop
-        := fun t x y => match of' (t:=Tbase t) x with
-                        | Some x' => R t x' y
-                        | None => True
-                        end.
+      Lemma of'_to' {t} v : of' (@to' t (Some v)) = Some v.
+      Proof.
+        induction t;
+          repeat first [ progress simpl
+                       | progress destruct_head_hnf prod
+                       | progress destruct_head_hnf unit
+                       | progress destruct_head base_type
+                       | rewrite of'_pair
+                       | rewrite_hyp !*
+                       | reflexivity ].
+      Qed.
+
+      Section lift_relation.
+        Context {interp_base_type2 : base_type -> Type}
+                (R : forall t, T -> interp_base_type2 t -> Prop).
+        Definition lift_relation
+          : forall t, interp_base_type' t -> interp_base_type2 t -> Prop
+          := fun t x y => match of' (t:=Tbase t) x with
+                          | Some x' => R t x' y
+                          | None => True
+                          end.
+
+        Lemma lift_relation_flat_type_pointwise2 t x y x'
+              (Hx : of' x = Some x')
+          : interp_flat_type_rel_pointwise2 lift_relation x y
+            <-> interp_flat_type_rel_pointwise2 (t:=t) R x' y.
+        Proof.
+          induction t; simpl; try tauto.
+          { unfold lift_relation; rewrite Hx; reflexivity. }
+          { rewrite of'_pair in Hx.
+            destruct (of' (fst x)) eqn:?, (of' (snd x)) eqn:?; try congruence.
+            inversion_option; subst.
+            destruct_head_hnf prod; split_iff; intuition eauto. }
+        Qed.
+
+        Lemma lift_relation_type_pointwise2 t f g f'
+              (Hx : forall x x', of' x = Some x' -> of' (f x) = Some (f' x'))
+          : interp_type_rel_pointwise2 lift_relation f g
+            -> interp_type_rel_pointwise2 (t:=t) R f' g.
+        Proof.
+          destruct t; simpl; unfold Morphisms.respectful_hetero.
+          intros H x y p; specialize (H (to' (Some x)) y).
+          eapply lift_relation_flat_type_pointwise2 in p; [ | apply of'_to'.. ].
+          specialize (H p).
+          eapply lift_relation_flat_type_pointwise2 in H; [ exact H | ].
+          erewrite Hx; [ reflexivity | ].
+          rewrite of'_to'; reflexivity.
+        Qed.
+      End lift_relation.
 
       Definition Some {t} (x : T) : interp_base_type' t
         := match t with
@@ -95,14 +144,45 @@ Module InterpretationsGen (Bit : BitSize).
     Global Arguments lift_relation {T _} R _ _ _.
 
     Section lift_option2.
-      Context (T U : Type).
-      Definition lift_relation2 (R : T -> U -> Prop)
+      Context (T U : Type) (R : T -> U -> Prop).
+      Definition lift_relation2
         : forall t, interp_base_type' T t -> interp_base_type' U t -> Prop
         := fun t x y => match of' (t:=Tbase t) x, of' (t:=Tbase t) y with
                         | Datatypes.Some x', Datatypes.Some y' => R x' y'
                         | None, None => True
                         | _, _ => False
                         end.
+
+      Lemma lift_relation2_flat_type_pointwise2 t x y x' y'
+            (Hx : of' x = Datatypes.Some x')
+            (Hy : of' y = Datatypes.Some y')
+        : interp_flat_type_rel_pointwise2 lift_relation2 x y
+          <-> interp_flat_type_rel_pointwise2 (t:=t) (fun _ => R) x' y'.
+      Proof.
+        induction t; simpl; try tauto.
+        { unfold lift_relation2; rewrite Hx, Hy; reflexivity. }
+        { rewrite of'_pair in Hx, Hy.
+          destruct (of' (fst x)) eqn:?, (of' (snd x)) eqn:?; try congruence.
+          destruct (of' (fst y)) eqn:?, (of' (snd y)) eqn:?; try congruence.
+          inversion_option; subst.
+          destruct_head_hnf prod; split_iff; intuition eauto. }
+      Qed.
+
+      Lemma lift_relation2_type_pointwise2 t f g f' g'
+            (Hx : forall x x', of' x = Datatypes.Some x' -> of' (f x) = Datatypes.Some (f' x'))
+            (Hy : forall x x', of' x = Datatypes.Some x' -> of' (g x) = Datatypes.Some (g' x'))
+        : interp_type_rel_pointwise2 lift_relation2 f g
+          -> interp_type_rel_pointwise2 (t:=t) (fun _ => R) f' g'.
+      Proof.
+        destruct t; simpl; unfold Morphisms.respectful_hetero.
+        intros H x y p; specialize (H (to' (Datatypes.Some x)) (to' (Datatypes.Some y))).
+        eapply lift_relation2_flat_type_pointwise2 in p; [ | apply of'_to'.. ].
+        specialize (H p).
+        eapply lift_relation2_flat_type_pointwise2 in H; [ exact H | .. ];
+          [ erewrite Hx; [ reflexivity | ]
+          | erewrite Hy; [ reflexivity | ] ];
+          rewrite of'_to'; reflexivity.
+      Qed.
     End lift_option2.
     Global Arguments lift_relation2 {T U} R _ _ _.
   End LiftOption.

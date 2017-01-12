@@ -73,14 +73,16 @@ Section language.
                  List.In (existT (fun t : base_type_code => (interp_base_type t * interp_base_type t)%type) t (x, x')%core) G
                  -> x = x')
              (Rwf : wf G e1 e2)
-    : interp_type_gen_rel_pointwise (fun _ => eq) (interp e1) (interp e2).
+    : forall x, interp e1 x = interp e2 x.
     Proof.
       induction Rwf; simpl; repeat intro; simpl in *; subst; eauto.
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; intros; progress destruct_head' or; [ | solve [ eauto ] ]
-      end.
-      inversion_sigma; inversion_prod; repeat subst; simpl; auto.
+      eapply interpf_wff; [ | solve [ eauto ] ].
+      repeat match goal with
+             | _ => intro
+             | [ H : List.In _ (_ ++ _) |- _ ] => apply List.in_app_or in H
+             | _ => progress destruct_head' or
+             | _ => solve [ eauto ]
+             end.
     Qed.
   End wf.
 End language.
