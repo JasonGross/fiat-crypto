@@ -3,7 +3,6 @@ Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Util.Tactics.
 
 Local Opaque Interp.

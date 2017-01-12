@@ -64,33 +64,19 @@ Section language.
 
   Local Hint Resolve interpf_inline_constf.
 
-  Lemma interp_inline_const is_const G {t} e1 e2
-        (wf : @wf _ _ G t e1 e2)
-        (H : forall t x x',
-            List.In
-              (existT (fun t : base_type_code => (exprf (Tbase t) * interp_base_type t)%type) t
-                      (x, x')) G
-            -> interpf interp_op x = x')
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (interp interp_op (inline_const is_const e1))
-                                    (interp interp_op e2).
+  Lemma interp_inline_const is_const {t} e1 e2
+        (wf : @wf _ _ t e1 e2)
+    : forall x, interp interp_op (inline_const is_const e1) x = interp interp_op e2 x.
   Proof.
-    induction wf.
-    { eapply (interpf_inline_constf is_const); eauto. }
-    { simpl in *; intro.
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; intuition (inversion_sigma; inversion_prod; subst; eauto)
-      end. }
+    destruct wf.
+    simpl in *; intro; eapply (interpf_inline_constf is_const); eauto.
   Qed.
 
   Lemma Interp_InlineConst is_const {t} (e : Expr t)
         (wf : Wf e)
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (Interp interp_op (InlineConst is_const e))
-                                    (Interp interp_op e).
+    : forall x, Interp interp_op (InlineConst is_const e) x = Interp interp_op e x.
   Proof.
     unfold Interp, InlineConst.
-    eapply (interp_inline_const is_const) with (G := nil); simpl; intuition.
+    eapply (interp_inline_const is_const); simpl; intuition.
   Qed.
 End language.

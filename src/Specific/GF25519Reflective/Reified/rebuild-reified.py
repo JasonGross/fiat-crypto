@@ -10,22 +10,22 @@ for name, opkind in ([(name, 'BinOp') for name in ('Add', 'Carry_Add', 'Sub', 'C
     extra = ''
     if name in ('Carry_Add', 'Carry_Sub', 'Mul', 'Carry_Opp', 'Pack', 'Unpack', 'Ge_Modulus', 'PreFreeze'):
         extra = r"""Local Obligation Tactic := intros; vm_compute; constructor.
-Program Definition r%(lname)sW_correct_and_bounded
+Program Definition r%(lname)sZ_correct_and_bounded
   := Expr%(uopkind)s_correct_and_bounded
-       r%(lname)sW %(lname)s r%(lname)sZ_sig r%(lname)sW_correct_and_bounded_gen
+       r%(lname)sZ %(lname)s r%(lname)sZ_sig r%(lname)sZ_correct_and_bounded_gen
        _ _.
 """ % locals()
     with open(name.replace('_', '') + '.v', 'w') as f:
-        f.write(r"""Require Import Crypto.Specific.GF25519Reflective.Common%(uopkind)s.
+        f.write(r"""Require Import Crypto.Specific.GF25519Reflective.Common.
 
 Definition r%(lname)sZ_sig : rexpr_%(lopkind)s_sig %(lname)s. Proof. reify_sig. Defined.
-Definition r%(lname)sW := Eval vm_compute in rword_of_Z r%(lname)sZ_sig.
-Lemma r%(lname)sW_correct_and_bounded_gen : correct_and_bounded_genT r%(lname)sW r%(lname)sZ_sig.
+Definition r%(lname)sZ := Eval vm_compute in proj1_sig r%(lname)sZ_sig.
+Lemma r%(lname)sZ_correct_and_bounded_gen : correct_and_bounded_genT r%(lname)sZ r%(lname)sZ_sig.
 Proof. rexpr_correct. Qed.
-Definition r%(lname)s_output_bounds := Eval vm_compute in compute_bounds r%(lname)sW Expr%(uopkind)s_bounds.
+Definition r%(lname)s_output_bounds := Eval vm_compute in compute_bounds r%(lname)sZ Expr%(uopkind)s_bounds.
 %(extra)s
 Local Open Scope string_scope.
-Compute ("%(name)s", compute_bounds_for_display r%(lname)sW Expr%(uopkind)s_bounds).
-Compute ("%(name)s overflows? ", sanity_compute r%(lname)sW Expr%(uopkind)s_bounds).
-Compute ("%(name)s overflows (error if it does)? ", sanity_check r%(lname)sW Expr%(uopkind)s_bounds).
+Compute ("%(name)s", compute_bounds_for_display r%(lname)sZ Expr%(uopkind)s_bounds).
+Compute ("%(name)s overflows? ", sanity_compute r%(lname)sZ Expr%(uopkind)s_bounds).
+Compute ("%(name)s overflows (error if it does)? ", sanity_check r%(lname)sZ Expr%(uopkind)s_bounds).
 """ % locals())

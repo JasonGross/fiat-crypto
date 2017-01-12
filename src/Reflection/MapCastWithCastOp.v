@@ -1,8 +1,8 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Equality.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.MapCast.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
@@ -124,7 +124,7 @@ Section language.
     Definition map_interp_cast_with_cast_op
              {t1} (e1 : @expr base_type_code1 op1 ivarf t1)
              {t2} (e2 : @expr base_type_code2 op2 interp_base_type2 t2)
-      : forall (args2 : interp_all_binders_for' t2 interp_base_type2),
+      : forall (args2 : interp_flat_type interp_base_type2 (domain t2)),
         @expr base_type_code1 op1 ovar (@new_type _ args2 (interp interp_op2 e2))
       := @map_interp_cast
            base_type_code1 base_type_code2 interp_base_type2 op1 op2
@@ -152,7 +152,7 @@ Section homogenous.
           (is_cast : forall t1 t2, op t1 t2 -> bool).
   Definition MapInterpCastWithCastOp
              new_op
-             {t} (e : Expr base_type_code op t) args
+             {t} (e : Expr base_type_code op t) (args : interp_flat_type interp_base_type2 (domain t))
     : Expr base_type_code op (new_type (@new_base_type) args (Interp interp_op2 e))
     := fun var => map_interp_cast_with_cast_op base_type_code_beq base_type_code_bl (@failv) Cast is_cast new_op (e _) (e _) args.
 End homogenous.

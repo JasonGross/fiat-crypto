@@ -1,6 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
-Require Import Crypto.Reflection.Application.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
@@ -17,13 +17,11 @@ Section language.
           (new_base_type : forall t, interp_base_type2 t -> base_type_code1).
   Local Notation new_flat_type (*: forall t, interp_flat_type interp_base_type2 t -> flat_type base_type_code1*)
     := (@SmartFlatTypeMap2 _ _ interp_base_type2 (fun t v => Tbase (new_base_type t v))).
-  Fixpoint new_type t
-    : forall (ve : interp_all_binders_for' t interp_base_type2) (v : interp_type interp_base_type2 t),
+  Definition new_type t
+    : forall (ve : interp_flat_type interp_base_type2 (domain t))
+             (v : interp_type interp_base_type2 t),
       type base_type_code1
-    := match t return interp_all_binders_for' t _ -> interp_type _ t -> type base_type_code1 with
-       | Tflat T => fun _ => new_flat_type
-       | Arrow A B => fun ve v => Arrow (@new_base_type A (fst ve)) (@new_type B (snd ve) (v (fst ve)))
-       end.
+    := fun ve v => Arrow (@new_flat_type (domain t) ve) (@new_flat_type (codomain t) (v ve)).
   Context (transfer_op : forall ovar src1 dst1 src2 dst2
                                 (opc1 : op1 src1 dst1)
                                 (opc2 : op2 src2 dst2)
@@ -44,10 +42,9 @@ Section language.
       := (SmartValf _ (@failv _)).
     Local Notation failf t (* {t} : @exprf base_type_code1 op1 ovar t*)
       := (SmartPairf (SmartFail t)).
-    Fixpoint fail t : @expr base_type_code1 op1 ovar t
+    Definition fail t : @expr base_type_code1 op1 ovar t
       := match t with
-         | Tflat T => @failf _
-         | Arrow A B => Abs (fun _ => @fail B)
+         | Arrow A B => Abs (fun _ => @failf B)
          end.
 
     Fixpoint mapf_interp_cast
@@ -81,24 +78,17 @@ Section language.
          end.
     Arguments mapf_interp_cast {_} _ {_} _. (* 8.4 workaround for bad arguments *)
 
-    Fixpoint map_interp_cast
+    Definition map_interp_cast
              {t1} (e1 : @expr base_type_code1 op1 ivarf t1)
              {t2} (e2 : @expr base_type_code2 op2 interp_base_type2 t2)
-             {struct e2}
-      : forall (args2 : interp_all_binders_for' t2 interp_base_type2),
+      : forall (args2 : interp_flat_type interp_base_type2 (domain t2)),
         @expr base_type_code1 op1 ovar (@new_type _ args2 (interp interp_op2 e2))
       := match e1 in expr _ _ t1, e2 in expr _ _ t2
-               return forall (args2 : interp_all_binders_for' t2 _), expr _ _ (new_type _ args2 (interp _ e2)) with
-         | Return t1 ex1, Return t2 ex2
-           => fun _ => mapf_interp_cast ex1 ex2
+               return forall (args2 : interp_flat_type _ (domain t2)), expr _ _ (new_type _ args2 (interp _ e2)) with
          | Abs src1 dst1 f1, Abs src2 dst2 f2
            => fun args2
-              => Abs (fun x
-                      => let x' := @transfer_var (Tbase _) (Tbase _) (Tbase _) (fun x => x) (Var x) in
-                         @map_interp_cast _ (f1 x') _ (f2 (fst args2)) (snd args2))
-         | Return _ _, _
-         | Abs _ _ _, _
-           => fun _ => @fail _
+              => Abs (fun x : interp_flat_type _ (new_flat_type _)
+                      => transfer_var _ _ _ (fun x => @mapf_interp_cast _ (f1 x) _ (f2 args2)) (SmartVarfMap (fun t => Var) x))
          end.
   End with_var.
 End language.
@@ -122,7 +112,7 @@ Section homogenous.
                                  (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=ovar) tC1)
                                  (v : interp_flat_type ivarf tx2),
               exprf base_type_code op (var:=ovar) tC1)
-          {t} (e : Expr base_type_code op t) args
+          {t} (e : Expr base_type_code op t) (args : interp_flat_type interp_base_type2 (domain t))
     : Expr base_type_code op (new_type (@new_base_type) args (Interp interp_op2 e))
     := fun var => map_interp_cast (@failv) transfer_op (transfer_var _) (e _) (e _) args.
 End homogenous.

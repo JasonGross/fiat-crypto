@@ -1,0 +1,6 @@
+- Add unit type to flat type
+- make Abs take in flat type, not base
+- make Arrow take in two flat types, not base and type
+- remove const constructor, rel_wff
+- add const operation which takes a unit
+- MapCast correctness talks about three-place relation between two interpretations of input expression, and output interpretation

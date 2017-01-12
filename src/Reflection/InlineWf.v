@@ -72,21 +72,15 @@ Section language.
           t_fin.
     Qed.
 
-    Lemma wf_inline_const is_const {t} e1 e2 G G'
-          (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x, x')) G'
-                              -> wff G x x')
-          (Hwf : wf G' e1 e2)
-      : @wf var1 var2 G t (inline_const is_const e1) (inline_const is_const e2).
+    Lemma wf_inline_const is_const {t} e1 e2
+          (Hwf : wf e1 e2)
+      : @wf var1 var2 t (inline_const is_const e1) (inline_const is_const e2).
     Proof.
-      revert dependent G; induction Hwf; simpl; constructor; intros;
-        [ eapply (wff_inline_constf is_const); [ | solve [ eauto ] ] | ];
-        match goal with
-        | [ H : _ |- _ ]
-          => apply H; simpl; intros; progress destruct_head' or
-        end;
-        inversion_sigma; inversion_prod; repeat subst; simpl.
-      { constructor; left; reflexivity. }
-      { eauto. }
+      destruct Hwf; simpl; constructor; intros.
+      eapply (wff_inline_constf is_const); [ | solve [ eauto ] ].
+      intros ??? H'.
+      apply wff_SmartVarVarf with (G := nil) in H'.
+      rewrite List.app_nil_r in H'; assumption.
     Qed.
   End with_var.
 
@@ -95,7 +89,7 @@ Section language.
     : Wf (InlineConst is_const e).
   Proof.
     intros var1 var2.
-    apply (@wf_inline_const var1 var2 is_const t (e _) (e _) nil nil); simpl; [ tauto | ].
+    apply (@wf_inline_const var1 var2 is_const t (e _) (e _)); simpl.
     apply Hwf.
   Qed.
 End language.
