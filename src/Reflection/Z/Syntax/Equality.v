@@ -30,6 +30,7 @@ Qed.
 Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
   := match f, g return bool with
      | OpConst TZ v, OpConst TZ v' => Z.eqb v v'
+     | OpConst (TWord _) v, OpConst (TWord _) v' => wordT_beq_hetero v v'
      | OpConst _ _, _ => false
      | Add T1, Add T2
      | Sub T1, Sub T2

@@ -180,6 +180,7 @@ src/Reflection/Z/BinaryNotationConstants.v
 src/Reflection/Z/BoundsInterpretations.v
 src/Reflection/Z/CNotations.v
 src/Reflection/Z/HexNotationConstants.v
+src/Reflection/Z/Interpretations.v
 src/Reflection/Z/Interpretations128.v
 src/Reflection/Z/Interpretations64.v
 src/Reflection/Z/InterpretationsGen.v
@@ -188,9 +189,7 @@ src/Reflection/Z/OpInversion.v
 src/Reflection/Z/Reify.v
 src/Reflection/Z/Syntax.v
 src/Reflection/Z/Interpretations128/Relations.v
-src/Reflection/Z/Interpretations128/RelationsCombinations.v
 src/Reflection/Z/Interpretations64/Relations.v
-src/Reflection/Z/Interpretations64/RelationsCombinations.v
 src/Reflection/Z/Syntax/Equality.v
 src/Reflection/Z/Syntax/Util.v
 src/Spec/CompleteEdwardsCurve.v

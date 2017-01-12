@@ -56,6 +56,7 @@ Lemma cast_const_id {t} v
   : @cast_const t t v = v.
 Proof.
   destruct t; simpl; trivial.
+  rewrite ZToWord_wordToZ; reflexivity.
 Qed.
 
 Lemma cast_const_idempotent {a b c} v
