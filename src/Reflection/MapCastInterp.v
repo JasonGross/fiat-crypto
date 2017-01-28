@@ -31,6 +31,14 @@ Section language.
                                 args2
                                 (args' : @exprf base_type_code op ovar (@new_flat_type _ (interpf interp_op2 args2))),
               @exprf base_type_code op ovar (@new_flat_type _ (interpf interp_op2 (Op opc2 args2)))).
+  Context (bound_is_good : forall t, interp_base_type2 t -> Prop).
+  Local Notation bounds_are_good
+    := (@interp_flat_type_rel_pointwise0 _ _ bound_is_good).
+
+  Context (good_bounds_monotone : forall src dst opc args,
+              bounds_are_good (interp_op2 src dst opc args)
+              -> bounds_are_good args).
+
   Context (R' : forall t1 t2, interp_base_type1 t1 -> interp_base_type2 t2 -> Prop).
   Local Notation Rt t1 t2 x y (*t1 t2 (x : interp_flat_type interp_base_type1 t1) (y : interp_flat_type interp_base_type2 t2)*)
     := (interp_flat_type_rel_pointwise2_hetero (t1:=t1) (t2:=t2) R' x y).
@@ -66,12 +74,17 @@ Section language.
          (only parsing).
 
   Context (Rinterp_op : forall src dst opc args1 args2,
-              R args1 args2 -> R (interp_op1 src dst opc args1) (interp_op2 src dst opc args2))
+              bounds_are_good args2
+              -> bounds_are_good (interp_op2 src dst opc args2)
+              -> R args1 args2
+              -> R (interp_op1 src dst opc args1) (interp_op2 src dst opc args2))
           (Rtransfer_op : forall src dst
                                  (opc : op src dst)
                                  args2
                                  (args' : @exprf base_type_code op interp_base_type1 (@new_flat_type _ (interpf interp_op2 args2))),
-              R (interpf interp_op1 args') (interpf interp_op2 args2)
+              bounds_are_good (interpf interp_op2 args2)
+              -> bounds_are_good (interpf interp_op2 (Op opc args2))
+              -> R (interpf interp_op1 args') (interpf interp_op2 args2)
               -> R (interpf interp_op1 (transfer_op _ src dst src dst opc opc args2 args'))
                    (interpf interp_op2 (Op opc args2))).
 
@@ -88,9 +101,11 @@ Section language.
                       (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
                       (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
                       v1 v2,
-                (forall a,
-                    interp_flat_type_ivarf_R2b a v2
-                    -> R (interpf interp_op1 (f a)) (g v2))
+                bounds_are_good v2
+                -> bounds_are_good (g v2)
+                -> (forall a,
+                       interp_flat_type_ivarf_R2b a v2
+                       -> R (interpf interp_op1 (f a)) (g v2))
                 -> interp_flat_type_ivarf_R2b v1 v2
                 -> R (interpf interp_op1 (@transfer_var tx1 tx2 tC1 f v1))
                      (g v2)).
@@ -209,11 +224,44 @@ Section language.
                              (transfer_var (Tbase _) (Tbase _) (Tbase _)
                                            (fun k => k) x))
                     y)
+          (HG_good : forall t x y,
+              List.In (existT _ t (x, y)%core) G
+              -> bound_is_good _ y)
           {t1} e1 ebounds
+          (Hgood : bounds_are_good (interpf interp_op2 ebounds))
           (Hwf : wff G e1 ebounds)
       : R (interpf interp_op1 (@mapf_interp_cast interp_base_type1 transfer_var t1 e1 t1 ebounds))
           (interpf interp_op2 ebounds).
-    Proof. induction Hwf; repeat t_step. Qed.
+    Proof. induction Hwf; t_step; try solve [ repeat t_step ].
+           move e1' at bottom.
+           Inductive D := { f : D -> D }.
+           Fixpoint bad (x : D) : False :=
+             match x with
+             | Build_D fv => bad (fv x)
+             end
+           Inductive NatSet := { contains : nat -> bool ; isSubsetOf : NatSet -> bool }.
+           t_step.
+           t_step; try solve [ repeat t_step ].
+           { t_step.
+             t_step.
+             t_step.
+             t_step.
+             t_step; try solve [ repeat t_step ].
+             {
+               t_step.
+               t_step.
+               t_step.
+               t_step.
+               t_step.
+               t_step.
+               t_step.
+               t_step.
+           { repeat t_step.
+
+           Info 1 t_step.
+           {
+           move e1' at bottom.
+    Qed.
 
     Local Hint Resolve interpf_mapf_interp_cast.
 

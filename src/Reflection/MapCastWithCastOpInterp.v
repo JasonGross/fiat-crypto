@@ -94,15 +94,25 @@ Section language.
            -> R (interpf interp_op1 x) y)
          (only parsing).
   Context (bound_is_good : forall t, interp_base_type2 t -> Prop).
+  Local Notation bounds_are_good
+    := (@interp_flat_type_rel_pointwise0 _ _ bound_is_good).
 
+  Context (good_bounds_monotone : forall src dst opc args,
+              bounds_are_good (interp_op2 src dst opc args)
+              -> bounds_are_good args).
 
   Context (Rinterp_op : forall src dst opc args1 args2,
-              R args1 args2 -> R (interp_op1 src dst opc args1) (interp_op2 src dst opc args2))
+              bounds_are_good args2
+              -> bounds_are_good (interp_op2 src dst opc args2)
+              -> R args1 args2
+              -> R (interp_op1 src dst opc args1) (interp_op2 src dst opc args2))
           (Rnew_op
            : forall src dst opc args2 new_src f,
               new_op interp_base_type1 src dst src dst opc opc args2 = Some (existT _ new_src f)
               -> forall v,
-                R (interpf interp_op1 v) (interpf interp_op2 args2)
+                bounds_are_good (interpf interp_op2 args2)
+                -> bounds_are_good (interpf interp_op2 (Op opc args2))
+                -> R (interpf interp_op1 v) (interpf interp_op2 args2)
                 -> R (interpf interp_op1 (f v)) (interpf interp_op2 (Op opc args2))).
   (*(RCast : forall t1 t2,
 
@@ -111,6 +121,15 @@ Section language.
   Local Notation ivar t := (@exprf base_type_code op interp_base_type1 (Tbase t)) (only parsing).
   Local Notation ivarf := (fun t => ivar t).
 
+  (*Lemma interpf_SmartBound_good_bounds T1 T1' T2
+        (args' : exprf base_type_code op T1)
+        (args2 : interp_flat_type interp_base_type2 T2)
+        (Hgood : bounds_are_good args2)
+        (HR : R (interpf interp_op1 args') args2)
+    : R (interpf interp_op1 (SmartBound (t2:=T1') base_type_code_beq base_type_code_bl failv Cast is_cast args'))
+        args2.
+  Proof.
+*)
   (*Lemma interpf_SmartBound src dst src' dst' args2 opc
         (Hc : is_cast src dst opc = true)
     : forall args',
@@ -130,6 +149,8 @@ Section language.
         (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
         (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
         v1 v2
+        (Hv2_good : bounds_are_good v2)
+        (Hg_good : bounds_are_good (g v2))
         (Hfg : forall a,
             interp_flat_type_ivarf_R2b a v2
             -> R (interpf interp_op1 (f a)) (g v2))
@@ -151,7 +172,9 @@ Section language.
   Lemma interpf_bound_op
         src dst opc args2
     : forall args',
-      R (interpf interp_op1 args') (interpf interp_op2 args2)
+      bounds_are_good (interpf interp_op2 args2)
+      -> bounds_are_good (interpf interp_op2 (Op opc args2))
+      -> R (interpf interp_op1 args') (interpf interp_op2 args2)
       -> R (interpf interp_op1 (@bound_op _ src dst src dst opc opc args2 args'))
            (interpf interp_op2 (Op opc args2)).
   Proof.
@@ -162,51 +185,8 @@ Section language.
       break_match; destruct_head sigT.
       specialize (Rnew_op _ _ eq_refl).
       simpl.
-      { intros; apply Rnew_op.
+      { intros; apply Rnew_op; eauto.
         admit. }
-      {
-      intros; apply Rinterp_op.
-      brea_
-    Local Notation Rt' t1 t2 x y (*t1 t2 (x : interp_flat_type interp_base_type1 t1) (y : interp_flat_type interp_base_type2 t2)*)
-
-      := (interp_flat_type_rel_pointwise2_hetero (t1:=t1) (t2:=t2) R' x y).
-
-    Local Notation RTt t1 t2 x y
-    := (interp_type_rel_pointwise2_hetero (t1:=t1) (t2:=t2) R' x y).
-
-
-    Unset Printing Notations.
-    Set Printing Implicit.
-      Lemma interpf_SmartBound src dst src' dst' args2 opc
-        (Hc : is_cast src dst opc = true)
-    : forall args',
-      Rt  (interpf interp_op1 args') (interpf interp_op2 args2)
-      -> Rt dst' _
-            (interpf interp_op1 (SmartBound base_type_code_beq base_type_code_bl failv Cast is_cast args'))
-            (interpf interp_op2 (Op opc args2)).
-
-
-            (SmartBound (var:=ovar2) base_type_code_beq base_type_code_bl failv Cast is_cast e2).
-    Proof.
-      clear -wff_failv wff_Cast Hwf.
-      revert dependent t2; induction Hwf; intros; specialize_by auto;
-        induction t2;
-        repeat match goal with
-               | [ |- wff _ (VarBound _ _ _ _ _) (VarBound _ _ _ _ _) ]
-                 => apply wff_VarBound
-               | _ => progress t_step
-               end.
-
-    revert opc2.
-    revert dependent dst1; revert src1.
-    induction args2;
-      repeat match goal with
-             | _ => progress simpl in *
-             | _ => intro
-             end.
-    unfold bound_op.
-
-    Set Printing All.*)
   Admitted.
 
   Local Hint Resolve interpf_bound_op.
@@ -214,6 +194,8 @@ Section language.
   Lemma interp_map_interp_cast_with_cast_op
         {t1} e1 ebounds args
         (Hwf_bounds : wf e1 ebounds)
+        (Hargs_good : bounds_are_good args)
+        (Hgood : bounds_are_good (interp interp_op2 ebounds args))
     : forall v,
       R v args
       -> R (interp interp_op1 (@map_interp_cast_with_cast_op interp_base_type1 t1 e1 t1 ebounds args) v)
