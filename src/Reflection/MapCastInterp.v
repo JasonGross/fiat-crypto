@@ -102,19 +102,16 @@ Section language.
                                     (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=interp_base_type1) (new_flat_type (interpf interp_op2 (eC' ex'))))
                                     (v : interp_flat_type interp_base_type1 (new_flat_type ex')),
                 exprf base_type_code op (var:=interp_base_type1) (new_flat_type (interpf interp_op2 (eC' ex')))).
-    Context (R_transfer_var1
-             : forall tx1 tx1' tx2 tC1 tC2
-                      (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
-                      (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
-                      v1 v2,
-                bounds_are_good v2
-                -> bounds_are_good (g v2)
+    Context (R_transfer_var2
+             : forall tx1 tC' ex' eC' f v,
+                bounds_are_good ex'
+                -> bounds_are_good (interpf interp_op2 (eC' ex'))
+                -> R v ex'
                 -> (forall a,
-                       interp_flat_type_ivarf_R2b a v2
-                       -> R (interpf interp_op1 (f a)) (g v2))
-                -> interp_flat_type_ivarf_R2b v1 v2
-                -> R (interpf interp_op1 (@transfer_var tx1 tx2 tC1 f v1))
-                     (g v2)).
+                       interp_flat_type_ivarf_R2b a ex'
+                       -> R (interpf interp_op1 (f a)) (interpf interp_op2 (eC' ex')))
+                -> R (interpf interp_op1 (@transfer_var2 tx1 tx1 tC' ex' eC' f v))
+                     (interpf interp_op2 (eC' ex'))).
 
     Local Notation mapf_interp_cast
       := (@mapf_interp_cast
@@ -160,14 +157,14 @@ Section language.
 
     Local Ltac handle_transfer_var_t :=
       match goal with
-      | [ |- R (interpf _ (transfer_var _ _ _ _ _)) _ ]
-        => apply R_transfer_var
-      | [ |- R (interpf _ (transfer_var _ _ _ _ _)) (interpf ?interp_op (?e _)) ]
-        => apply R_transfer_var with (g := fun v => interpf interp_op (e v))
+      | [ |- R (interpf _ (transfer_var2 _ _ _ _ _ _ _)) _ ]
+        => apply R_transfer_var2
+(*      | [ |- R (interpf _ (transfer_var2 _ _ _ _ _ _ _)) (interpf ?interp_op (?e _)) ]
+        => apply R_transfer_var2 with (g := fun v => interpf interp_op (e v))
       | [ |- R' ?t1 ?t2 (interpf _ (transfer_var ?tx1 ?tx2 ?tC1 (fun x => x) ?v1)) ?v2 ]
         => apply (R_transfer_var tx1 (Tbase _) tx2 tC1 (Tbase _) (fun x => x) (fun x => x))
       | [ H : _ |- R (interpf _ (mapf_interp_cast _ _ _)) (interpf _ _) ]
-        => apply H
+        => apply H*)
       end.
 
     Local Ltac handle_list_t :=
@@ -226,9 +223,7 @@ Section language.
           (HG : forall t x y,
               List.In (existT _ t (x, y)%core) G
               -> R' (new_base_type t y) t
-                    (interpf interp_op1
-                             (transfer_var (Tbase _) (Tbase _) (Tbase _)
-                                           (fun k => k) x))
+                    (interpf interp_op1 (transfer_var1 t t x y))
                     y)
           (HG_good : forall t x y,
               List.In (existT _ t (x, y)%core) G
@@ -236,9 +231,14 @@ Section language.
           {t1} e1 ebounds
           (Hgood : bounds_are_good (interpf interp_op2 ebounds))
           (Hwf : wff G e1 ebounds)
-      : R (interpf interp_op1 (@mapf_interp_cast interp_base_type1 transfer_var t1 e1 t1 ebounds))
+      : R (interpf interp_op1 (@mapf_interp_cast interp_base_type1 transfer_var1 transfer_var2 t1 e1 t1 ebounds))
           (interpf interp_op2 ebounds).
     Proof. induction Hwf; t_step; try solve [ repeat t_step ].
+           t_step; try solve [ repeat t_step ].
+           t_step; try solve [ repeat t_step ].
+           move e1' at bottom.
+           move e2' at bottom.
+
            move e1' at bottom.
            t_step.
            t_step; try solve [ repeat t_step ].
