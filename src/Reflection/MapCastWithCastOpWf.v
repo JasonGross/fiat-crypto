@@ -63,6 +63,18 @@ Section language.
           op
           base_type_code_beq base_type_code_bl
           failv Cast is_cast).
+  Local Notation bound_var1
+    := (@bound_var1
+          base_type_code base_type_code interp_base_type
+          op
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast).
+  Local Notation bound_var2
+    := (@bound_var2
+          base_type_code base_type_code interp_base_type
+          op op interp_op2
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast).
 
   Local Notation interp_flat_type_ivarf_wff G a b
     := (forall t x y,
@@ -231,6 +243,63 @@ Section language.
       Qed.
 
       Local Hint Resolve wff_bound_var.
+
+      Lemma wff_bound_var1
+            G t x1 x2 v
+            (Hwf : wff G x1 x2)
+        : wff G
+              (@bound_var1 ovar1 t t x1 v)
+              (@bound_var1 ovar2 t t x2 v).
+      Proof.
+        apply wff_bound_var;
+          repeat match goal with
+                 | _ => intro
+                 | _ => assumption
+                 | [ H : False |- _ ] => exfalso; assumption
+                 | _ => progress subst
+                 | _ => progress inversion_sigma
+                 | _ => progress inversion_prod
+                 | _ => progress simpl in *
+                 | _ => progress destruct_head' or
+                 | _ => solve [ eauto ]
+                 end.
+      Qed.
+
+      Local Hint Resolve wff_bound_var1.
+
+      Lemma wff_bound_var2
+            G tx tC ex' eC' f g v1 v2
+            (Hwfg : forall a b,
+                interp_flat_type_ivarf_wff G a b
+                -> wff G (f a) (g b))
+            (Hwfv : wff (op:=op) G (SmartVarf v1) (SmartVarf v2))
+        : wff G
+              (@bound_var2 ovar1 tx tx tC ex' eC' f v1)
+              (@bound_var2 ovar2 tx tx tC ex' eC' g v2).
+      Proof.
+        apply wff_bound_var;
+          repeat match goal with
+                 | _ => intro
+                 | _ => assumption
+                 | [ H : False |- _ ] => exfalso; assumption
+                 | _ => progress subst
+                 | _ => progress inversion_sigma
+                 | _ => progress inversion_prod
+                 | _ => progress destruct_head' ex
+                 | _ => progress destruct_head' and
+                 | _ => progress destruct_head' sigT
+                 | _ => progress destruct_head' prod
+                 | _ => progress simpl in *
+                 | _ => progress destruct_head' or
+                 | _ => solve [ eauto using In_G_wff_SmartVarf, wff_in_impl_Proper ]
+                 | [ H : context[flatten_binding_list (SmartVarfMap _ _) (SmartVarfMap _ _)] |- _ ]
+                   => rewrite flatten_binding_list_SmartVarfMap in H
+                 | [ H : List.In _ (List.map _ _) |- _ ]
+                   => rewrite List.in_map_iff in H
+                 end.
+      Qed.
+
+      Local Hint Resolve wff_bound_var2.
 
       Lemma wf_map_interp_cast_with_cast_op
             {t1} e1 e2 ebounds args

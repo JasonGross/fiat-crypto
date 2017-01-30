@@ -41,14 +41,26 @@ Section language.
     Local Notation ivar2 t := (@exprf base_type_code op ovar2 (Tbase t)) (only parsing).
     Local Notation ivarf1 := (fun t => ivar1 t).
     Local Notation ivarf2 := (fun t => ivar2 t).
-    Context (transfer_var1 : forall tx1 tx2 tC1
-                                    (f : interp_flat_type ivarf1 tx1 -> exprf base_type_code op (var:=ovar1) tC1)
-                                    (v : interp_flat_type ivarf1 tx2),
-                exprf base_type_code op (var:=ovar1) tC1).
-    Context (transfer_var2 : forall tx1 tx2 tC1
-                                    (f : interp_flat_type ivarf2 tx1 -> exprf base_type_code op (var:=ovar2) tC1)
-                                    (v : interp_flat_type ivarf2 tx2),
-                exprf base_type_code op (var:=ovar2) tC1).
+    Context (transfer_var11 : forall tx1 tx2
+                                     (v1 : ivar1 tx1)
+                                     (v2 : interp_base_type tx2),
+                exprf base_type_code op (var:=ovar1) (Tbase (new_base_type tx2 v2))).
+    Context (transfer_var12 : forall tx1 tx2
+                                     (v1 : ivar2 tx1)
+                                     (v2 : interp_base_type tx2),
+                exprf base_type_code op (var:=ovar2) (Tbase (new_base_type tx2 v2))).
+    Context (transfer_var21 : forall tx1 tx' tC'
+                                     (ex' : interp_flat_type interp_base_type tx')
+                                     (eC' : interp_flat_type interp_base_type tx' -> exprf base_type_code op tC')
+                                     (f : interp_flat_type ivarf1 tx1 -> exprf base_type_code op (var:=ovar1) (new_flat_type (interpf interp_op2 (eC' ex'))))
+                                     (v : interp_flat_type ovar1 (new_flat_type ex')),
+                exprf base_type_code op (var:=ovar1) (new_flat_type (interpf interp_op2 (eC' ex')))).
+    Context (transfer_var22 : forall tx1 tx' tC'
+                                     (ex' : interp_flat_type interp_base_type tx')
+                                     (eC' : interp_flat_type interp_base_type tx' -> exprf base_type_code op tC')
+                                     (f : interp_flat_type ivarf2 tx1 -> exprf base_type_code op (var:=ovar2) (new_flat_type (interpf interp_op2 (eC' ex'))))
+                                     (v : interp_flat_type ovar2 (new_flat_type ex')),
+                exprf base_type_code op (var:=ovar2) (new_flat_type (interpf interp_op2 (eC' ex')))).
 
     Context (wff_transfer_op
              : forall G src1 dst1 src2 dst2 opc1 opc2 args2 e1 e2,
@@ -56,15 +68,21 @@ Section language.
                 -> wff G
                        (@transfer_op ovar1 src1 dst1 src2 dst2 opc1 opc2 args2 e1)
                        (@transfer_op ovar2 src1 dst1 src2 dst2 opc1 opc2 args2 e2)).
-    Context (wff_transfer_var
-             : forall G tx1 tx2 tC1 f g v1 v2,
+    Context (wff_transfer_var1
+             : forall G t x1 x2 v,
+                wff G x1 x2
+                -> wff G
+                       (@transfer_var11 t t x1 v)
+                       (@transfer_var12 t t x2 v)).
+    Context (wff_transfer_var2
+             : forall G tx tC ex' eC' f g (v1 : interp_flat_type ovar1 _) v2,
                 (forall a b,
                     interp_flat_type_ivarf_wff G a b
                     -> wff G (f a) (g b))
-                -> interp_flat_type_ivarf_wff G v1 v2
+                -> wff (op:=op) G (SmartVarf v1) (SmartVarf v2)
                 -> wff G
-                       (@transfer_var1 tx1 tx2 tC1 f v1)
-                       (@transfer_var2 tx1 tx2 tC1 g v2)).
+                       (@transfer_var21 tx tx tC ex' eC' f v1)
+                       (@transfer_var22 tx tx tC ex' eC' g v2)).
     Local Notation mapf_interp_cast
       := (@mapf_interp_cast
             base_type_code base_type_code interp_base_type
@@ -128,8 +146,8 @@ Section language.
           (Hwf_bounds : wff Gbounds e1 ebounds)
           (Hwf : wff G1 e1 e2)
       : wff G2
-            (@mapf_interp_cast ovar1 transfer_var1 t1 e1 t1 ebounds)
-            (@mapf_interp_cast ovar2 transfer_var2 t1 e2 t1 ebounds).
+            (@mapf_interp_cast ovar1 transfer_var11 transfer_var21 t1 e1 t1 ebounds)
+            (@mapf_interp_cast ovar2 transfer_var12 transfer_var22 t1 e2 t1 ebounds).
     Proof.
       revert dependent Gbounds; revert ebounds; revert dependent G2.
       induction Hwf;
@@ -142,18 +160,16 @@ Section language.
                             | auto
                             | hnf; auto ]
                | _ => progress simpl in *
-               | [ |- wff _ (transfer_var1 _ _ _ _ _) (transfer_var2 _ _ _ _ _) ]
-                 => apply wff_transfer_var
+               | [ |- wff _ (transfer_var11 _ _ _ _ _) (transfer_var12 _ _ _ _ _) ]
+                 => apply wff_transfer_var1
+               | [ |- wff _ (transfer_var21 _ _ _ _ _ _ _) (transfer_var22 _ _ _ _ _ _ _) ]
+                 => apply wff_transfer_var2
                | [ H : List.In _ (_ ++ _) |- _ ] => apply List.in_app_or in H
                | _ => progress destruct_head or
                | [ |- wff _ _ _ ] => constructor
-               | [ H : _ |- wff _ (mapf_interp_cast _ _ _) (mapf_interp_cast _ _ _) ]
+               | [ H : _ |- wff _ (mapf_interp_cast _ _ _ _) (mapf_interp_cast _ _ _ _) ]
                  => eapply H; eauto; []; clear H
-               | _ => solve [ eauto using wff_in_impl_Proper ]
-               | [ H : context[flatten_binding_list (SmartVarfMap _ _) (SmartVarfMap _ _)] |- _ ]
-                 => rewrite flatten_binding_list_SmartVarfMap in H
-               | [ H : List.In _ (List.map _ _) |- _ ]
-                 => rewrite List.in_map_iff in H
+               | _ => solve [ eauto using wff_SmartVarf, wff_in_impl_Proper ]
                end.
     Qed.
 
@@ -162,8 +178,8 @@ Section language.
           args2
           (Hwf_bounds : wf e1 ebounds)
           (Hwf : wf e1 e2)
-      : wf (@map_interp_cast ovar1 transfer_var1 t1 e1 t1 ebounds args2)
-           (@map_interp_cast ovar2 transfer_var2 t1 e2 t1 ebounds args2).
+      : wf (@map_interp_cast ovar1 transfer_var11 transfer_var21 t1 e1 t1 ebounds args2)
+           (@map_interp_cast ovar2 transfer_var12 transfer_var22 t1 e2 t1 ebounds args2).
     Proof.
       destruct Hwf;
         repeat match goal with
@@ -173,12 +189,9 @@ Section language.
                | _ => intro
                | _ => progress break_t
                | [ |- wf _ _ ] => constructor
-               | [ |- wff _ (transfer_var1 _ _ _ _ _) (transfer_var2 _ _ _ _ _) ]
-                 => apply wff_transfer_var
-               | [ H : context[flatten_binding_list (SmartVarfMap _ _) (SmartVarfMap _ _)] |- _ ]
-                 => rewrite flatten_binding_list_SmartVarfMap in H
-               | [ H : List.In _ (List.map _ _) |- _ ]
-                 => rewrite List.in_map_iff in H
+               | [ |- wff _ (transfer_var21 _ _ _ _ _ _ _) (transfer_var22 _ _ _ _ _ _ _) ]
+                 => apply wff_transfer_var2
+               | _ => solve [ eauto using wff_SmartVarf, wff_in_impl_Proper ]
                end.
     Qed.
   End with_var.
@@ -190,25 +203,39 @@ Section language.
                 -> wff G
                        (@transfer_op ovar1 src1 dst1 src2 dst2 opc1 opc2 args2 e1)
                        (@transfer_op ovar2 src1 dst1 src2 dst2 opc1 opc2 args2 e2)).
-    Context (transfer_var : forall ovar tx1 tx2 tC1
-                                   (ivarf := fun t => @exprf base_type_code op ovar (Tbase t))
-                                   (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=ovar) tC1)
-                                   (v : interp_flat_type ivarf tx2),
-                exprf base_type_code op (var:=ovar) tC1).
-    Context (wff_transfer_var
-             : forall ovar1 ovar2 G tx1 tx2 tC1 f g v1 v2,
+    Context (transfer_var1 : forall ovar tx1 tx2
+                                    (ivar := fun t => @exprf base_type_code op ovar (Tbase t))
+                                    (v1 : ivar tx1)
+                                    (v2 : interp_base_type tx2),
+                exprf base_type_code op (var:=ovar) (Tbase (new_base_type tx2 v2))).
+    Context (transfer_var2 : forall ovar tx1 tx' tC'
+                                    (ivarf := fun t => @exprf base_type_code op ovar (Tbase t))
+                                    (ex' : interp_flat_type interp_base_type tx')
+                                    (eC' : interp_flat_type interp_base_type tx' -> exprf base_type_code op tC')
+                                    (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=ovar) (new_flat_type (interpf interp_op2 (eC' ex'))))
+                                    (v : interp_flat_type ovar (new_flat_type ex')),
+                exprf base_type_code op (var:=ovar) (new_flat_type (interpf interp_op2 (eC' ex')))).
+    Context (wff_transfer_var1
+             : forall ovar1 ovar2 G t x1 x2 v,
+                wff G x1 x2
+                -> wff G
+                       (@transfer_var1 ovar1 t t x1 v)
+                       (@transfer_var1 ovar2 t t x2 v)).
+    Context (wff_transfer_var2
+             : forall ovar1 ovar2 G tx tC ex' eC' f g (v1 : interp_flat_type ovar1 _) v2,
                 (forall a b,
                     interp_flat_type_ivarf_wff G a b
                     -> wff G (f a) (g b))
-                -> interp_flat_type_ivarf_wff G v1 v2
+                -> wff (op:=op) G (SmartVarf v1) (SmartVarf v2)
                 -> wff G
-                       (@transfer_var ovar1 tx1 tx2 tC1 f v1)
-                       (@transfer_var ovar2 tx1 tx2 tC1 g v2)).
+                       (@transfer_var2 ovar1 tx tx tC ex' eC' f v1)
+                       (@transfer_var2 ovar2 tx tx tC ex' eC' g v2)).
+
     Local Notation MapInterpCast
       := (@MapInterpCast
             base_type_code interp_base_type
             op interp_op2 failv new_base_type
-            transfer_op transfer_var).
+            transfer_op transfer_var1 transfer_var2).
 
     Lemma WfMapInterpCast
           {t} e

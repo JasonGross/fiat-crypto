@@ -37,6 +37,11 @@ Section language.
       end.
   End tuple.
 
+  Definition domain (t : type) : flat_type
+    := match t with Arrow src dst => src end.
+  Definition codomain (t : type) : flat_type
+    := match t with Arrow src dst => dst end.
+
   Section interp.
     Definition interp_type_gen_hetero (interp_src interp_dst : flat_type -> Type) (t : type) :=
       (interp_src match t with Arrow x y => x end -> interp_dst match t with Arrow x y => y end)%type.
@@ -116,6 +121,8 @@ Global Arguments Unit {_}%type_scope.
 Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Tbase {_}%type_scope _%ctype_scope.
+Global Arguments domain {_}%type_scope _%ctype_scope.
+Global Arguments codomain {_}%type_scope _%ctype_scope.
 
 Global Arguments Var {_ _ _ _} _.
 Global Arguments TT {_ _ _}.

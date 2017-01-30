@@ -17,11 +17,6 @@ Section language.
   Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation Expr := (@Expr base_type_code op).
 
-  Definition domain (t : type) : flat_type
-    := match t with Arrow src dst => src end.
-  Definition codomain (t : type) : flat_type
-    := match t with Arrow src dst => dst end.
-
   Section with_var.
     Context {var : base_type_code -> Type}.
 

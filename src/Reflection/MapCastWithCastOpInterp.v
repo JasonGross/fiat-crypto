@@ -7,9 +7,12 @@ Require Import Crypto.Reflection.MapCastInterp.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.WfProofs.
 Require Import Crypto.Reflection.WfInversion.
+Require Import Crypto.Reflection.Equality.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Sumbool.
+Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 
@@ -68,6 +71,18 @@ Section language.
           op
           base_type_code_beq base_type_code_bl
           failv Cast is_cast).
+  Local Notation bound_var1
+    := (@bound_var1
+          base_type_code base_type_code interp_base_type2
+          op
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast).
+  Local Notation bound_var2
+    := (@bound_var2
+          base_type_code base_type_code interp_base_type2
+          op op interp_op2
+          base_type_code_beq base_type_code_bl
+          failv new_base_type Cast is_cast).
   (*Local Notation interp_flat_type_ivarf_wff G a b
     := (forall t x y,
            List.In (existT _ t (x, y)%core) (flatten_binding_list base_type_code a b)
@@ -86,16 +101,20 @@ Section language.
   Local Notation interp_flat_type_ivarf_R2b a b
     := (forall t1 t2 x y,
            List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
-           -> Rt _ (Tbase _) (interpf interp_op1 x) y)
+           -> Rt _ (Tbase _) (interpf interp_op1 (bound_var1 _ _ x y)) y)
          (only parsing).
-  Local Notation interp_flat_type_ivarf_R2 a b
+  (*Local Notation interp_flat_type_ivarf_R2 a b
     := (forall t1 t2 x y,
            List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
            -> R (interpf interp_op1 x) y)
-         (only parsing).
+         (only parsing).*)
   Context (bound_is_good : forall t, interp_base_type2 t -> Prop).
   Local Notation bounds_are_good
     := (@interp_flat_type_rel_pointwise0 _ _ bound_is_good).
+  Local Notation bounds_are_recursively_good
+    := (@bounds_are_recursively_good
+          base_type_code interp_base_type2 op interp_op2
+          bound_is_good).
 
   Context (good_bounds_monotone : forall src dst opc args,
               bounds_are_good (interp_op2 src dst opc args)
@@ -169,6 +188,252 @@ Section language.
 
   Local Hint Resolve interpf_bound_var.
 
+  Lemma var_cast_helper var t1 t2 (H : Tbase t1 = Tbase t2) v
+    : match H in (_ = y) return @exprf base_type_code op var y with
+      | eq_refl => Var (op:=op) v
+      end
+      = Var (op:=op) match H in (_ = y) return interp_flat_type _ y with
+                     | eq_refl => v
+                     end.
+  Proof.
+    inversion_flat_type; subst; reflexivity.
+  Qed.
+
+  Lemma interpf_bound_var2
+        tx1 tC' ex' eC' f v
+        (Hgood : bounds_are_good (interpf interp_op2 (eC' ex')))
+        (HR : R v ex')
+        (Hfg : forall a,
+            interp_flat_type_ivarf_R2b a ex'
+            -> R (interpf interp_op1 (f a)) (interpf interp_op2 (eC' ex')))
+    : R (interpf interp_op1 (@bound_var2 _ tx1 tx1 tC' ex' eC' f v))
+        (interpf interp_op2 (eC' ex')).
+  Proof.
+    revert dependent tC'.
+    induction tx1;
+      repeat match goal with
+             | _ => progress break_match_step ltac:(fun _ => idtac)
+             | _ => progress simpl in *
+             | _ => intro
+             end;
+      [ apply Hfg; clear Hfg
+      | apply Hfg; clear Hfg
+      | ];
+      [ cbv [bound_var2 bound_var1 bound_var]; simpl;
+        repeat match goal with
+               | _ => intro
+               | _ => assumption
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress inversion_option
+               | _ => progress inversion_sumbool
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => rewrite var_cast_helper
+               | _ => rewrite concat_pV
+               | [ |- context[base_type_code_beq ?x ?y] ]
+                 => first [ is_var x; fail 1
+                          | let H := fresh in
+                            destruct (Sumbool.sumbool_of_bool (id (base_type_code_beq x y))) as [H|H];
+                            [ apply base_type_code_bl in H
+                            | unfold id in H ];
+                            generalize dependent x ]
+               | [ |- context[Sumbool.sumbool_of_bool ?b] ]
+                 => destruct (Sumbool.sumbool_of_bool b) eqn:?
+               | _ => congruence
+               end..
+      | ].
+    admit.
+    admit.
+    { unfold bound_var2.
+
+      pose (SmartVarfMap (t:=Prod _ _) (fun t : base_type_code => Var (op:=op)) v) as v'.
+      simpl in v'.
+      change (interp_
+      unfold ivarf in *.
+      specialize (Hfg (SmartVarfMap (t:=Prod _ _) (fun t : base_type_code => Var) v)).
+    { repeat match goal with
+             | _ => intro
+             | _ => assumption
+             | [ H : False |- _ ] => exfalso; assumption
+             | _ => progress inversion_sigma
+             | _ => progress inversion_prod
+             | _ => progress inversion_option
+             | _ => progress inversion_sumbool
+             | _ => progress subst
+             | _ => progress simpl in *
+             | _ => progress destruct_head' or
+             | _ => rewrite var_cast_helper
+             | _ => rewrite concat_pV
+             | [ |- context[base_type_code_beq ?x ?y] ]
+               => first [ is_var x; fail 1
+                        | let H := fresh in
+                          destruct (Sumbool.sumbool_of_bool (id (base_type_code_beq x y))) as [H|H];
+                          [ apply base_type_code_bl in H
+                          | unfold id in H ];
+                          generalize dependent x ]
+             | [ |- context[Sumbool.sumbool_of_bool ?b] ]
+               => destruct (Sumbool.sumbool_of_bool b) eqn:?
+             | _ => congruence
+             end. }
+
+    {
+
+
+      unfold SmartBound.
+
+      rewrite
+
+      induction Heqs as [Heqs] using path_sumbool_rect;
+        try match type of Heqs with
+      | False => exfalso; exact H
+      end.
+inversion_sumbool_step.
+
+      lazymatch goal with
+      end.
+      lazymatch goal with
+      | [ |- context[Sumbool.sumbool_of_bool ?b] ]
+        => destruct b eqn:?; unfold Sumbool.sumbool_of_bool
+      end.
+      { break_match_step ltac:(fun _ => idtac);
+          repeat match goal with
+                 | _ => intro
+                 | [ H : False |- _ ] => exfalso; assumption
+                 | _ => progress inversion_sigma
+                 | _ => progress inversion_prod
+                 | _ => progress subst
+                 | _ => progress simpl in *
+                 | _ => progress destruct_head' or
+                 | _ => rewrite var_cast_helper
+                 end.
+      { match goal with
+        | [ |- context[base_type_code_bl ?x ?y ?H] ]
+          => pose proof (base_type_code_bl x y H); generalize dependent x
+        end.
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => rewrite var_cast_helper
+               | _ => rewrite concat_pV
+               end.
+
+        break_match_step ltac:(fun _ => idtac);
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => rewrite var_cast_helper
+               | _ => rewrite concat_pV
+               end.
+        { rewrite !concat_pV; simpl.
+          simpl.
+        rewrite
+        b
+      SearchAbout sumbool.
+      repeat match goal with
+
+      intros ????; simpl.
+      break_match.
+      { rewrite var_cast_helper.
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               end.
+        { match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | [ |- context G[match ?H as H' in (_ = y) return @?P y H' with eq_refl => Var (op:=?op) ?v end] ]
+                 => let m := fresh "m" in
+                    set (m := match H as H' in (_ = y) return P y H' with eq_refl => Var (op:=op) v end);
+                      let G' := context G[m] in
+                      change G';
+                        let m' := fresh "m'" in
+                        pose (Var (op:=op) match H as H' in (_ = y) return interp_flat_type _ y with eq_refl => v end) as m';
+                          replace m with m'; subst m m'; [ | clear ]
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+          end.
+          Focus 2.
+        repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | [ |- context G[match ?H as H' in (_ = y) return @?P y H' with eq_refl => Var (op:=?op) ?v end] ]
+                 => let m := fresh "m" in
+                    set (m := match H as H' in (_ = y) return P y H' with eq_refl => Var (op:=op) v end);
+                      let G' := context G[m] in change G'
+               end.
+
+        Focus 2.
+        intro e; clear.
+        generalize depe
+        break_match.
+        generalize dependent  (
+        2:subst m'.
+        Focus 2.
+        intro e; case e.
+
+        match goal with
+        end.
+          let rep := fresh "orig" in
+             pose (let H' := H in Var (op:=op) match H' in (_ = y) return interp_flat_type _ y with eq_refl => v end) as rep;
+             let G' := context G[rep] in
+             cut G'; cbv zeta in *
+        end.
+        pattern rep.
+        match goal with
+        | [
+
+
+
+               | [ |- context[@f_equal _ _ _ ?a ?b ?H] ]
+                 => first [ is_var H; fail 1 | generalize H; generalize dependent a ]
+        generalize dependent (new_base_type t2 ex').
+        { repeat match goal with
+               | _ => intro
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress inversion_sigma
+               | _ => progress inversion_prod
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+                 end.
+          break_match.
+        match goal with
+        end.
+        Set Printing Implicit.
+        simpl in *.
+
+    simpl in *. =
+
+  Admitted.
+
+  Local Hint Resolve interpf_bound_var2.
+
   Lemma interpf_bound_op
         src dst opc args2
     : forall args',
@@ -193,9 +458,8 @@ Section language.
 
   Lemma interp_map_interp_cast_with_cast_op
         {t1} e1 ebounds args
-        (Hwf_bounds : wf e1 ebounds)
-        (Hargs_good : bounds_are_good args)
-        (Hgood : bounds_are_good (interp interp_op2 ebounds args))
+        (Hgood : bounds_are_recursively_good (invert_Abs ebounds args))
+        (Hwf : wf e1 ebounds)
     : forall v,
       R v args
       -> R (interp interp_op1 (@map_interp_cast_with_cast_op interp_base_type1 t1 e1 t1 ebounds args) v)

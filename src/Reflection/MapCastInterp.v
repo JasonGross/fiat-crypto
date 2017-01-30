@@ -10,6 +10,7 @@ Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
 
 Local Open Scope ctype_scope.
@@ -38,6 +39,26 @@ Section language.
   Context (good_bounds_monotone : forall src dst opc args,
               bounds_are_good (interp_op2 src dst opc args)
               -> bounds_are_good args).
+  Fixpoint bounds_are_recursively_good {t} (e : exprf base_type_code op t) : Prop
+    := match e with
+       | LetIn tx ex tC eC
+         => @bounds_are_recursively_good tx ex
+            /\ @bounds_are_recursively_good tC (eC (interpf interp_op2 ex))
+       | Op t1 tR opc args as e'
+         => @bounds_are_recursively_good _ args
+            /\ bounds_are_good (interpf interp_op2 e')
+       | TT => True
+       | Var t v => bound_is_good _ v
+       | Pair tx ex ty ey
+         => @bounds_are_recursively_good _ ex
+            /\ @bounds_are_recursively_good _ ey
+       end.
+  Lemma bounds_are_good_when_recursively_good {t} e
+    : @bounds_are_recursively_good t e -> bounds_are_good (interpf interp_op2 e).
+  Proof.
+    induction e; simpl; unfold LetIn.Let_In; intuition auto.
+  Qed.
+  Local Hint Resolve bounds_are_good_when_recursively_good.
 
   Context (R' : forall t1 t2, interp_base_type1 t1 -> interp_base_type2 t2 -> Prop).
   Local Notation Rt t1 t2 x y (*t1 t2 (x : interp_flat_type interp_base_type1 t1) (y : interp_flat_type interp_base_type2 t2)*)
@@ -60,16 +81,6 @@ Section language.
   Local Notation interp_flat_type_ivarf_R a b
     := (forall t x y,
            List.In (existT _ t (x, y)%core) (flatten_binding_list a b)
-           -> R (interpf interp_op1 x) y)
-         (only parsing).
-  Local Notation interp_flat_type_ivarf_R2b a b
-    := (forall t1 t2 x y,
-           List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
-           -> Rt _ (Tbase _) (interpf interp_op1 x) y)
-         (only parsing).
-  Local Notation interp_flat_type_ivarf_R2 a b
-    := (forall t1 t2 x y,
-           List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
            -> R (interpf interp_op1 x) y)
          (only parsing).
 
@@ -102,10 +113,19 @@ Section language.
                                     (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=interp_base_type1) (new_flat_type (interpf interp_op2 (eC' ex'))))
                                     (v : interp_flat_type interp_base_type1 (new_flat_type ex')),
                 exprf base_type_code op (var:=interp_base_type1) (new_flat_type (interpf interp_op2 (eC' ex')))).
+    Local Notation interp_flat_type_ivarf_R2b a b
+      := (forall t1 t2 x y,
+             List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
+             -> Rt _ (Tbase _) (interpf interp_op1 (transfer_var1 _ _ x y)) y)
+           (only parsing).
+    (*Local Notation interp_flat_type_ivarf_R2 a b
+    := (forall t1 t2 x y,
+           List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
+           -> R (interpf interp_op1 x) y)
+         (only parsing).*)
     Context (R_transfer_var2
              : forall tx1 tC' ex' eC' f v,
-                bounds_are_good ex'
-                -> bounds_are_good (interpf interp_op2 (eC' ex'))
+                bounds_are_good (interpf interp_op2 (eC' ex'))
                 -> R v ex'
                 -> (forall a,
                        interp_flat_type_ivarf_R2b a ex'
@@ -159,12 +179,10 @@ Section language.
       match goal with
       | [ |- R (interpf _ (transfer_var2 _ _ _ _ _ _ _)) _ ]
         => apply R_transfer_var2
-(*      | [ |- R (interpf _ (transfer_var2 _ _ _ _ _ _ _)) (interpf ?interp_op (?e _)) ]
-        => apply R_transfer_var2 with (g := fun v => interpf interp_op (e v))
-      | [ |- R' ?t1 ?t2 (interpf _ (transfer_var ?tx1 ?tx2 ?tC1 (fun x => x) ?v1)) ?v2 ]
-        => apply (R_transfer_var tx1 (Tbase _) tx2 tC1 (Tbase _) (fun x => x) (fun x => x))
-      | [ H : _ |- R (interpf _ (mapf_interp_cast _ _ _)) (interpf _ _) ]
-        => apply H*)
+      | [ H : _ |- R (interpf _ (mapf_interp_cast _ _ _ _)) (interpf _ _) ]
+        => apply H
+      | [ H : _ |- R' ?t1 ?t2 (interpf _ (transfer_var1 ?tx1 ?tx2 ?v1 ?v2)) ?v2 ]
+        => apply H
       end.
 
     Local Ltac handle_list_t :=
@@ -198,6 +216,7 @@ Section language.
 
     Local Ltac misc_t :=
       match goal with
+      | _ => progress specialize_by eauto
       | [ H : _ |- R' _ _ (interpf _ ?x) ?y ]
         => is_var x; is_var y; apply H
       | [ |- exists _, _ ]
@@ -225,92 +244,79 @@ Section language.
               -> R' (new_base_type t y) t
                     (interpf interp_op1 (transfer_var1 t t x y))
                     y)
-          (HG_good : forall t x y,
+          (*HG_good : forall t x y,
               List.In (existT _ t (x, y)%core) G
-              -> bound_is_good _ y)
+              -> bound_is_good _ y*)
           {t1} e1 ebounds
-          (Hgood : bounds_are_good (interpf interp_op2 ebounds))
+          (Hgood : bounds_are_recursively_good ebounds)
           (Hwf : wff G e1 ebounds)
       : R (interpf interp_op1 (@mapf_interp_cast interp_base_type1 transfer_var1 transfer_var2 t1 e1 t1 ebounds))
           (interpf interp_op2 ebounds).
-    Proof. induction Hwf; t_step; try solve [ repeat t_step ].
-           t_step; try solve [ repeat t_step ].
-           t_step; try solve [ repeat t_step ].
-           move e1' at bottom.
-           move e2' at bottom.
-
-           move e1' at bottom.
-           t_step.
-           t_step; try solve [ repeat t_step ].
-           { t_step.
-             t_step.
-             t_step.
-             t_step.
-             t_step; try solve [ repeat t_step ].
-             {
-               t_step.
-               t_step.
-               t_step.
-               t_step.
-               t_step.
-               t_step.
-               t_step.
-               t_step.
-           { repeat t_step.
-
-           Info 1 t_step.
-           {
-           move e1' at bottom.
-    Qed.
+    Proof. induction Hwf; repeat t_step. Qed.
 
     Local Hint Resolve interpf_mapf_interp_cast.
 
     Lemma interp_map_interp_cast
           {t1} e1 ebounds
           args2
+          (Hgood : bounds_are_recursively_good (invert_Abs ebounds args2))
           (Hwf : wf e1 ebounds)
       : forall v,
         R v args2
-        -> R (interp interp_op1 (@map_interp_cast interp_base_type1 transfer_var t1 e1 t1 ebounds args2) v)
+        -> R (interp interp_op1 (@map_interp_cast interp_base_type1 transfer_var1 transfer_var2 t1 e1 t1 ebounds args2) v)
              (interp interp_op2 ebounds args2).
     Proof.
       destruct Hwf;
         repeat match goal with
                | _ => t_step
-               | [ |- R (interpf _ (mapf_interp_cast _ _ _)) (interpf _ _) ]
+               | [ |- R (interpf _ (mapf_interp_cast _ _ _ _)) (interpf _ _) ]
                  => eapply interpf_mapf_interp_cast
                end.
     Qed.
   End with_var.
 
   Section gen.
-    Context (transfer_var : forall ovar tx1 tx2 tC1
-                                   (ivarf := fun t => @exprf base_type_code op ovar (Tbase t))
-                                   (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=ovar) tC1)
-                                   (v : interp_flat_type ivarf tx2),
-                exprf base_type_code op (var:=ovar) tC1).
-    Context (R_transfer_var
-             : forall tx1 tx1' tx2 tC1 tC2
-                      (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
-                      (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
-                      v1 v2,
-                (forall a,
-                    interp_flat_type_ivarf_R2b a v2
-                    -> R (interpf interp_op1 (f a)) (g v2))
-                -> interp_flat_type_ivarf_R2b v1 v2
-                -> R (interpf interp_op1 (@transfer_var _ tx1 tx2 tC1 f v1))
-                     (g v2)).
+    Context (transfer_var1 : forall ovar tx1 tx2
+                                    (ivar := fun t => @exprf base_type_code op ovar (Tbase t))
+                                    (v1 : ivar tx1)
+                                    (v2 : interp_base_type2 tx2),
+                exprf base_type_code op (var:=ovar) (Tbase (new_base_type tx2 v2))).
+    Context (transfer_var2 : forall ovar tx1
+                                    tx' tC'
+                                    (ivarf := fun t => @exprf base_type_code op ovar (Tbase t))
+                                    (ex' : interp_flat_type interp_base_type2 tx')
+                                    (eC' : interp_flat_type interp_base_type2 tx' -> exprf base_type_code op tC')
+                                    (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=ovar) (new_flat_type (interpf interp_op2 (eC' ex'))))
+                                    (v : interp_flat_type ovar (new_flat_type ex')),
+                exprf base_type_code op (var:=ovar) (new_flat_type (interpf interp_op2 (eC' ex')))).
+
+    Local Notation interp_flat_type_ivarf_R2b a b
+      := (forall t1 t2 x y,
+             List.In (existT _ (t1, t2)%core (x, y)%core) (flatten_binding_list2 a b)
+             -> Rt _ (Tbase _) (interpf interp_op1 (transfer_var1 _ _ _ x y)) y)
+           (only parsing).
+
+    Context (R_transfer_var2
+             : forall tx1 tC' ex' eC' f v,
+                bounds_are_good (interpf interp_op2 (eC' ex'))
+                -> R v ex'
+                -> (forall a,
+                       interp_flat_type_ivarf_R2b a ex'
+                       -> R (interpf interp_op1 (f a)) (interpf interp_op2 (eC' ex')))
+                -> R (interpf interp_op1 (@transfer_var2 _ tx1 tx1 tC' ex' eC' f v))
+                     (interpf interp_op2 (eC' ex'))).
 
     Local Notation MapInterpCast
       := (@MapInterpCast
             base_type_code interp_base_type2
             op interp_op2 failv new_base_type
-            transfer_op transfer_var).
+            transfer_op transfer_var1 transfer_var2).
 
     Lemma InterpMapInterpCast
           {t} e
           args
           (Hwf : Wf e)
+          (Hgood : bounds_are_recursively_good (invert_Abs (e interp_base_type2) args))
       : forall v,
         R v args
         -> R (Interp interp_op1 (@MapInterpCast t e args) v)

@@ -115,6 +115,7 @@ src/Reflection/MapCast.v
 src/Reflection/MapCastInterp.v
 src/Reflection/MapCastWf.v
 src/Reflection/MapCastWithCastOp.v
+src/Reflection/MapCastWithCastOpInterp.v
 src/Reflection/MapCastWithCastOpWf.v
 src/Reflection/MultiSizeTest.v
 src/Reflection/MultiSizeTest2.v
