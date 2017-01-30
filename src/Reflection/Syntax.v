@@ -96,9 +96,15 @@ Section language.
         := @interpf_step (@interpf) t e.
 
       Definition interp {t} (e : @expr interp_base_type t) : interp_type t
-        := match e in expr t return interp_type t with
-           | Abs _ _ f => fun x => @interpf _ (f x)
-           end.
+        := fun x
+           => @interpf
+                _
+                (match e in @expr _ t
+                       return interp_flat_type (match t with Arrow src dst => src end)
+                              -> exprf (match t with Arrow src dst => dst end)
+                 with
+                 | Abs _ _ f => f
+                 end x).
 
       Definition Interp {t} (E : Expr t) : interp_type t := interp (E _).
     End interp.
@@ -124,6 +130,7 @@ Global Arguments interp_type {_} _ _.
 Global Arguments Interp {_ _ _} interp_op {t} _.
 Global Arguments interp {_ _ _} interp_op {t} _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
+Global Arguments interp _ _ _ _ _ !_ / .
 
 Module Export Notations.
   Notation "()" := (@Unit _) : ctype_scope.

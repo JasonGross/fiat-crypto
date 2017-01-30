@@ -91,12 +91,18 @@ Section language.
   Local Notation ivar t := (@exprf base_type_code op interp_base_type1 (Tbase t)) (only parsing).
   Local Notation ivarf := (fun t => ivar t).
   Section with_var.
-    Context (transfer_var : forall tx1 tx2 tC1
-                                   (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=interp_base_type1) tC1)
-                                   (v : interp_flat_type ivarf tx2),
-                exprf base_type_code op (var:=interp_base_type1) tC1).
-
-    Context (R_transfer_var
+    Context (transfer_var1 : forall tx1 tx2
+                                    (v1 : ivar tx1)
+                                    (v2 : interp_base_type2 tx2),
+                exprf base_type_code op (var:=interp_base_type1) (Tbase (new_base_type tx2 v2))).
+    Context (transfer_var2 : forall tx1
+                                    tx' tC'
+                                    (ex' : interp_flat_type interp_base_type2 tx')
+                                    (eC' : interp_flat_type interp_base_type2 tx' -> exprf base_type_code op tC')
+                                    (f : interp_flat_type ivarf tx1 -> exprf base_type_code op (var:=interp_base_type1) (new_flat_type (interpf interp_op2 (eC' ex'))))
+                                    (v : interp_flat_type interp_base_type1 (new_flat_type ex')),
+                exprf base_type_code op (var:=interp_base_type1) (new_flat_type (interpf interp_op2 (eC' ex')))).
+    Context (R_transfer_var1
              : forall tx1 tx1' tx2 tC1 tC2
                       (f : interp_flat_type ivarf tx1 -> exprf base_type_code op tC1)
                       (g : interp_flat_type interp_base_type2 tx1' -> interp_flat_type interp_base_type2 tC2)
@@ -234,12 +240,6 @@ Section language.
           (interpf interp_op2 ebounds).
     Proof. induction Hwf; t_step; try solve [ repeat t_step ].
            move e1' at bottom.
-           Inductive D := { f : D -> D }.
-           Fixpoint bad (x : D) : False :=
-             match x with
-             | Build_D fv => bad (fv x)
-             end
-           Inductive NatSet := { contains : nat -> bool ; isSubsetOf : NatSet -> bool }.
            t_step.
            t_step; try solve [ repeat t_step ].
            { t_step.

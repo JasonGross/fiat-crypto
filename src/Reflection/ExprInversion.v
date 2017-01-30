@@ -54,7 +54,7 @@ Section language.
          | Pair _ x _ y => Some (x, y)%core
          | _ => None
          end.
-    Definition invert_Abs {A B} (e : expr (Arrow A B)) : interp_flat_type_gen var A -> exprf B
+    Definition invert_Abs {t} (e : expr t) : interp_flat_type_gen var (domain t) -> exprf (codomain t)
       := match e with Abs _ _ f => f end.
 
     Local Ltac t' :=
@@ -100,24 +100,14 @@ Section language.
     Proof. t. Defined.
 
     Lemma invert_Abs_Some {A B e v}
-      : @invert_Abs A B e = v -> e = Abs v.
+      : @invert_Abs (Arrow A B) e = v -> e = Abs v.
     Proof. t. Defined.
   End with_var.
 
-  Lemma interpf_invert_Abs interp_op {A B e} x
-    : Syntax.interpf interp_op (@invert_Abs interp_base_type A B e x)
+  Lemma interpf_invert_Abs interp_op {t e} x
+    : Syntax.interpf interp_op (@invert_Abs interp_base_type t e x)
       = Syntax.interp interp_op e x.
-  Proof.
-    refine (match e in expr _ _ t
-                  return match t return expr _ _ t -> _ with
-                         | Arrow src dst
-                           => fun e
-                              => (forall x : interp_flat_type src,
-                                     interpf _ (invert_Abs e x) = interp _ e x)
-                         end e with
-            | Abs _ _ _ => fun _ => eq_refl
-            end x).
-  Qed.
+  Proof. destruct e; reflexivity. Qed.
 End language.
 
 Global Arguments domain {_} _.
@@ -126,7 +116,7 @@ Global Arguments invert_Var {_ _ _ _} _.
 Global Arguments invert_Op {_ _ _ _} _.
 Global Arguments invert_LetIn {_ _ _ _} _.
 Global Arguments invert_Pair {_ _ _ _ _} _.
-Global Arguments invert_Abs {_ _ _ _ _} _ _.
+Global Arguments invert_Abs {_ _ _ _} _ _.
 
 Ltac invert_expr_subst_step :=
   match goal with
@@ -134,7 +124,7 @@ Ltac invert_expr_subst_step :=
   | [ H : invert_Op ?e = Some _ |- _ ] => apply invert_Op_Some in H
   | [ H : invert_LetIn ?e = Some _ |- _ ] => apply invert_LetIn_Some in H
   | [ H : invert_Pair ?e = Some _ |- _ ] => apply invert_Pair_Some in H
-  | [ e : expr _ _ (Arrow _ _) |- _ ]
+  | [ e : expr _ _ _ |- _ ]
     => let f := fresh e in
        let H := fresh in
        rename e into f;

@@ -83,17 +83,11 @@ Section language.
              | Tflat T => Unit
              | Arrow A (Tflat B) => A
              | Arrow A B
-               => A * match compilet B with
-                      | Syntax.Arrow B' C' => B'
-                      end
+               => A * domain (compilet B)
              end%ctype
              match t with
              | Tflat T => T
-             | Arrow A (Tflat B) => B
-             | Arrow A B
-               => match compilet B with
-                  | Syntax.Arrow B' C' => C'
-                  end
+             | Arrow A B => codomain (compilet B)
              end.
 
       Fixpoint SmartConst (t : flat_type) : interp_flat_type t -> Syntax.exprf base_type_code op (var:=var) t
@@ -130,12 +124,8 @@ Section language.
                   => match compilet dst' as cdst
                            return (_ -> Syntax.expr _ _ cdst)
                                   -> Syntax.expr _ _ (Syntax.Arrow
-                                                        (_ * match cdst with
-                                                             | Syntax.Arrow _ _ => _
-                                                             end)
-                                                        match cdst with
-                                                        | Syntax.Arrow _ _ => _
-                                                        end)
+                                                        (_ * domain cdst)
+                                                        (codomain cdst))
                      with
                      | Syntax.Arrow A' B'
                        => fun resf => Syntax.Abs (fun x : interp_flat_type_gen var (_ * _)
