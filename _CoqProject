@@ -131,6 +131,7 @@ src/Reflection/MapCast.v
 src/Reflection/MapCastInterp.v
 src/Reflection/MapCastWf.v
 src/Reflection/MapSigCast.v
+src/Reflection/MapSigCastWf.v
 src/Reflection/MultiSizeTest.v
 src/Reflection/MultiSizeTest2.v
 src/Reflection/Reify.v
