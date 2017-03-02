@@ -158,6 +158,8 @@ src/Reflection/Named/EstablishLiveness.v
 src/Reflection/Named/NameUtil.v
 src/Reflection/Named/RegisterAssign.v
 src/Reflection/Named/Syntax.v
+src/Reflection/NamedBase/MapCast.v
+src/Reflection/NamedBase/Syntax.v
 src/Reflection/Z/BinaryNotationConstants.v
 src/Reflection/Z/BoundsInterpretations.v
 src/Reflection/Z/CNotations.v
