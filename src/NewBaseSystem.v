@@ -307,7 +307,7 @@ Definition runtime_shr := Z.shiftr.
 Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope. 
 
 Module B.
-  Local Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
+  Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
   Module Associational.
     Definition eval (p:list limb) : Z :=
       List.fold_right Z.add 0%Z (List.map (fun t => fst t * snd t) p).
@@ -823,11 +823,9 @@ Section DivMod.
     pose proof (Z.div_mod a b H). congruence.
   Qed.
 End DivMod.
-  
-Local Coercion Z.of_nat : nat >-> Z.
-Import Coq.Lists.List.ListNotations. Local Open Scope list_scope.
-Import B.
 
+Import B.
+  
 Ltac basesystem_partial_evaluation_RHS := 
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
@@ -857,19 +855,6 @@ Positional.to_associational_cps Positional.to_associational Positional.eval Posi
                   (@runtime_mul));
   [replace_with_vm_compute t1; clear t1|reflexivity].
 
-Ltac assert_preconditions :=
-  repeat match goal with
-         | |- context [Positional.Fdecode ?wt] =>
-           unique assert (forall i, wt i <> 0)
-             by (intros; apply Z.pow_nonzero; try (cbv; congruence);
-                 solve [zero_bounds])
-         | |- context [Positional.chained_carries_cps ?wt _ ?idxs] =>
-           unique assert (forall i, In i idxs -> wt (S i) / wt i <> 0)
-             by (clear; simpl;  intuition; subst_let; subst; cbv in *;
-                 congruence)
-         | _ => unique pose proof div_mod
-         end.
-
 (* TODO : move *)
 Lemma F_of_Z_opp {m} x : F.of_Z m (- x) = F.opp (F.of_Z m x).
 Proof.
@@ -897,115 +882,3 @@ Ltac solve_op_mod_eq wt x :=
   basesystem_partial_evaluation_RHS.
 
 Ltac solve_op_F wt x := F_mod_eq; solve_op_mod_eq wt x.
-
-Section Ops.
-  Local Infix "^" := tuple : type_scope.
-
-  (* These `Let`s will need to be passed as Ltac arguments (or cleverly inferred *)
-  Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
-  Let sz := 10%nat.
-  Let s : Z := 2^255.
-  Let c : list B.limb := [(1, 19)].
-  Let coef_div_modulus := 2. (* add 2*modulus before subtracting *)
-  Let carry_chain := (seq 0 sz) ++ ([0;1])%nat.
-
-  (* These `Lets` are inferred from those above *)
-  Let m := Eval compute in Z.to_pos (s - Associational.eval c). (* modulus *)
-  Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
-  Let coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
-  Let coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
-
-  Definition zero_sig :
-    { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}.
-  Proof.
-    let t := eval vm_compute in
-    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt 0) in
-        exists t; vm_decide.
-  Defined.
-
-  Definition one_sig :
-    { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}.
-  Proof.
-    let t := eval vm_compute in
-    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt 1) in
-        exists t; vm_decide.
-  Defined.
-
-  Definition add_sig :
-    { add : (Z^sz -> Z^sz -> Z^sz)%type |
-               forall a b : Z^sz,
-                 let eval := Positional.Fdecode (m:=m) wt in
-                 eval (add a b) = (eval a  + eval b)%F }.
-  Proof.
-    eexists; cbv beta zeta; intros; assert_preconditions.
-    let x := constr:(
-        Positional.add_cps (n := sz) wt a b id) in
-    solve_op_F wt x. reflexivity.
-  Defined.
-
-  Definition sub_sig :
-    {sub : (Z^sz -> Z^sz -> Z^sz)%type |
-               forall a b : Z^sz,
-                 let eval := Positional.Fdecode (m:=m) wt in
-                 eval (sub a b) = (eval a - eval b)%F}.
-  Proof.
-    eexists; cbv beta zeta; intros; assert_preconditions.
-    let x := constr:(
-         Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
-    solve_op_F wt x. reflexivity.
-  Defined.
-
-  Definition opp_sig :
-    {opp : (Z^sz -> Z^sz)%type |
-               forall a : Z^sz,
-                 let eval := Positional.Fdecode (m := m) wt in
-                 eval (opp a) = F.opp (eval a)}.
-  Proof.
-    eexists; cbv beta zeta; intros; assert_preconditions.
-    let x := constr:(
-         Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
-    solve_op_F wt x. reflexivity.
-  Defined.
-  
-  Definition mul_sig :
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
-               forall a b : Z^sz,
-                 let eval := Positional.Fdecode (m := m) wt in
-                 eval (mul a b) = (eval a  * eval b)%F}.
-  Proof.
-    eexists; cbv beta zeta; intros; assert_preconditions.
-    let x := constr:(
-         Positional.mul_cps (n:=sz) (m:=sz2) wt a b
-           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
-    solve_op_F wt x. reflexivity.
-
-    (* rough breakdown of synthesis time *)
-    (* 1.2s for side conditions -- should improve significantly when [chained_carries] gets a correctness lemma *)
-    (* basesystem_partial_evaluation_RHS (primarily vm_compute): 1.8s, which gets re-computed during defined *)
-
-    (* doing [cbv -[Let_In runtime_add runtime_mul]] took 37s *)
-
-  Defined. (* 3s *)
-
-  (* Performs a full carry loop (as specified by carry_chain) *)
-  Definition carry_sig :
-    {carry : (Z^sz -> Z^sz)%type |
-               forall a : Z^sz,
-                 let eval := Positional.Fdecode (m := m) wt in
-                 eval (carry a) = eval a}.
-  Proof.
-    eexists; cbv beta zeta; intros; assert_preconditions.
-    let x := constr:(
-               Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt a carry_chain id) in
-    solve_op_F wt x. reflexivity.
-  Defined.
-
-End Ops.
-
-(*
-Eval cbv [proj1_sig add_sig] in (proj1_sig add_sig).
-Eval cbv [proj1_sig sub_sig] in (proj1_sig sub_sig).
-Eval cbv [proj1_sig opp_sig] in (proj1_sig opp_sig).
-Eval cbv [proj1_sig mul_sig] in (proj1_sig mul_sig).
-Eval cbv [proj1_sig carry_sig] in (proj1_sig carry_sig).
-*)
