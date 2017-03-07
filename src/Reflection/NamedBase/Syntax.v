@@ -38,7 +38,7 @@ Module Export Named.
         := match e in exprf t return option (interp_base_type t) with
            | Var t' x => lookupb ctx x t'
            | BinOp _ _ _ arg1 arg2
-             => match @interpf ctx _ arg1, @interpf ctx _ arg1 with
+             => match @interpf ctx _ arg1, @interpf ctx _ arg2 with
                 | Some a1, Some a2 => Some (@interp_op _ _ _ a1 a2)
                 | None, _ | _, None => None
                 end
