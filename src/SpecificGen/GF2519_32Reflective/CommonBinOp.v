@@ -7,9 +7,9 @@ Require Import Crypto.Util.Tactics.
 
 Local Opaque Interp.
 Lemma ExprBinOp_correct_and_bounded
-      ropW op (ropZ_sig : rexpr_binop_sig op)
-      (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall xy
+      ropZ op (ropZ_sig : rexpr_binop_sig op)
+      (Hbounds : correct_and_bounded_genT ropZ ropZ_sig)
+      (*(H0 : forall xy
                    (xy := (eta_fe2519_32W (fst xy), eta_fe2519_32W (snd xy)))
                    (Hxy : is_bounded (fe2519_32WToZ (fst xy)) = true
                           /\ is_bounded (fe2519_32WToZ (snd xy)) = true),
@@ -36,8 +36,8 @@ Lemma ExprBinOp_correct_and_bounded
           with
           | Some bounds => binop_bounds_good bounds = true
           | None => False
-          end)
-  : binop_correct_and_bounded ropW op.
+          end)*)
+  : binop_correct_and_bounded ropZ op.
 Proof.
   intros xy HxHy.
   pose xy as xy'.

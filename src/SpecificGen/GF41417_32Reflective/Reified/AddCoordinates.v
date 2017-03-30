@@ -8,9 +8,7 @@ Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Reflection.Z.Interpretations64.
-Require Crypto.Reflection.Z.Interpretations64.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
@@ -23,7 +21,6 @@ Require Import Crypto.SpecificGen.GF41417_32Reflective.Common.
 Require Import Crypto.SpecificGen.GF41417_32Reflective.Reified.Add.
 Require Import Crypto.SpecificGen.GF41417_32Reflective.Reified.Sub.
 Require Import Crypto.SpecificGen.GF41417_32Reflective.Reified.Mul.
-Require Import Crypto.SpecificGen.GF41417_32Reflective.Common9_4Op.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.HList.
@@ -163,21 +160,18 @@ Definition radd_coordinates_input_bounds
   := (ExprUnOp_bounds, ((ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds),
                         (ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds))).
 
-Time Definition radd_coordinatesW := Eval vm_compute in rword_of_Z radd_coordinatesZ_sig.
-Lemma radd_coordinatesW_correct_and_bounded_gen : correct_and_bounded_genT radd_coordinatesW radd_coordinatesZ_sig.
-Proof. Time rexpr_correct. Time Qed.
-Definition radd_coordinates_output_bounds := Eval vm_compute in compute_bounds radd_coordinatesW radd_coordinates_input_bounds.
 
+Time Definition radd_coordinatesZ : Syntax.Expr _ _ _ := Eval vm_compute in proj1_sig radd_coordinatesZ_sig.
+Time Definition radd_coordinatesW : Syntax.Expr _ _ _ := Eval vm_compute in rexpr_select_word_sizes radd_coordinatesZ radd_coordinates_input_bounds.
+
+Definition radd_coordinatesZ_Wf : rexpr_wfT radd_coordinatesZ. Proof. Time prove_rexpr_wfT. Qed.
+Definition radd_coordinates_output_bounds
+  := Eval vm_compute in compute_bounds radd_coordinatesZ radd_coordinates_input_bounds.
 Local Obligation Tactic := intros; vm_compute; constructor.
-
-(*
-Program Definition radd_coordinatesW_correct_and_bounded
-  := Expr9_4Op_correct_and_bounded
-       radd_coordinatesW uncurried_add_coordinates radd_coordinatesZ_sig radd_coordinatesW_correct_and_bounded_gen
-       _ _.
- *)
+Program Definition radd_coordinatesZ_correct_and_bounded
+  := rexpr_correct_and_bounded radd_coordinatesZ radd_coordinatesZ_Wf radd_coordinates_input_bounds.
 
 Local Open Scope string_scope.
-Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesW radd_coordinates_input_bounds).
-Compute ("Add_Coordinates overflows? ", sanity_compute radd_coordinatesW radd_coordinates_input_bounds).
-Compute ("Add_Coordinates overflows (error if it does)? ", sanity_check radd_coordinatesW radd_coordinates_input_bounds).
+Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesZ radd_coordinates_input_bounds).
+Compute ("Add_Coordinates overflows? ", sanity_compute radd_coordinatesZ radd_coordinates_input_bounds).
+Compute ("Add_Coordinates overflows (error if it does)? ", sanity_check radd_coordinatesZ radd_coordinates_input_bounds).

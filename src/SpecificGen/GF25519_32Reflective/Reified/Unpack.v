@@ -1,17 +1,16 @@
-Require Import Crypto.SpecificGen.GF25519_32Reflective.CommonUnOpWireToFE.
+Require Import Crypto.SpecificGen.GF25519_32Reflective.Common.
 
 Definition runpackZ_sig : rexpr_unop_WireToFE_sig unpack. Proof. reify_sig. Defined.
-Definition runpackW := Eval vm_compute in rword_of_Z runpackZ_sig.
-Lemma runpackW_correct_and_bounded_gen : correct_and_bounded_genT runpackW runpackZ_sig.
-Proof. rexpr_correct. Qed.
-Definition runpack_output_bounds := Eval vm_compute in compute_bounds runpackW ExprUnOpWireToFE_bounds.
+Definition runpackZ : Syntax.Expr _ _ _ := Eval vm_compute in proj1_sig runpackZ_sig.
+Definition runpackW : Syntax.Expr _ _ _ := Eval vm_compute in rexpr_select_word_sizes runpackZ ExprUnOpWireToFE_bounds.
+Definition runpackZ_Wf : rexpr_wfT runpackZ. Proof. prove_rexpr_wfT. Qed.
+Definition runpack_output_bounds
+  := Eval vm_compute in compute_bounds runpackZ ExprUnOpWireToFE_bounds.
 Local Obligation Tactic := intros; vm_compute; constructor.
-Program Definition runpackW_correct_and_bounded
-  := ExprUnOpWireToFE_correct_and_bounded
-       runpackW unpack runpackZ_sig runpackW_correct_and_bounded_gen
-       _ _.
+Program Definition runpackZ_correct_and_bounded
+  := rexpr_correct_and_bounded runpackZ runpackZ_Wf ExprUnOpWireToFE_bounds.
 
 Local Open Scope string_scope.
-Compute ("Unpack", compute_bounds_for_display runpackW ExprUnOpWireToFE_bounds).
-Compute ("Unpack overflows? ", sanity_compute runpackW ExprUnOpWireToFE_bounds).
-Compute ("Unpack overflows (error if it does)? ", sanity_check runpackW ExprUnOpWireToFE_bounds).
+Compute ("Unpack", compute_bounds_for_display runpackZ ExprUnOpWireToFE_bounds).
+Compute ("Unpack overflows? ", sanity_compute runpackZ ExprUnOpWireToFE_bounds).
+Compute ("Unpack overflows (error if it does)? ", sanity_check runpackZ ExprUnOpWireToFE_bounds).

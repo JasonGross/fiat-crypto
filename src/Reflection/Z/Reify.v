@@ -15,19 +15,19 @@ Require Import Crypto.Reflection.EtaInterp.
 
 Ltac base_reify_op op op_head extra ::=
      lazymatch op_head with
-     | @Z.add => constr:(reify_op op op_head 2 (Add TZ))
-     | @Z.mul => constr:(reify_op op op_head 2 (Mul TZ))
-     | @Z.sub => constr:(reify_op op op_head 2 (Sub TZ))
-     | @Z.shiftl => constr:(reify_op op op_head 2 (Shl TZ))
-     | @Z.shiftr => constr:(reify_op op op_head 2 (Shr TZ))
-     | @Z.land => constr:(reify_op op op_head 2 (Land TZ))
-     | @Z.lor => constr:(reify_op op op_head 2 (Lor TZ))
-     | @ModularBaseSystemListZOperations.cmovne => constr:(reify_op op op_head 4 (Cmovne TZ))
-     | @ModularBaseSystemListZOperations.cmovl => constr:(reify_op op op_head 4 (Cmovle TZ))
+     | @Z.add => constr:(reify_op op op_head 2 (Add TZ TZ TZ))
+     | @Z.mul => constr:(reify_op op op_head 2 (Mul TZ TZ TZ))
+     | @Z.sub => constr:(reify_op op op_head 2 (Sub TZ TZ TZ))
+     | @Z.shiftl => constr:(reify_op op op_head 2 (Shl TZ TZ TZ))
+     | @Z.shiftr => constr:(reify_op op op_head 2 (Shr TZ TZ TZ))
+     | @Z.land => constr:(reify_op op op_head 2 (Land TZ TZ TZ))
+     | @Z.lor => constr:(reify_op op op_head 2 (Lor TZ TZ TZ))
+     | @ModularBaseSystemListZOperations.cmovne => constr:(reify_op op op_head 4 (Cmovne TZ TZ TZ TZ TZ))
+     | @ModularBaseSystemListZOperations.cmovl => constr:(reify_op op op_head 4 (Cmovle TZ TZ TZ TZ TZ))
      | @ModularBaseSystemListZOperations.neg
        => lazymatch extra with
           | @ModularBaseSystemListZOperations.neg ?int_width _
-            => constr:(reify_op op op_head 1 (Neg TZ int_width))
+            => constr:(reify_op op op_head 1 (Neg TZ TZ int_width))
           | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is neg but body is wrong:" extra
           end
      end.

@@ -1,7 +1,6 @@
 Require Export Coq.ZArith.ZArith.
 Require Export Coq.Strings.String.
 Require Export Crypto.Specific.GF25519.
-Require Export Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
@@ -10,9 +9,6 @@ Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.Eta.
 Require Import Crypto.Reflection.EtaInterp.
-Require Import Crypto.Reflection.Z.Interpretations64.
-Require Crypto.Reflection.Z.Interpretations64.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
@@ -23,7 +19,6 @@ Require Import Crypto.Specific.GF25519Reflective.Common.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Add.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Sub.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Mul.
-Require Import Crypto.Specific.GF25519Reflective.Common9_4Op.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.HList.
@@ -169,21 +164,21 @@ Definition rladderstep_input_bounds
       ((ExprUnOp_bounds, ExprUnOp_bounds),
        (ExprUnOp_bounds, ExprUnOp_bounds))).
 
-Time Definition rladderstepW := Eval vm_compute in rword_of_Z rladderstepZ_sig.
-Lemma rladderstepW_correct_and_bounded_gen : correct_and_bounded_genT rladderstepW rladderstepZ_sig.
-Proof. Time rexpr_correct. Time Qed.
-Definition rladderstep_output_bounds := Eval vm_compute in compute_bounds rladderstepW rladderstep_input_bounds.
-
-Local Obligation Tactic := intros; vm_compute; constructor.
-
-(*
-Program Definition rladderstepW_correct_and_bounded
-  := Expr9_4Op_correct_and_bounded
-       rladderstepW uncurried_ladderstep rladderstepZ_sig rladderstepW_correct_and_bounded_gen
-       _ _.
- *)
+Time Definition rladderstepZ : Expr _ := Eval vm_compute in proj1_sig rladderstepZ_sig.
+Time Definition rladderstepW_pkgo := Eval vm_compute in rexpr_select_word_sizes_option rladderstepZ rladderstep_input_bounds.
+Time Definition rladderstepW_pkg := Eval vm_compute in rexpr_select_word_sizes_postprocess1 rladderstepW_pkgo.
+Time Definition rladderstepT := get_output_type rladderstepW_pkg.
+Time Definition rladderstepW' : Expr _ := Eval vm_compute in get_output_expr rladderstepW_pkg.
+Time Definition rladderstepW : Expr rladderstepT := Eval cbv [rladderstepW'] in rexpr_select_word_sizes_postprocess2 rladderstepW'.
+Time Definition rladderstep_output_bounds := Eval vm_compute in get_bounds rladderstepW_pkg.
+Time Definition rladderstepZ_Wf : rexpr_wfT rladderstepZ. Proof. prove_rexpr_wfT. Qed.
+Local Obligation Tactic := rexpr_correct_and_bounded_obligation_tac.
+Time Program Definition rladderstepZ_correct_and_bounded_tight
+  : rexpr_correct_and_boundedT rladderstepZ rladderstepW rladderstep_input_bounds rladderstep_output_bounds
+  := rexpr_correct_and_bounded rladderstepZ rladderstepW rladderstep_input_bounds rladderstep_output_bounds rladderstepZ_Wf.
 
 Local Open Scope string_scope.
-Compute ("Ladderstep", compute_bounds_for_display rladderstepW rladderstep_input_bounds).
-Compute ("Ladderstep overflows? ", sanity_compute rladderstepW rladderstep_input_bounds).
-Compute ("Ladderstep overflows (error if it does)? ", sanity_check rladderstepW rladderstep_input_bounds).
+Compute ("Ladderstep", compute_bounds_for_display rladderstepW_pkg).
+(* We use [compute] rather than [vm_compute] so as to not eta-expand functions, so we get pretty display *)
+Eval compute in ("Ladderstep overflows? ", sanity_compute rladderstepW_pkg).
+Compute ("Ladderstep overflows (error if it does)? ", sanity_check rladderstepW_pkg).
