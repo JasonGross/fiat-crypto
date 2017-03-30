@@ -1,45 +1,18 @@
 raddW = 
 fun var : Syntax.base_type -> Type =>
 λ
-x x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
- x18 : var Syntax.TZ,
-Tbase Syntax.TZ x19 = x + x9;
-Tbase Syntax.TZ x20 = x0 + x10;
-Tbase Syntax.TZ x21 = x1 + x11;
-Tbase Syntax.TZ x22 = x2 + x12;
-Tbase Syntax.TZ x23 = x3 + x13;
-Tbase Syntax.TZ x24 = x4 + x14;
-Tbase Syntax.TZ x25 = x5 + x15;
-Tbase Syntax.TZ x26 = x6 + x16;
-Tbase Syntax.TZ x27 = x7 + x17;
-Tbase Syntax.TZ x28 = x8 + x18;
-(Return x19, Return x20, Return x21, Return x22, Return x23, 
-Return x24, Return x25, Return x26, Return x27, Return x28)
-     : forall var : Syntax.base_type -> Type,
-       expr Syntax.base_type Syntax.op
-         (Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Syntax.TZ ->
-          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
-          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
-          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
-          Tbase Syntax.TZ)
-
-Argument scope is [function_scope]
+'(n19, n20, n18, n16, n14, n12, n10, n8, n6, n4,
+ (n37, n38, n36, n34, n32, n30, n28, n26, n24, n22))%core,
+uint32_t x = n19 + n37;
+uint32_t x0 = n20 + n38;
+uint32_t x1 = n18 + n36;
+uint32_t x2 = n16 + n34;
+uint32_t x3 = n14 + n32;
+uint32_t x4 = n12 + n30;
+uint32_t x5 = n10 + n28;
+uint32_t x6 = n8 + n26;
+uint32_t x7 = n6 + n24;
+uint32_t x8 = n4 + n22;
+(Return x, Return x0, Return x1, Return x2, Return x3, 
+Return x4, Return x5, Return x6, Return x7, Return x8)
+     : C_like

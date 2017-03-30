@@ -1,16 +1,12 @@
 Require Export Coq.ZArith.ZArith.
 Require Export Coq.Strings.String.
 Require Export Crypto.Specific.GF25519.
-Require Export Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Reflection.Z.Interpretations64.
-Require Crypto.Reflection.Z.Interpretations64.Relations.
-Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
@@ -23,7 +19,6 @@ Require Import Crypto.Specific.GF25519Reflective.Common.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Add.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Sub.
 Require Import Crypto.Specific.GF25519Reflective.Reified.Mul.
-Require Import Crypto.Specific.GF25519Reflective.Common9_4Op.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.HList.
@@ -189,21 +184,22 @@ Definition radd_coordinates_input_bounds
   := (ExprUnOp_bounds, ((ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds),
                         (ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds, ExprUnOp_bounds))).
 
-Time Definition radd_coordinatesW := Eval vm_compute in rword_of_Z radd_coordinatesZ_sig.
-Lemma radd_coordinatesW_correct_and_bounded_gen : correct_and_bounded_genT radd_coordinatesW radd_coordinatesZ_sig.
-Proof. Time rexpr_correct. Time Qed.
-Definition radd_coordinates_output_bounds := Eval vm_compute in compute_bounds radd_coordinatesW radd_coordinates_input_bounds.
 
-Local Obligation Tactic := intros; vm_compute; constructor.
-
-(*
-Program Definition radd_coordinatesW_correct_and_bounded
-  := Expr9_4Op_correct_and_bounded
-       radd_coordinatesW uncurried_add_coordinates radd_coordinatesZ_sig radd_coordinatesW_correct_and_bounded_gen
-       _ _.
- *)
+Time Definition radd_coordinatesZ : Expr _ := Eval vm_compute in proj1_sig radd_coordinatesZ_sig.
+Time Definition radd_coordinatesW_pkgo := Eval vm_compute in rexpr_select_word_sizes_option radd_coordinatesZ radd_coordinates_input_bounds.
+Time Definition radd_coordinatesW_pkg := Eval vm_compute in rexpr_select_word_sizes_postprocess1 radd_coordinatesW_pkgo.
+Time Definition radd_coordinatesT := get_output_type radd_coordinatesW_pkg.
+Time Definition radd_coordinatesW' : Expr _ := Eval vm_compute in get_output_expr radd_coordinatesW_pkg.
+Time Definition radd_coordinatesW : Expr radd_coordinatesT := Eval cbv [radd_coordinatesW'] in rexpr_select_word_sizes_postprocess2 radd_coordinatesW'.
+Time Definition radd_coordinates_output_bounds := Eval vm_compute in get_bounds radd_coordinatesW_pkg.
+Time Definition radd_coordinatesZ_Wf : rexpr_wfT radd_coordinatesZ. Proof. prove_rexpr_wfT. Qed.
+Local Obligation Tactic := rexpr_correct_and_bounded_obligation_tac.
+Time Program Definition radd_coordinatesZ_correct_and_bounded_tight
+  : rexpr_correct_and_boundedT radd_coordinatesZ radd_coordinatesW radd_coordinates_input_bounds radd_coordinates_output_bounds
+  := rexpr_correct_and_bounded radd_coordinatesZ radd_coordinatesW radd_coordinates_input_bounds radd_coordinates_output_bounds radd_coordinatesZ_Wf.
 
 Local Open Scope string_scope.
-Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesW radd_coordinates_input_bounds).
-Compute ("Add_Coordinates overflows? ", sanity_compute radd_coordinatesW radd_coordinates_input_bounds).
-Compute ("Add_Coordinates overflows (error if it does)? ", sanity_check radd_coordinatesW radd_coordinates_input_bounds).
+Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesW_pkg).
+(* We use [compute] rather than [vm_compute] so as to not eta-expand functions, so we get pretty display *)
+Eval compute in ("Add_Coordinates overflows? ", sanity_compute radd_coordinatesW_pkg).
+Compute ("Add_Coordinates overflows (error if it does)? ", sanity_check radd_coordinatesW_pkg).
