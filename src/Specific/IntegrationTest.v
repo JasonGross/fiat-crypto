@@ -148,9 +148,10 @@ Ltac split_BoundedWordToZ :=
 <<
 is_bounded_by _ bounds (map wordToZ (?fW args)) /\ map wordToZ (?fW args) = fZ argsZ
 >>
-    and uses [change] to turn it into a goal that the reflective
-    machinery can handle.  The goal left by this tactic should be
-    fully solvable by the reflective pipeline. *)
+    and uses [cut] and a small lemma to turn it into a goal that the
+    reflective machinery can handle.  The goal left by this tactic
+    should be fully solvable by the reflective pipeline. *)
+
 Ltac const_tuple T val :=
   lazymatch T with
   | (?A * ?B)%type => let a := const_tuple A val in
@@ -175,7 +176,10 @@ Ltac zrange_to_reflective :=
        let map_t := constr:(fun t bs => @cast_back_flat_const (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) bs) in
        let map_output := constr:(map_t (codomain rT) bounds) in
        let map_input := constr:(map_t (domain rT) input_bounds) in
-       change (is_bounded_by' bounds (map_output (reified_f_evar args)) /\ map_output (reified_f_evar args) = f (map_input args));
+       (* we use [cut] and [abstract] rather than [change] to catch inefficiencies in conversion early, rather than allowing [Defined] to take forever *)
+       cut (is_bounded_by' bounds (map_output (reified_f_evar args)) /\ map_output (reified_f_evar args) = f (map_input args));
+       [ generalize reified_f_evar; clear; clearbody f; let x := fresh in intros ? x; abstract exact x
+       | ];
        cbv beta
   end;
   adjust_goal_for_reflective.
@@ -183,6 +187,7 @@ Require Import Crypto.Reflection.Z.Bounds.Relax.
 do_curry.
 split_BoundedWordToZ.
 zrange_to_reflective.
+
 
 Require Import Crypto.Reflection.Z.MapBounds.
 Require Import Crypto.Reflection.Z.MapBoundsInterp.
