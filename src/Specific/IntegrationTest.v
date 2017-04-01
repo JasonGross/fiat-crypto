@@ -46,15 +46,15 @@ Section BoundedField25p5.
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
 
   (* TODO : change this to field once field isomorphism happens *)
-  Definition mul :
-    { mul : feBW -> feBW -> feBW
-    | forall a b, phi (mul a b) = (F.mul (phi a) (phi b))%F }.
+  Definition add :
+    { add : feBW -> feBW -> feBW
+    | forall a b, phi (add a b) = (phi a + phi b)%F }.
   Proof.
-    eexists ?[mul]; intros. cbv [phi].
-    rewrite <- (proj2_sig mul_sig).
+    eexists ?[add]; intros. cbv [phi].
+    rewrite <- (proj2_sig add_sig).
     symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
-    set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
-    change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).
+    set (carry_addZ := fun a b => proj1_sig carry_sig (proj1_sig add_sig a b)).
+    change (proj1_sig carry_sig (proj1_sig add_sig ?a ?b)) with (carry_addZ a b).
     (* XXX FIXME This is a kludge around anomalies in Coq *)
     Definition recurry1 {T} (F : Z * Z * Z * Z * Z * Z * Z * Z * Z * Z -> T) (x : Z * Z * Z * Z * Z * Z * Z * Z * Z * Z) : T
       := let '(a, b, c, d, e, f, g, h, i, j) := x in
@@ -63,10 +63,10 @@ Section BoundedField25p5.
       := let '(a, b, c, d, e, f, g, h, i, j) := fst x in
          let '(a', b', c', d', e', f', g', h', i', j') := snd x in
          F ((a, b, c, d, e, f, g, h, i, j, (a', b', c', d', e', f', g', h', i', j'))).
-    change (proj1_sig carry_sig) with (recurry1 (proj1_sig carry_sig)) in (value of carry_mulZ).
-    change (proj1_sig mul_sig) with (fun x y => recurry (fun xy => proj1_sig mul_sig (fst xy) (snd xy)) (x, y)) in (value of carry_mulZ).
-    cbv beta iota delta [proj1_sig mul_sig carry_sig recurry recurry1 runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz] in carry_mulZ.
-    cbn beta iota delta [fst snd] in carry_mulZ.
+    change (proj1_sig carry_sig) with (recurry1 (proj1_sig carry_sig)) in (value of carry_addZ).
+    change (proj1_sig add_sig) with (fun x y => recurry (fun xy => proj1_sig add_sig (fst xy) (snd xy)) (x, y)) in (value of carry_addZ).
+    cbv beta iota delta [proj1_sig add_sig carry_sig recurry recurry1 runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz] in carry_addZ.
+    cbn beta iota delta [fst snd] in carry_addZ.
     apply f_equal.
     (* jgross start here! *)
     Require Import Crypto.Util.LetIn.
