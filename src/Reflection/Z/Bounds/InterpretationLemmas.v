@@ -48,7 +48,13 @@ Local Ltac Zarith_t_step :=
             => assert (x = y) by omega; clear H H'
           end
         | progress Z.ltb_to_lt_in_context ].
-
+Local Ltac Zarith_land_lor_t_step :=
+  match goal with
+  | [ |- _ <= Z.lor _ _ <= _ ]
+    => split; etransitivity; [ | apply Z.lor_bounds; omega | apply Z.lor_bounds; omega | ]
+  | [ |- 2^Z.log2_up (?x + 1) - 1 <= 2^Z.log2_up (?y + 1) - 1 ]
+    => let H := fresh in assert (H : x <= y) by omega; rewrite H; reflexivity
+  end.
 Local Ltac word_arith_t :=
   match goal with
   | [ |- (0 <= FixedWordSizes.wordToZ ?w <= 2^2^Z.of_nat ?logsz - 1)%Z ]
@@ -129,6 +135,14 @@ Local Ltac saturate_with_shift_facts :=
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?y >> ?y'] ]
            => unique assert (x >> x' <= y >> y') by (apply Z.shiftr_le_mono; omega)
          end.
+Local Ltac saturate_with_all_shift_facts :=
+  repeat match goal with
+         | _ => progress saturate_with_shift_facts
+         | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[Z.shiftl _ _] ]
+           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
+         | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[Z.shiftr _ _] ]
+           => unique assert (x >> x' <= y >> y') by (apply Z.shiftr_le_mono; omega)
+         end.
 Local Ltac saturate_land_lor_facts :=
   repeat match goal with
          | [ |- context[Z.land ?x ?y] ]
@@ -157,7 +171,9 @@ Local Ltac saturate_land_lor_facts :=
 Local Ltac clean_neg :=
   repeat match goal with
          | [ H : (-?x) < 0 |- _ ] => assert (0 <= x) by omega; assert (x <> 0) by omega; clear H
-         | [ H : -?x <= -?y |- _ ] => assert (y <= x) by omega; clear H
+         | [ H : -?x <= -?y |- _ ] => apply Z.opp_le_mono in H
+         | [ |- -?x <= -?y ] => apply Z.opp_le_mono
+         | _ => progress rewrite <- Z.opp_le_mono in *
          end.
 Local Ltac replace_with_neg x :=
   assert (x = -(-x)) by omega; generalize dependent (-x);
@@ -196,6 +212,9 @@ Local Ltac rewriter_t :=
         | rewrite !Bool.orb_true_iff
         | rewrite !Bool.orb_false_iff
         | rewrite !Z.abs_opp
+        | rewrite !Z.max_log2_up
+        | rewrite !Z.add_max_distr_r
+        | rewrite !Z.add_max_distr_l
         | rewrite wordToZ_ZToWord by (autorewrite with push_Zof_nat zsimplify_const; omega)
         | match goal with
           | [ H : _ |- _ ]
@@ -260,7 +279,12 @@ Proof.
   { handle_four_corners. }
   { handle_four_corners. }
   { destruct_head Bounds.t.
-    case_Zvar_nonneg; replace_all_neg_with_pos; handle_shift_neg; admit. }
+    case_Zvar_nonneg; replace_all_neg_with_pos; handle_shift_neg;
+      autorewrite with Zshift_to_pow;
+      rewrite ?Z.div_opp_l_complete by auto with zarith;
+      autorewrite with Zpow_to_shift.
+    16:split_min_max; saturate_with_shift_facts; omega.
+    all:admit. }
   { destruct_head Bounds.t.
     case_Zvar_nonneg; replace_all_neg_with_pos; handle_shift_neg; admit. }
   { repeat first [ progress destruct_head Bounds.t
@@ -278,29 +302,10 @@ Proof.
                  | Zarith_t_step
                  | rewriter_t
                  | progress replace_all_neg_with_pos
-                 | progress saturate_land_lor_facts ].
-    Focus 9.
-    { split_min_max.
-      all:split; try omega.
-      all:try lazymatch goal with
-      | [ H : ?x <= 2^Z.log2_up (?b + 1) - 1 |- ?x <= 2^Z.log2_up (?b' + 1) - 1 ]
-        => let H' := fresh in
-           assert (H' : b <= b') by omega;
-             rewrite H, H'; reflexivity
-              end.
-      lazymatch goal with
-      | [ H : ?x <= 2^Z.log2_up (?b + 1) - 1 |- ?x <= 2^Z.log2_up (?b' + 1) - 1 ]
-        => rewrite H; clear H
-      end.
-      repeat match goal with
-             | [ |- _ - ?x <= _ - ?x ]
-               => apply Z.sub_le_eq_Proper; [ | reflexivity ]
-             | [ |- ?x^_ <= ?x^_ ]
-               => apply Z.pow_Zpos_le_Proper
-             end.
-      all:admit. }
-    Unfocus.
-    all:admit. }
+                 | progress saturate_land_lor_facts
+                 | progress Zarith_land_lor_t_step
+                 | solve [ split_min_max; try omega; try Zarith_land_lor_t_step ] ];
+      admit. }
   { t_special_case_op. }
   { t_special_case_op. }
   { t_special_case_op. }
@@ -364,7 +369,49 @@ Proof.
                    | match goal with
                      | [ H : _ |- _ ] => erewrite H by eassumption
                      end ].. ].
-  Focus 2.
+  { simpl in *; unfold unzify_op, cast_back_flat_const, SmartFlatTypeMap, Bounds.interp_base_type, cast_const, Bounds.is_bounded_by', lift_op, SmartFlatTypeMapUnInterp, SmartFlatTypeMapInterp2, cast_const in *; simpl in *.
+    unfold Bounds.is_bounded_by', cast_const, ZToInterp, interpToZ, Bounds.bounds_to_base_type, ZRange.is_bounded_by' in *; simpl in *.
+    destruct_head base_type; break_innermost_match; Z.ltb_to_lt; destruct_head Bounds.t;
+      repeat match goal with
+             | _ => progress destruct_head'_and
+             | _ => reflexivity
+             | [ H : forall v, _ /\ True -> _ |- _ ] => specialize (fun v pf => H v (conj pf I))
+             | [ H : forall v, _ -> _ /\ True |- _ ] => pose proof (fun v pf => proj1 (H v pf)); clear H
+             | [ H : True |- _ ] => clear H
+             | [ H : ?T, H' : ?T |- _ ] => clear H
+             | [ H : forall v, _ -> _ <= ?f v <= _ |- ?f ?v' = _ ]
+               => specialize (H v')
+             | [ H : forall v, _ -> _ <= ?f (?g v) <= _ |- ?f (?g ?v') = _ ]
+               => specialize (H v')
+             | [ H : forall v, _ -> _ <= ?f (?g (?h v)) <= _ /\ _ /\ _ |- context[?h ?v'] ]
+               => specialize (H v')
+             | [ H : forall v, _ -> _ <= ?f (?g (?h (?i v))) <= _ /\ _ /\ _ |- context[?h (?i ?v')] ]
+               => specialize (H v')
+             | _ => progress specialize_by omega
+             | _ => rewrite wordToZ_ZToWord
+                 by repeat match goal with
+                           | [ |- and _ _ ] => split
+                           | [ |- ?x < ?y ] => cut (1 + x <= y); [ omega | ]
+                           | _ => omega
+                           | _ => progress autorewrite with push_Zof_nat zsimplify_const
+                           | _ => rewrite Z2Nat.id by auto with zarith
+                           | _ => rewrite <- !Z.log2_up_le_full
+                           end
+             | _ => rewrite wordToZ_ZToWord in *
+                 by repeat match goal with
+                           | [ |- and _ _ ] => split
+                           | [ |- ?x < ?y ] => cut (1 + x <= y); [ omega | ]
+                           | _ => omega
+                           | _ => progress autorewrite with push_Zof_nat zsimplify_const
+                           | _ => rewrite Z2Nat.id by auto with zarith
+                           | _ => rewrite <- !Z.log2_up_le_full
+                           end
+             | _ => rewrite wordToZ_ZToWord_wordToZ
+                 by (rewrite Nat2Z.inj_le, Z2Nat.id, <- !Z.log2_up_le_pow2_full by auto with zarith; omega)
+             | _ => rewrite wordToZ_ZToWord_wordToZ in *
+                 by (rewrite Nat2Z.inj_le, Z2Nat.id, <- !Z.log2_up_le_pow2_full by auto with zarith; omega)
+             end.
+    all:admit. }
   { simpl in *.
     specialize (H0 tt I).
     simpl in *.
