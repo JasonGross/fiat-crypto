@@ -343,6 +343,7 @@ Ltac handle_bounds_from_hyps :=
          end.
 { handle_bounds_from_hyps. }
 2:reflexivity.
-  Admitted.
+abstract vm_cast_no_check (eq_refl true).
+  Qed.
 
 End BoundedField25p5.
