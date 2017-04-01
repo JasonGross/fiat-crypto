@@ -119,7 +119,7 @@ Module Import Bounds.
   Definition bit_width_of_base_type ty : option Z
     := match ty with
        | TZ => None
-       | TWord logsz => Some (2^Z.of_nat logsz)%Z
+       | TWord sz => Some (Z.of_nat sz)
        end.
 
   Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
@@ -142,13 +142,14 @@ Module Import Bounds.
   Definition of_interp t (z : Syntax.interp_base_type t) : interp_base_type t
     := ZToZRange (match t return Syntax.interp_base_type t -> Z with
                   | TZ => fun z => z
-                  | TWord logsz => FixedWordSizes.wordToZ
+                  | TWord sz => FixedWordSizes.wordToZ
                   end z).
 
   Definition bounds_to_base_type (b : t) : base_type
-    := if (0 <=? lower b)%Z
-       then TWord (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b))))
-       else TZ.
+    := match bounds_to_word_size (lower b) (upper b) with
+       | Some sz => TWord sz
+       | None => TZ
+       end.
 
   Definition ComputeBounds {t} (e : Expr base_type op t)
              (input_bounds : interp_flat_type interp_base_type (domain t))

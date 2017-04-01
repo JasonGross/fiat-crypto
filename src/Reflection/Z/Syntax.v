@@ -12,10 +12,30 @@ Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
-Inductive base_type := TZ | TWord (logsz : nat).
+Inductive word_size := wordsz64 | wordsz128.
+Lemma word_size_to_nat : word_size -> nat.
+Proof.
+  exact (fun x => match x with
+                  | wordsz64 => 64
+                  | wordsz128 => 128
+                  end).
+Qed.
+Coercion word_size_to_nat : word_size >-> nat.
+Lemma bounds_to_word_size (lower upper : Z) : option word_size.
+Proof.
+  exact (if ((0 <=? lower) && (upper <? 2^128))
+         then Some (if (upper <? 2^64)
+                    then wordsz64
+                    else wordsz128)
+         else None)%Z%bool.
+Qed.
+Axiom bounds_to_word_size_good : forall lower upper sz,
+    bounds_to_word_size lower upper = Some sz
+    -> (0 <= lower /\ upper < 2^Z.of_nat sz)%Z.
+Inductive base_type := TZ | TWord (sz : word_size).
 
 Local Notation tZ := (Tbase TZ).
-Local Notation tWord logsz := (Tbase (TWord logsz)).
+Local Notation tWord sz := (Tbase (TWord sz)).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | OpConst {T} (z : Z) : op Unit (Tbase T)
@@ -33,7 +53,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 Definition interp_base_type (v : base_type) : Type :=
   match v with
   | TZ => Z
-  | TWord logsz => wordT logsz
+  | TWord sz => wordT sz
   end.
 
 Definition interpToZ {t} : interp_base_type t -> Z

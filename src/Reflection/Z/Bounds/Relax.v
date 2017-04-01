@@ -24,6 +24,12 @@ Proof.
   reflexivity.
 Qed.
 
+Local Ltac convert_bounds_to_word_size :=
+  repeat match goal with
+         | [ H : bounds_to_word_size _ _ = Some _ |- _ ]
+           => apply bounds_to_word_size_good in H
+         end.
+
 Local Arguments Z.pow : simpl never.
 Local Arguments Z.sub !_ !_.
 Local Arguments Z.add !_ !_.
@@ -59,6 +65,7 @@ Proof.
   apply interp_flat_type_rel_pointwise_iff_relb in Hrelax.
   induction t; unfold SmartFlatTypeMap in *; simpl @smart_interp_flat_map in *; inversion_flat_type.
   { cbv [Bounds.is_tighter_thanb' ZRange.is_tighter_than_bool is_true SmartFlatTypeMap Bounds.bounds_to_base_type ZRange.is_bounded_by' ZRange.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type] in *; simpl in *.
+    break_match_hyps; destruct_head'_and; split_andb; Z.ltb_to_lt; unfold Bounds.interp_base_type in *; repeat apply conj; try solve [
     repeat first [ progress inversion_flat_type
                  | progress inversion_base_type
                  | progress destruct_head bounds
@@ -67,13 +74,37 @@ Proof.
                  | progress break_match_hyps
                  | progress destruct_head'_and
                  | progress simpl in *
+                 | progress subst
                  | rewrite helper in *
                  | omega
                  | tauto
                  | congruence
                  | progress destruct_head @eq; (reflexivity || omega)
                  | progress break_innermost_match_step
-                 | apply conj ]. }
+                 | apply conj
+                 | progress convert_bounds_to_word_size ] ].
+    { move sz at bottom. inversion_flat_type; inversion_base_type; subst; simpl in *.
+      move sz at bottom.
+    repeat first [ progress inversion_flat_type
+                 | progress inversion_base_type
+                 | progress destruct_head bounds
+                 | progress split_andb
+                 | progress Z.ltb_to_lt
+                 | progress break_match_hyps
+                 | progress destruct_head'_and
+                 | progress simpl in *
+                 | progress subst
+                 | rewrite helper in *
+                 | omega
+                 | tauto
+                 | congruence
+                 | progress destruct_head @eq; (reflexivity || omega)
+                 | progress break_innermost_match_step
+                 | apply conj ].
+    move sz at bottom.
+    destruct relaxed_output_bounds as [l u]; simpl in *.
+    move u at bottom.
+  }
   { compute in *; tauto. }
   { simpl in *.
     specialize (fun Hv => IHt1 (fst tight_output_bounds) (fst relaxed_output_bounds) Hv (fst v)).
