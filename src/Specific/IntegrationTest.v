@@ -50,7 +50,7 @@ Section BoundedField25p5.
     { add : feBW -> feBW -> feBW
     | forall a b, phi (add a b) = (phi a + phi b)%F }.
   Proof.
-    eexists ?[add]; intros. cbv [phi].
+    unshelve eexists ?[add]; cycle 1. intros. cbv [phi].
     rewrite <- (proj2_sig add_sig).
     symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
     set (carry_addZ := fun a b => proj1_sig carry_sig (proj1_sig add_sig a b)).
@@ -127,14 +127,18 @@ Ltac make_evar_for_first_projection :=
        | subst y f
        | etransitivity_rev y;
          subst y;
-         clearbody pf;
          cbv beta iota;
-         [ lazymatch goal with
+         [ clearbody pf;
+           lazymatch goal with
            | [ |- ?map ?wordToZ (?f ?args) = ?RHS ]
              => cut (P (f args) /\ map wordToZ (f args) = RHS); [ refine (@proj2 _ _) | exact pf ]
            end
          | subst f; cbn [fst snd]; apply f_equal;
-           instantiate (2:=ltac:(repeat intros [? ?]; refine (exist _ _ _)))(* XXX FIXME: Is 2 always the right number? *) ] ];
+           lazymatch goal with
+           | [ |- proj1_sig ?k = ?a ]
+             => cut (k = exist _ a (proj1 pf)); [ refine (@f_equal _ _ (@proj1_sig _ _) _ _) | ]
+           end;
+           instantiate (4:=ltac:(repeat intros [? ?]; refine (exist _ _ _)))(* XXX FIXME: Is 4 always the right number? *) ] ];
        cbn [proj1_sig]
   end.
 Ltac split_BoundedWordToZ :=
@@ -186,8 +190,7 @@ Ltac zrange_to_reflective :=
 Require Import Crypto.Reflection.Z.Bounds.Relax.
 do_curry.
 split_BoundedWordToZ.
-zrange_to_reflective.
-
+zrange_to_reflective. (* TODO: also change in hypotheses *)
 
 Require Import Crypto.Reflection.Z.MapBounds.
 Require Import Crypto.Reflection.Z.MapBoundsInterp.
@@ -217,7 +220,7 @@ Ltac assert_reflective :=
          /\ cast_back_flat_const (?fW ?v) = ?fZ (cast_back_flat_const ?v) ]
     => let rexpr := fresh "rexpr" in
        simple refine (let rexpr : { rexpr | forall x, Interp interp_op (t:=T) rexpr x = fZ x } := _ in _);
-         [
+         [ cbv [interp_flat_type interp_base_type Tuple.tuple Tuple.tuple'] in *
          | rewrite <- (proj2_sig rexpr);
            let rexpr' := fresh rexpr in
            set (rexpr' := proj1_sig rexpr);
@@ -305,7 +308,7 @@ Ltac pretighten_bounds tighter_bounds :=
     => simple refine (@relax_output_bounds t tighter_bounds relaxed_bounds _ v k _ _)
   end.
 Ltac posttighten_bounds :=
-  [ > clear; vm_compute; reflexivity | unfold eq_rect | clear ].
+  [ > clear; vm_compute; reflexivity | unfold eq_rect | clear; abstract vm_cast_no_check (eq_refl true) ].
 Ltac pretighten_bounds_from_correctness Hcorrectness :=
   cbv beta iota zeta in Hcorrectness;
   lazymatch type of Hcorrectness with
@@ -325,15 +328,6 @@ Ltac specialize_Hcorrectness Hcorrectness :=
        end;
        [ let H := fresh in intro H; specialize (Hcorrectness H) | ]
   end.
-assert_reflective.
-cbv [interp_flat_type interp_base_type Tuple.tuple Tuple.tuple'] in *.
-reify_sig.
-cbv beta iota in *.
-assert_wf.
-do_pose_correctness Hcorrectness.
-tighten_bounds_from_correctness Hcorrectness.
-specialize_Hcorrectness Hcorrectness.
-exact Hcorrectness.
 Ltac handle_bounds_from_hyps :=
   repeat match goal with
          | _ => assumption
@@ -341,9 +335,22 @@ Ltac handle_bounds_from_hyps :=
          | [ |- _ /\ _ ] => split
          | [ |- Bounds.is_bounded_by (_, _) _ ] => split
          end.
-{ handle_bounds_from_hyps. }
-2:reflexivity.
-abstract vm_cast_no_check (eq_refl true).
-  Qed.
+assert_reflective.
+Time all: [ > reify_sig | cbv beta iota in * | .. ].
+Time assert_wf.
+do_pose_correctness Hcorrectness.
+tighten_bounds_from_correctness Hcorrectness.
+specialize_Hcorrectness Hcorrectness.
+exact Hcorrectness.
+Time handle_bounds_from_hyps.
+(** Make sure that printout of failure of bounds checking is reparseable *)
+match goal with
+| [ |- exist _ ?a ?b = exist _ ?a' ?b' ] => unify a a'
+end.
+apply f_equal.
+clear -H.
+Time reflexivity.
+
+  Time Qed.
 
 End BoundedField25p5.
