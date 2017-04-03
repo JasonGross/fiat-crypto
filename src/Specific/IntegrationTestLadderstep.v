@@ -200,9 +200,24 @@ Section BoundedField25p5.
     eexists_sig_etransitivity. all:cbv [phi].
     rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ 10 32 bounds)).
     rewrite <- (proj2_sig Mxzladderstep_sig).
-    context_to_dlet_in_rhs (proj1_sig Mxzladderstep_sig).
-    cbv beta iota delta [proj1_sig].
-    cbv [Mxzladderstep_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz M.xzladderstep].
+    Lemma cast_back_xzladderstep {F1 F2 F1add F1sub F1mul F2add F2sub F2mul} (F12 : F1 -> F2)
+          (Hadd : forall x y, F12 (F1add x y) = F2add (F12 x) (F12 y))
+          (Hsub : forall x y, F12 (F1sub x y) = F2sub (F12 x) (F12 y))
+          (Hmul : forall x y, F12 (F1mul x y) = F2mul (F12 x) (F12 y))
+      : forall a24 x1 Q Q',
+        Tuple.map (n:=2) (Tuple.map (n:=2) F12) (@M.xzladderstep F1 F1add F1sub F1mul a24 x1 Q Q')
+        = @M.xzladderstep F2 F2add F2sub F2mul (F12 a24) (F12 x1) (Tuple.map (n:=2) F12 Q) (Tuple.map (n:=2) F12 Q').
+    Proof.
+      cbv [M.xzladderstep Let_In Tuple.map Tuple.map' fst snd]; intros ?? [? ?] [? ?].
+      repeat rewrite ?Hadd, ?Hmul, ?Hsub; reflexivity.
+    Qed.
+    cbv [proj1_sig]; cbv [Mxzladderstep_sig].
+    (* todo: use uconstr *)
+    set (k := M.xzladderstep); context_to_dlet_in_rhs k; subst k.
+    cbv [M.xzladderstep].
+    cbv [Mxzladderstep_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    Print M.xzladderstep.
+    cbv [M.xzladderstep].
     lazymatch goal with
     | [ |- context[@proj1_sig ?a ?b mul_sig] ]
       => context_to_dlet_in_rhs (@proj1_sig a b mul_sig)
