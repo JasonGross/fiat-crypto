@@ -215,9 +215,6 @@ Section BoundedField25p5.
     (* todo: use uconstr *)
     set (k := M.xzladderstep); context_to_dlet_in_rhs k; subst k.
     cbv [M.xzladderstep].
-    cbv [Mxzladderstep_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
-    Print M.xzladderstep.
-    cbv [M.xzladderstep].
     lazymatch goal with
     | [ |- context[@proj1_sig ?a ?b mul_sig] ]
       => context_to_dlet_in_rhs (@proj1_sig a b mul_sig)
@@ -230,6 +227,8 @@ Section BoundedField25p5.
     | [ |- context[@proj1_sig ?a ?b sub_sig] ]
       => context_to_dlet_in_rhs (@proj1_sig a b sub_sig)
     end.
+    (*** HERE *)
+    rewrite <- (proj2_sig sub_sig). (* fails; how do I make this work? *)
     let xzladderstepZ' := (eval  in carry_mulZ) in
     let carry_mulZ'' := fresh carry_mulZ in
     rename carry_mulZ into carry_mulZ'';
