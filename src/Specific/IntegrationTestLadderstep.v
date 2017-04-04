@@ -189,6 +189,7 @@ Section BoundedField25p5.
     Set Printing Depth 10000.
     Require Import Coq.Program.Tactics.
     clear.
+    (*** HERE *)
     lazymatch goal with
     | [ |- { a : ?A | ?P } ]
       => let P'' := fresh a in
