@@ -1,5 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import Coq.Classes.Morphisms.
+Require Import Coq.Setoids.Setoid.
 Local Open Scope Z_scope.
 
 Require Import Crypto.Algebra.
@@ -10,98 +12,9 @@ Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Sigma.Lift Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.LetIn.
-(**)
-Require Import Crypto.Algebra Crypto.Algebra.Field.
-Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
-Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
-Require Import Crypto.Spec.MontgomeryCurve.
-
-Require Import Crypto.Algebra Crypto.Algebra.Field.
-Require Import Crypto.Util.GlobalSettings.
-Require Import Crypto.Util.Sum Crypto.Util.Prod.
-Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Spec.MontgomeryCurve Crypto.Spec.WeierstrassCurve.
-
-Module M.
-  Section MontgomeryCurve'.
-    Import BinNat.
-    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Feq_dec:Decidable.DecidableRel Feq}
-            {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}.
-    Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-    Local Infix "+" := Fadd. Local Infix "*" := Fmul.
-    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "- x" := (Fopp x).
-    Local Notation "x ^ 2" := (x*x) (at level 30).
-    Local Notation "x ^ 3" := (x*x^2) (at level 30).
-    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
-    Local Notation "2" := (1+1). Local Notation "3" := (1+2).
-    Local Notation "'∞'" := unit : type_scope.
-    Local Notation "'∞'" := (inr tt) : core_scope.
-    Local Notation "( x , y )" := (inl (pair x y)).
-    Local Open Scope core_scope.
-
-    Context {a b: F} {b_nonzero:b <> 0}.
-
-    Program Definition opp (P:@M.point F Feq Fadd Fmul a b) : @M.point F Feq Fadd Fmul a b :=
-      match P return F*F+∞ with
-      | (x, y) => (x, -y)
-      | ∞ => ∞
-      end.
-    Next Obligation. Proof. destruct P; cbv; break_match; trivial; fsatz. Qed.
-  End MontgomeryCurve'.
-  Section MontgomeryCurve.
-    Import BinNat.
-    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Feq_dec:Decidable.DecidableRel Feq}
-            {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}
-            {char_ge_5:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5}.
-    Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-    Local Infix "+" := Fadd. Local Infix "*" := Fmul.
-    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^ 2" := (x*x).
-    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
-    Local Notation "'∞'" := (inr tt) : core_scope.
-    Local Notation "( x , y )" := (inl (pair x y)).
-
-    Context {a b: F} {b_nonzero:b <> 0}.
-    Local Notation add := (M.add(b_nonzero:=b_nonzero)).
-    Local Notation opp := (M.opp(b_nonzero:=b_nonzero)).
-    Local Notation point := (@M.point F Feq Fadd Fmul a b).
-
-    Program Definition to_xz (P:point) : F*F :=
-      match M.coordinates P with
-      | (x, y) => pair x 1
-      | ∞ => pair 1 0
-      end.
-
-    (* From Curve25519 paper by djb, appendix B. Credited to Montgomery *)
-    Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
-    Definition xzladderstep (x1:F) (Q Q':F*F) : ((F*F)*(F*F)) :=
-      match Q, Q' with
-        pair x z, pair x' z' =>
-        dlet A := x+z in
-        dlet B := x-z in
-        dlet AA := A^2 in
-        dlet BB := B^2 in
-        dlet x2 := AA*BB in
-        dlet E := AA-BB in
-        dlet z2 := E*(AA + a24*E) in
-        dlet C := x'+z' in
-        dlet D := x'-z' in
-        dlet CB := C*B in
-        dlet DA := D*A in
-        dlet x3 := (DA+CB)^2 in
-        dlet z3 := x1*(DA-CB)^2 in
-        (pair (pair x2 z2) (pair x3 z3))
-      end.
-  End MontgomeryCurve.
-End M.
-
-(**)
-(*Require Import Crypto.MontgomeryX.*)
+Require Import Crypto.Util.Tactics.SetEvars.
+Require Import Crypto.Util.Tactics.SubstEvars.
+Require Import Crypto.MontgomeryX.
 Import ListNotations.
 
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.
@@ -144,6 +57,18 @@ Section BoundedField25p5.
     destruct Q, Q'; cbv [map map' fst snd Let_In eval].
     repeat rewrite <- ?(proj2_sig add_sig), <- ?(proj2_sig mul_sig), <- ?(proj2_sig sub_sig).
     reflexivity.
+  Defined.
+
+  Definition adjust_tuple2_tuple2_sig {A P Q}
+             (v : { a : { a : tuple (tuple A 2) 2 | (P (fst (fst a)) /\ P (snd (fst a))) /\ (P (fst (snd a)) /\ P (snd (snd a))) }
+                  | Q (exist _ _ (proj1 (proj1 (proj2_sig a))),
+                       exist _ _ (proj2 (proj1 (proj2_sig a))),
+                       (exist _ _ (proj1 (proj2 (proj2_sig a))),
+                        exist _ _ (proj2 (proj2 (proj2_sig a))))) })
+    : { a : tuple (tuple (@sig A P) 2) 2 | Q a }.
+  Proof.
+    eexists.
+    exact (proj2_sig v).
   Defined.
 
   (** TODO MOVE ME *)
@@ -243,17 +168,45 @@ Section BoundedField25p5.
     end.
     cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
     reflexivity.
-    Require Import Coq.Classes.Morphisms.
-    SearchAbout Tuple.map Proper.
     eexists_sig_etransitivity_for_rewrite_fun.
     { intro; cbv beta.
-      setoid_rewrite <- (Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ 10 32 bounds)).
-    apply (proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => eq_sym p)).
-    eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ 10 32 bounds)).
+      subst feBW.
+      set_evars.
+      do 2 lazymatch goal with
+           | [ |- context[Tuple.map (n:=?n) (fun x => ?f (?g x))] ]
+             => rewrite <- (Tuple.map_map (n:=n) f g : pointwise_relation _ eq _ _)
+           end.
+      subst_evars.
+      reflexivity. }
+    cbv beta.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
+    apply adjust_tuple2_tuple2_sig.
     (* jgross start here! *)
-    (*Set Ltac Profiling.*)
+    Set Ltac Profiling.
+    change (@map 2) with (fun A B f => @map' A B f 1); cbv [map' BoundedWordToZ].
+    cbn [fst snd proj1_sig].
+    Set Printing Implicit.
+    Set Printing Depth 10000.
+    Require Import Coq.Program.Tactics.
+    clear.
+    lazymatch goal with
+    | [ |- { a : ?A | ?P } ]
+      => let P'' := fresh a in
+         let P' := fresh P'' in
+         let term := constr:(fun a : A => match P with
+                                          | P' => ltac:(let v := (eval cbv delta [P'] in P') in
+                                                        idtac v; exact I)
+                                          end) in
+         idtac end.
+       let Q := lazymatch (eval cbv beta in term) with fun _ => ?term => term end in
+       apply (@sig_sig_assoc _ _ Q)
+  end.
+
+    Print Ltac Associativity.sig_sig_assoc.
+    Locate sig_sig_assoc.
+    Glue.reassoc_sig_and_eexists.
+    Glu
+    Glue.
     Time refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
     (*Show Ltac Profile.*)
     (* total time:     19.632s
