@@ -162,6 +162,18 @@ Section BoundedField25p5.
       => let lem := open_constr:(@sig_eq_trans_exist1 A _ f b _) in
          simple refine (lem _ _)
     end.
+  Definition sig_eq_trans_rewrite_fun_exist1 {A B} (f f' : A -> B)
+             (b : B)
+             (pf : forall a, f' a = f a)
+             (y : { a : A | f' a = b })
+    : { a : A | f a = b }
+    := let 'exist a p := y in exist _ a (eq_trans (eq_sym (pf a)) p).
+  Ltac eexists_sig_etransitivity_for_rewrite_fun :=
+    lazymatch goal with
+    | [ |- { a : ?A | @?f a = ?b } ]
+      => let lem := open_constr:(@sig_eq_trans_rewrite_fun_exist1 A _ f _ b) in
+         simple refine (lem _ _)
+    end.
 
 
   (** TODO MOVE ME *)
@@ -175,18 +187,30 @@ Section BoundedField25p5.
                 replace (@Let_In A B x P) with (P v) by (clear; abstract (subst v; cbv [Let_In]; reflexivity));
                 cbv beta
            end.
+  (** Takes in a uconstr [uc], uses [set] to find it in the goal and
+      passes the constr that it finds to [k] *)
+  Ltac with_uconstr_in_goal uc k :=
+    let f := fresh in
+    set (f := uc);
+    let f' := (eval cbv delta [f] in f) in
+    subst f; k f'.
   (** This tactic creates a [dlet x := f in rhs] in the rhs of a goal
       of the form [lhs = rhs]. *)
   Ltac context_to_dlet_in_rhs f :=
     lazymatch goal with
     | [ |- ?LHS = ?RHS ]
-      => let RHS' := lazymatch (eval pattern f in RHS) with
-                     | ?RHS _ => RHS
-                     end in
-         let x := fresh "x" in
-         transitivity (dlet x := f in RHS' x);
-         [ | clear; abstract (cbv [Let_In]; reflexivity) ]
+      => with_uconstr_in_goal
+           f
+           ltac:(fun f
+                 => let RHS' := lazymatch (eval pattern f in RHS) with
+                                | ?RHS _ => RHS
+                                end in
+                    let x := fresh "x" in
+                    transitivity (dlet x := f in RHS' x);
+                    [ | clear; abstract (cbv [Let_In]; reflexivity) ]
+                )
     end.
+  Tactic Notation "context_to_dlet_in_rhs" uconstr(f) := context_to_dlet_in_rhs f.
   (* TODO : change this to field once field isomorphism happens *)
   Definition xzladderstep :
     { xzladderstep : feBW -> feBW -> feBW * feBW -> feBW * feBW -> feBW * feBW * (feBW * feBW)
@@ -200,19 +224,9 @@ Section BoundedField25p5.
     eexists_sig_etransitivity. all:cbv [phi].
     rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ 10 32 bounds)).
     rewrite <- (proj2_sig Mxzladderstep_sig).
-    Lemma cast_back_xzladderstep {F1 F2 F1add F1sub F1mul F2add F2sub F2mul} (F12 : F1 -> F2)
-          (Hadd : forall x y, F12 (F1add x y) = F2add (F12 x) (F12 y))
-          (Hsub : forall x y, F12 (F1sub x y) = F2sub (F12 x) (F12 y))
-          (Hmul : forall x y, F12 (F1mul x y) = F2mul (F12 x) (F12 y))
-      : forall a24 x1 Q Q',
-        Tuple.map (n:=2) (Tuple.map (n:=2) F12) (@M.xzladderstep F1 F1add F1sub F1mul a24 x1 Q Q')
-        = @M.xzladderstep F2 F2add F2sub F2mul (F12 a24) (F12 x1) (Tuple.map (n:=2) F12 Q) (Tuple.map (n:=2) F12 Q').
-    Proof.
-      cbv [M.xzladderstep Let_In Tuple.map Tuple.map' fst snd]; intros ?? [? ?] [? ?].
-      repeat rewrite ?Hadd, ?Hmul, ?Hsub; reflexivity.
-    Qed.
+    apply f_equal.
     cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-    (* todo: use uconstr *)
+    context_to_dlet_in_rhs M.xzladderstep.
     set (k := M.xzladderstep); context_to_dlet_in_rhs k; subst k.
     cbv [M.xzladderstep].
     lazymatch goal with
@@ -227,15 +241,16 @@ Section BoundedField25p5.
     | [ |- context[@proj1_sig ?a ?b sub_sig] ]
       => context_to_dlet_in_rhs (@proj1_sig a b sub_sig)
     end.
-    (*** HERE *)
-    rewrite <- (proj2_sig sub_sig). (* fails; how do I make this work? *)
-    let xzladderstepZ' := (eval  in carry_mulZ) in
-    let carry_mulZ'' := fresh carry_mulZ in
-    rename carry_mulZ into carry_mulZ'';
-      pose carry_mulZ' as carry_mulZ;
-      replace carry_mulZ'' with carry_mulZ by abstract (cbv beta iota delta [carry_mulZ'' proj1_sig mul_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; reflexivity);
-      clear carry_mulZ''.
-    all:save_state_and_back_to_sig.
+    cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    reflexivity.
+    Require Import Coq.Classes.Morphisms.
+    SearchAbout Tuple.map Proper.
+    eexists_sig_etransitivity_for_rewrite_fun.
+    { intro; cbv beta.
+      setoid_rewrite <- (Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ 10 32 bounds)).
+    apply (proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => eq_sym p)).
+    eexists_sig_etransitivity. all:cbv [phi].
+    rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ 10 32 bounds)).
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
