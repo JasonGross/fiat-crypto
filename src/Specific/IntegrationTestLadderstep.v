@@ -1,7 +1,52 @@
-Require Import Coq.ZArith.ZArith.
+bRequire Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
 Local Open Scope Z_scope.
+
+
+
+Require Import Crypto.Spec.MxDH.
+Require Import Crypto.Curves.Montgomery.XZ.
+Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ForLoop.
+Section foo.
+  Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {Feq_dec:Decidable.DecidableRel Feq}.
+  Delimit Scope F_scope with F.
+  Local Open Scope F_scope.
+  Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+  Local Infix "+" := Fadd : F_scope. Local Infix "*" := Fmul : F_scope.
+  Local Infix "-" := Fsub : F_scope. Local Infix "/" := Fdiv : F_scope.
+  Local Notation "x ^ 2" := (x*x) (at level 30) : F_scope.
+  Local Notation "0" := Fzero : F_scope.  Local Notation "1" := Fone : F_scope.
+  Local Notation "2" := (1+1) : F_scope. Local Notation "4" := (2+2) : F_scope.
+
+  Context {a b: F}. (* parameters of the Montgomery curve *)
+  Context {nonsquare_aa_m4:~exists sqrt, sqrt^2 = a^2-4} {five_neq_zero:1+4<>0}.
+
+  Context {a24:F} {a24_correct:4*a24 = a-2}.
+
+  Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
+
+  Local Notation xor := Coq.Init.Datatypes.xorb.
+
+  Local Notation xzladderstep := (@M.xzladderstep _ Fadd Fsub Fmul a24).
+
+  (* Ideally, we would verify that this corresponds to x coordinate
+    multiplication *)
+  Definition montladder (bound : positive) (testbit:nat->bool) (u:F) :=
+    let '(P1, P2, swap) :=
+        for (int i = Z.pos bound; i >= 0; i--)
+            updating ('(P1, P2, swap) = ((1, 0), (u, 1), false)%F) {{
+          dlet s_i := testbit (Z.to_nat i) in
+          dlet swap := xor swap s_i in
+          let '(P1, P2) := cswap swap P1 P2 in
+          dlet swap := s_i in
+          let '(P1, P2) := xzladderstep u P1 P2 in
+          (P1, P2, swap)
+        }} in
+    let '((x, z), _) := cswap swap P1 P2 in
+    x * Finv z.
+End foo.
 
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.FixedWordSizes.
@@ -20,6 +65,8 @@ Import ListNotations.
 Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
 
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
+
+
 
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.
@@ -64,6 +111,128 @@ Section BoundedField25p5.
     repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
     reflexivity.
   Defined.
+
+  Context {cswap:bool->F m*F m->F m*F m->(F m*F m)*(F m*F m)}.
+  Context {cswapZ:bool->tuple Z sz*tuple Z sz->tuple Z sz*tuple Z sz->(tuple Z sz*tuple Z sz)*(tuple Z sz*tuple Z sz)}.
+  Context {cswapw:bool->feW*feW->feW*feW->(feW*feW)*(feW*feW)}.
+
+  Context {invZ : tuple Z sz -> tuple Z sz}.
+
+
+  Definition Fmontladder bound testbit a24 := @montladder (F m) 0%F 1%F F.add F.sub F.mul F.inv a24 cswap bound testbit.
+
+  Definition montstep_sig
+    : forall bound testbit,
+      { montladderZ : tuple Z sz -> tuple Z sz -> tuple Z sz
+      | forall a24 u,
+          let montladderZ := montladderZ a24 u in
+          let eval := B.Positional.Fdecode wt in
+          eval montladderZ = Fmontladder bound testbit (eval a24) (eval u) }.
+  Proof.
+    intros.
+    eexists (fun a24 => @montladder _ (proj1_sig zero_sig) (proj1_sig one_sig) (proj1_sig add_sig) (proj1_sig sub_sig) (fun x y => proj1_sig carry_sig (proj1_sig mul_sig x y)) invZ a24 cswapZ bound testbit).
+    intros.
+    Require Import AdmitAxiom.
+    subst montladderZ.
+    subst eval.
+    unfold Fmontladder.
+    unfold montladder.
+    match goal with
+    | [ |- ?f (let (a, b) := ?d in @?e a b) = ?rhs ]
+      => transitivity (let (b, a) := d in f (e a b)); [ destruct d; reflexivity | ] (*** XXXXXX Needing to swap [b] and [a] as arguments to [e] is a BUG, track it down *)
+    end.
+    admit.
+  Defined. (*
+
+revert p;    admit.
+    Set Printing All.
+    pose (let (a, b) := D in (a, b)).
+
+    end.
+    revert p.
+    pattern H.
+    Set Printing All.
+    repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
+    reflexivity.
+  Defined.*)
+
+
+  Definition montladderw
+    : forall bound testbit,
+      { montladderw : feW -> feW -> feW
+      | forall a24 u,
+          let montladderw := montladderw a24 u in
+          feW_bounded a24
+          -> feW_bounded u
+          -> feW_bounded montladderw
+             /\ phi montladderw = Fmontladder bound testbit (phi a24) (phi u) }.
+  Proof.
+    intros.
+    lazymatch goal with
+    | [ |- { op | forall (a:?A) (b:?B),
+               let v := op a b in
+               @?P a b v } ]
+      => refine (@lift2_sig A B _ P _)
+    end.
+    intros.
+    lazymatch goal with
+    | [ |- { e | ?A -> ?B -> @?E e } ]
+      => refine (proj2_sig_map (P:=fun e => A -> B -> (_:Prop)) _ _)
+    end.
+    { intros ? FINAL.
+      repeat let H := fresh in intro H; specialize (FINAL H).
+      cbv [phi].
+      split; [ refine (proj1 FINAL); shelve | ].
+      rewrite <- (proj2_sig (montstep_sig _ _)).
+      Unset Printing All.
+      apply f_equal.
+      cbv [proj1_sig]. cbv [montstep_sig].
+      context_to_dlet_in_rhs (montladder _ _).
+      cbv [montladder].
+      (*do 4 match goal with
+           | [ |- context[Tuple.map (n:=?N) (fun x : ?T => ?f (?g x))] ]
+             => rewrite <- (Tuple.map_map (n:=N) f g
+                            : pointwise_relation _ eq _ (Tuple.map (n:=N) (fun x : T => f (g x))))
+           end.*)
+      (*rewrite <- (proj2_sig Mxzladderstep_sig).
+      apply f_equal.
+      cbv [proj1_sig]; cbv [Mxzladderstep_sig].*)
+      context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _).
+      cbv [M.xzladderstep].
+      do 4 lazymatch goal with
+           | [ |- context[@proj1_sig ?a ?b ?f_sig] ]
+             => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
+           end.
+      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
+      refine (proj2 FINAL). }
+    subst feW feW_bounded; cbv beta.
+
+
+    apply lift2_sig.
+
+Print montladder.
+
+
+
+        downto
+          ((1, 0), (u, 1), false)
+          bound
+          (fun state i =>
+             let '(P1, P2, swap) := state in
+             let s_i := testbit i in
+             let swap := xor swap s_i in
+             let '(P1, P2) := cswap swap P1 P2 in
+             let swap := s_i in
+             let '(P1, P2) := ladderstep u P1 P2 in
+             (P1, P2, swap)
+          ) in
+    let '((x, z), _) := cswap swap P1 P2 in
+    x * Finv z.
+
+
+
+
+
 
   (* TODO : change this to field once field isomorphism happens *)
   Definition xzladderstep :
