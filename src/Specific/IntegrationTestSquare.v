@@ -133,7 +133,7 @@ Section BoundedField25p5.
         cbv beta iota delta [k'] in l.
         clear k'.
         let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
-        cbv [norm_symbolize_exprf] in
+        cbv [norm_symbolize_exprf] in (*** HERE *)
         vm_compute in k.
         let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
         vm_compute in k; subst k.
