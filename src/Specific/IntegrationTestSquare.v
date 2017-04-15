@@ -63,6 +63,144 @@ Section BoundedField25p5.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
+    Time Glue.refine_to_reflective_glue (64::128::nil)%nat%list.
+    Time ReflectiveTactics.refine_with_pipeline_correct.
+    { Time ReflectiveTactics.do_reify. }
+    Require Import CNotations.
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { cbv [Pipeline.Definition.PostWfPipeline].
+      set (k := Inline.InlineConst _).
+      pose (Eta.ExprEta k) as k'.
+      vm_compute in k'.
+      vm_compute in k.
+      assert (var : Syntax.base_type -> Type) by admit.
+      refine (let x := _ in
+              let y := _ in
+              let z := _ in
+              let w := _ in
+              let v := _ in
+              let l := ExprInversion.invert_Abs (Eta.ExprEta (CommonSubexpressionElimination.CSE k') var) (x, y, z, w, v)%core in
+              _);
+        clearbody x y z w v.
+      { exfalso; clear -l.
+        cbv [Eta.ExprEta CommonSubexpressionElimination.CSE k' ExprInversion.invert_Abs] in l; clear -l.
+        cbv [Eta.expr_eta CommonSubexpressionElimination.CSE_gen] in l.
+        cbv [Eta.expr_eta_gen Compilers.CommonSubexpressionElimination.CSE] in l.
+        Import Compilers.CommonSubexpressionElimination.
+        Import Z.CommonSubexpressionElimination.
+        cbv [Eta.interp_flat_type_eta_gen domain codomain interp_flat_type Compilers.CommonSubexpressionElimination.cse ExprInversion.invert_Abs Eta.exprf_eta CommonSubexpressionElimination.prepend_prefix Compilers.CommonSubexpressionElimination.csef CommonSubexpressionElimination.symbolicify_smart_var CommonSubexpressionElimination.symbolize_var CommonSubexpressionElimination.push_pair_symbolic_expr Context.empty SymbolicExprContext AListContext.AListContext SmartMap.SmartVarfMap2 SmartMap.smart_interp_flat_map2] in l; cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        Notation "( x ; y )" := (existT _ x y).
+        Arguments SSnd {_ _ _ _} _.
+        Arguments SFst {_ _ _ _} _.
+
+        let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
+        vm_compute in k; subst k.
+        unfold csef_step at 1 in (value of l).
+        simpl @Context.lookupb in l.
+        cbv beta iota in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
+        vm_compute in k. subst k.
+        cbv beta iota in l.
+        simpl @Context.lookupb in l.
+        cbv beta iota in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
+        vm_compute in k; subst k.
+        cbv beta iota in l.
+        simpl @Context.lookupb in l.
+        cbv beta iota in l.
+        cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        set (k' := @csef_step) in (value of l) at 1.
+        cbn [fst snd] in l.
+        cbv beta iota delta [csef_step] in k'.
+        cbv beta iota delta [k'] in l.
+        clear k'.
+        let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
+        cbv [norm_symbolize_exprf] in
+        vm_compute in k.
+        let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
+        vm_compute in k; subst k.
+        cbv beta iota in l.
+        simpl @Context.lookupb in l.
+        cbv beta iota in l.
+        cbn [fst snd length] in l.
+        simpl @Context.extendb in l.
+        cbv [AListContext.add] in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        cbv [Eta.interp_flat_type_eta_gen domain codomain interp_flat_type Compilers.CommonSubexpressionElimination.cse ExprInversion.invert_Abs Eta.exprf_eta CommonSubexpressionElimination.prepend_prefix Compilers.CommonSubexpressionElimination.csef CommonSubexpressionElimination.symbolicify_smart_var CommonSubexpressionElimination.symbolize_var CommonSubexpressionElimination.push_pair_symbolic_expr Context.empty SymbolicExprContext AListContext.AListContext SmartMap.SmartVarfMap2 SmartMap.smart_interp_flat_map2 norm_symbolize_exprf symbolize_exprf option_map CommonSubexpressionElimination.symbolize_op Context.extendb AListContext.add] in l; cbn [fst snd length] in l.
+        cbv [symbolic_expr_normalize CommonSubexpressionElimination.normalize_symbolic_expr_mod_c CommonSubexpressionElimination.symbolic_op_args_to_list ] in l.
+        cbv [CommonSubexpressionElimination.SymbolicExprSort.sort CommonSubexpressionElimination.SymbolicExprSort.iter_merge SymbolicExprSort.merge_list_to_stack SymbolicExprSort.merge_stack SymbolicExprSort.merge] in l.
+        cbv [symbolic_op_list_to_args] in l.
+        cbv [Eta.interp_flat_type_eta_gen domain codomain interp_flat_type Compilers.CommonSubexpressionElimination.cse ExprInversion.invert_Abs Eta.exprf_eta CommonSubexpressionElimination.prepend_prefix Compilers.CommonSubexpressionElimination.csef CommonSubexpressionElimination.symbolicify_smart_var CommonSubexpressionElimination.symbolize_var CommonSubexpressionElimination.push_pair_symbolic_expr Context.empty SymbolicExprContext AListContext.AListContext SmartMap.SmartVarfMap2 SmartMap.smart_interp_flat_map2 norm_symbolize_exprf symbolize_exprf option_map CommonSubexpressionElimination.symbolize_op Context.extendb AListContext.add Context.lookupb AListContext.find symbolic_expr_beq] in l; cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        cbn [fst snd] in l.
+        unfold csef_step at 1 in (value of l).
+        cbv [norm_symbolize_exprf option_map symbolize_exprf symbolic_expr_normalize CommonSubexpressionElimination.normalize_symbolic_expr_mod_c CommonSubexpressionElimination.symbolic_op_args_to_list ] in l.
+        cbv [Eta.interp_flat_type_eta_gen domain codomain interp_flat_type Compilers.CommonSubexpressionElimination.cse ExprInversion.invert_Abs Eta.exprf_eta CommonSubexpressionElimination.prepend_prefix Compilers.CommonSubexpressionElimination.csef CommonSubexpressionElimination.symbolicify_smart_var CommonSubexpressionElimination.symbolize_var CommonSubexpressionElimination.push_pair_symbolic_expr Context.empty SymbolicExprContext AListContext.AListContext SmartMap.SmartVarfMap2 SmartMap.smart_interp_flat_map2 norm_symbolize_exprf symbolize_exprf option_map CommonSubexpressionElimination.symbolize_op Context.extendb AListContext.add Context.lookupb AListContext.find symbolic_expr_beq flat_type_beq symbolic_op_beq Syntax.base_type_beq andb] in l; cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        cbn [fst snd] in l.
+        cbv [norm_symbolize_exprf option_map symbolize_exprf symbolic_expr_normalize CommonSubexpressionElimination.normalize_symbolic_expr_mod_c CommonSubexpressionElimination.symbolic_op_args_to_list ] in l.
+        cbv [Eta.interp_flat_type_eta_gen domain codomain interp_flat_type Compilers.CommonSubexpressionElimination.cse ExprInversion.invert_Abs Eta.exprf_eta CommonSubexpressionElimination.prepend_prefix Compilers.CommonSubexpressionElimination.csef CommonSubexpressionElimination.symbolicify_smart_var CommonSubexpressionElimination.symbolize_var CommonSubexpressionElimination.push_pair_symbolic_expr Context.empty SymbolicExprContext AListContext.AListContext SmartMap.SmartVarfMap2 SmartMap.smart_interp_flat_map2 norm_symbolize_exprf symbolize_exprf option_map CommonSubexpressionElimination.symbolize_op Context.extendb AListContext.add Context.lookupb AListContext.find symbolic_expr_beq flat_type_beq symbolic_op_beq Syntax.base_type_beq andb] in l; cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        cbn [fst snd] in l.
+        cbv [norm_symbolize_exprf option_map symbolize_exprf symbolic_expr_normalize CommonSubexpressionElimination.normalize_symbolic_expr_mod_c CommonSubexpressionElimination.symbolic_op_args_to_list ] in l.
+        cbv [Eta.interp_flat_type_eta_gen domain codomain interp_flat_type Compilers.CommonSubexpressionElimination.cse ExprInversion.invert_Abs Eta.exprf_eta CommonSubexpressionElimination.prepend_prefix Compilers.CommonSubexpressionElimination.csef CommonSubexpressionElimination.symbolicify_smart_var CommonSubexpressionElimination.symbolize_var CommonSubexpressionElimination.push_pair_symbolic_expr Context.empty SymbolicExprContext AListContext.AListContext SmartMap.SmartVarfMap2 SmartMap.smart_interp_flat_map2 norm_symbolize_exprf symbolize_exprf option_map CommonSubexpressionElimination.symbolize_op Context.extendb AListContext.add Context.lookupb AListContext.find symbolic_expr_beq flat_type_beq symbolic_op_beq Syntax.base_type_beq andb] in l; cbn [fst snd length] in l.
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        unfold csef_step at 1 in (value of l).
+        cbv [Context.lookupb] in l.
+        set
+      set (l := CommonSubexpressionElimination.CSE _).
+      set (l' := Eta.ExprEta l).
+      cbv [CommonSubexpressionElimination.CSE k]
+      Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_rhs_reflexivity. }
+    { Time ReflectiveTactics.unify_abstract_renamify_rhs_reflexivity. }
+    { Time SubstLet.subst_let; clear; abstract vm_cast_no_check (eq_refl true). }
+    { Time SubstLet.subst_let; clear; vm_compute; reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_compute_rhs_reflexivity. }
+    { Time ReflectiveTactics.unify_abstract_cbv_interp_rhs_reflexivity. }
+    { Time abstract ReflectiveTactics.handle_bounds_from_hyps. }
+
     Time refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
     (*Show Ltac Profile.*)
     (* total time:     19.632s
