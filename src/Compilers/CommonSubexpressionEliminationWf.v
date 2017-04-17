@@ -26,7 +26,6 @@ Section symbolic.
           (base_type_code_lb : forall x y, x = y -> base_type_code_beq x y = true)
           (op_code_bl : forall x y, op_code_beq x y = true -> x = y)
           (op_code_lb : forall x y, x = y -> op_code_beq x y = true)
-          (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (symbolize_op : forall s d, op s d -> op_code).
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
@@ -39,9 +38,6 @@ Section symbolic.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type_gen := interp_flat_type.
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation exprf := (@exprf base_type_code op).
   Local Notation expr := (@expr base_type_code op).
   Local Notation Expr := (@Expr base_type_code op).
@@ -83,8 +79,8 @@ Section symbolic.
     Local Arguments lookupb : simpl never.
     Local Arguments extendb : simpl never.
     Lemma wff_csef G G' t e1 e2
-          (m1 : @SymbolicExprContext (interp_flat_type_gen var1))
-          (m2 : @SymbolicExprContext (interp_flat_type_gen var2))
+          (m1 : @SymbolicExprContext (interp_flat_type var1))
+          (m2 : @SymbolicExprContext (interp_flat_type var2))
           (Hlen : length m1 = length m2)
           (Hm1m2None : forall t v, lookupb m1 v t = None <-> lookupb m2 v t = None)
           (Hm1m2Some : forall t v sv1 sv2,
