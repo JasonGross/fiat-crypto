@@ -30,7 +30,8 @@ Section symbolic.
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (symbolize_op : forall s d, op s d -> op_code).
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
-  Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr).
+  Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr)
+          (inline_symbolic_expr_in_lookup : bool).
 
   Local Notation symbolic_expr_beq := (@symbolic_expr_beq base_type_code op_code base_type_code_beq op_code_beq).
   Local Notation symbolic_expr_lb := (@internal_symbolic_expr_dec_lb base_type_code op_code base_type_code_beq op_code_beq base_type_code_lb op_code_lb).
@@ -48,9 +49,9 @@ Section symbolic.
   Local Notation symbolicify_smart_var := (@symbolicify_smart_var base_type_code op_code).
   Local Notation symbolize_exprf := (@symbolize_exprf base_type_code op_code op symbolize_op).
   Local Notation norm_symbolize_exprf := (@norm_symbolize_exprf base_type_code op_code op symbolize_op normalize_symbolic_op_arguments).
-  Local Notation csef := (@csef base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments).
-  Local Notation cse := (@cse base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments).
-  Local Notation CSE := (@CSE base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments).
+  Local Notation csef := (@csef base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments inline_symbolic_expr_in_lookup).
+  Local Notation cse := (@cse base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments inline_symbolic_expr_in_lookup).
+  Local Notation CSE := (@CSE base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments inline_symbolic_expr_in_lookup).
   Local Notation SymbolicExprContext := (@SymbolicExprContext base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl).
   Local Notation SymbolicExprContextOk := (@SymbolicExprContextOk base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl base_type_code_lb op_code_bl op_code_lb).
   Local Notation prepend_prefix := (@prepend_prefix base_type_code op).
@@ -108,7 +109,11 @@ Section symbolic.
               | [ H : lookupb ?m1 ?x = Some ?k, H' : lookupb ?m2 ?x = None |- _ ]
                 => apply Hm1m2None in H'; congruence
               end;
-          [ | constructor; intros; auto; [].. ];
+          lazymatch goal with
+          | [ |- wff _ (LetIn _ _) (LetIn _ _) ]
+            => constructor; intros; auto; []
+          | _ => idtac
+          end;
           match goal with H : _ |- _ => apply H end;
           repeat first [ progress unfold symbolize_var
                        | rewrite Hlen
@@ -130,8 +135,8 @@ Section symbolic.
                        | break_innermost_match_step
                        | break_innermost_match_hyps_step
                        | progress simpl in *
-                       | solve [ intuition (eauto || congruence) ] ]. }
-    Qed.
+                       | solve [ intuition (eauto || congruence) ] ].
+    Admitted.
 
     Lemma wff_prepend_prefix {var1' var2'} prefix1 prefix2 G t e1 e2
           (Hlen : length prefix1 = length prefix2)
