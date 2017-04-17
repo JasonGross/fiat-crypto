@@ -70,6 +70,8 @@ Section BoundedField25p5.
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    (*
     { cbv [Pipeline.Definition.PostWfPipeline].
       set (k := Inline.InlineConst _).
       pose (Eta.ExprEta k) as k'.
@@ -133,7 +135,13 @@ Section BoundedField25p5.
         cbv beta iota delta [k'] in l.
         clear k'.
         let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
-        cbv [norm_symbolize_exprf] in (*** HERE *)
+        cbv [norm_symbolize_exprf] in k.
+        cbv [symbolize_exprf option_map] in k; cbn [fst snd] in k.
+        cbv [symbolic_expr_normalize] in k.
+        cbv [normalize_symbolic_expr_mod_c symbolize_op] in k.
+        cbv [symbolic_op_args_to_list] in k.
+        vm_compute in k.
+            (*** HERE *)
         vm_compute in k.
         let k := fresh "k" in set (k := norm_symbolize_exprf (var:=var) Syntax.base_type symbolic_op Syntax.op symbolize_op normalize_symbolic_expr_mod_c _) in (value of l).
         vm_compute in k; subst k.
@@ -192,7 +200,7 @@ Section BoundedField25p5.
       set (l := CommonSubexpressionElimination.CSE _).
       set (l' := Eta.ExprEta l).
       cbv [CommonSubexpressionElimination.CSE k]
-      Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+      Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. } *)
     { Time UnifyAbstractReflexivity.unify_abstract_rhs_reflexivity. }
     { Time ReflectiveTactics.unify_abstract_renamify_rhs_reflexivity. }
     { Time SubstLet.subst_let; clear; abstract vm_cast_no_check (eq_refl true). }
