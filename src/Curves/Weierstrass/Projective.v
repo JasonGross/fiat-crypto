@@ -43,7 +43,7 @@ Module Projective.
              | _ => progress cbv [W.eq W.add W.coordinates proj1_sig] in *
              | _ => progress break_match_hyps
              | _ => progress break_match
-             | |- _ /\ _ => split
+             | |- _ /\ _ => split | |- _ <-> _ => split
              end.
 
     Definition point : Type := { P : F*F*F | let '(X,Y,Z) := P in Y^2*Z = X^3 + a*X*Z^2 + b*Z^3 /\ (Z = 0 -> Y <> 0) }.
@@ -63,6 +63,19 @@ Module Projective.
       end.
     Next Obligation. Proof. t; fsatz. Qed.
 
+    Definition eq (P Q:point) : Prop :=
+      match proj1_sig P, proj1_sig Q with
+      | (X1, Y1, Z1), (X2, Y2, Z2) =>
+        if dec (Z1 = 0) then Z2 = 0
+        else if dec (Z2 = 0) then False
+             else X1*Z2 = X2*Z1 /\ Y1*Z2 = Y2*Z1
+      end.
+
+    Lemma eq_iff_Weq P Q : eq P Q <-> W.eq (to_affine P) (to_affine Q).
+    Proof.
+      cbv [W.eq eq to_affine] in *; t; specialize_by_assumption; try fsatz.
+    Qed.
+
     Program Definition opp (P:point) : point :=
       match proj1_sig P return F*F*F with
       | (X, Y, Z) => (X, Fopp Y, Z)
@@ -73,11 +86,102 @@ Module Projective.
     Local Notation "4" := (1+1+1+1). Local Notation "27" := (4*4 + 4+4 +1+1+1).
     Context {discriminant_nonzero: id(4*a*a*a + 27*b*b <> 0)}.
 
-    Program Definition add (P Q:point)
-            (y_PmQ_nz: match W.coordinates (W.add (to_affine P) (to_affine (opp Q))) return Prop with
-                       | inr _ => True
-                       | inl (_, y) => y <> 0
-                       end) : point :=
+    Let not_exceptional_y (P Q:point) :=
+      match W.coordinates (W.add (to_affine P) (to_affine (opp Q))) return Prop with
+      | inr _ => True
+      | inl (_, y) => y <> 0
+      end.
+
+    Global Instance DecidableRel_not_exceptional : DecidableRel not_exceptional_y.
+    Proof.
+      cbv [not_exceptional_y]; intros; break_match; exact _.
+    Defined.
+
+    Lemma exceptional_P_neq_Q P Q (H:~not_exceptional_y P Q) :
+      ~ W.eq (to_affine P) (to_affine Q).
+    Proof.
+      destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
+      destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
+      cbv [not_exceptional_y opp to_affine] in *; clear not_exceptional_y.
+      t; try exact id.
+      all: repeat match goal with
+                    [H:~ _ <> _ |- _ ] => rewrite (not_not (_ = _)) in H
+                  end.
+      all: intro HX; destruct HX; fsatz.
+    Qed.
+
+    Lemma exceptional_2P_eq_2Q P Q (H:~not_exceptional_y P Q) :
+      W.eq
+        (W.add (to_affine P) (to_affine P))
+        (W.add (to_affine Q) (to_affine Q)).
+    Proof.
+      destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
+      destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
+      cbv [not_exceptional_y opp to_affine] in *; clear not_exceptional_y.
+      t.
+      all: repeat match goal with
+                    [H:~ _ <> _ |- _ ] => rewrite (not_not (_ = _)) in H
+                  end.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      cbv [id] in *. abstract fsatz.
+      abstract fsatz.
+      cbv [id] in *. abstract fsatz.
+      {
+        clear n.
+        repeat match goal with [H: ?x = ?x |- _ ] => clear H end.
+        assert (Y1 <> 0) by fsatz; clear H4.
+        assert (Y2 <> 0) by fsatz; clear H6.
+        Import BinPos.
+        assert (char_ge_21 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 21) by admit.
+        abstract fsatz.
+      }
+      {
+        clear n.
+        repeat match goal with [H: ?x = ?x |- _ ] => clear H end.
+        assert (Y1 <> 0) by fsatz; clear H4.
+        assert (Y2 <> 0) by fsatz; clear H6.
+        Import BinPos.
+        assert (char_ge_21 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 21) by admit.
+        admit. (* stack overflow *)
+      }
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+      abstract fsatz.
+    Admitted.
+
+    Lemma not_exceptional_w P Q
+       (p := to_affine P)
+       (q := to_affine Q)
+       : (W.eq (W.add p p) (W.add q q) -> W.eq p q) -> not_exceptional_y P Q.
+    Proof.
+      subst p q.
+      pose proof exceptional_2P_eq_2Q P Q.
+      pose proof exceptional_P_neq_Q P Q.
+      intro Himpl.
+      rewrite <-not_not by typeclasses eauto.
+      intuition trivial.
+    Qed.
+
+    Program Definition add (P Q:point) (y_PmQ_nz: not_exceptional_y P Q) : point :=
       match proj1_sig P, proj1_sig Q return F*F*F with (X1, Y1, Z1), (X2, Y2, Z2) =>
         let t0 := X1*X2 in
         let t1 := Y1*Y2 in
@@ -123,6 +227,7 @@ Module Projective.
       end.
     Next Obligation.
     Proof.
+      cbv [not_exceptional_y] in *.
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
       t.
@@ -142,7 +247,7 @@ Module Projective.
     Proof using Type.
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
-      cbv [add opp to_affine] in *; t.
+      cbv [not_exceptional_y add opp to_affine] in *; t.
       all: try abstract fsatz.
 
       (* zero + P = P   -- cases for x and y *)
