@@ -31,7 +31,7 @@ Module Projective.
 
     Ltac t :=
       repeat match goal with
-             | _ => solve [ contradiction | trivial ]
+             | _ => solve [ discriminate | contradiction | trivial ]
              | _ => progress cbv zeta
              | _ => progress intros
              | _ => progress destruct_head' @W.point
@@ -44,6 +44,11 @@ Module Projective.
              | _ => progress break_match_hyps
              | _ => progress break_match
              | |- _ /\ _ => split | |- _ <-> _ => split
+             | [H:~ _ <> _ |- _ ] => rewrite (not_not (_ = _)) in H
+             | [H: not ?P, G: ?P -> _ |- _ ] => clear G
+             | [H: ?P, G: not ?P -> _ |- _ ] => clear G
+             | [H: ?x = ?x |- _ ] => clear H
+             | [H: True |- _ ] => clear H
              end.
 
     Definition point : Type := { P : F*F*F | let '(X,Y,Z) := P in Y^2*Z = X^3 + a*X*Z^2 + b*Z^3 /\ (Z = 0 -> Y <> 0) }.
@@ -73,7 +78,7 @@ Module Projective.
 
     Lemma eq_iff_Weq P Q : eq P Q <-> W.eq (to_affine P) (to_affine Q).
     Proof.
-      cbv [W.eq eq to_affine] in *; t; specialize_by_assumption; try fsatz.
+      cbv [W.eq eq to_affine] in *; t; specialize_by_assumption; fsatz.
     Qed.
 
     Program Definition opp (P:point) : point :=
@@ -99,7 +104,7 @@ Module Projective.
 
     Lemma exceptional_P_neq_Q P Q (H:~not_exceptional_y P Q) :
       ~ W.eq (to_affine P) (to_affine Q).
-    Proof.
+    Proof using three_b_correct three_b.
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
       cbv [not_exceptional_y opp to_affine] in *; clear not_exceptional_y.
@@ -116,29 +121,18 @@ Module Projective.
       W.eq
         (W.add (to_affine P) (to_affine P))
         (W.add (to_affine Q) (to_affine Q)).
-    Proof.
+    Proof using three_b_correct three_b discriminant_nonzero char_ge_21 .
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
       cbv [not_exceptional_y opp to_affine] in *; clear not_exceptional_y.
       t.
-      (* TODO: why does [par] not work here? *)
-      all: 
-        abstract (
-            repeat
-              match goal with
-              | [H:~ _ <> _ |- _ ] => rewrite (not_not (_ = _)) in H
-              | [H: not ?P, G: ?P -> _ |- _ ] => clear G
-              | [H: ?P, G: not ?P -> _ |- _ ] => clear G
-              | [H: ?x = ?x |- _ ] => clear H
-              | _ => solve [ fsatz | cbv [id] in * ; fsatz ]
-              end).
-    Qed.
+      par: abstract solve [ fsatz | cbv [id] in * ; fsatz ].
+   Qed.
 
     Definition not_exceptional P Q :=
       let p := to_affine P in
       let q := to_affine Q in
       (W.eq (W.add p p) (W.add q q) -> W.eq p q).
-
     Lemma not_exceptional_y_of_not_exceptional P Q
        : not_exceptional P Q -> not_exceptional_y P Q.
     Proof.
@@ -195,31 +189,26 @@ Module Projective.
         (X3, Y3, Z3)
       end.
     Next Obligation.
-    Proof using char_ge_21.
+    Proof using three_b three_b_correct discriminant_nonzero char_ge_21.
       apply not_exceptional_y_of_not_exceptional in except.
-      cbv [not_exceptional_y] in except.
+      cbv [not_exceptional_y to_affine opp] in except. clear not_exceptional_y.
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
       t.
-      all: try abstract fsatz.
-      (* FIXME: the final fsatz starts requiring 56 <> 0 if
-           - the next assert block is removed
-           - the assertion is changed to [Y2 = Fopp Y1] *)
-      assert (Y2 / Z2 = Fopp (Y1 / Z1)) by (
-        assert (forall pfP pfQ, match W.coordinates (W.add (to_affine (exist _ (X1,Y1,Z1) pfP)) (to_affine (exist _ (X2,Y2,Z2) pfQ))) with inl _ => False | _ => True end) by (cbv [to_affine]; t; fsatz); cbv [to_affine] in *; t; specialize_by (t;fsatz); t; fsatz).
-      unfold id in discriminant_nonzero; fsatz.
+      par: abstract solve [ fsatz | cbv [id] in * ; fsatz ].
     Qed.
 
     Lemma to_affine_add P Q except :
       W.eq
         (to_affine (add P Q except))
         (WeierstrassCurve.W.add (to_affine P) (to_affine Q)).
-    Proof using char_ge_21.
-      apply not_exceptional_y_of_not_exceptional in except.
-      cbv [not_exceptional_y] in except.
+    Proof using Type.
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
-      cbv [not_exceptional_y add opp to_affine] in *; t.
+      pose proof (not_exceptional_y_of_not_exceptional _ _ except).
+      cbv [not_exceptional_y opp to_affine add] in *; t;
+        clear except not_exceptional_y;
+        specialize_by_assumption.
       all: try abstract fsatz.
 
       (* zero + P = P   -- cases for x and y *)
