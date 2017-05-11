@@ -52,18 +52,19 @@ Section columns.
           (add_get_carry : Z -> Z -> Z -> Z * Z)
           (p_len : nat)
           (s : Z).
-  Context (p : tuple (list Z) p_len)
+  Context (p : tuple Z p_len)
           (k0 : Z) (* [(-p⁻¹) mod 2ˢ] *).
   Local Notation weight := (fun i : nat => 2^(Z.of_nat i * s))%Z.
   Section body.
     Context (k' : nat).
     Let k := (S (k' + p_len)).
     Context (T : tuple Z k).
-    Local Notation Pos2Col t
+    Local Notation Pos2Col' k t
       := (@Columns.from_associational
             weight k
             (@B.Positional.to_associational
                weight k t)).
+    Local Notation Pos2Col t := (Pos2Col' k t).
     Local Notation encode z
       := (Pos2Col (@B.Positional.encode weight modulo div k z)).
     Local Notation compact := (@Columns.compact weight add_get_carry div modulo k).
@@ -72,7 +73,7 @@ Section columns.
 
     Let T1 := (hd T) (*mod (2^s)*).
     Let Y := (T1 * k0) mod (2^s).
-    Let T2 := mul ((Y::nil)%list : tuple _ 1) p.
+    Let T2 := mul ((Y::nil)%list : tuple _ 1) (Pos2Col' p_len p).
     Let T3 := add (Pos2Col T) T2.
     Definition (*carry_to_highest_and_*)drop_lowest (ts : tuple Z k) (c : Z) : tuple Z (pred k)
       := (*Tuple.left_append c*) (tl ts).
