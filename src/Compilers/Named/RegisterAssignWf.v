@@ -89,6 +89,40 @@ Section language.
                         eapply H; [ solve [ eauto ] | | | eassumption ]; clear H
                    end ].*)
 
+  (*Local Notation lookup_good ctxi ctxr
+    := (forall t (n_in : InName) (n_out : OutName),
+           lookupb ctxi n_in t = Some n_out
+           <-> lookupb ctxr n_out t = Some n_in)
+         (only parsing).
+
+  Lemma lookup_good_extend
+        (ctxi : InContext) (ctxr : ReverseContext) T ni no
+        (H : lookup_good ctxi ctxr)
+    : lookup_good (extend ctxi ni no) (extend (t:=T) ctxr no ni).
+  Proof.
+    intros t n_in n_out; specialize (H t n_in n_out).
+    rewrite !(@lookupb_extend base_type_code _ InName _), !(@lookupb_extend base_type_code _ OutName _) by auto.
+    induction T; [ | assumption | ].
+    { simpl; unfold cast_if_eq; break_innermost_match; subst; simpl;
+        eliminate_hprop_eq; simpl; split; try congruence.
+      unfold cast_if_eq.
+      repeat rewrite !(@find_Name_and_val_split base_type_code base_type_code_dec _ _ _ _ _ _ _ _ (lookupb _ _)).
+
+      lazymatch goal with
+      | [ |- context[dec ?P] ] => destruct (dec P)
+      end.
+      edestruct (dec (_ = _)); subst.
+      repeat first [
+                 | progress subst
+                 | apply conj
+                 | progress destruct_head' iff
+                 | break_innermost_match_step
+                 | congruence
+                 | progress intros
+                 | progress specialize_by_assumption ].
+      Focus 4.
+*)
+
   Section with_var.
     Context {var : base_type_code -> Type}
             {VarInContext : Context InName var}
@@ -96,25 +130,130 @@ Section language.
             {VarInContextOk : ContextOk VarInContext}
             {VarOutContextOk : ContextOk VarOutContext}.
 
+    Local Notation lookup_good ctxi ctxr ctxi_var ctxr_var
+      := (forall t (n_in : InName) (n_out : OutName) v,
+             lookupb ctxi n_in t = Some n_out
+             -> lookupb ctxr n_out t = Some n_in
+             -> lookupb ctxi_var n_in t = Some v
+             -> lookupb ctxr_var n_out t = None
+             -> False)
+           (only parsing).
+
+    Lemma lookup_good_extend
+          {ctxi : InContext} {ctxr : ReverseContext}
+          {ctxi_var : VarInContext} {ctxr_var : VarOutContext}
+          {T ni no v}
+          (H : lookup_good ctxi ctxr ctxi_var ctxr_var)
+      : lookup_good (extend ctxi ni no) (extend (t:=T) ctxr no ni)
+                    (extend ctxi_var ni v) (extend ctxr_var no v).
+    Proof.
+      intros t n_in n_out v'; specialize (H t n_in n_out v').
+      rewrite !(@lookupb_extend base_type_code _ InName _), !(@lookupb_extend base_type_code _ OutName _) by auto.
+      repeat rewrite !(@find_Name_and_val_split base_type_code base_type_code_dec _ _ _ _ _ _ _ _ (lookupb _ _)).
+      break_innermost_match; subst; eauto; try congruence.
+      { clear H.
+        induction T; [ | simpl; congruence | ].
+        { simpl; unfold cast_if_eq; break_innermost_match; subst; simpl;
+            eliminate_hprop_eq; simpl; congruence. }
+        { simpl in *; destruct_head'_prod.
+          repeat match goal with
+                 | [ H : forall x : ?T, _, x' : ?T |- _ ] => specialize (H x')
+                 end.
+          simpl in *.
+          repeat rewrite !(@find_Name_and_val_split base_type_code base_type_code_dec _ _ _ _ _ _ _ _ (find_Name_and_val _ _ _ _ _ _ _)).
+          break_innermost_match; break_match_hyps; subst; eauto; try congruence;
+            inversion_option; subst;
+              intros;
+              specialize_by_assumption; specialize_by reflexivity;
+                repeat match goal with
+                       | [ H : _ -> ?T -> _, H' : ?T |- _ ] => specialize (fun a => H a H')
+                       | [ H : _ -> _ -> ?T -> _, H' : ?T |- _ ] => specialize (fun a b => H a b H')
+                       | [ H : _ -> _ -> _ -> ?T -> _, H' : ?T |- _ ] => specialize (fun a b c => H a b c H')
+                       | [ H : _ -> ?x = ?x -> _ |- _ ] => specialize (fun a => H a eq_refl)
+                       | [ H : context[find_Name_and_val _ ?ndec ?t ?n ?N ?x ?default] |- _ ]
+                         => rewrite (@find_Name_and_val_different base_type_code base_type_code_dec _ ndec _ t n _ N x default) in H by assumption
+                       end.
+          clear IHT2 Heqo.
+          pose (@find_Name_and_val_different base_type_code base_type_code_dec InName _).
+          match goal with
+          end.
+          SearchAbout find_Name None find_Name_and_val.
+
+
+          simpl; unfold cast_if_eq; break_innermost_match; subst; simpl;
+            eliminate_hprop_eq; simpl. congruence. }
+      {
+        eauto.
+        unfold cast_if_eq.
+      repeat rewrite !(@find_Name_and_val_split base_type_code base_type_code_dec _ _ _ _ _ _ _ _ (lookupb _ _)).
+*)
+
+    (* leaves the goal in a readable state (hopefully) *)
+    Local Ltac t_careful :=
+      repeat first [ progress intros
+                   | progress unfold option_map in *
+                   | progress simpl @register_reassignf in *
+                   | progress simpl @prop_of_option in *
+                   | progress autorewrite with push_prop_of_option in *
+                   | progress destruct_head'_and
+                   | progress inversion_option
+                   | progress subst
+                   | congruence
+                   | assumption
+                   | progress break_innermost_match_hyps
+                   | progress break_innermost_match_step
+                   | solve [ eauto ]
+                   | match goal with
+                     | [ H : InName_beq _ _ = true |- _ ] => apply InName_bl in H
+                     | [ IH : forall ctxi ctxr new_names ctxi_var ctxr_var Hwf eout, _ -> register_reassignf _ _ _ _ = Some _ -> prop_of_option _,
+                           Heq : register_reassignf _ _ _ _ = Some _ |- _ ]
+                       => specialize (fun ctxi_var pf ctxr_var pf' => IH _ _ _ ctxi_var ctxr_var pf _ pf' Heq)
+                     | [ IH : forall cv, prop_of_option (wff cv ?e) -> _, Hwf : prop_of_option (wff ?cv' ?e) |- _ ]
+                       => specialize (IH cv' Hwf);
+                          try match goal with
+                              | [ H : forall t n_in n_out v, _ -> _ -> _ -> _ -> False |- _ ]
+                                => specialize (IH _ H)
+                              end
+                     | [ IH : forall cv, prop_of_option (wff cv ?e) -> _, Hwf : forall x, prop_of_option (wff (@?cv' x) ?e) |- _ ]
+                       => specialize (fun x => IH (cv' x) (Hwf x));
+                          try match goal with
+                              | [ H : forall t n_in n_out v, _ -> _ -> _ -> _ -> False |- _ ]
+                                => specialize (IH _ H)
+                              end
+                     | [ |- _ /\ _ ] => split
+                     end ].
+
     Lemma wff_register_reassignf
           ctxi ctxr t e new_names
           (ctxi_var : VarInContext)
           (ctxr_var : VarOutContext)
           eout
           (Hwf : prop_of_option (Named.wff ctxi_var e))
-      : (*(forall t (n_in : InName) (n_out : OutName),
+      : (forall t (n_in : InName) (n_out : OutName) v,
+            lookupb ctxi n_in t = Some n_out
+            -> lookupb ctxr n_out t = Some n_in
+            -> lookupb ctxi_var n_in t = Some v
+            -> lookupb ctxr_var n_out t = None
+            -> False)
+        (*(forall t (n_in : InName) (n_out : OutName),
             lookupb ctxi n_in t = Some n_out
             <-> lookupb ctxr n_out t = Some n_in)
-        ->*) (forall t (n_in : InName) (n_out : OutName),
+        -> (forall t (n_in : InName) (n_out : OutName),
                lookupb ctxi n_in t = Some n_out
                -> lookupb ctxr n_out t = Some n_in
-               -> lookupb ctxi_var n_in t = lookupb ctxr_var n_out t)
+               -> lookupb ctxi_var n_in t = lookupb ctxr_var n_out t)*)
         -> @register_reassignf ctxi ctxr t e new_names = Some eout
         -> prop_of_option (Named.wff ctxr_var eout).
     Proof.
       revert ctxi ctxr new_names ctxi_var ctxr_var Hwf eout.
       induction e;
-        try solve [ repeat first [ reflexivity
+        try solve [ t_careful ].
+      { t_careful.
+        { eapply IHe2; clear IHe2 IHe1.
+
+        break_innermost_match; simpl in *; eauto.
+        break_innermost_match; simpl in *; eauto.
+      try solve [ repeat first [ reflexivity
                      | assumption
                      | progress subst
                      | progress inversion_option
@@ -127,6 +266,63 @@ Section language.
                      | rewrite (@lookupb_extend base_type_code _ OutName _)
                      | progress intros
                      | progress unfold option_map in *
+                     | solve [ eauto ]
+                     | match goal with
+                       | [ |- _ /\ _ ] => split
+                       | [ H : forall t x y, _ = Some _ -> _ = Some _ -> _ = _,
+                             H0 : _ = Some _, H1 : _ = Some _, H2 : _ = Some _, H3 : _ = None |- _ ]
+                         => specialize (H _ _ _ H0 H1); rewrite H2, H3 in H; congruence
+                       | [ H : _ |- prop_of_option (wff _ _) ]
+                         => eapply H; [ .. | eassumption ]; [ solve [ eauto ] | .. ]
+                       end
+                     | break_innermost_match_step
+                     | break_innermost_match_hyps_step
+                     | match goal with
+                       | [ H : lookupb (extend _ _ _) _ = Some _, H' : lookupb (extend _ _ _) _ = Some _ |- _ ]
+                         => pose proof (lookupb_extend_helper H H'); clear H H'
+                       | [ H : find_Name_and_val _ _ _ _ _ _ ?x = _ |- _ ]
+                         => lazymatch x with
+                            | None => fail
+                            | _ => rewrite find_Name_and_val_split in H
+                            end
+                       | [ |- context[@find_Name_and_val ?base_type_code ?Name ?base_type_code_dec ?Name_dec ?var' ?t ?n ?T ?N ?V ?default] ]
+                         => lazymatch default with
+                            | None => fail
+                            | _ => rewrite (@find_Name_and_val_split base_type_code base_type_code_dec Name Name_dec var' t n T N V default)
+                            end
+                       | [ H : _ |- _ ]
+                         => first [ rewrite !(@lookupb_extend base_type_code _ InName _) in H
+                                  | rewrite !(@lookupb_extend base_type_code _ OutName _) in H ]
+                       end ] ].
+      {
+        all:eapply IHe2; clear IHe2 IHe1.
+        Focus 2.
+        Focus 3.
+        specialize (IHe1 _ H).
+        Focus 2.
+          specialize (fun ctxi_var pf ctxr_var pf' => IHe1 _ _ _ ctxi_var ctxr_var pf _ pf' Heqo0).
+          simpl in Hwf |- *.
+          autorewrite with push_prop_of_option in *.
+          destruct_head'_and.
+          simpl in H1.
+          repeat match goal with
+                 end.
+          cbv beta in *.
+        Focus 3.
+        3:repeat first [ reflexivity
+                     | assumption
+                     | progress subst
+                     | progress inversion_option
+                     | progress simpl in *
+                     | progress intros
+                     | progress destruct_head'_and
+                     | progress destruct_head'_or
+                     | progress autorewrite with push_prop_of_option in *
+                     | rewrite (@lookupb_extend base_type_code _ InName _)
+                     | rewrite (@lookupb_extend base_type_code _ OutName _)
+                     | progress intros
+                     | progress unfold option_map in *
+                     | solve [ eauto ]
                      | match goal with
                        | [ H : InName_beq _ _ = true |- _ ] => apply InName_bl in H
                        | [ |- _ /\ _ ] => split
@@ -154,7 +350,62 @@ Section language.
                        | [ H : _ |- _ ]
                          => first [ rewrite !(@lookupb_extend base_type_code _ InName _) in H
                                   | rewrite !(@lookupb_extend base_type_code _ OutName _) in H ]
-                       end ] ].
+                       end ].
+        simpl.
+          intros.
+          { break_innermost_match_hyps; inversion_option; subst; simpl;
+              match goal with
+              | [ H : InName_beq _ _ = true |- _ ] => apply InName_bl in H
+              end;
+              subst; simpl in *; try tauto;
+                break_innermost_match; simpl; try trivial.
+            revert Heqo0 Heqo1 Heqo Heqo2.
+
+            Focus 2.
+            { simpl in *.
+{      Info 0 repeat first [ reflexivity
+                     | assumption
+                     | progress subst
+                     | progress inversion_option
+                     | progress simpl in *
+                     | progress intros
+                     | progress destruct_head'_and
+                     | progress destruct_head'_or
+                     | progress autorewrite with push_prop_of_option in *
+                     | rewrite (@lookupb_extend base_type_code _ InName _)
+                     | rewrite (@lookupb_extend base_type_code _ OutName _)
+                     | progress intros
+                     | progress unfold option_map in *
+                     | solve [ eauto ]
+                     | match goal with
+                       | [ H : InName_beq _ _ = true |- _ ] => apply InName_bl in H
+                       | [ |- _ /\ _ ] => split
+                       | [ H : forall t x y, _ = Some _ -> _ = Some _ -> _ = _,
+                             H0 : _ = Some _, H1 : _ = Some _, H2 : _ = Some _, H3 : _ = None |- _ ]
+                         => specialize (H _ _ _ H0 H1); rewrite H2, H3 in H; congruence
+                       | [ H : _ |- prop_of_option (wff _ _) ]
+                         => eapply H; [ .. | eassumption ]; [ solve [ eauto ] | .. ]
+                       end
+                     | break_innermost_match_step
+                     | break_innermost_match_hyps_step
+                     | match goal with
+                       | [ H : lookupb (extend _ _ _) _ = Some _, H' : lookupb (extend _ _ _) _ = Some _ |- _ ]
+                         => pose proof (lookupb_extend_helper H H'); clear H H'
+                       | [ H : find_Name_and_val _ _ _ _ _ _ ?x = _ |- _ ]
+                         => lazymatch x with
+                            | None => fail
+                            | _ => rewrite find_Name_and_val_split in H
+                            end
+                       | [ |- context[@find_Name_and_val ?base_type_code ?Name ?base_type_code_dec ?Name_dec ?var' ?t ?n ?T ?N ?V ?default] ]
+                         => lazymatch default with
+                            | None => fail
+                            | _ => rewrite (@find_Name_and_val_split base_type_code base_type_code_dec Name Name_dec var' t n T N V default)
+                            end
+                       | [ H : _ |- _ ]
+                         => first [ rewrite !(@lookupb_extend base_type_code _ InName _) in H
+                                  | rewrite !(@lookupb_extend base_type_code _ OutName _) in H ]
+                       end ].
+      eauto.
       admit.
     Admitted.
     (*
@@ -205,11 +456,6 @@ Section language.
                pose proof c
           end. *)
 
-    Local Notation lookup_good ctxi ctxr
-      := (forall t (n_in : InName) (n_out : OutName),
-             lookupb ctxi n_in t = Some n_out
-             <-> lookupb ctxr n_out t = Some n_in)
-           (only parsing).
     Local Notation ctx_var_good ctxi ctxr ctxi_var ctxr_var
       := (forall t (n_in : InName) (n_out : OutName),
              lookupb ctxi n_in t = Some n_out

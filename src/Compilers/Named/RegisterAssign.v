@@ -25,6 +25,8 @@ Section language.
             {ReverseContext : Context OutName (fun _ : base_type_code => InName)}
             (InName_beq : InName -> InName -> bool).
 
+    Lemma XXX : unit. Proof. constructor. Qed.
+
     Definition register_reassignf_step
                (register_reassignf : forall (ctxi : InContext) (ctxr : ReverseContext)
                                             {t} (e : exprf InName t) (new_names : list (option OutName)),
@@ -54,9 +56,13 @@ Section language.
                 => let ctxi := extend ctxi n n' in
                    let ctxr := extend ctxr n' n in
                    option_map (LetIn tx n' x) (@register_reassignf ctxi ctxr _ eC new_names')
-              | _, _
+              | None, Some x
                 => let ctxi := remove ctxi n in
-                   @register_reassignf ctxi ctxr _ eC new_names'
+                   match XXX with
+                   | tt => @register_reassignf ctxi ctxr _ eC new_names'
+                   end
+              | _, None
+                => None
               end
          | Pair _ ex _ ey
            => match @register_reassignf ctxi ctxr _ ex nil, @register_reassignf ctxi ctxr _ ey nil with
