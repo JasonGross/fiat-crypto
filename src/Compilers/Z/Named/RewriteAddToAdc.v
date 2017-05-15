@@ -46,10 +46,9 @@ Section named.
              {t} (e : exprf t)
     : exprf t
     := match e in Named.exprf _ _ _ t return exprf t with
-       |           (nlet (a2, c1) : tZ * tZ := (ADD bw1 c0 a as ex0) in P0)
+       |           (nlet (a2, c1) : tZ * tZ := (ADD bw1 a b as ex0) in P0)
          => match rewrite_exprf _ P0 in Named.exprf _ _ _ t return exprf t -> exprf t with
-            |      (nlet (s , c2) : tZ * tZ := (ADD bw2 (Var _ a2') b as ex1) in P1)
-            |      (nlet (s , c2) : tZ * tZ := (ADD bw2 b (Var _ a2') as ex1) in P1)
+            |      (nlet (s , c2) : tZ * tZ := (ADD bw2 c0 (Var _ a2') as ex1) in P1)
               => match P1 in Named.exprf _ _ _ t return exprf t -> exprf t with
                  | (nlet c        : tZ      := (ADX (Var _ c1') (Var _ c2') as ex2) in P)
                    => fun e
@@ -59,7 +58,7 @@ Section named.
                          then (nlet (a2, c1) : tZ * tZ := ex0 in
                                nlet (s , c2) : tZ * tZ := ex1 in
                                nlet c        : tZ      := ex2 in
-                               nlet (s, c)   : tZ * tZ := ADC bw1 b c0 a in
+                               nlet (s, c)   : tZ * tZ := ADC bw1 c0 a b in
                                P)
                          else e
                  | P1' => fun e => e
