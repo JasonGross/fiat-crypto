@@ -132,6 +132,8 @@ src/Compilers/Z/MapCastByDeBruijnWf.v
 src/Compilers/Z/OpInversion.v
 src/Compilers/Z/Reify.v
 src/Compilers/Z/RewriteAddToAdc.v
+src/Compilers/Z/RewriteAddToAdcInterp.v
+src/Compilers/Z/RewriteAddToAdcWf.v
 src/Compilers/Z/Syntax.v
 src/Compilers/Z/Bounds/Interpretation.v
 src/Compilers/Z/Bounds/MapCastByDeBruijn.v
@@ -150,6 +152,7 @@ src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.v
 src/Compilers/Z/Named/DeadCodeElimination.v
 src/Compilers/Z/Named/DeadCodeEliminationInterp.v
 src/Compilers/Z/Named/RewriteAddToAdc.v
+src/Compilers/Z/Named/RewriteAddToAdcInterp.v
 src/Compilers/Z/Syntax/Equality.v
 src/Compilers/Z/Syntax/Util.v
 src/Curves/Edwards/AffineProofs.v

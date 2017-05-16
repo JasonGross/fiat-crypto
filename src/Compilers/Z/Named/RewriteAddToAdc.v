@@ -42,41 +42,53 @@ Section named.
        end.
 
   Definition do_rewrite
-             (rewrite_exprf : forall t (e : exprf t), exprf t)
+             {t} (e : exprf t)
+    : option (exprf t)
+    := match e in Named.exprf _ _ _ t return option (exprf t) with
+       |           (nlet (a2, c1) : tZ * tZ := (ADD bw1 a b as ex0) in P0)
+         => match P0 in Named.exprf _ _ _ t return option (exprf t) with
+            |      (nlet (s , c2) : tZ * tZ := (ADD bw2 c0 (Var _ a2') as ex1) in P1)
+              => match P1 in Named.exprf _ _ _ t return option (exprf t) with
+                 | (nlet c        : tZ      := (ADX (Var _ c1') (Var _ c2') as ex2) in P)
+                   => if (((bw1 =Z? bw2) && (a2 =n? a2') && (c1 =n? c1') && (c2 =n? c2'))
+                            && (is_const_or_var c0 && is_const_or_var a && is_const_or_var b)
+                            && negb (name_list_has_duplicate (a2::c1::s::c2::c::nil ++ get_namesf c0 ++ get_namesf a ++ get_namesf b)%list))
+                      then Some (nlet (a2, c1) : tZ * tZ := ex0 in
+                                 nlet (s , c2) : tZ * tZ := ex1 in
+                                 nlet c        : tZ      := ex2 in
+                                 nlet (s, c)   : tZ * tZ := ADC bw1 c0 a b in
+                                 P)
+                      else None
+                 | P1' => None
+                 end
+            | P0' => None
+            end
+       | _ => None
+       end%core%nexpr%bool.
+
+  Definition do_rewriteo {t} (e : exprf t) : exprf t
+    := match do_rewrite e with
+       | Some e' => e'
+       | None => e
+       end.
+
+  Definition rewrite_exprf_prestep
+             (rewrite_exprf : forall {t} (e : exprf t), exprf t)
              {t} (e : exprf t)
     : exprf t
     := match e in Named.exprf _ _ _ t return exprf t with
-       |           (nlet (a2, c1) : tZ * tZ := (ADD bw1 a b as ex0) in P0)
-         => match rewrite_exprf _ P0 in Named.exprf _ _ _ t return exprf t -> exprf t with
-            |      (nlet (s , c2) : tZ * tZ := (ADD bw2 c0 (Var _ a2') as ex1) in P1)
-              => match P1 in Named.exprf _ _ _ t return exprf t -> exprf t with
-                 | (nlet c        : tZ      := (ADX (Var _ c1') (Var _ c2') as ex2) in P)
-                   => fun e
-                      => if (((bw1 =Z? bw2) && (a2 =n? a2') && (c1 =n? c1') && (c2 =n? c2'))
-                               && (is_const_or_var c0 && is_const_or_var a && is_const_or_var b)
-                               && negb (name_list_has_duplicate (a2::c1::s::c2::c::nil ++ get_namesf c0 ++ get_namesf a ++ get_namesf b)%list))
-                         then (nlet (a2, c1) : tZ * tZ := ex0 in
-                               nlet (s , c2) : tZ * tZ := ex1 in
-                               nlet c        : tZ      := ex2 in
-                               nlet (s, c)   : tZ * tZ := ADC bw1 c0 a b in
-                               P)
-                         else e
-                 | P1' => fun e => e
-                 end
-            | P0' => fun e => e
-            end (nlet (a2, c1) : tZ * tZ := rewrite_exprf _ ex0 in rewrite_exprf _ P0)
        | TT => TT
        | Var _ n => Var n
        | Op _ _ opc args
-         => Op opc (rewrite_exprf _ args)
+         => Op opc (@rewrite_exprf _ args)
        | (nlet nx := ex in eC)
-         => (nlet nx := rewrite_exprf _ ex in rewrite_exprf _ eC)
+         => (nlet nx := @rewrite_exprf _ ex in @rewrite_exprf _ eC)
        | Pair tx ex ty ey
-         => Pair (rewrite_exprf tx ex) (rewrite_exprf ty ey)
-       end%core%nexpr%bool.
+         => Pair (@rewrite_exprf tx ex) (@rewrite_exprf ty ey)
+       end%nexpr.
 
   Fixpoint rewrite_exprf {t} (e : exprf t) : exprf t
-    := @do_rewrite (@rewrite_exprf) t e.
+    := do_rewriteo (@rewrite_exprf_prestep (@rewrite_exprf) t e).
 
   Definition rewrite_expr {t} (e : expr t) : expr t
     := match e in Named.expr _ _ _ t return expr t with
