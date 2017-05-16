@@ -1,4 +1,5 @@
 Require Import Crypto.Compilers.Named.PositiveContext.
+Require Import Crypto.Compilers.Named.PositiveContext.DefaultsProperties.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.InterpretToPHOASInterp.
 Require Import Crypto.Compilers.Named.CompileWf.
@@ -26,86 +27,47 @@ Section language.
   Proof.
     intro x; unfold RewriteAdc, option_map; break_innermost_match; try reflexivity;
       match goal with |- ?x = ?y => cut (Some x = Some y); [ congruence | ] end;
-      (etransitivity; [ symmetry; eapply @Interp_InterpToPHOAS | ]); try solve [
-      repeat first [ intros; eapply @PositiveContextOk
-                   | progress split_andb
-                   | congruence
-                   | tauto
-                   | solve [ auto | eapply @BinPos.Pos.eqb_eq; auto ]
-                   | eapply @Wf_from_unit
-                   | eapply @dec_rel_of_bool_dec_rel
-                   | eapply @internal_base_type_dec_lb
-                   | eapply @internal_base_type_dec_bl
-                   | eapply @InterpEliminateDeadCode; [ .. | eassumption | eassumption | ]
-                   | progress intros
-                   | rewrite !@lookupb_empty
-                   | eapply @wf_from_unit with (uContext:=PContext _); [ .. | eassumption ]
-                   | lazymatch goal with
-                     | [ |- Some _ = Some _ ] => fail
-                     | [ |- None = Some _ ] => exfalso; eapply @wf_interp_not_None; [ .. | unfold Syntax.Named.Interp in *; eassumption ]
-                     | [ |- ?x = Some _ ] => destruct x eqn:?; [ apply f_equal | ]
-                     end ] ].
-    { lazymatch goal with
-      | [ H : DeadCodeElimination.EliminateDeadCode _ _ = Some ?e |- Syntax.Named.Interp ?e _ = Some _ ]
-        => let lhs := match goal with |- ?lhs = _ => lhs end in
-           let v := fresh in
-           destruct lhs as [v|] eqn:?; [ apply f_equal; eapply @InterpEliminateDeadCode; [ .. | eassumption | try eassumption | try eassumption ]; clear H | ]
-      end;
-        try solve [       repeat first [ intros; eapply @PositiveContextOk
-                                       | eassumption
-                   | progress split_andb
-                   | congruence
-                   | tauto
-                   | solve [ auto | eapply @BinPos.Pos.eqb_eq; auto ]
-                   | eapply @Wf_from_unit
-                   | eapply @dec_rel_of_bool_dec_rel
-                   | eapply @internal_base_type_dec_lb
-                   | eapply @internal_base_type_dec_bl
-                   | eapply @InterpEliminateDeadCode; [ .. | eassumption | eassumption | ]
-                   | progress intros
-                   | rewrite !@lookupb_empty
-                   | eapply @wf_from_unit with (uContext:=PContext _); [ .. | eassumption ]
-                   | lazymatch goal with
-                     | [ |- Some _ = Some _ ] => fail
-                     | [ |- None = Some _ ] => exfalso; eapply @wf_interp_not_None; [ .. | unfold Syntax.Named.Interp in *; eassumption ]
-                     | [ |- ?x = Some _ ] => destruct x eqn:?; [ apply f_equal | ]
-                     end ] ].
-      lazymatch goal with
-      | [ H : DeadCodeElimination.EliminateDeadCode _ _ = Some ?e |- Syntax.Named.Interp ?e _ = Some _ ]
-        => let lhs := match goal with |- ?lhs = _ => lhs end in
-           let v := fresh in
-           destruct lhs as [v|] eqn:?; [ apply f_equal; eapply @InterpEliminateDeadCode; [ .. | eassumption | try eassumption | try eassumption ]; clear H | ]
-      | [ |- Syntax.Named.Interp (RewriteAddToAdc.rewrite_expr _ ?e) _ = Some _ ]
-        => let lhs := match goal with |- ?lhs = _ => lhs end in
-           let H := fresh in
-           destruct lhs eqn:H; [ apply (f_equal (@Some _)); eapply @Interp_rewrite_expr in H | ]
-      end;
-        try solve [       repeat first [ intros; eapply @PositiveContextOk
-                                       | eassumption
-                   | progress split_andb
-                   | congruence
-                   | tauto
-                   | solve [ auto | eapply @BinPos.Pos.eqb_eq; auto ]
-                   | eapply @Wf_from_unit
-                   | eapply @dec_rel_of_bool_dec_rel
-                   | eapply @internal_base_type_dec_lb
-                   | eapply @internal_base_type_dec_bl
-                   | eapply @InterpEliminateDeadCode; [ .. | eassumption | eassumption | ]
-                   | progress intros
-                   | rewrite !@lookupb_empty
-                   | eapply @wf_from_unit with (uContext:=PContext _); [ .. | eassumption ]
-                   | lazymatch goal with
-                     | [ |- Some _ = Some _ ] => fail
-                     | [ |- None = Some _ ] => exfalso; eapply @wf_interp_not_None; [ .. | unfold Syntax.Named.Interp in *; eassumption ]
-                     | [ |- ?x = Some _ ] => destruct x eqn:?; [ apply f_equal | ]
-                     end ] ].
-      move e at bottom.
-      move e1 at bottom.
-      clear dependent e1.
-      lazymatch goal with
-      | [ H : Compile.compile (?e _) _ = Some ?e'', H' : Syntax.Named.Interp ?e'' ?x = Some ?v' |- ?v' = Interp _ ?e ?x ]
-        => eapply @interp_compile with (v:=x) (e':=?[XXX]) in H
-      end.
-      pose ?XXX.
-  Admitted.
+      (etransitivity; [ symmetry; eapply @Interp_InterpToPHOAS | ]);
+      repeat
+        repeat
+        first [ lazymatch goal with
+                | [ H : DeadCodeElimination.EliminateDeadCode _ _ = Some ?e |- Syntax.Named.Interp ?e _ = Some _ ]
+                  => let lhs := match goal with |- ?lhs = _ => lhs end in
+                     let v := fresh in
+                     (destruct lhs as [v|] eqn:?);
+                     [ apply f_equal; eapply @InterpEliminateDeadCode with (Name_beq:=BinPos.Pos.eqb);
+                       [ .. | eassumption | try eassumption | try eassumption ]; clear H | ]
+                | [ |- Syntax.Named.Interp (RewriteAddToAdc.rewrite_expr _ ?e) _ = Some _ ]
+                  => let lhs := match goal with |- ?lhs = _ => lhs end in
+                     let H := fresh in
+                     destruct lhs eqn:H; [ apply (f_equal (@Some _)); eapply @Interp_rewrite_expr in H | ]
+                | [ H : Compile.compile (?e _) _ = Some ?e'', H' : Syntax.Named.Interp ?e'' ?x = Some ?v' |- ?v' = Interp ?interp_op' ?e ?x ]
+                  => eapply @Interp_compile with (v:=x) (interp_op:=interp_op') in H
+                end
+              | intros; eapply (@PositiveContextOk _ _ base_type_beq internal_base_type_dec_bl internal_base_type_dec_lb)
+              | progress split_andb
+              | congruence
+              | tauto
+              | solve [ auto | eapply @BinPos.Pos.eqb_eq; auto ]
+              | eapply @Wf_from_unit
+              | eapply @dec_rel_of_bool_dec_rel
+              | eapply @internal_base_type_dec_lb
+              | eapply @internal_base_type_dec_bl
+              | eapply @InterpEliminateDeadCode; [ .. | eassumption | eassumption | ]
+              | apply name_list_unique_DefaultNamesFor
+              | progress intros
+              | rewrite !@lookupb_empty
+              | eapply @wf_from_unit with (uContext:=PContext _); [ .. | eassumption ]
+              | match goal with
+                | [ H : Syntax.Named.Interp ?e ?x = Some ?a, H' : Syntax.Named.Interp ?e ?x = Some ?b |- _ ]
+                  => assert (a = b) by congruence; (subst a || subst b)
+                end
+              | lazymatch goal with
+                | [ |- Some _ = Some _ ] => fail
+                | [ |- None = Some _ ] => exfalso; eapply @wf_interp_not_None; [ .. | unfold Syntax.Named.Interp in *; eassumption ]
+                | [ |- ?x = Some _ ] => destruct x eqn:?; [ apply f_equal | ]
+                end ].
+  Qed.
 End language.
+
+Hint Rewrite @InterpRewriteAdc using solve_wf_side_condition : reflective_interp.

@@ -34,7 +34,7 @@ Section language.
        let interp_to_phoas := InterpToPHOAS (Context:=fun var => PContext var)
                                             (fun _ t => Op (OpConst 0%Z) TT) in
        let e' := compile (e _) (DefaultNamesFor e) in
-       let e' := option_map (rewrite_expr positive_beq) e' in
+       let e' := option_map (rewrite_expr Pos.eqb) e' in
        let good := is_good e' in
        let e' := match e' with
                  | Some e'
