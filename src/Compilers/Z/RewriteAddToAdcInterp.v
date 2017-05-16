@@ -102,6 +102,10 @@ Section language.
       move e at bottom.
       move e1 at bottom.
       clear dependent e1.
-
+      lazymatch goal with
+      | [ H : Compile.compile (?e _) _ = Some ?e'', H' : Syntax.Named.Interp ?e'' ?x = Some ?v' |- ?v' = Interp _ ?e ?x ]
+        => eapply @interp_compile with (v:=x) (e':=?[XXX]) in H
+      end.
+      pose ?XXX.
   Admitted.
 End language.
