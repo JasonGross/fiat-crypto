@@ -300,6 +300,283 @@ Section with_for_state.
       Qed.
     End lemmas.
   End with_loop_params.
+
+  Section with_loop_params_no_break.
+    Context {state : Type}.
+    Context (test : Z -> Z -> bool) (i_final : Z) (upd_i : Z -> Z)
+            (body : state -> Z -> forall {T} (continue : state -> T), T).
+    Local Notation body_with_break := (fun st z T (continue break : state -> T) => @body st z T continue).
+
+    Section lemmas.
+      Local Open Scope Z_scope.
+      Context (upd_linear : forall x, upd_i x = upd_i 0 + x)
+              (upd_nonzero : upd_i 0 <> 0)
+              (upd_signed : forall i0, test i0 i_final = true -> 0 <= (i_final - i0) / (upd_i 0)).
+      Local Notation step := (upd_i 0).
+      Context (test_step_linear : forall i0 k, test i0 i_final = false -> test (i0 + step * Z.of_nat k) i_final = false)
+              (Hi_final : test (i_final + step) i_final = false).
+
+      Definition count_loop_iterations (i0 : Z) : nat
+        := for_cps
+             test i_final upd_i (fun n _ T continue break => continue (S n)) i0 0%nat _ id.
+      Local Ltac t_step_extra :=
+        first [ rewrite Z.add_simpl_l in *
+              | rewrite Z.div_mul' in * by eauto
+              | rewrite Z2Nat.inj_add in *
+              | rewrite Nat2Z.id in *
+              | rewrite (eq_refl : Z.to_nat 1 = 1%nat) in *
+              | rewrite (eq_refl : Pos.to_nat 1 = 1%nat) in * ].
+      Local Ltac t_step fin_t
+        := first [ progress intros
+                 | assumption
+                 | progress unfold id in *
+                 | progress destruct_head'_and
+                 | progress subst
+                 | break_innermost_match_step
+                 | progress simpl in *
+                 | rewrite Z.mul_0_r
+                 | rewrite Z.add_0_r
+                 | match goal with
+                   | [ H : ?x = true, H' : context[?x] |- _ ] => rewrite H in H'
+                   | [ |- context[upd_i ?x] ]
+                     => lazymatch x with
+                        | 0 => fail
+                        | _ => rewrite (upd_linear x)
+                        end
+                   | [ |- _ /\ _ ] => split
+                   | [ H : _ |- _ ] => rewrite Z.mul_0_r in H
+                   | [ H : _ |- _ ] => rewrite Z.add_0_r in H
+                   end
+                 | solve [ auto ]
+                 | discriminate
+                 | nia
+                 | progress specialize_by omega
+                 | progress destruct_head'_or
+                 | match goal with
+                   | [ H : _ |- _ ] => apply H; clear H; solve [ fin_t () ]
+                   end ].
+      Local Ltac t := repeat t_step ltac:(fun _ => t).
+      Local Lemma test_diff i0 k
+            (Hgood : i_final = i0 + step * Z.of_nat k)
+            v v'
+            (H1 : test (i0 + step * Z.of_nat v) i_final = true)
+            (H2 : test (i0 + step * Z.of_nat v') i_final = false)
+        : (v < v')%nat.
+      Proof.
+        subst.
+        destruct (lt_eq_lt_dec v v') as [ [?|?]|? ]; [ assumption | exfalso; congruence | exfalso ].
+        assert (v = (v' + (v - v'))%nat) by omega.
+        generalize dependent (v - v')%nat; intros; subst v.
+        rewrite Nat2Z.inj_add, Z.mul_add_distr_l, Z.add_assoc in H1.
+        rewrite test_step_linear in H1 by assumption.
+        congruence.
+      Qed.
+      Lemma count_loop_iterations_normal i0
+            (Hi0 : test i0 i_final = true)
+            (H_exact : exists k, i_final = i0 + step * Z.of_nat k)
+            (Htest1 : forall k,
+                (k < Z.to_nat ((i_final - i0) / step))%nat -> test (i0 + step * Z.of_nat k) i_final = true)
+            (Htest2 : forall k,
+                (Z.to_nat ((i_final - i0) / step) < k)%nat -> test (i0 + step * Z.of_nat k) i_final = false)
+        : count_loop_iterations i0
+          = Z.to_nat ((i_final - i0) / step
+                      + if test i_final i_final then 1 else 0).
+      Proof.
+        unfold count_loop_iterations.
+        destruct H_exact as [k H_exact].
+        pose proof upd_nonzero.
+        pose proof (test_diff i0 k H_exact) as test_diff.
+        pose proof (Htest1 (pred k)).
+        apply for_cps_ind with (invariant := fun i k => i = i0 + step * Z.of_nat k
+                                                        /\ (k = 0%nat \/ test (i0 + step * Z.of_nat (pred k)) i_final = true));
+          subst;
+          [ assumption
+          | assumption
+          | assumption
+          | repeat apply conj; auto; nia
+          | solve [ t ]
+          | ].
+        { replace (i0 + step * Z.of_nat k + step) with (i0 + step * (Z.of_nat (k + 1))) in Hi_final by nia.
+          repeat first [ t_step ltac:(fun _ => idtac) | t_step_extra ];
+            repeat match goal with
+                   | [ H : test (?i0 + step * Z.of_nat ?v) _ = false, H' : test (?i0 + step * Z.of_nat ?v') _ = true |- _ ]
+                     => unique assert ((v' < v)%nat) by auto
+                   | _ => progress specialize_by omega
+                   end;
+            omega. }
+      Qed.
+      Local Notation i_after_final i0
+        := (Z.of_nat (count_loop_iterations i0) * step + i0).
+      Theorem for_nobreak_cps_ind
+              (Htest_linear : forall x y k, test x (k + y) = test (x - k) y)
+              (body_Proper : Proper (eq ==> eq ==> forall_relation (fun T => (pointwise_relation _ eq) ==> eq)) body)
+              (invariant : Z -> state -> Prop)
+              T (P : Z -> T -> Prop) i0 v0 rest
+        : invariant i0 v0
+          -> (forall i v continue,
+                 test i i_final = true
+                 -> (forall v, invariant (upd_i i) v -> P (i_after_final i0) (continue v))
+                 -> invariant i v
+                 -> P (i_after_final i0) (@body v i T continue))
+          -> (forall i v, test i i_final = false -> invariant i v -> P i (rest v))
+          -> P (i_after_final i0) (for_cps test i_final upd_i body_with_break i0 v0 T rest).
+      Proof.
+        destruct (Z_zerop step) as [Hstep|Hstep].
+        { unfold count_loop_iterations.
+          setoid_rewrite upd_linear.
+          rewrite Hstep, Z.mul_0_r, Z.add_0_l.
+          setoid_rewrite Z.add_0_l.
+          intros.
+          apply @for_cps_ind with (P:=P i0) (body:=body_with_break) (invariant := fun i v => i = i0 /\ invariant i0 v);
+            [ assumption
+            | assumption
+            | assumption
+            | solve [ auto ]
+            | solve [ setoid_rewrite upd_linear; rewrite Hstep; setoid_rewrite Z.add_0_l;
+                      intuition (subst; auto) ]
+            | solve [ intuition (subst; auto) ] ]. }
+        { remember (Z.to_nat ((i_final - i0) / step)) as fuel eqn:Hfuel.
+          set (k := count_loop_iterations).
+          unfold count_loop_iterations in k.
+          set (base := 0%nat) in (value of k).
+          change i_final with (-(Z.of_nat base * step) + i_final) in (value of k).
+          subst k; cbv beta.
+          intros Hinv Hbody Hrest.
+          change P with (fun i => P (Z.of_nat base * step + i)) in Hrest; cbv beta in Hrest.
+          change invariant with (fun i => invariant (Z.of_nat base * step + i)) in Hinv, Hbody, Hrest.
+          change test with (fun i => test (Z.of_nat base * step + i)) in Hinv, Hbody, Hrest.
+          change i0 with (Z.of_nat base * step + i0) at 3.
+          revert Hinv Hbody Hrest; cbv beta.
+          clearbody base.
+          revert i0 v0 Hfuel base.
+          induction fuel as [|fuel IHfuel].
+          { intros i0 v0 Hfuel base Hinv Hbody Hrest.
+            destruct (Z_le_gt_dec ((i_final - i0) / step) 0) as [Hfinal|Hfinal];
+              [
+              | assert (H' : 0 = Z.of_nat (Z.to_nat ((i_final - i0) / step))) by lia;
+                rewrite Z2Nat.id in H' by lia; omega ].
+            assert ((i_final - (i0 + step)) / step < 0)
+              by (revert Hfinal; clear -upd_nonzero;
+                  Z.div_mod_to_quot_rem; nia).
+            rewrite (@for_cps_unroll1 nat), (@for_cps_unroll1 state)
+              by solve [ assumption
+                       | repeat intro; apply body_Proper; eassumption
+                       | repeat intro; subst; eauto
+                       | let H := fresh in
+                         intro; rewrite Htest_linear; intro H; specialize (upd_signed _ H);
+                         revert upd_signed; clear -upd_nonzero;
+                         Z.div_mod_to_quot_rem; nia ].
+            rewrite Htest_linear, Z.sub_opp_r, (Z.add_comm i0 (Z.of_nat base * step)).
+            unfold id in *.
+            destruct (test (Z.of_nat base * step + i0) i_final) eqn:Htest;
+              [
+              | solve [ auto ] ].
+            admit. }
+          {
+            rewrite (@for_cps_unroll1 nat), (@for_cps_unroll1 state)
+              by solve [ assumption
+                       | repeat intro; apply body_Proper; eassumption
+                       | repeat intro; subst; eauto
+                       | let H := fresh in
+                         intro; rewrite Htest_linear; intro H; specialize (upd_signed _ H);
+                         revert upd_signed; clear -upd_nonzero;
+                         Z.div_mod_to_quot_rem; nia ].
+
+            Focus 2.
+            auto.
+            move rest at bottom.
+            unfold id.
+
+
+            exfalso.
+
+            {
+            unfold id; simpl.
+            autorewrite with zsimplify_fast.
+            specialize (fun i => Hrest (-Z.of_nat base + i)).
+            setoid_rewrite Z.add_assoc in Hrest.
+            autorewrite with zsimplify_fast in Hrest.
+            setoid_rewrite Z.add_0_l in Hrest.
+
+            setoid_rewrite
+            SearchAbout (?x + - ?x).
+            move Hstep at bottom.
+            eauto. }
+          { intros i0 v0 Hfuel Hinv Hbody Hrest.
+
+            move rest at bottom.
+            move v0 at bottom.
+            rewrite Z.mul_0_r, Z.add_0_r.
+            {
+
+          .
+          rewrite upd_linear, Hstep, Z.add_0_l.
+
+
+          apply H0; eauto.
+          Focus 2.
+            auto.
+
+
+          intros
+          SearchAbout (_ + 0).
+        revert i0 v0.
+
+        intros.
+        unfold for_cps, cpscall, cpsreturn.
+        intros Hinv IH Hrest.
+        eapply @loop_cps_wf_ind with (T:=T)
+                                     (invariant := fun '(i, s) => invariant i s
+                                                                  /\ (exists k, i = i0 + k * step)
+                                                                  /\ (test i i_final = true
+                                                                      \/ (test i i_final = false
+                                                                          /\ i = i_after_final i0)))
+                                     (measure := fun '(i, s) => S (Z.to_nat ((i_final - i) / upd_i 0)));
+          unfold count_loop_iterations in *;
+          [ try solve [ destruct (test i0 i_final); repeat intuition (auto || omega || exists 0) ]
+          |
+          | omega ].
+        unfold count_loop_iterations.
+        { repeat apply conj; destruct (test i0 i_final); repeat intuition (auto || omega || exists 0).
+          right; split; auto.
+        intros [i st] continue Hinv' IH'.
+        destruct_head'_and.
+        destruct (test i i_final) eqn:Hi;
+          (destruct_head'_or; destruct_head'_and; subst;
+           try congruence; []);
+          [ | solve [ eauto ] ].
+        pose proof (upd_signed _ Hi) as upd_signed'.
+        assert (upd_i 0 <> 0)
+          by (intro H'; rewrite H' in upd_signed'; autorewrite with zsimplify in upd_signed';
+              omega).
+        specialize (IH i st (fun st' => continue (upd_i i, st')) Hi).
+        specialize (fun v pf => IH' (upd_i i, v) pf).
+        cbv beta iota in *.
+        specialize (fun pf v => IH' v pf).
+        rewrite upd_linear in IH'.
+        replace ((i_final - (upd_i 0 + i)) / upd_i 0)
+        with ((i_final - i) / upd_i 0 - 1)
+          in IH'
+          by (Z.div_mod_to_quot_rem; nia).
+        rewrite <- upd_linear, Z2Nat.inj_sub in IH' by omega.
+        assert ((Z.to_nat 0 < Z.to_nat ((i_final - i) / upd_i 0))%nat)
+          by (apply Z2Nat.inj_lt; omega).
+        change (Z.to_nat 0) with 0%nat in *.
+        change (Z.to_nat 1) with 1%nat in *.
+        destruct_head'_ex; subst.
+        specialize_by omega.
+        apply IH; clear IH; auto; [].
+        intros v Hinv'; apply IH'; clear IH'.
+        split; [ assumption | ].
+        rewrite upd_linear.
+        match goal with
+        | [ |- (exists k, ?step + (?i0 + ?x * ?step) = ?i0 + k * ?step) /\ _ ]
+          => split; [ exists (1 + x); nia | ]
+        end.
+        auto with omega.
+      Qed.
+    End lemmas.
+  End with_loop_params.
 End with_for_state.
 
 Delimit Scope for_upd_scope with for_upd.
