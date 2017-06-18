@@ -120,7 +120,7 @@ Definition PostWfBoundsPipeline
           (projT2_map
              (fun b e'
               => let e' := InlineConst e' in
-                 (*let e' := InlineConst (Linearize (SimplifyArith false e')) in
+                 let e' := InlineConst (Linearize (SimplifyArith false e')) in(*
                  let e' := InlineConst (Linearize (SimplifyArith false e')) in
                  let e' := InlineConst (Linearize (SimplifyArith false e')) in
                  let e' := InlineConst (Linearize (SimplifyArith false e')) in
@@ -128,8 +128,8 @@ Definition PostWfBoundsPipeline
                  let e' := InlineConst (Linearize (SimplifyArith false e')) in
                  let e' := InlineConst (Linearize (SimplifyArith false e')) in
                  let e' := InlineConst (Linearize (SimplifyArith false e')) in
-                 let e' := InlineConst (Linearize (SimplifyArith false e')) in
-                 let e' := if opts.(anf) then InlineConst (ANormal e') else e' in*)
+                 let e' := InlineConst (Linearize (SimplifyArith false e')) in*)
+                 let e' := if opts.(anf) then InlineConst (ANormal e') else e' in
                  let e' := ExprEta e' in
                  e'))
           e).
