@@ -6,6 +6,7 @@ Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Util.Sigma Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 
 Local Open Scope ctype_scope.
@@ -73,14 +74,31 @@ Section language.
   Section gen.
     Context (let_bind_op_args : bool).
 
-    Lemma interpf_linearizef_gen {t} e
+    Lemma interpf_linearizef_gen_step
+          {linearizef_gen}
+          (Hlinearizef_gen : forall t e, interpf interp_op (linearizef_gen t e) = interpf interp_op e)
+          {t} e
+      : interpf interp_op (linearizef_gen_step let_bind_op_args linearizef_gen (t:=t) e) = interpf interp_op e.
+    Proof using Type.
+      clear -Hlinearizef_gen.
+      destruct e;
+        repeat match goal with
+               | [ e : exprf _ |- _ ] => unique pose proof (Hlinearizef_gen _ e)
+               | [ e : ?T -> exprf _ |- _ ] => unique pose proof (fun t => Hlinearizef_gen _ (e t))
+               end;
+        clear Hlinearizef_gen;
+        abstract (
+            repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
+                         | progress simpl
+                         | t_fin ]
+          ).
+    Defined.
+
+    Fixpoint interpf_linearizef_gen {t} e
       : interpf interp_op (linearizef_gen let_bind_op_args (t:=t) e) = interpf interp_op e.
     Proof using Type.
-      clear.
-      induction e;
-        repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
-                     | progress simpl
-                     | t_fin ].
+      pose proof (@interpf_linearizef_gen_step _ (@interpf_linearizef_gen) t e) as H.
+      destruct e; exact H.
     Qed.
 
     Local Hint Resolve interpf_linearizef_gen.

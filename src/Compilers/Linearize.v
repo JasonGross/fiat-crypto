@@ -53,7 +53,10 @@ Section language.
         := under_letsf' false e (fun v => match v with inl v => C (SmartVarf v) | inr v => C v end).
     End under_lets.
 
-    Fixpoint linearizef_gen {t} (e : exprf t) : exprf t
+    Definition linearizef_gen_step
+             (linearizef_gen : forall {t} (e : exprf t), exprf t)
+             {t} (e : exprf t)
+      : exprf t
       := match e in Syntax.exprf _ _ t return exprf t with
          | LetIn _ ex _ eC
            => under_letsf (LetIn (@linearizef_gen _ ex) (fun x => @linearizef_gen _ (eC x))) (fun x => x)
@@ -66,6 +69,12 @@ Section language.
          | Pair A ex B ey
            => under_letsf (Pair (@linearizef_gen _ ex) (@linearizef_gen _ ey)) (fun v => v)
          end.
+    Fixpoint linearizef_gen {t} (e : exprf t) : exprf t
+      := @linearizef_gen_step (@linearizef_gen) t e.
+
+    Lemma unfold_linearizef_gen {t} e
+      : linearizef_gen e = @linearizef_gen_step (@linearizef_gen) t e.
+    Proof using Type. destruct e; reflexivity. Qed.
 
     Definition linearize_gen {t} (e : expr t) : expr t
       := match e in Syntax.expr _ _ t return expr t with
@@ -79,6 +88,7 @@ End language.
 
 Global Arguments under_letsf' _ {_ _ _} bind_pairs {_} _ {tC} _.
 Global Arguments under_letsf _ {_ _ _ _} _ {tC} _.
+Global Arguments linearizef_gen_step _ {_ _ _} _ {t} _.
 Global Arguments linearizef_gen _ {_ _ _ _} _.
 Global Arguments linearize_gen _ {_ _ _ _} _.
 Global Arguments Linearize_gen _ {_ _ _} _ var.

@@ -8,6 +8,7 @@ Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 Local Open Scope ctype_scope.
 Section language.
@@ -105,11 +106,11 @@ Section language.
             t_fin idtac.
       Qed.
 
-      Lemma  wff_under_letsf G {t} e1 e2 {tC} eC1 eC2
-             (wf : @wff var1 var2 G t e1 e2)
-             (H' : forall G' (x y : exprf t),
-                 wff (G' ++ G) x y
-                 -> wff (G' ++ G) (eC1 x) (eC2 y))
+      Lemma wff_under_letsf G {t} e1 e2 {tC} eC1 eC2
+            (wf : @wff var1 var2 G t e1 e2)
+            (H' : forall G' (x y : exprf t),
+                wff (G' ++ G) x y
+                -> wff (G' ++ G) (eC1 x) (eC2 y))
         : @wff var1 var2 G tC (under_letsf let_bind_op_args e1 eC1) (under_letsf let_bind_op_args e2 eC2).
       Proof using Type.
         apply wff_under_letsf'; t_fin idtac.
@@ -125,11 +126,32 @@ Section language.
     Section gen2.
       Context (let_bind_op_args : bool).
 
-      Lemma wff_linearizef_gen G {t} e1 e2
+      Lemma wff_linearizef_gen_step
+            {linearizef1 linearizef2}
+            (Hwf_linearizef : forall G t e1 e2,
+                @wff var1 var2 G t e1 e2
+                -> @wff var1 var2 G t (linearizef1 t e1) (linearizef2 t e2))
+            G {t} e1 e2
         : @wff var1 var2 G t e1 e2
-          -> @wff var1 var2 G t (linearizef_gen let_bind_op_args e1) (linearizef_gen let_bind_op_args e2).
+          -> @wff var1 var2 G t (linearizef_gen_step let_bind_op_args linearizef1 e1) (linearizef_gen_step let_bind_op_args linearizef2 e2).
       Proof using Type.
-        induction 1; t_fin ltac:(apply wff_under_letsf).
+        destruct 1;
+          repeat match goal with
+                 | [ H : wff ?G ?e ?e' |- _ ]
+                   => is_var e; is_var e'; unique pose proof (Hwf_linearizef _ _ _ _ H)
+                 | [ H : forall a b, wff (_ ++ ?G) (?e _) (?e' _) |- _ ]
+                   => is_var e; is_var e'; unique pose proof (fun a b => Hwf_linearizef _ _ _ _ (H a b))
+                 end;
+          clear Hwf_linearizef;
+          abstract t_fin ltac:(apply wff_under_letsf).
+      Defined.
+
+      Fixpoint wff_linearizef_gen G {t} e1 e2
+               (Hwf : @wff var1 var2 G t e1 e2)
+        : @wff var1 var2 G t (linearizef_gen let_bind_op_args e1) (linearizef_gen let_bind_op_args e2).
+      Proof using Type.
+        pose proof (@wff_linearizef_gen_step _ _ (@wff_linearizef_gen) G t e1 e2 Hwf) as H.
+        destruct Hwf; exact H.
       Qed.
 
       Local Hint Resolve wff_linearizef_gen.
