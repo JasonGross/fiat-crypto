@@ -23,52 +23,46 @@ Module Import ReifyDebugNotations.
   Open Scope string_scope.
 End ReifyDebugNotations.
 
-Ltac debug_enter_reify_idtac funname e :=
-  let s := (eval compute in (String.append funname ": Attempting to reify:")) in
-  cidtac2 s e.
-Ltac debug_leave_reify_success_idtac funname e :=
-  let s := (eval compute in (String.append funname ": Success in reifying:")) in
-  cidtac2 s e.
-Ltac debug_leave_reify_failure_idtac funname e :=
-  let s := (eval compute in (String.append funname ": Failure in reifying:")) in
-  cfail2 s e.
-Ltac debug_reifyf_case_idtac case :=
-  let s := (eval compute in (String.append "reifyf: " case)) in
-  cidtac s.
+Tactic Notation "debug_enter_reify_idtac" string(funname) uconstr(e)
+  := idtac funname "Attempting to reify:" e.
+Tactic Notation "debug_leave_reify_success_idtac" string(funname) uconstr(e) uconstr(ret)
+  := idtac funname "Success in reifying:" e "as" ret.
+Tactic Notation "debug_leave_reify_failure_idtac" string(funname) uconstr(e)
+  := idtac funname "Failure in reifying:" e.
 Ltac check_debug_level_then_Set _ :=
   let lvl := reify_debug_level in
   lazymatch type of lvl with
   | nat => constr:(Set)
-  | ?T => cfail2 "reify_debug_level should have type nat but instead has type" T
+  | ?T => constr_run_tac ltac:(fun _ => idtac "Error: reify_debug_level should have type nat but instead has type" T)
   end.
+Ltac debug0 tac :=
+  constr_run_tac tac.
 Ltac debug1 tac :=
   let lvl := reify_debug_level in
-  match lvl with
-  | S _ => tac ()
+  lazymatch lvl with
+  | S _ => constr_run_tac tac
   | _ => check_debug_level_then_Set ()
   end.
 Ltac debug2 tac :=
   let lvl := reify_debug_level in
-  match lvl with
-  | S (S _) => tac ()
+  lazymatch lvl with
+  | S (S _) => constr_run_tac tac
   | _ => check_debug_level_then_Set ()
   end.
 Ltac debug3 tac :=
   let lvl := reify_debug_level in
-  match lvl with
-  | S (S (S _)) => tac ()
+  lazymatch lvl with
+  | S (S (S _)) => constr_run_tac tac
   | _ => check_debug_level_then_Set ()
   end.
-Ltac debug_enter_reify2 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
-Ltac debug_leave_reify3_success funname e := debug3 ltac:(fun _ => debug_leave_reify_success_idtac funname e).
-Ltac debug_enter_reify3 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
-Ltac debug_enter_reify_flat_type e := debug_enter_reify3 "reify_flat_type" e.
-Ltac debug_enter_reify_type e := debug_enter_reify3 "reify_type" e.
-Ltac debug_enter_reifyf e := debug_enter_reify2 "reifyf" e.
-Ltac debug_leave_reifyf_success e := debug_leave_reify3_success "reifyf" e.
-Ltac debug_leave_reifyf_failure e := debug_leave_reify_failure_idtac "reifyf" e.
-Ltac debug_reifyf_case case := debug3 ltac:(fun _ => debug_reifyf_case_idtac case).
-Ltac debug_enter_reify_abs e := debug_enter_reify2 "reify_abs" e.
+Ltac debug_enter_reify_flat_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_flat_type:" e).
+Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_type:" e).
+Ltac debug_enter_reifyf e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reifyf:" e).
+Ltac debug_leave_reifyf_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac "reifyf:" e ret).
+Ltac debug_leave_reifyf_failure e := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac "reifyf:" e).
+Tactic Notation "debug_reifyf_case" string(case)
+  := debug3 ltac:(fun _ => idtac "reifyf:" case).
+Ltac debug_enter_reify_abs e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_abs:" e).
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
 Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
@@ -209,12 +203,12 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           let C' := match constr:(Set) with
                     | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                                      (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
-                    | _ => cfail2 "reifyf: Failed to reify by typeclasses:"%string e
+                    | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to reify by typeclasses:" e)
                     end in
           match constr:(Set) with
           | _ => lazymatch C'
                  with fun _ v _ => @?C v => C end
-          | _ => cfail2 "reifyf: Failed to eliminate function dependencies of:"%string C'
+          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to eliminate function dependencies of:" C')
           end
         | match ?ev with pair a b => @?eC a b end =>
           let dummy := debug_reifyf_case "matchpair" in
@@ -308,13 +302,13 @@ Ltac reifyf base_type_code interp_base_type op var e :=
                          let args := let a01 := mkPair a0 a1 in let a012 := mkPair a01 a2 in mkPair a012 a3 in
                          mkOp (@Prod _ (@Prod _ (@Prod _ a0T a1T) a2T) a3T) tR op_code args
                     end
-               | _ => cfail2 "Unsupported number of operation arguments in reifyf:"%string nargs
+               | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: Unsupported number of operation arguments in reifyf:" nargs)
                end
           | reification_unsuccessful
-            => cfail2 "Failed to reify:"%string x
+            => constr_run_tac_fail ltac:(fun _ => idtac "Error: Failed to reify:" x)
           end
         end in
-    let dummy := debug_leave_reifyf_success e in
+    let dummy := debug_leave_reifyf_success e ret in
     ret
   | _ => debug_leave_reifyf_failure e
   end.
@@ -354,12 +348,12 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
       let C' := match constr:(Set) with
                 | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                                  (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
-                | _ => cfail2 "reify_abs: Failed to reify by typeclasses:"%string e
+                | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to reify by typeclasses:" e)
                 end in
       let C := match constr:(Set) with
                | _ => lazymatch C'
                       with fun _ v _ => @?C v => C end
-               | _ => cfail2 "reify_abs: Failed to eliminate function dependencies of:"%string C'
+               | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to eliminate function dependencies of:" C')
                end in
       mkAbs t C
     | ?x =>
@@ -424,7 +418,7 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                   clear;
                   abstract (
                       lazymatch goal with
-                      | [ |- appcontext[@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e] ]
+                      | [ |- context[@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e] ]
                         => let interp_base_type' := (eval hnf in interp_base_type) in
                            let interp_op' := (eval hnf in interp_op) in
                            change interp_base_type with interp_base_type';

@@ -10,14 +10,14 @@ Section language.
 
   Definition ContextOn (Ctx : Context Name1 var) : Context Name2 var
     := {| ContextT := Ctx;
-          lookupb ctx n t := lookupb ctx (f n) t;
-          extendb ctx n t v := extendb ctx (f n) v;
-          removeb ctx n t := removeb ctx (f n) t;
+          lookupb t ctx n := lookupb t ctx (f n);
+          extendb t ctx n v := extendb ctx (f n) v;
+          removeb t ctx n := removeb t ctx (f n);
           empty := empty |}.
 
   Lemma ContextOnOk {Ctx} (COk : ContextOk Ctx) : ContextOk (ContextOn Ctx).
   Proof.
-    split; intros; try apply COk; auto.
+    unfold ContextOn in *; split; intros; try eapply COk; eauto.
   Qed.
 End language.
 

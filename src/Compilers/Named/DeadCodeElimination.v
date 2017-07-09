@@ -20,6 +20,8 @@ Section language.
   Context (base_type_code : Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (Name : Type)
+          {base_type_code_beq : base_type_code -> base_type_code -> bool}
+          (base_type_code_bl : forall t1 t2, base_type_code_beq t1 t2 = true -> t1 = t2)
           {Context : Context Name (fun _ : base_type_code => positive)}.
 
   Local Notation flat_type := (flat_type base_type_code).
@@ -30,15 +32,23 @@ Section language.
   Local Notation nexprf := (@Named.exprf base_type_code op Name).
   Local Notation nexpr := (@Named.expr base_type_code op Name).
 
+  Local Notation PContext var := (@PositiveContext base_type_code var base_type_code_beq base_type_code_bl).
+
+  Definition EliminateDeadCode
+             {t} (e : @Named.expr base_type_code op _ t) (ls : list Name)
+    : option (nexpr t)
+    := Let_In (insert_dead_names (Context:=PositiveContext_nd) None e ls) (* help vm_compute by factoring this out *)
+              (fun names => register_reassign (InContext:=PContext _) (ReverseContext:=Context) Pos.eqb empty empty e names).
+
   Definition CompileAndEliminateDeadCode
              {t} (e : Expr t) (ls : list Name)
     : option (nexpr t)
     := let e := compile (Name:=positive) (e _) (List.map Pos.of_nat (seq 1 (CountBinders e))) in
        match e with
-       | Some e => Let_In (insert_dead_names (Context:=PositiveContext_nd) None e ls) (* help vm_compute by factoring this out *)
-                          (fun names => register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=Context) Pos.eqb empty empty e names)
+       | Some e => EliminateDeadCode e ls
        | None => None
        end.
 End language.
 
-Global Arguments CompileAndEliminateDeadCode {_ _ _ _ t} e ls.
+Global Arguments EliminateDeadCode {_ _ _ _ _ _ t} e ls.
+Global Arguments CompileAndEliminateDeadCode {_ _ _ _ _ _ t} e ls.

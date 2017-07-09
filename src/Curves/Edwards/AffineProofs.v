@@ -1,6 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra.Hierarchy Crypto.Util.Decidable.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult Crypto.Util.Decidable.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
@@ -12,7 +12,7 @@ Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module E.
-  Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
+  Import Group Ring Field CompleteEdwardsCurve.E.
 
   Notation onCurve_zero := Pre.onCurve_zero.
   Notation denominator_nonzero := Pre.denominator_nonzero.
@@ -44,7 +44,7 @@ Module E.
     Local Notation mul   := (E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
 
     Program Definition opp (P:point) : point := (Fopp (fst P), (snd P)).
-    Next Obligation. destruct P as [ [??]?]; cbv; fsatz. Qed.
+    Next Obligation. match goal with P : point |- _ => destruct P as [ [??]?] end; cbv; fsatz. Qed.
 
     Ltac t_step :=
       match goal with
@@ -90,9 +90,6 @@ Module E.
       intros n n'; repeat intro; subst n'.
       induction n; (reflexivity || eapply (_:Proper (eq==>eq==>eq) add); eauto).
     Qed.
-
-    Global Instance mul_is_scalarmult : @is_scalarmult point eq add zero mul.
-    Proof using Type. split; intros; (reflexivity || exact _). Qed.
 
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).
@@ -153,11 +150,11 @@ Module E.
                | _ => progress Option.inversion_option
                end.
         destruct (dec (r = 0)).
-        assert (s = 0); [|solve[setoid_subst_rel Feq; trivial] ].
-        admit.
-        progress rewrite parity_opp in * by assumption.
-        destruct (parity r), p; cbv [negb] in *; congruence.
-      Admitted.
+        { assert (s = 0) by Nsatz.nsatz_power 2%nat.
+          setoid_subst_rel Feq; trivial. }
+        { progress rewrite parity_opp in * by assumption.
+          destruct (parity r), p; cbv [negb] in *; congruence. }
+      Qed.
 
       Local Ltac t_step :=
         match goal with
@@ -202,13 +199,16 @@ Module E.
       Proof.
         cbv [compress decompress exist_option coordinates] in *; intros.
         t.
-        intro.
-        apply (H0 f); [|congruence].
-        admit.
-        intro. Prod.inversion_prod; subst.
-        rewrite solve_correct in y.
-        eapply H. eapply y.
-      Admitted.
+        { intro.
+          match goal with
+          | [ H0 : _ |- False ]
+            => apply (H0 f); [t|congruence]; clear H0
+          end.
+          rewrite solve_correct in y; Nsatz.nsatz_power 2%nat. }
+        { intro. Prod.inversion_prod; subst.
+          rewrite solve_correct in y.
+          eapply H. eapply y. }
+      Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
   Section Homomorphism.

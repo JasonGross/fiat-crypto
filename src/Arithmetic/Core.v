@@ -248,6 +248,7 @@ Require Import Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
+Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
@@ -306,6 +307,10 @@ Definition runtime_and := Z.land.
 Global Notation "a &' b" := (runtime_and a%RT b%RT) : runtime_scope.
 Definition runtime_shr := Z.shiftr.
 Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope.
+Definition runtime_lor := Z.lor.
+Global Arguments runtime_lor (_ _)%RT.
+
+Ltac cbv_runtime := cbv beta delta [runtime_add runtime_and runtime_lor runtime_mul runtime_opp runtime_shr].
 
 Module B.
   Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
@@ -357,7 +362,7 @@ Module B.
     Lemma split_cps_id s p: forall {T} f,
         @split_cps s p T f = f (split s p).
     Proof.
-      induction p;
+      induction p as [|?? IHp];
         repeat match goal with
                | _ => rewrite IHp
                | _ => progress (cbv [split]; prove_id)
@@ -429,7 +434,9 @@ Module B.
       Definition carryterm_cps (w fw:Z) (t:limb) {T} (f:list limb->T) :=
         if dec (fst t = w)
         then dlet t2 := snd t in
-             f ((w*fw, div t2 fw) :: (w, modulo t2 fw) :: @nil limb)
+             dlet d2 := div t2 fw in
+             dlet m2 := modulo t2 fw in
+             f ((w*fw, d2) :: (w, m2) :: @nil limb)
         else f [t].
 
       Definition carryterm w fw t := carryterm_cps w fw t id.
@@ -522,9 +529,9 @@ Module B.
       Proof using Type.
         cbv [eval Associational.eval to_associational_cps zeros].
         pose proof (seq_length n 0). generalize dependent (seq 0 n).
-        intro xs; revert n; induction xs; intros;
+        intro xs; revert n; induction xs as [|?? IHxs]; intros n H;
           [autorewrite with uncps; reflexivity|].
-        intros; destruct n; [distr_length|].
+        destruct n as [|n]; [distr_length|].
         specialize (IHxs n). autorewrite with uncps in *.
         rewrite !@Tuple.to_list_repeat in *.
         simpl List.repeat. rewrite map_cons, combine_cons, map_cons.
@@ -726,6 +733,29 @@ Module B.
             (fun P => Associational.negate_snd_cps P
               (fun R => from_associational_cps n R f)).
 
+        Definition split_cps {n m1 m2} (s:Z) (p : tuple Z n)
+                    {T} (f:(tuple Z m1 * tuple Z m2) -> T) :=
+          to_associational_cps p
+            (fun P => Associational.split_cps s P
+            (fun split_P =>
+              f (from_associational m1 (fst split_P),
+                (from_associational m2 (snd split_P))))).
+
+        Definition scmul_cps {n} (x : Z) (p: tuple Z n)
+                    {T} (f:tuple Z n->T) :=
+          to_associational_cps p
+            (fun P => Associational.mul_cps P [(1, x)]
+            (fun R => from_associational_cps n R f)).
+
+        (* This version of sub does not add balance; bounds must be
+        carefully handled. *)
+        Definition unbalanced_sub_cps {n} (p q: tuple Z n)
+                    {T} (f:tuple Z n->T) :=
+          to_associational_cps p
+            (fun P => to_associational_cps q
+            (fun Q => Associational.negate_snd_cps Q
+            (fun negQ => from_associational_cps n (P ++ negQ) f))).
+
       End Wrappers.
       Hint Unfold
            Positional.add_cps
@@ -733,6 +763,9 @@ Module B.
            Positional.reduce_cps
            Positional.carry_reduce_cps
            Positional.negate_snd_cps
+           Positional.split_cps
+           Positional.scmul_cps
+           Positional.unbalanced_sub_cps
       .
 
       Section Subtraction.
@@ -806,7 +839,7 @@ Module B.
           eval wt (Tuple.left_append (n:=n) x xs)
           = wt n * x + eval wt xs.
       Proof.
-        induction n; intros; try destruct xs;
+        induction n as [|n IHn]; intros wt x xs; try destruct xs;
           unfold Tuple.left_append; fold @Tuple.left_append;
             autorewrite with push_basesystem_eval; [ring|].
         rewrite (Tuple.subst_append xs), Tuple.hd_append, Tuple.tl_append.
@@ -817,8 +850,8 @@ Module B.
       Lemma eval_wt_equiv {n} :forall wta wtb (x:tuple Z n),
           (forall i, wta i = wtb i) -> eval wta x = eval wtb x.
       Proof.
-        destruct n; [reflexivity|].
-        induction n; intros; [rewrite !eval_single, H; reflexivity|].
+        destruct n as [|n]; [reflexivity|].
+        induction n as [|n IHn]; intros wta wtb x H; [rewrite !eval_single, H; reflexivity|].
         simpl tuple in *; destruct x.
         change (t, z) with (Tuple.append (n:=S n) z t).
         rewrite !eval_step. rewrite (H 0%nat). apply Group.cancel_left.
@@ -833,45 +866,52 @@ Module B.
     End EvalHelpers.
 
     Section Select.
-      Context {weight : nat -> Z}
-              {select_single : Z -> Z -> Z}
-              {select_single_correct : forall cond x,
-                  select_single cond x = if dec (cond = 0) then 0 else x}
-      .
-      
-      Definition select_cps {n} cond (p : tuple Z n) {T} (f:_->T) :=
-        Tuple.map_cps (select_single cond) p f.
+      Context {weight : nat -> Z}.
 
-      Definition select {n} cond p := @select_cps n cond p _ id.
-      Lemma select_id {n} cond p T f :
-        @select_cps n cond p T f = f (select cond p).
+      Definition select_cps {n} (mask cond:Z) (p:tuple Z n)
+                 {T} (f:tuple Z n->T) :=
+        dlet t := Z.zselect cond 0 mask in Tuple.map_cps (runtime_and t) p f.
+
+      Definition select {n} mask cond p := @select_cps n mask cond p _ id.
+      Lemma select_id {n} mask cond p T f :
+        @select_cps n mask cond p T f = f (select mask cond p).
       Proof.
-        cbv [select_cps select]. autorewrite with uncps push_id.
-        reflexivity.
+        cbv [select select_cps Let_In]; autorewrite with uncps push_id;
+          reflexivity.
       Qed.
       Hint Opaque select : uncps.
-      Hint Rewrite @select_id : uncps.
 
-      Lemma eval_select {n} cond p :
-        eval weight (@select n cond p) = if dec (cond = 0) then 0 else eval weight p.
+      Lemma map_and_0 {n} (p:tuple Z n) : Tuple.map (Z.land 0) p = zeros n.
       Proof.
-        cbv [select select_cps]; autorewrite with uncps push_id.
-        induction n; [destruct p|].
-        { break_match; reflexivity. }
-        { rewrite (Tuple.subst_left_append p).
-          rewrite Tuple.map_left_append, !eval_left_append.
-          rewrite select_single_correct, IHn.
-          break_match;  ring. }
-      Qed. Hint Rewrite @eval_select : push_basesystem_eval.
+        induction n as [|n IHn]; [destruct p; reflexivity | ].
+        rewrite (Tuple.subst_append p), Tuple.map_append, Z.land_0_l, IHn.
+        reflexivity.
+      Qed.
+
+      Lemma eval_select {n} mask cond x (H:Tuple.map (Z.land mask) x = x) :
+        B.Positional.eval weight (@select n mask cond x) =
+        if dec (cond = 0) then 0 else  B.Positional.eval weight x.
+      Proof.
+        cbv [select select_cps Let_In].
+        autorewrite with uncps push_id.
+        rewrite Z.zselect_correct; break_match.
+        { rewrite map_and_0. apply B.Positional.eval_zeros. }
+        {  change runtime_and with Z.land. rewrite H; reflexivity. }
+      Qed.
+
     End Select.
 
   End Positional.
+
   Hint Unfold
       Positional.add_cps
       Positional.mul_cps
       Positional.reduce_cps
       Positional.carry_reduce_cps
       Positional.negate_snd_cps
+      Positional.split_cps
+      Positional.scmul_cps
+      Positional.unbalanced_sub_cps
       Positional.opp_cps
   .
   Hint Rewrite
@@ -894,6 +934,7 @@ Module B.
        @Positional.eval_single
        @Positional.eval_unit
        @Positional.eval_to_associational
+       @Positional.eval_left_append
        @Associational.eval_carry
        @Associational.eval_carryterm
        @Associational.eval_reduce
@@ -942,40 +983,13 @@ Section DivMod.
   Qed.
 End DivMod.
 
-Section ZSelect.
-
-  Definition mask width cond :=
-    if dec (cond = 0) then 0 else Z.ones width.
-
-  Definition zselect bitwidth (cond x : Z) : Z :=
-    if (dec (x <= 0))
-    then (if dec (cond = 0) then 0 else x)
-    else (let width := Z.max (Z.log2 x + 1) bitwidth in
-          dlet t := mask width cond in x &' t).
-
-  Lemma zselect_correct bw cond x :
-    zselect bw cond x = if dec (cond = 0) then 0 else x.
-  Proof.
-    cbv [zselect mask Let_In]; break_match;
-      rewrite ?Z.land_0_r; try reflexivity; [ ].
-    pose proof (Z.log2_nonneg x).
-    pose proof (Z.log2_spec x) as Hlog2.
-    rewrite <-Z.add_1_r in Hlog2.
-    apply Z.max_case_strong; intros; rewrite Z.land_ones by omega;
-      apply Z.mod_small; split; try omega.
-    apply Z.lt_le_trans with (m:=2 ^ (Z.log2 x + 1));
-      [|apply Z.pow_le_mono_r]; omega.
-  Qed.
-
-End ZSelect.
-
 Import B.
 
 Ltac basesystem_partial_evaluation_RHS :=
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
   (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
-Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
+Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.split_cps Positional.scmul_cps Positional.unbalanced_sub_cps Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
                  ] in t0) in
   let t := (eval pattern @runtime_mul in t) in
   let t := match t with ?t _ => t end in
@@ -1039,6 +1053,16 @@ Ltac replace_match_with_destructuring_match T :=
                              let v := replace_match_with_destructuring_match v in
                              exact v)
                end)
+  | (fun a : ?A => @?f a)
+    => let T' := fresh in
+       let T' := fresh T' in
+       let T' := fresh T' in
+       constr:(fun a : A
+               => match f a with
+                  | T' => ltac:(let v := (eval cbv beta delta [T'] in T') in
+                                let v := replace_match_with_destructuring_match v in
+                                exact v)
+                  end)
   | ?x => x
   end.
 Ltac do_replace_match_with_destructuring_match_in_goal :=

@@ -23,6 +23,7 @@ Lemma pow2_inj_helper x y : 2^x = 2^y -> x = y.
 Proof.
   destruct (NatUtil.nat_eq_dec x y) as [pf|pf]; [ intros; assumption | ].
   intro H; exfalso.
+  let pf := pf in
   abstract (apply pf; eapply NPeano.Nat.pow_inj_r; [ | eassumption ]; omega).
 Defined.
 Lemma pow2_inj_helper_refl x p : pow2_inj_helper x x p = eq_refl.
@@ -43,6 +44,7 @@ Proof.
   intros [pf H]; exists (pow2_inj_helper x y pf); subst v'.
   destruct (NatUtil.nat_eq_dec x y) as [H|H];
     [ | exfalso; clear -pf H;
+        let pf := pf in
         abstract (apply pow2_inj_helper in pf; omega) ].
   subst; rewrite pow2_inj_helper_refl; simpl.
   pose proof (NatUtil.UIP_nat_transparent _ _ pf eq_refl); subst pf.
@@ -99,7 +101,10 @@ Proof.
          | _, _
            => fun x y pf => match _ : False with end
          end;
-    try abstract (rewrite wordT_beq_hetero_type_lb_false in pf by omega; clear -pf; congruence).
+    match goal with
+    | [ pf : _ = _ |- _ ]
+      => abstract (rewrite wordT_beq_hetero_type_lb_false in pf by omega; clear -pf; congruence)
+    end.
 Defined.
 
 Lemma ZToWord_gen_wordToZ_gen : forall {sz} v, ZToWord_gen (@wordToZ_gen sz v) = v.
@@ -123,7 +128,7 @@ Qed.
 Lemma wordToZ_gen_ZToWord_gen_mod : forall {sz} w, (0 <= w)%Z -> wordToZ_gen (@ZToWord_gen sz w) = (w mod (2^Z.of_nat sz))%Z.
 Proof.
   unfold ZToWord_gen, wordToZ_gen.
-  intros.
+  intros sz w H.
   rewrite wordToN_NToWord_mod.
   rewrite N2Z.inj_mod by (destruct sz; simpl; congruence).
   rewrite Z2N.id, N2Z.inj_pow, nat_N_Z by assumption.
@@ -181,6 +186,18 @@ Proof.
   unfold ZToWord_gen, wordToZ_gen; intro H.
   rewrite N2Z.id, wordToN_NToWord_wordToN by omega.
   reflexivity.
+Qed.
+
+Lemma eq_ZToWord_gen : forall {sz} v1 v2, (Z.max 0 v1 mod 2^Z.of_nat sz = Z.max 0 v2 mod 2^Z.of_nat sz)%Z
+                                          <-> @ZToWord_gen sz v1 = @ZToWord_gen sz v2.
+Proof.
+  intros; split; intro H.
+  { rewrite <- (ZToWord_gen_wordToZ_gen (ZToWord_gen v1)), <- (ZToWord_gen_wordToZ_gen (ZToWord_gen v2)).
+    rewrite !wordToZ_gen_ZToWord_gen_mod_full.
+    congruence. }
+  { apply (f_equal wordToZ_gen) in H; revert H.
+    rewrite !wordToZ_gen_ZToWord_gen_mod_full.
+    trivial. }
 Qed.
 
 Lemma ZToWord_wordToZ : forall {sz} v, ZToWord (@wordToZ sz v) = v.
@@ -255,6 +272,13 @@ Lemma wordToZ_ZToWord_mod_full : forall {sz} w, wordToZ (@ZToWord sz w) = ((Z.ma
 Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros sz w; break_match; apply wordToZ_gen_ZToWord_gen_mod_full.
+Qed.
+
+Lemma eq_ZToWord : forall {sz} v1 v2, (Z.max 0 v1 mod 2^Z.of_nat (2^sz) = Z.max 0 v2 mod 2^Z.of_nat (2^sz))%Z
+                                      <-> @ZToWord sz v1 = @ZToWord sz v2.
+Proof.
+  unfold ZToWord, word_case_dep.
+  intros sz v1 v2; break_innermost_match; apply eq_ZToWord_gen.
 Qed.
 
 Local Ltac wordToZ_word_case_dep_t :=

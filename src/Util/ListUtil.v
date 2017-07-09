@@ -7,6 +7,8 @@ Require Import Crypto.Util.NatUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 
 Create HintDb distr_length discriminated.
 Create HintDb simpl_set_nth discriminated.
@@ -17,6 +19,10 @@ Create HintDb simpl_firstn discriminated.
 Create HintDb simpl_skipn discriminated.
 Create HintDb simpl_fold_right discriminated.
 Create HintDb simpl_sum_firstn discriminated.
+Create HintDb push_map discriminated.
+Create HintDb push_flat_map discriminated.
+Create HintDb push_fold_right discriminated.
+Create HintDb push_partition discriminated.
 Create HintDb pull_nth_error discriminated.
 Create HintDb push_nth_error discriminated.
 Create HintDb pull_nth_default discriminated.
@@ -68,16 +74,50 @@ Module Export List.
     Variables (A : Type) (B : Type).
     Variable f : A -> B.
 
+    Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
+    Proof. reflexivity. Qed.
     Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
     Proof using Type.
       reflexivity.
     Qed.
   End Map.
+  Hint Rewrite @map_cons @map_nil : push_map.
+
+  Section FlatMap.
+    Lemma flat_map_nil {A B} (f:A->list B) : List.flat_map f (@nil A) = nil.
+    Proof. reflexivity. Qed.
+    Lemma flat_map_cons {A B} (f:A->list B) x xs :
+      (List.flat_map f (x::xs) = (f x++List.flat_map f xs))%list.
+    Proof. reflexivity. Qed.
+  End FlatMap.
+  Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
+
+  Section FoldRight.
+    Context {A B} (f:B->A->A).
+    Lemma fold_right_nil : forall {A B} (f:B->A->A) a,
+        List.fold_right f a nil = a.
+    Proof. reflexivity. Qed.
+    Lemma fold_right_cons : forall a b bs,
+      fold_right f a (b::bs) = f b (fold_right f a bs).
+    Proof. reflexivity. Qed.
+  End FoldRight.
+  Hint Rewrite @fold_right_nil @fold_right_cons : simpl_fold_right push_fold_right.
+
+  Section Partition.
+    Lemma partition_nil {A} (f:A->_) : partition f nil = (nil, nil).
+    Proof. reflexivity.                                         Qed.
+    Lemma partition_cons {A} (f:A->_) x xs : partition f (x::xs) =
+                                             if f x
+                                             then (x :: (fst (partition f xs)), (snd (partition f xs)))
+                                             else ((fst (partition f xs)), x :: (snd (partition f xs))).
+    Proof. cbv [partition]; break_match; reflexivity.           Qed.
+  End Partition.
+  Hint Rewrite @partition_nil @partition_cons : push_partition.
 
   Lemma in_seq len start n :
     In n (seq start len) <-> start <= n < start+len.
   Proof.
-   revert start. induction len; simpl; intros.
+   revert start. induction len as [|len IHlen]; simpl; intros.
    - rewrite <- plus_n_O. split;[easy|].
      intros (H,H'). apply (Lt.lt_irrefl _ (Lt.le_lt_trans _ _ _ H H')).
    - rewrite IHlen, <- plus_n_Sm; simpl; split.
@@ -136,7 +176,7 @@ Module Export List.
 
     Lemma firstn_all2 n: forall (l:list A), (length l) <= n -> firstn n l = l.
     Proof using Type. induction n as [|k iHk].
-           - intro. inversion 1 as [H1|?].
+           - intro l. inversion 1 as [H1|?].
              rewrite (length_zero_iff_nil l) in H1. subst. now simpl.
            - destruct l as [|x xs]; simpl.
              * now reflexivity.
@@ -157,7 +197,7 @@ Module Export List.
           n <= length l -> length (firstn n l) = n.
     Proof using Type. induction l as [|x xs Hrec].
            - simpl. intros n H. apply le_n_0_eq in H. rewrite <- H. now simpl.
-           - destruct n.
+           - destruct n as [|n].
              * now simpl.
              * simpl. intro H. apply le_S_n in H. now rewrite (Hrec n H).
     Qed.
@@ -252,7 +292,7 @@ Ltac boring :=
   simpl; intuition auto with zarith datatypes;
   repeat match goal with
            | [ H : _ |- _ ] => rewrite H; clear H
-           | [ |- appcontext[match ?pf with end] ] => solve [ case pf ]
+           | [ |- context[match ?pf with end] ] => solve [ case pf ]
            | _ => progress autounfold in *
            | _ => progress autorewrite with core
            | _ => progress simpl in *
@@ -318,26 +358,26 @@ Lemma nth_error_seq : forall i start len,
   if lt_dec i len
   then Some (start + i)
   else None.
-  induction i; destruct len; nth_tac'; erewrite IHi; nth_tac'.
+  induction i as [|? IHi]; destruct len; nth_tac'; erewrite IHi; nth_tac'.
 Qed.
 
 Lemma nth_error_error_length : forall A i (xs:list A), nth_error xs i = None ->
   i >= length xs.
 Proof.
-  induction i; destruct xs; nth_tac'; try specialize (IHi _ H); omega.
+  induction i as [|? IHi]; destruct xs; nth_tac'; try match goal with H : _ |- _ => specialize (IHi _ H) end; omega.
 Qed.
 
 Lemma nth_error_value_length : forall A i (xs:list A) x, nth_error xs i = Some x ->
   i < length xs.
 Proof.
-  induction i; destruct xs; nth_tac'; try specialize (IHi _ _ H); omega.
+  induction i as [|? IHi]; destruct xs; nth_tac'; try match goal with H : _ |- _ => specialize (IHi _ _ H) end; omega.
 Qed.
 
 Lemma nth_error_length_error : forall A i (xs:list A),
   i >= length xs ->
   nth_error xs i = None.
 Proof.
-  induction i; destruct xs; nth_tac'; rewrite IHi by omega; auto.
+  induction i as [|? IHi]; destruct xs; nth_tac'; rewrite IHi by omega; auto.
 Qed.
 Hint Resolve nth_error_length_error.
 Hint Rewrite @nth_error_length_error using omega : simpl_nth_error.
@@ -345,29 +385,14 @@ Hint Rewrite @nth_error_length_error using omega : simpl_nth_error.
 Lemma map_nth_default : forall (A B : Type) (f : A -> B) n x y l,
   (n < length l) -> nth_default y (map f l) n = f (nth_default x l n).
 Proof.
-  intros.
+  intros A B f n x y l H.
   unfold nth_default.
   erewrite map_nth_error.
   reflexivity.
   nth_tac'.
+  let H0 := match goal with H0 : _ = None |- _ => H0 end in
   pose proof (nth_error_error_length A n l H0).
   omega.
-Qed.
-
-Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
-Proof. reflexivity. Qed.
-
-(* Note: this is a duplicate of a lemma that exists in 8.5, included for
-   8.4 support *)
-Lemma In_nth : forall {A} (x : A) d xs, In x xs ->
-  exists i, i < length xs /\ nth i xs d = x.
-Proof.
-  induction xs; intros;
-    match goal with H : In _ _ |- _ => simpl in H; destruct H end.
-  + subst. exists 0. simpl; split; auto || omega.
-  + destruct IHxs as [i [ ]]; auto.
-    exists (S i).
-    split; auto; simpl; try omega.
 Qed.
 
 Hint Rewrite @map_nth_default using omega : push_nth_default.
@@ -423,7 +448,7 @@ Lemma update_nth_ext {T} f g n
   : forall xs, (forall x, nth_error xs n = Some x -> f x = g x)
                -> @update_nth T n f xs = @update_nth T n g xs.
 Proof.
-  induction n; destruct xs; simpl; intros H;
+  induction n as [|n IHn]; destruct xs; simpl; intros H;
     try rewrite IHn; try rewrite H;
       try congruence; trivial.
 Qed.
@@ -436,7 +461,7 @@ Lemma update_nth_id_eq_specific {T} f n
   : forall (xs : list T) (H : forall x, nth_error xs n = Some x -> f x = x),
     update_nth n f xs = xs.
 Proof.
-  induction n; destruct xs; simpl; intros;
+  induction n as [|n IHn]; destruct xs; simpl; intros H;
     try rewrite IHn; try rewrite H; unfold value in *;
       try congruence; assumption.
 Qed.
@@ -461,7 +486,7 @@ Lemma nth_update_nth : forall m {T} (xs:list T) (n:nat) (f:T -> T),
   then option_map f (nth_error xs n)
   else nth_error xs n.
 Proof.
-  induction m.
+  induction m as [|? IHm].
   { destruct n, xs; auto. }
   { destruct xs, n; intros; simpl; auto;
       [ | rewrite IHm ]; clear IHm;
@@ -478,28 +503,13 @@ Qed.
 
 Hint Rewrite @length_update_nth : distr_length.
 
-(** TODO: this is in the stdlib in 8.5; remove this when we move to 8.5-only *)
-Lemma nth_error_None : forall (A : Type) (l : list A) (n : nat), nth_error l n = None <-> length l <= n.
-Proof.
-  intros A l n.
-  destruct (le_lt_dec (length l) n) as [H|H];
-    split; intro H';
-      try omega;
-      try (apply nth_error_length_error in H; tauto);
-      try (apply nth_error_error_length in H'; omega).
-Qed.
-
-(** TODO: this is in the stdlib in 8.5; remove this when we move to 8.5-only *)
-Lemma nth_error_Some : forall (A : Type) (l : list A) (n : nat), nth_error l n <> None <-> n < length l.
-Proof. intros; rewrite nth_error_None; split; omega. Qed.
-
 Lemma nth_set_nth : forall m {T} (xs:list T) (n:nat) x,
   nth_error (set_nth m x xs) n =
   if eq_nat_dec n m
   then (if lt_dec n (length xs) then Some x else None)
   else nth_error xs n.
 Proof.
-  intros; unfold set_nth; rewrite nth_update_nth.
+  intros m T xs n x; unfold set_nth; rewrite nth_update_nth.
   destruct (nth_error xs n) eqn:?, (lt_dec n (length xs)) as [p|p];
     rewrite <- nth_error_Some in p;
     solve [ reflexivity
@@ -522,7 +532,7 @@ Qed.
 Lemma nth_error_length_not_error : forall {A} (i : nat) (xs : list A),
   nth_error xs i = None -> (i < length xs)%nat -> False.
 Proof.
-  intros.
+  intros A i xs H H0.
   destruct (nth_error_length_exists_value i xs); intuition; congruence.
 Qed.
 
@@ -540,7 +550,7 @@ Proof. auto. Qed.
 Lemma destruct_repeat : forall {A} xs y, (forall x : A, In x xs -> x = y) ->
   xs = nil \/ exists xs', xs = y :: xs' /\ (forall x : A, In x xs' -> x = y).
 Proof.
-  destruct xs; intros; try tauto.
+  destruct xs as [|? xs]; intros; try tauto.
   right.
   exists xs; split.
   + f_equal; auto using in_eq.
@@ -590,7 +600,7 @@ Lemma update_nth_equiv_splice_nth: forall {T} n f (xs:list T),
        end
   else xs.
 Proof.
-  induction n; destruct xs; intros;
+  induction n as [|? IHn]; destruct xs; intros;
     autorewrite with simpl_update_nth simpl_nth_default in *; simpl in *;
       try (erewrite IHn; clear IHn); auto.
   repeat break_match; remove_nth_error; try reflexivity; try omega.
@@ -601,17 +611,17 @@ Lemma splice_nth_equiv_set_nth : forall {T} n x (xs:list T),
   if lt_dec n (length xs)
   then set_nth n x xs
   else xs ++ x::nil.
-Proof. intros; rewrite splice_nth_equiv_update_nth with (f := fun _ => x); auto. Qed.
+Proof. intros T n x xs; rewrite splice_nth_equiv_update_nth with (f := fun _ => x); auto. Qed.
 
 Lemma splice_nth_equiv_set_nth_set : forall {T} n x (xs:list T),
   n < length xs ->
   splice_nth n x xs = set_nth n x xs.
-Proof. intros; rewrite splice_nth_equiv_update_nth_update with (f := fun _ => x); auto. Qed.
+Proof. intros T n x xs H; rewrite splice_nth_equiv_update_nth_update with (f := fun _ => x); auto. Qed.
 
 Lemma splice_nth_equiv_set_nth_snoc : forall {T} n x (xs:list T),
   n >= length xs ->
   splice_nth n x xs = xs ++ x::nil.
-Proof. intros; rewrite splice_nth_equiv_update_nth_snoc with (f := fun _ => x); auto. Qed.
+Proof. intros T n x xs H; rewrite splice_nth_equiv_update_nth_snoc with (f := fun _ => x); auto. Qed.
 
 Lemma set_nth_equiv_splice_nth: forall {T} n x (xs:list T),
   set_nth n x xs =
@@ -619,7 +629,7 @@ Lemma set_nth_equiv_splice_nth: forall {T} n x (xs:list T),
   then splice_nth n x xs
   else xs.
 Proof.
-  intros; unfold set_nth; rewrite update_nth_equiv_splice_nth with (f := fun _ => x); auto.
+  intros T n x xs; unfold set_nth; rewrite update_nth_equiv_splice_nth with (f := fun _ => x); auto.
   repeat break_match; remove_nth_error; trivial.
 Qed.
 
@@ -627,13 +637,13 @@ Lemma combine_update_nth : forall {A B} n f g (xs:list A) (ys:list B),
   combine (update_nth n f xs) (update_nth n g ys) =
   update_nth n (fun xy => (f (fst xy), g (snd xy))) (combine xs ys).
 Proof.
-  induction n; destruct xs, ys; simpl; try rewrite IHn; reflexivity.
+  induction n as [|? IHn]; destruct xs, ys; simpl; try rewrite IHn; reflexivity.
 Qed.
 
 (* grumble, grumble, [rewrite] is bad at inferring the identity function, and constant functions *)
 Ltac rewrite_rev_combine_update_nth :=
   let lem := match goal with
-             | [ |- appcontext[update_nth ?n (fun xy => (@?f xy, @?g xy)) (combine ?xs ?ys)] ]
+             | [ |- context[update_nth ?n (fun xy => (@?f xy, @?g xy)) (combine ?xs ?ys)] ]
                => let f := match (eval cbv [fst] in (fun y x => f (x, y))) with
                            | fun _ => ?f => f
                            end in
@@ -669,7 +679,7 @@ Lemma combine_set_nth : forall {A B} n (x:A) xs (ys:list B),
     | Some y => set_nth n (x,y) (combine xs ys)
     end.
 Proof.
-  intros; unfold set_nth; rewrite combine_update_nth_l.
+  intros A B n x xs ys; unfold set_nth; rewrite combine_update_nth_l.
   nth_tac;
     [ repeat rewrite_rev_combine_update_nth; apply f_equal2
     | assert (nth_error (combine xs ys) n = None)
@@ -686,15 +696,15 @@ Qed.
 Lemma In_nth_error_value : forall {T} xs (x:T),
   In x xs -> exists n, nth_error xs n = Some x.
 Proof.
-  induction xs; nth_tac; destruct_head or; subst.
+  induction xs as [|?? IHxs]; nth_tac; destruct_head or; subst.
   - exists 0; reflexivity.
-  - edestruct IHxs; eauto. exists (S x0). eauto.
+  - edestruct IHxs as [x0]; eauto. exists (S x0). eauto.
 Qed.
 
 Lemma nth_value_index : forall {T} i xs (x:T),
   nth_error xs i = Some x -> In i (seq 0 (length xs)).
 Proof.
-  induction i; destruct xs; nth_tac; right.
+  induction i as [|? IHi]; destruct xs; nth_tac; right.
   rewrite <- seq_shift; apply in_map; eapply IHi; eauto.
 Qed.
 
@@ -703,7 +713,7 @@ Lemma nth_error_app : forall {T} n (xs ys:list T), nth_error (xs ++ ys) n =
   then nth_error xs n
   else nth_error ys (n - length xs).
 Proof.
-  induction n; destruct xs; nth_tac;
+  induction n as [|n IHn]; destruct xs as [|? xs]; nth_tac;
     rewrite IHn; destruct (lt_dec n (length xs)); trivial; omega.
 Qed.
 
@@ -712,7 +722,7 @@ Lemma nth_default_app : forall {T} n x (xs ys:list T), nth_default x (xs ++ ys) 
   then nth_default x xs n
   else nth_default x ys (n - length xs).
 Proof.
-  intros.
+  intros T n x xs ys.
   unfold nth_default.
   rewrite nth_error_app.
   destruct (lt_dec n (length xs)); auto.
@@ -738,6 +748,17 @@ Lemma combine_app_samelength : forall {A B} (xs xs':list A) (ys ys':list B),
 Proof.
   induction xs, xs', ys, ys'; boring; omega.
 Qed.
+
+Lemma map_fst_combine {A B} (xs:list A) (ys:list B) : List.map fst (List.combine xs ys) = List.firstn (length ys) xs.
+Proof.
+  revert xs; induction ys; destruct xs; simpl; solve [ trivial | congruence ].
+Qed.
+
+Lemma map_snd_combine {A B} (xs:list A) (ys:list B) : List.map snd (List.combine xs ys) = List.firstn (length xs) ys.
+Proof.
+  revert xs; induction ys; destruct xs; simpl; solve [ trivial | congruence ].
+Qed.
+Hint Rewrite @map_fst_combine @map_snd_combine : push_map.
 
 Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
 Proof. destruct n; auto. Qed.
@@ -870,14 +891,6 @@ Qed.
 
 Hint Rewrite @skipn_length : distr_length.
 
-Lemma fold_right_cons : forall {A B} (f:B->A->A) a b bs,
-  fold_right f a (b::bs) = f b (fold_right f a bs).
-Proof.
-  reflexivity.
-Qed.
-
-Hint Rewrite @fold_right_cons : simpl_fold_right.
-
 Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
   reflexivity.
 Qed.
@@ -952,7 +965,7 @@ Lemma list012 : forall {T} (xs:list T),
   \/ (exists x, xs = x::nil)
   \/ (exists x xs' y, xs = x::xs'++y::nil).
 Proof.
-  destruct xs; auto.
+  destruct xs as [|? xs]; auto.
   right.
   destruct xs using rev_ind. {
     left; eexists; auto.
@@ -1017,7 +1030,7 @@ Hint Rewrite @set_nth_nil : simpl_set_nth.
 Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
  skipn n us = nth_default d us n :: skipn (S n) us.
 Proof.
-  induction n; destruct us; intros; nth_tac.
+  induction n as [|n IHn]; destruct us as [|? us]; intros d H; nth_tac.
   rewrite (IHn us d) at 1 by omega.
   nth_tac.
 Qed.
@@ -1025,10 +1038,13 @@ Qed.
 Lemma nth_default_out_of_bounds : forall {T} n us (d : T), (n >= length us)%nat ->
   nth_default d us n = d.
 Proof.
-  induction n; unfold nth_default; nth_tac; destruct us; nth_tac.
+  induction n as [|n IHn]; unfold nth_default; nth_tac;
+    let us' := match goal with us : list _ |- _ => us end in
+    destruct us' as [|? us]; nth_tac.
   assert (n >= length us)%nat by omega.
-  pose proof (nth_error_length_error _ n us H1).
-  rewrite H0 in H2.
+  pose proof (nth_error_length_error _ n us).
+  specialize_by_assumption.
+  rewrite_hyp * in *.
   congruence.
 Qed.
 
@@ -1131,12 +1147,12 @@ Hint Rewrite @map_nth_default_always : push_nth_default.
 
 Lemma map_S_seq {A} (f:nat->A) len : forall start,
   List.map (fun i => f (S i)) (seq start len) = List.map f (seq (S start) len).
-Proof. induction len; intros; simpl; rewrite ?IHlen; reflexivity. Qed.
+Proof. induction len as [|len IHlen]; intros; simpl; rewrite ?IHlen; reflexivity. Qed.
 
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
 Proof.
-  induction l; intros; simpl; try tauto.
+  induction l as [|?? IHl]; intros; simpl; try tauto.
   rewrite <- IHl.
   intuition (subst; auto).
 Qed.
@@ -1145,7 +1161,7 @@ Lemma fold_right_invariant : forall {A B} P (f: A -> B -> B) l x,
   P x -> (forall y, In y l -> forall z, P z -> P (f y z)) ->
   P (fold_right f x l).
 Proof.
-  induction l; intros ? ? step; auto.
+  induction l as [|a l IHl]; intros ? ? step; auto.
   simpl.
   apply step; try apply in_eq.
   apply IHl; auto.
@@ -1167,7 +1183,7 @@ Qed.
 Lemma In_firstn_skipn_split {T} n (x : T)
   : forall l, In x l <-> In x (firstn n l) \/ In x (skipn n l).
 Proof.
-  split; revert l; induction n; destruct l; boring.
+  intro l; split; revert l; induction n; destruct l; boring.
   match goal with
   | [ IH : forall l, In ?x l -> _ \/ _, H' : In ?x ?ls |- _ ]
     => destruct (IH _ H')
@@ -1177,7 +1193,7 @@ Qed.
 Lemma firstn_firstn_min : forall {A} m n (l : list A),
     firstn n (firstn m l) = firstn (min n m) l.
 Proof.
-  induction m; destruct n; intros; try omega; auto.
+  induction m as [|? IHm]; destruct n; intros l; try omega; auto.
   destruct l; auto.
   simpl.
   f_equal.
@@ -1187,7 +1203,7 @@ Qed.
 Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
   firstn n (firstn m l) = firstn n l.
 Proof.
-  intros; rewrite firstn_firstn_min.
+  intros A m n l H; rewrite firstn_firstn_min.
   apply Min.min_case_strong; intro; [ reflexivity | ].
   assert (n = m) by omega; subst; reflexivity.
 Qed.
@@ -1197,7 +1213,7 @@ Hint Rewrite @firstn_firstn using omega : push_firstn.
 Lemma firstn_succ : forall {A} (d : A) n l, (n < length l)%nat ->
   firstn (S n) l = (firstn n l) ++ nth_default d l n :: nil.
 Proof.
-  induction n; destruct l; rewrite ?(@nil_length0 A); intros; try omega.
+  intros A d; induction n as [|? IHn]; destruct l; rewrite ?(@nil_length0 A); intros; try omega.
   + rewrite nth_default_cons; auto.
   + simpl.
     rewrite nth_default_cons_S.
@@ -1208,20 +1224,20 @@ Qed.
 Lemma firstn_seq k a b
   : firstn k (seq a b) = seq a (min k b).
 Proof.
-  revert k a; induction b, k; simpl; try reflexivity.
+  revert k a; induction b as [|? IHb], k; simpl; try reflexivity.
   intros; rewrite IHb; reflexivity.
 Qed.
 
 Lemma skipn_seq k a b
   : skipn k (seq a b) = seq (k + a) (b - k).
 Proof.
-  revert k a; induction b, k; simpl; try reflexivity.
+  revert k a; induction b as [|? IHb], k; simpl; try reflexivity.
   intros; rewrite IHb; simpl; f_equal; omega.
 Qed.
 
 Lemma update_nth_out_of_bounds : forall {A} n f xs, n >= length xs -> @update_nth A n f xs = xs.
 Proof.
-  induction n; destruct xs; simpl; try congruence; try omega; intros.
+  induction n as [|n IHn]; destruct xs; simpl; try congruence; try omega; intros.
   rewrite IHn by omega; reflexivity.
 Qed.
 
@@ -1235,8 +1251,8 @@ Lemma update_nth_nth_default_full : forall {A} (d:A) n f l i,
     else nth_default d l i
   else d.
 Proof.
-  induction n; (destruct l; simpl in *; [ intros; destruct i; simpl; try reflexivity; omega | ]);
-    intros; repeat break_match; subst; try destruct i;
+  induction n as [|n IHn]; (destruct l; simpl in *; [ intros i **; destruct i; simpl; try reflexivity; omega | ]);
+    intros i **; repeat break_match; subst; try destruct i;
       repeat first [ progress break_match
                    | progress subst
                    | progress boring
@@ -1273,7 +1289,7 @@ Hint Rewrite @set_nth_nth_default using (omega || distr_length; omega) : push_nt
 Lemma nth_default_preserves_properties : forall {A} (P : A -> Prop) l n d,
   (forall x, In x l -> P x) -> P d -> P (nth_default d l n).
 Proof.
-  intros; rewrite nth_default_eq.
+  intros A P l n d H H0; rewrite nth_default_eq.
   destruct (nth_in_or_default n l d); auto.
   congruence.
 Qed.
@@ -1282,7 +1298,7 @@ Lemma nth_default_preserves_properties_length_dep :
   forall {A} (P : A -> Prop) l n d,
   (forall x, In x l -> n < (length l) -> P x) -> ((~ n < length l) -> P d) -> P (nth_default d l n).
 Proof.
-  intros.
+  intros A P l n d H H0.
   destruct (lt_dec n (length l)).
   + rewrite nth_default_eq; auto using nth_In.
   + rewrite nth_default_out_of_bounds by omega.
@@ -1300,7 +1316,7 @@ Qed.
 Lemma nth_error_exists_first : forall {T} l (x : T) (H : nth_error l 0 = Some x),
   exists l', l = x :: l'.
 Proof.
-  induction l; try discriminate; eexists.
+  induction l; try discriminate; intros x H; eexists.
   apply nth_error_first in H.
   subst; eauto.
 Qed.
@@ -1308,7 +1324,7 @@ Qed.
 Lemma list_elementwise_eq : forall {T} (l1 l2 : list T),
   (forall i, nth_error l1 i = nth_error l2 i) -> l1 = l2.
 Proof.
-  induction l1, l2; intros; try reflexivity;
+  induction l1, l2; intros H; try reflexivity;
     pose proof (H 0%nat) as Hfirst; simpl in Hfirst; inversion Hfirst.
   f_equal.
   apply IHl1.
@@ -1337,7 +1353,7 @@ Hint Rewrite @sum_firstn_all using omega : simpl_sum_firstn.
 Lemma sum_firstn_succ_default : forall l i,
   sum_firstn l (S i) = (nth_default 0 l i + sum_firstn l i)%Z.
 Proof.
-  unfold sum_firstn; induction l, i;
+  unfold sum_firstn; induction l as [|a l IHl], i;
     intros; autorewrite with simpl_nth_default simpl_firstn simpl_fold_right in *;
       try reflexivity.
   rewrite IHl; omega.
@@ -1404,7 +1420,7 @@ Hint Resolve sum_firstn_nonnegative : znonzero.
 Lemma sum_firstn_app : forall xs ys n,
   sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
 Proof.
-  induction xs; simpl.
+  induction xs as [|a xs IHxs]; simpl.
   { intros ys n; autorewrite with simpl_sum_firstn; simpl.
     f_equal; omega. }
   { intros ys [|n]; autorewrite with simpl_sum_firstn; simpl; [ reflexivity | ].
@@ -1428,7 +1444,7 @@ Proof. reflexivity. Qed.
 Lemma nth_error_skipn : forall {A} n (l : list A) m,
 nth_error (skipn n l) m = nth_error l (n + m).
 Proof.
-induction n; destruct l; boring.
+induction n as [|n IHn]; destruct l; boring.
 apply nth_error_nil_error.
 Qed.
 Hint Rewrite @nth_error_skipn : push_nth_error.
@@ -1450,11 +1466,19 @@ induction m; intros.
     omega.
 Qed.
 
+Lemma nth_default_seq_inbounds d s n i (H:(i < n)%nat) :
+  List.nth_default d (List.seq s n) i = (s+i)%nat.
+Proof.
+  progress cbv [List.nth_default].
+  rewrite nth_error_seq.
+  break_innermost_match; solve [ trivial | omega ].
+Qed.
+Hint Rewrite @nth_default_seq_inbounds using lia : push_nth_default.
 
 Lemma sum_firstn_prefix_le' : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
                                             (sum_firstn l n <= sum_firstn l (n + m))%Z.
 Proof.
-intros.
+intros l n m H.
 rewrite sum_firstn_skipn.
 pose proof (sum_firstn_nonnegative m (skipn n l)) as Hskipn_nonneg.
 match type of Hskipn_nonneg with
@@ -1468,7 +1492,7 @@ Lemma sum_firstn_prefix_le : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
                                             (n <= m)%nat ->
                                             (sum_firstn l n <= sum_firstn l m)%Z.
 Proof.
-intros.
+intros l n m H H0.
 replace m with (n + (m - n))%nat by omega.
 auto using sum_firstn_prefix_le'.
 Qed.
@@ -1478,17 +1502,17 @@ Lemma sum_firstn_pos_lt_succ : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
                                         (sum_firstn l n < sum_firstn l (S m))%Z ->
                                         (n <= m)%nat.
 Proof.
-intros.
+intros l n m H H0 H1.
 destruct (le_dec n m); auto.
 replace n with (m + (n - m))%nat in H1 by omega.
 rewrite sum_firstn_skipn in H1.
 rewrite sum_firstn_succ_default in *.
-match goal with H : (?a + ?b < ?c + ?a)%Z |- _ => assert (b < c)%Z by omega end.
+match goal with H : (?a + ?b < ?c + ?a)%Z |- _ => assert (H2 : (b < c)%Z) by omega end.
 destruct (lt_dec m (length l)). {
     rewrite skipn_nth_default with (d := 0%Z) in H2 by assumption.
     replace (n - m)%nat with (S (n - S m))%nat in H2 by omega.
     rewrite sum_firstn_succ_cons in H2.
-    pose proof (sum_firstn_nonnegative (n - S m) (skipn (S m) l)).
+    pose proof (sum_firstn_nonnegative (n - S m) (skipn (S m) l)) as H3.
     match type of H3 with
       ?P -> _ => assert P as Q; [ | specialize (H3 Q); omega ] end.
     intros ? A.
@@ -1522,7 +1546,7 @@ Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
     then f (nth_default d1 ls1 i) (nth_default d2 ls2 i)
     else d.
 Proof.
-  induction ls1, ls2.
+  induction ls1 as [|a ls1 IHls1], ls2.
   + cbv [map2 length min].
     intros.
     break_match; try omega.
@@ -1539,7 +1563,7 @@ Proof.
     destruct i.
     - intros. rewrite !nth_default_cons.
       break_match; auto; omega.
-    - intros. rewrite !nth_default_cons_S.
+    - intros d d1 d2. rewrite !nth_default_cons_S.
       rewrite IHls1 with (d1 := d1) (d2 := d2).
       repeat break_match; auto; omega.
 Qed.
@@ -1564,10 +1588,10 @@ Qed.
 Local Hint Resolve map2_nil_r map2_nil_l.
 
 Ltac simpl_list_lengths := repeat match goal with
-                                  | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
-                                  | H : appcontext[length (_ :: _)] |- _ => rewrite length_cons in H
-                                  | |- appcontext[length (@nil ?A)] => rewrite (@nil_length0 A)
-                                  | |- appcontext[length (_ :: _)] => rewrite length_cons
+                                  | H : context[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
+                                  | H : context[length (_ :: _)] |- _ => rewrite length_cons in H
+                                  | |- context[length (@nil ?A)] => rewrite (@nil_length0 A)
+                                  | |- context[length (_ :: _)] => rewrite length_cons
                                   end.
 
 Section OpaqueMap2.
@@ -1576,7 +1600,7 @@ Section OpaqueMap2.
   Lemma map2_length : forall A B C (f : A -> B -> C) ls1 ls2,
       length (map2 f ls1 ls2) = min (length ls1) (length ls2).
   Proof.
-    induction ls1, ls2; intros; try solve [cbv; auto].
+    induction ls1 as [|a ls1 IHls1], ls2; intros; try solve [cbv; auto].
     rewrite map2_cons, !length_cons, IHls1.
     auto.
   Qed.
@@ -1587,7 +1611,7 @@ Section OpaqueMap2.
       (length ls1 = length ls2) ->
       map2 f (ls1 ++ ls1') (ls2 ++ ls2') = map2 f ls1 ls2 ++ map2 f ls1' ls2'.
   Proof.
-    induction ls1, ls2; intros; rewrite ?map2_nil_r, ?app_nil_l; try congruence;
+    induction ls1 as [|a ls1 IHls1], ls2; intros; rewrite ?map2_nil_r, ?app_nil_l; try congruence;
       simpl_list_lengths; try omega.
     rewrite <-!app_comm_cons, !map2_cons.
     rewrite IHls1; auto.
@@ -1611,15 +1635,15 @@ Require Import Coq.Lists.SetoidList.
 Global Instance Proper_nth_default : forall A eq,
   Proper (eq==>eqlistA eq==>Logic.eq==>eq) (nth_default (A:=A)).
 Proof.
-  do 5 intro; subst; induction 1.
+  intros A ee x y H; subst; induction 1.
   + repeat intro; rewrite !nth_default_nil; assumption.
-  + repeat intro; subst; destruct y0; rewrite ?nth_default_cons, ?nth_default_cons_S; auto.
+  + intros x1 y0 H2; subst; destruct y0; rewrite ?nth_default_cons, ?nth_default_cons_S; auto.
 Qed.
 
 Lemma fold_right_andb_true_map_iff A (ls : list A) f
   : List.fold_right andb true (List.map f ls) = true <-> forall i, List.In i ls -> f i = true.
 Proof.
-  induction ls; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
+  induction ls as [|a ls IHls]; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
   intuition (congruence || eauto).
 Qed.
 
@@ -1633,16 +1657,17 @@ Qed.
 Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
   (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
 Proof.
-  split; intros.
+  intros A R xs ys d H; split; [ intros H0 i H1 | intros H0 ].
+
   + revert xs ys H H0 H1.
-    induction i; intros; destruct H0; distr_length; autorewrite with push_nth_default; auto.
+    induction i as [|i IHi]; intros xs ys H H0 H1; destruct H0; distr_length; autorewrite with push_nth_default; auto.
     eapply IHi; auto. omega.
-  + revert xs ys H H0; induction xs; intros; destruct ys; distr_length; econstructor.
+  + revert xs ys H H0; induction xs as [|a xs IHxs]; intros ys H H0; destruct ys; distr_length; econstructor.
     - specialize (H0 0%nat).
       autorewrite with push_nth_default in *; auto.
       apply H0; omega.
     - apply IHxs; try omega.
-      intros.
+      intros i H1.
       specialize (H0 (S i)).
       autorewrite with push_nth_default in *; auto.
       apply H0; omega.
@@ -1653,7 +1678,7 @@ Lemma nth_default_firstn : forall {A} (d : A) l i n,
                                  then if lt_dec i n then nth_default d l i else d
                                  else nth_default d l i.
 Proof.
-  induction n; intros; break_match; autorewrite with push_nth_default; auto; try omega.
+  intros A d l i; induction n as [|n IHn]; break_match; autorewrite with push_nth_default; auto; try omega.
   + rewrite (firstn_succ d) by omega.
     autorewrite with push_nth_default; repeat (break_match_hyps; break_match; distr_length);
       rewrite Min.min_l in * by omega; try omega.
@@ -1677,8 +1702,8 @@ Hint Rewrite repeat_length : distr_length.
 Lemma repeat_spec_iff : forall {A} (ls : list A) x n,
     (length ls = n /\ forall y, In y ls -> y = x) <-> ls = repeat x n.
 Proof.
-  split; [ revert A ls x n | intro; subst; eauto using repeat_length, repeat_spec ].
-  induction ls, n; simpl; intros; intuition try congruence.
+  intros A ls x n; split; [ revert A ls x n | intro; subst; eauto using repeat_length, repeat_spec ].
+  induction ls as [|a ls IHls], n; simpl; intros; intuition try congruence.
   f_equal; auto.
 Qed.
 
@@ -1714,13 +1739,13 @@ Qed.
 Lemma pointwise_map {A B} : Proper ((pointwise_relation _ eq) ==> eq ==> eq) (@List.map A B).
 Proof.
   repeat intro; cbv [pointwise_relation] in *; subst.
-  match goal with [H:list _ |- _ ] => induction H as [|? IH] end; [reflexivity|].
+  match goal with [H:list _ |- _ ] => induction H as [|? IH IHIH] end; [reflexivity|].
   simpl. rewrite IHIH. congruence.
 Qed.
 
 Lemma map_map2 {A B C D} (f:A -> B -> C) (g:C -> D) (xs:list A) (ys:list B) : List.map g (map2 f xs ys) = map2 (fun (a : A) (b : B) => g (f a b)) xs ys.
 Proof.
-  revert ys; induction xs; intros; [reflexivity|].
+  revert ys; induction xs as [|a xs IHxs]; intros ys; [reflexivity|].
   destruct ys; [reflexivity|].
   simpl. rewrite IHxs. reflexivity.
 Qed.
@@ -1728,7 +1753,7 @@ Qed.
 Lemma map2_fst {A B C} (f:A -> C) (xs:list A) : forall (ys:list B), length xs = length ys ->
   map2 (fun (a : A) (_ : B) => f a) xs ys = List.map f xs.
 Proof.
-  induction xs; intros; [reflexivity|].
+  induction xs as [|a xs IHxs]; intros ys **; [reflexivity|].
   destruct ys; [simpl in *; discriminate|].
   simpl. rewrite IHxs by eauto. reflexivity.
 Qed.
@@ -1736,7 +1761,7 @@ Qed.
 Lemma map2_flip {A B C} (f:A -> B -> C) (xs:list A) : forall (ys: list B),
    map2 (fun b a => f a b) ys xs = map2 f xs ys.
 Proof.
-  induction xs; destruct ys; try reflexivity; [].
+  induction xs as [|a xs IHxs]; destruct ys; try reflexivity; [].
   simpl. rewrite IHxs. reflexivity.
 Qed.
 
@@ -1747,6 +1772,6 @@ Proof. intros. rewrite map2_flip. eauto using map2_fst. Qed.
 Lemma map2_map {A B C A' B'} (f:A -> B -> C) (g:A' -> A) (h:B' -> B) (xs:list A') (ys:list B')
   : map2 f (List.map g xs) (List.map h ys) = map2 (fun a b => f (g a) (h b)) xs ys.
 Proof.
-  revert ys; induction xs; destruct ys; intros; try reflexivity; [].
+  revert ys; induction xs as [|a xs IHxs]; destruct ys; intros; try reflexivity; [].
   simpl. rewrite IHxs. reflexivity.
 Qed.

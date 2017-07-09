@@ -12,12 +12,29 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.PointedProp.
 
 Definition make_const t : interp_base_type t -> op Unit (Tbase t)
   := fun v => OpConst (cast_const (t2:=TZ) v).
 Definition is_const s d (v : op s d) : bool
   := match v with OpConst _ _ => true | _ => false end.
 Arguments is_const [s d] v.
+Definition is_opp s d (v : op s d) : bool
+  := match v with Opp _ _ => true | _ => false end.
+Arguments is_opp [s d] v.
+Definition is_const_or_opp s d (v : op s d) : bool
+  := (is_const v || is_opp v)%bool.
+Arguments is_const_or_opp [s d] v.
+
+
+Definition interped_op_side_conditions {s d} (opc : op s d)
+  : interp_flat_type interp_base_type s -> pointed_Prop
+  := match opc in op s d return interp_flat_type _ s -> _ with
+     | IdWithAlt TZ TZ TZ
+       => fun v1v2 : Z * Z
+          => inject (fst v1v2 = snd v1v2)
+     | _ => fun _ => trivial
+     end.
 
 Definition cast_back_flat_const {var t f V}
            (v : interp_flat_type interp_base_type (@SmartFlatTypeMap base_type var f t V))
@@ -61,6 +78,13 @@ Definition genericize_op {var' src dst} (opc : op src dst) {f}
      | Land _ _ _ => fun _ _ => Land _ _ _
      | Lor _ _ _ => fun _ _ => Lor _ _ _
      | Opp _ _ => fun _ _ => Opp _ _
+     | IdWithAlt _ _ _ => fun _ _ => IdWithAlt _ _ _
+     | Zselect _ _ _ _ => fun _ _ => Zselect _ _ _ _
+     | MulSplit bitwidth _ _ _ _ => fun _ _ => MulSplit bitwidth _ _ _ _
+     | AddWithCarry _ _ _ _ => fun _ _ => AddWithCarry _ _ _ _
+     | AddWithGetCarry bitwidth _ _ _ _ _ => fun _ _ => AddWithGetCarry bitwidth _ _ _ _ _
+     | SubWithBorrow _ _ _ _ => fun _ _ => SubWithBorrow _ _ _ _
+     | SubWithGetBorrow bitwidth _ _ _ _ _ => fun _ _ => SubWithGetBorrow bitwidth _ _ _ _ _
      end.
 
 Lemma cast_const_id {t} v
@@ -277,3 +301,18 @@ Proof.
   induction x, y; simpl; auto.
   rewrite !Nat.leb_le; omega.
 Qed.
+
+Lemma eta_match_base_type_impl P1 P2 PZ T
+  : match T as T return P1 T -> P2 with
+    | TZ => fun _ => PZ
+    | TWord _ => fun _ => PZ
+    end = fun _ => PZ.
+Proof. destruct T; reflexivity. Qed.
+Ltac rewrite_eta_match_base_type_impl_step :=
+  match goal with
+  | [ H : context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => fun _ => ?PZ | TWord _ => fun _ => ?PZ end] |- _ ]
+    => rewrite (@eta_match_base_type_impl P1 P2 PZ T) in H
+  | [ |- context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => fun _ => ?PZ | TWord _ => fun _ => ?PZ end] ]
+    => rewrite (@eta_match_base_type_impl P1 P2 PZ T)
+  end.
+Ltac rewrite_eta_match_base_type_impl := repeat rewrite_eta_match_base_type_impl_step.

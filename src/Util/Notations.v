@@ -16,6 +16,12 @@ Reserved Infix "<=?" (at level 70, no associativity).
 Reserved Infix "!=?" (at level 70, no associativity).
 Reserved Infix "?=" (at level 70, no associativity).
 Reserved Infix "?<" (at level 70, no associativity).
+Reserved Infix "=n?" (at level 70, no associativity).
+Reserved Infix "=Z?" (at level 70, no associativity).
+Reserved Infix "=ₙ?" (at level 70, no associativity).
+Reserved Infix "=ℤ?" (at level 70, no associativity).
+Reserved Infix "=ᶻ?" (at level 70, no associativity).
+Reserved Infix "=ⁿ?" (at level 70, no associativity).
 Reserved Infix ".+" (at level 50).
 Reserved Infix ".*" (at level 50).
 Reserved Notation "x ^ 2" (at level 30, format "x ^ 2").
@@ -43,6 +49,10 @@ Reserved Infix "≡_r" (at level 70, no associativity).
 Reserved Infix "≢_r" (at level 70, no associativity).
 Reserved Infix "≡ᵣ" (at level 70, no associativity).
 Reserved Infix "≢ᵣ" (at level 70, no associativity).
+Reserved Infix "≡_p" (at level 70, no associativity).
+Reserved Infix "≢_p" (at level 70, no associativity).
+Reserved Infix "≡ₚ" (at level 70, no associativity).
+Reserved Infix "≢ₚ" (at level 70, no associativity).
 Reserved Infix "≡₃₂" (at level 70, no associativity).
 Reserved Infix "≢₃₂" (at level 70, no associativity).
 Reserved Infix "≡₆₄" (at level 70, no associativity).
@@ -53,6 +63,13 @@ Reserved Infix "≡₂₅₆" (at level 70, no associativity).
 Reserved Infix "≢₂₅₆" (at level 70, no associativity).
 Reserved Infix "≡₅₁₂" (at level 70, no associativity).
 Reserved Infix "≢₅₁₂" (at level 70, no associativity).
+(* Put these at level 71 so they don't conflict with the infix notations at level 70 *)
+Reserved Notation "<" (at level 71).
+Reserved Notation ">" (at level 71).
+Reserved Notation "<=" (at level 71).
+Reserved Notation ">=" (at level 71).
+Reserved Notation "≤" (at level 71).
+Reserved Notation "≥" (at level 71).
 Reserved Notation "a !== b" (at level 70, no associativity).
 Reserved Notation "a ≢ b" (at level 70, no associativity).
 Reserved Notation "$$ v" (at level 40).
@@ -65,25 +82,29 @@ Reserved Notation "u {{ i }}" (at level 30).
 Reserved Notation "a # b" (at level 55, no associativity). (* match with theories/QArith/QArith_base.v *)
 Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
-Reserved Notation "'slet' x := A 'in' b"
-         (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
+Reserved Notation "'nlet' x := A 'in' b"
+         (at level 200, b at level 200, x at level 99, format "'nlet'  x  :=  A  'in' '//' b").
+Reserved Notation "'nlet' x : tx := A 'in' b"
+         (at level 200, b at level 200, x at level 99, format "'nlet'  x  :  tx  :=  A  'in' '//' b").
+Reserved Notation "'slet' x .. y := A 'in' b"
+         (at level 200, x binder, y binder, b at level 200, format "'slet'  x .. y  :=  A  'in' '//' b").
 Reserved Notation "'llet' x := A 'in' b"
          (at level 200, b at level 200, format "'llet'  x  :=  A  'in' '//' b").
 Reserved Notation "'mlet' x := A 'in' b"
          (at level 200, b at level 200, format "'mlet'  x  :=  A  'in' '//' b").
 (* Note that making [Let] a keyword breaks the vernacular [Let] in Coq 8.4 *)
-Reserved Notation "'dlet_nd' x := y 'in' f"
-         (at level 200, f at level 200, format "'dlet_nd'  x  :=  y  'in' '//' f").
-Reserved Notation "'dlet' x := y 'in' f"
-         (at level 200, f at level 200, format "'dlet'  x  :=  y  'in' '//' f").
+Reserved Notation "'dlet_nd' x .. y := v 'in' f"
+         (at level 200, x binder, y binder, f at level 200, format "'dlet_nd'  x .. y  :=  v  'in' '//' f").
+Reserved Notation "'dlet' x .. y := v 'in' f"
+         (at level 200, x binder, y binder, f at level 200, format "'dlet'  x .. y  :=  v  'in' '//' f").
 Reserved Notation "'pflet' x , pf := y 'in' f"
          (at level 200, f at level 200, format "'pflet'  x ,  pf  :=  y  'in' '//' f").
 Reserved Notation "'λ' x .. y , t" (at level 200, x binder, y binder, right associativity, format "'λ'  x .. y , '//' t").
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
 Reserved Notation "x ::> ( max_bitwidth = v )"
          (at level 70, no associativity, format "x  ::>  ( max_bitwidth  =  v )").
-Reserved Notation "r[ l ~> u ]" (format "r[ l  ~>  u ]").
-Reserved Notation "b[ l ~> u ]" (format "b[ l  ~>  u ]").
+Reserved Notation "r[ l ~> u ]" (l at level 69, format "r[ l  ~>  u ]").
+Reserved Notation "b[ l ~> u ]" (l at level 69, format "b[ l  ~>  u ]").
 Reserved Notation "'for' i (:= i0 ; += step ; < finish ) 'updating' ( state := initial ) {{ body }}"
          (at level 70, format "'[v  ' 'for'  i  (:=  i0 ;  +=  step ;  <  finish )  'updating'  ( state  :=  initial )  {{ '//' body ']' '//' }}").
 Reserved Notation "'for' ( 'int' i = i0 ; step_expr ; finish_expr ) 'updating' ( state1 .. staten = initial ) {{ body }}"
@@ -94,3 +115,6 @@ Reserved Notation "x ++" (at level 60, format "x ++").
 Reserved Notation "x --" (at level 60, format "x --").
 Reserved Notation "++ x" (at level 60, format "++ x").
 Reserved Notation "-- x" (at level 60, format "-- x").
+Reserved Notation "~> R" (at level 70).
+Reserved Notation "A ~> R" (at level 99).
+Reserved Notation "'return' x" (at level 70, format "'return'  x").

@@ -19,6 +19,8 @@ Require Import Crypto.Util.Tactics.EvarExists.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.MoveLetIn.
+Require Import Crypto.Util.Tactics.ClearAll.
+Require Import Crypto.Util.Tactics.ClearbodyAll.
 
 Module Export Exports.
   Export Crypto.Compilers.Z.Reify. (* export for the tactic redefinitions *)
@@ -91,11 +93,16 @@ Ltac pattern_proj1_sig_in_sig :=
   eapply proj2_sig_map;
   [ let a := fresh in
     let H := fresh in
-    intros a H; pattern (proj1_sig a);
+    intros a H;
+    lazymatch goal with
+    | [ |- context[@proj1_sig ?A ?P a] ]
+      => pattern (@proj1_sig A P a)
+    end;
     lazymatch goal with
     | [ |- ?P ?p1a ]
       => cut (dlet p := P in p p1a);
-         [ clear; abstract (cbv [Let_In]; exact (fun x => x)) | ]
+         [ repeat (clear_all; clearbody_all);
+           abstract (cbv [Let_In]; exact (fun x => x)) | ]
     end;
     exact H
   | cbv beta ].
@@ -359,11 +366,11 @@ Ltac split_BoundedWordToZ _ :=
             instantiate (1:=ltac:(destruct x)); destruct x ];
       (cbv beta iota) in
   let destruct_sig_or_pair v :=
-      progress repeat match v with
-                      | context[proj1_sig ?x] => destruct_sig x
-                      | context[fst ?x] => destruct_pair x
-                      | context[snd ?x] => destruct_pair x
-                      end in
+      match v with
+      | context[proj1_sig ?x] => destruct_sig x
+      | context[fst ?x] => destruct_pair x
+      | context[snd ?x] => destruct_pair x
+      end in
   repeat match goal with
          | [ |- context[Tuple.map ?f ?v] ]
            => check_is_map_wordToZ 0 "DEBUG" f; destruct_sig_or_pair v

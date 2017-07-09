@@ -2,29 +2,22 @@ language: generic
 
 sudo: required
 
+dist: trusty
+
 matrix:
   fast_finish: true
   include:
-    - dist: trusty
-      env: COQ_VERSION="trunk"    COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-trunk-daily"        TARGETS="coq"
-    - dist: trusty
-      env: COQ_VERSION="v8.6"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"          TARGETS="coq"
-    - dist: trusty
-      env: COQ_VERSION="v8.5"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"          TARGETS="lite"
-    - dist: trusty
-      env: COQ_VERSION="8.6"      COQ_PACKAGE="coq-8.6"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"       TARGETS="coq"
-#    - dist: trusty
-#      env: COQ_VERSION="8.5pl3"  COQ_PACKAGE="coq-8.5pl3 libcoq-ocaml-8.5pl3" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
-#    - dist: trusty
-#      env: COQ_VERSION="8.5"     COQ_PACKAGE="coq-8.5"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
-#    - dist: precise
-#      env: COQ_VERSION="8.4pl6"  COQ_PACKAGE="coq-8.4pl6 libcoq-ocaml-8.4pl6" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3"
-#    - dist: trusty
-#      env: COQ_VERSION="8.4"     COQ_PACKAGE="coq"                            COQPRIME="coqprime-8.4" PPA=""
+    - env: COQ_VERSION="trunk" TARGETS="coq display"              COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-trunk-daily"
+    - env: COQ_VERSION="v8.7"  TARGETS="coq display"              COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.7-daily"
+    - env: COQ_VERSION="v8.6"  TARGETS="no-curves-proofs display" COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.6-daily"
+    - env: COQ_VERSION="v8.5"  TARGETS="lite"                     COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.5-daily"
+    - env: COQ_VERSION="8.6"   TARGETS="no-curves-proofs display" COQ_PACKAGE="coq-8.6" PPA="ppa:jgross-h/many-coq-versions"
+    - env: TARGETS="printlite lite" COQ_VERSION="8.6"             COQ_PACKAGE="coq-8.6" PPA="ppa:jgross-h/many-coq-versions"
   allow_failures:
-    - env: COQ_VERSION="v8.5"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"          TARGETS="lite"
-    - env: COQ_VERSION="v8.6"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"          TARGETS="coq"
-    - env: COQ_VERSION="trunk"    COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-trunk-daily"        TARGETS="coq"
+    - env: COQ_VERSION="trunk" TARGETS="coq display"              COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-trunk-daily"
+    - env: COQ_VERSION="v8.7"  TARGETS="coq display"              COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.7-daily"
+    - env: COQ_VERSION="v8.6"  TARGETS="no-curves-proofs display" COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.6-daily"
+    - env: COQ_VERSION="v8.5"  TARGETS="lite"                     COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.5-daily"
 
 before_install:
   - if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
@@ -36,7 +29,7 @@ before_script:
   - uname -a
   - source ./etc/ci/travis_keep_alive.sh
 
-script: COQPATH="$(pwd)/$COQPRIME" ./etc/coq-scripts/timing/make-pretty-timed.sh -j2 && make COQPATH="$(pwd)/$COQPRIME" $TARGETS TIMED=1 -j2
+script: ./etc/coq-scripts/timing/make-pretty-timed.sh -j2 $TARGETS && make $TARGETS TIMED=1 -j2
 
 after_success:
   - kill $PID_KEEP_ALIVE

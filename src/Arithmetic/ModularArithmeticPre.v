@@ -4,6 +4,7 @@ Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.
@@ -60,7 +61,7 @@ Qed.
 
 Lemma powmod_Zpow_mod : forall m a n, powmod m a n = (a^Z.of_N n) mod m.
 Proof.
-  induction n using N.peano_ind; [auto|].
+  induction n as [|n IHn] using N.peano_ind; [auto|].
   rewrite <-N.add_1_l.
   rewrite powmod_1plus.
   rewrite IHn.
@@ -76,7 +77,7 @@ Local Obligation Tactic := idtac.
 Program Definition pow_impl_sig {m} (a:{z : Z | z = z mod m}) (x:N) : {z : Z | z = z mod m}
   := powmod m (proj1_sig a) x.
 Next Obligation.
-  intros; destruct x; [simpl; rewrite Zmod_mod; reflexivity|].
+  intros m a x; destruct x; [simpl; rewrite Zmod_mod; reflexivity|].
   rewrite N_pos_1plus.
   rewrite powmod_1plus.
   rewrite Zmod_mod; reflexivity.
@@ -122,7 +123,7 @@ Program Definition inv_impl {m : BinNums.Z} :
     exist (fun z : BinNums.Z => z = z mod m) (1 mod m) (Z_mod_mod 1 m))}
      := mod_inv_sig.
 Next Obligation.
-  split.
+  intros m; split.
   { apply exist_reduced_eq; rewrite Zmod_0_l; reflexivity. }
   intros Hm [a pfa] Ha'. apply exist_reduced_eq.
   assert (Hm':0 <= m - 2) by (pose proof prime_ge_2 m Hm; omega).

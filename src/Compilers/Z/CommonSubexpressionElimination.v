@@ -20,11 +20,20 @@ Inductive symbolic_op :=
 | SLand
 | SLor
 | SOpp
+| SIdWithAlt
+| SZselect
+| SMulSplit (bitwidth : Z)
+| SAddWithCarry
+| SAddWithGetCarry (bitwidth : Z)
+| SSubWithBorrow
+| SSubWithGetBorrow (bitwidth : Z)
 .
 
 Definition symbolic_op_leb (x y : symbolic_op) : bool
   := match x, y with
      | SOpConst z1, SOpConst z2 => Z.leb z1 z2
+     | SAddWithGetCarry bw1, SAddWithGetCarry bw2 => Z.leb bw1 bw2
+     | SSubWithGetBorrow bw1, SSubWithGetBorrow bw2 => Z.leb bw1 bw2
      | SOpConst _, _ => true
      | _, SOpConst _ => false
      | SAdd, _ => true
@@ -42,6 +51,21 @@ Definition symbolic_op_leb (x y : symbolic_op) : bool
      | SLor, _ => true
      | _, SLor => false
      | SOpp, _ => true
+     | _, SOpp => false
+     | SIdWithAlt, _ => true
+     | _, SIdWithAlt => false
+     | SZselect, _ => true
+     | _, SZselect => false
+     | SMulSplit _, _ => true
+     | _, SMulSplit _ => false
+     | SAddWithCarry, _ => true
+     | _, SAddWithCarry => false
+     | SAddWithGetCarry _, _ => true
+     | _, SAddWithGetCarry _ => false
+     | SSubWithBorrow, _ => true
+     | _, SSubWithBorrow => false
+     (*| SSubWithGetBorrow _, _ => true
+     | _, SSubWithGetBorrow _ => false*)
      end.
 
 Local Notation symbolic_expr := (@symbolic_expr base_type symbolic_op).
@@ -59,6 +83,13 @@ Definition symbolize_op s d (opc : op s d) : symbolic_op
      | Land T1 T2 Tout => SLand
      | Lor T1 T2 Tout => SLor
      | Opp T Tout => SOpp
+     | IdWithAlt T1 T2 Tout => SIdWithAlt
+     | Zselect T1 T2 T3 Tout => SZselect
+     | MulSplit bitwidth T1 T2 Tout1 Tout2 => SMulSplit bitwidth
+     | AddWithCarry T1 T2 T3 Tout => SAddWithCarry
+     | AddWithGetCarry bitwidth T1 T2 T3 Tout1 Tout2 => SAddWithGetCarry bitwidth
+     | SubWithBorrow T1 T2 T3 Tout => SSubWithBorrow
+     | SubWithGetBorrow bitwidth T1 T2 T3 Tout1 Tout2 => SSubWithGetBorrow bitwidth
      end.
 
 Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
@@ -72,6 +103,16 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SLand, Prod (Tbase _) (Tbase _), Tbase _ => Some (Land _ _ _)
      | SLor, Prod (Tbase _) (Tbase _), Tbase _ => Some (Lor _ _ _)
      | SOpp, Tbase _, Tbase _ => Some (Opp _ _)
+     | SIdWithAlt, Prod (Tbase _) (Tbase _), Tbase _ => Some (IdWithAlt _ _ _)
+     | SZselect, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (Zselect _ _ _ _)
+     | SMulSplit bitwidth, Prod (Tbase _) (Tbase _), Prod (Tbase _) (Tbase _)
+       => Some (MulSplit bitwidth _ _ _ _)
+     | SAddWithCarry, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (AddWithCarry _ _ _ _)
+     | SAddWithGetCarry bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
+       => Some (AddWithGetCarry bitwidth _ _ _ _ _)
+     | SSubWithBorrow, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (SubWithBorrow _ _ _ _)
+     | SSubWithGetBorrow bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
+       => Some (SubWithGetBorrow bitwidth _ _ _ _ _)
      | SAdd, _, _
      | SSub, _, _
      | SMul, _, _
@@ -81,14 +122,21 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SLor, _, _
      | SOpp, _, _
      | SOpConst _, _, _
+     | SIdWithAlt, _, _
+     | SZselect, _, _
+     | SMulSplit _, _, _
+     | SAddWithCarry, _, _
+     | SAddWithGetCarry _, _, _
+     | SSubWithBorrow, _, _
+     | SSubWithGetBorrow _, _, _
        => None
      end.
 
 Lemma symbolic_op_leb_total
   : forall a1 a2, symbolic_op_leb a1 a2 = true \/ symbolic_op_leb a2 a1 = true.
 Proof.
-  induction a1, a2; simpl; auto.
-  rewrite !Z.leb_le; omega.
+  induction a1, a2; simpl; auto;
+    rewrite !Z.leb_le; omega.
 Qed.
 
 Module SymbolicExprOrder <: TotalLeBool.
@@ -148,28 +196,35 @@ Definition normalize_symbolic_expr_mod_c (opc : symbolic_op) (args : symbolic_ex
      | SShl
      | SShr
      | SOpp
+     | SIdWithAlt
+     | SZselect
+     | SMulSplit _
+     | SAddWithCarry
+     | SAddWithGetCarry _
+     | SSubWithBorrow
+     | SSubWithGetBorrow _
        => args
      end.
 
-Definition csef {var t} (v : exprf _ _ t) xs
+Definition csef inline_symbolic_expr_in_lookup {var t} (v : exprf _ _ t) xs
   := @csef base_type symbolic_op base_type_beq symbolic_op_beq
            internal_base_type_dec_bl op symbolize_op
            normalize_symbolic_expr_mod_c
-           var t v xs.
+           var inline_symbolic_expr_in_lookup t v xs.
 
-Definition cse {var} (prefix : list _) {t} (v : expr _ _ t) xs
+Definition cse inline_symbolic_expr_in_lookup {var} (prefix : list _) {t} (v : expr _ _ t) xs
   := @cse base_type symbolic_op base_type_beq symbolic_op_beq
           internal_base_type_dec_bl op symbolize_op
           normalize_symbolic_expr_mod_c
-          var prefix t v xs.
+          inline_symbolic_expr_in_lookup var prefix t v xs.
 
-Definition CSE_gen {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
+Definition CSE_gen inline_symbolic_expr_in_lookup {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
   : Expr _ _ t
   := @CSE base_type symbolic_op base_type_beq symbolic_op_beq
           internal_base_type_dec_bl op symbolize_op
           normalize_symbolic_expr_mod_c
-          t e prefix.
+          inline_symbolic_expr_in_lookup t e prefix.
 
-Definition CSE {t} (e : Expr _ _ t)
+Definition CSE inline_symbolic_expr_in_lookup {t} (e : Expr _ _ t)
   : Expr _ _ t
-  := @CSE_gen t e (fun _ => nil).
+  := @CSE_gen inline_symbolic_expr_in_lookup t e (fun _ => nil).

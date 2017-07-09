@@ -57,7 +57,7 @@ Section BoundedField25p5.
       | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }.
   Proof.
     exists (@M.xzladderstep _ (proj1_sig add_sig) (proj1_sig sub_sig) (fun x y => proj1_sig carry_sig (proj1_sig mul_sig x y))).
-    intros.
+    intros a24 x1 Q Q' eval.
     cbv [FMxzladderstep M.xzladderstep].
     destruct Q, Q'; cbv [map map' fst snd Let_In eval].
     repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
@@ -77,12 +77,7 @@ Section BoundedField25p5.
             /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
            /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (eval (proj1_sig a24_sig)) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
   Proof.
-    lazymatch goal with
-    | [ |- { op | forall (a:?A) (b:?B) (c:?C),
-               let v := op a b c in
-               @?P a b c v } ]
-      => refine (@lift3_sig A B C _ P _)
-    end.
+    apply_lift_sig.
     intros a b c; cbv beta iota zeta.
     lazymatch goal with
     | [ |- { e | ?A -> ?B -> ?C -> @?E e } ]
@@ -102,11 +97,12 @@ Section BoundedField25p5.
       cbv [proj1_sig]; cbv [Mxzladderstep_sig].
       context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _ _).
       cbv [M.xzladderstep a24_sig].
-      do 4 lazymatch goal with
-           | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
-             => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
-           end.
-      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
+      repeat lazymatch goal with
+             | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
+               => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
+             end.
+      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig].
+      cbv_runtime.
       refine (proj2 FINAL). }
     subst feW feW_bounded; cbv beta.
     (* jgross start here! *)

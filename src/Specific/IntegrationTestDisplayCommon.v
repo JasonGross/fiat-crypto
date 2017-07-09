@@ -7,8 +7,9 @@ Require Import Crypto.Compilers.Eta.
 Require Export Coq.ZArith.ZArith.
 Require Export Crypto.Util.LetIn.
 Require Export Crypto.Util.FixedWordSizes.
-Require Export Crypto.Compilers.Z.CNotations.
-Require Export Coq.Unicode.Utf8. (* for better line breaks at function display; must come last *)
+Require Export Crypto.Compilers.Syntax.
+Require Export Crypto.Compilers.Z.HexNotationConstants.
+Require Export Crypto.Util.Notations.
 
 Global Arguments Pos.to_nat !_ / .
 Global Arguments InterpEta {_ _ _ _ _}.
@@ -21,9 +22,15 @@ Ltac display_helper f :=
     => let x := fresh "x" in
        lazymatch (eval hnf in A) with
        | @sig ?A ?P
-         => refine (fun x : A => _);
-            let f' := open_constr:(f (exist P x _)) in
-            display_helper f'
+         => lazymatch (eval hnf in A) with
+            | sig _
+              => let f' := open_constr:(fun x : A => f (exist P x _)) in
+                 display_helper f'
+            | _
+              => refine (fun x : A => _);
+                 let f' := open_constr:(f (exist P x _)) in
+                 display_helper f'
+            end
        | _
          => lazymatch A with
             | prod ?A ?B
@@ -35,7 +42,11 @@ Ltac display_helper f :=
                  display_helper f'
             end
        end
-  | sig _ => refine (proj1_sig f)
+  | @sig ?A _
+    => lazymatch (eval hnf in A) with
+       | sig _ => display_helper (proj1_sig f)
+       | _ => refine (proj1_sig f)
+       end
   | _
     => lazymatch t with
        | prod _ _
@@ -53,6 +64,7 @@ Tactic Notation "display" open_constr(f) :=
                                Tuple.map Tuple.map'
                                Lift.lift1_sig Lift.lift2_sig Lift.lift3_sig Lift.lift4_sig Lift.lift4_sig_sig
                                MapProjections.proj2_sig_map Associativity.sig_sig_assoc
+                               sig_conj_by_impl2
                                sig_eq_trans_exist1 sig_R_trans_exist1 sig_eq_trans_rewrite_fun_exist1
                                sig_R_trans_rewrite_fun_exist1
                                adjust_tuple2_tuple2_sig
@@ -78,6 +90,10 @@ Tactic Notation "display" open_constr(f) :=
   refine ret.
 Notation display f := (ltac:(let v := f in display v)) (only parsing).
 
+Require Export Crypto.Compilers.Z.CNotations.
+
 Notation "'Interp-η' f x" := (Eta.InterpEta f x) (format "'Interp-η' '//' f '//' x", at level 200, f at next level, x at next level).
 Notation ReturnType := (interp_flat_type _).
 Notation "'let' ( a , b ) := c 'in' d" := (let (a, b) := c in d) (at level 200, d at level 200, format "'let'  ( a ,  b )  :=  c  'in' '//' d").
+
+Require Export Coq.Unicode.Utf8. (* for better line breaks at function display; must come last *)

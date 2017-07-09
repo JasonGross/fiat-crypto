@@ -12,6 +12,7 @@ Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Algebra.Hierarchy Crypto.Algebra.Field.
 
 Existing Class prime.
@@ -33,7 +34,7 @@ Module F.
              | _ => solve [ solve_proper
                           | apply F.commutative_ring_modulo
                           | apply inv_nonzero
-                          | cbv [not]; pose proof prime_ge_2 q prime_q;
+                          | cbv [F.zero F.one not]; pose proof prime_ge_2 q prime_q;
                             rewrite F.eq_to_Z_iff, !F.to_Z_of_Z, !Zmod_small; omega ]
              | _ => split
              end.
@@ -66,9 +67,9 @@ Module F.
       rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || omega); reflexivity.
     Qed.
 
-    Global Instance Decidable_square (x:F q) : Decidable (exists y, y*y = x).
+    Global Instance Decidable_square : forall (x:F q), Decidable (exists y, y*y = x).
     Proof.
-      destruct (dec (x = 0)).
+      intro x; destruct (dec (x = 0)).
       { left. abstract (exists 0; subst; apply Ring.mul_0_l). }
       { eapply Decidable_iff_to_impl; [eapply euler_criterion; assumption | exact _]. }
     Defined.
@@ -95,7 +96,7 @@ Module F.
       rewrite <-H in q_3mod4; discriminate.
     Qed.
     Local Hint Resolve two_lt_q_3mod4.
-    
+
     Lemma sqrt_3mod4_correct (x:F q) :
       ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%F.
     Proof using Type*.
@@ -130,7 +131,7 @@ Module F.
                            constants [F.is_constant],
                            div (F.morph_div_theory q),
                            power_tac (F.power_theory q) [F.is_pow_constant]).
-    
+
     (* Any nonsquare element raised to (q-1)/4 (real implementations use 2 ^ ((q-1)/4) )
        would work for sqrt_minus1 *)
     Context (sqrt_minus1 : F q) (sqrt_minus1_valid : sqrt_minus1 * sqrt_minus1 = F.opp 1).
@@ -186,7 +187,7 @@ Module F.
 
     Lemma mul_square_sqrt_minus1 : forall x, sqrt_minus1 * x * (sqrt_minus1 * x) = F.opp (x * x).
     Proof using prime_q sqrt_minus1_valid.
-      intros.
+      intros x.
       transitivity (F.opp 1 * (x * x)); [ | field].
       rewrite <-sqrt_minus1_valid.
       field.
@@ -208,7 +209,7 @@ Module F.
     Lemma sqrt_5mod8_correct : forall x,
       ((exists y, y*y = x) <-> (sqrt_5mod8 x)*(sqrt_5mod8 x) = x).
     Proof using Type*.
-      cbv [sqrt_5mod8]; intros.
+      cbv [sqrt_5mod8]; intros x.
       destruct (F.eq_dec x 0).
       {
         repeat match goal with
@@ -241,7 +242,7 @@ Module F.
   Module Iso.
     Section IsomorphicRings.
       Context {q:positive} {prime_q:prime q} {two_lt_q:2 < Z.pos q}.
-      Context 
+      Context
         {H : Type} {eq : H -> H -> Prop} {zero one : H}
         {opp : H -> H} {add sub mul : H -> H -> H}
         {phi : F q -> H} {phi' : H -> F q}
@@ -251,12 +252,11 @@ Module F.
         {phi'_opp : forall a : H, Logic.eq (phi' (opp a)) (F.opp (phi' a))}
         {phi'_add : forall a b : H, Logic.eq (phi' (add a b)) (F.add (phi' a) (phi' b))}
         {phi'_sub : forall a b : H, Logic.eq (phi' (sub a b)) (F.sub (phi' a) (phi' b))}
-        {phi'_mul : forall a b : H, Logic.eq (phi' (mul a b)) (F.mul (phi' a) (phi' b))}
-        {P:Type} {pow : H -> P -> H} {NtoP:N->P}
-        {pow_is_scalarmult:ScalarMult.is_scalarmult(G:=H)(eq:=eq)(add:=mul)(zero:=one)(mul:=fun (n:nat) (k:H) => pow k (NtoP (N.of_nat n)))}.
+        {phi'_mul : forall a b : H, Logic.eq (phi' (mul a b)) (F.mul (phi' a) (phi' b))}.
+      (* TODO: revive this once we figure out how to spec the pow impl
       Definition inv (x:H) := pow x (NtoP (Z.to_N (q - 2)%Z)).
       Definition div x y := mul (inv y) x.
-      
+
       Lemma ring :
         @Algebra.Hierarchy.ring H eq zero one opp add sub mul
         /\ @Ring.is_homomorphism (F q) Logic.eq F.one F.add F.mul H eq one add mul phi
@@ -289,6 +289,7 @@ Module F.
         /\ @Ring.is_homomorphism H eq one add mul (F q) Logic.eq F.one F.add F.mul phi'.
       Proof using Type*. eapply @Field.field_and_homomorphism_from_redundant_representation;
                assumption || exact _ || exact inv_proof || exact div_proof. Qed.
+      *)
     End IsomorphicRings.
   End Iso.
 End F.
