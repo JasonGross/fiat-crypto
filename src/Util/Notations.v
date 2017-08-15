@@ -118,3 +118,4 @@ Reserved Notation "-- x" (at level 60, format "-- x").
 Reserved Notation "~> R" (at level 70).
 Reserved Notation "A ~> R" (at level 99).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
+idtac.
