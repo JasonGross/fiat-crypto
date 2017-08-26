@@ -55,7 +55,7 @@ Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op make_const inter
 Ltac reify_context_variables :=
   Reify.reify_context_variables base_type interp_base_type op.
 
-(*Ltac reify_debug_level ::= constr:(2).*)
+(*Ltac2 Set reify_debug_level := fun () => 4.*)
 
 Goal (flat_type base_type -> Type) -> False.
   intro var.
