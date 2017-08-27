@@ -148,15 +148,29 @@ Ltac reify_op op op_head expr :=
 
 Ltac debug_enter_reify_rec :=
   let lvl := reify_debug_level in
-  match lvl with
+  lazymatch lvl with
   | S _ => idtac_goal
   | _ => idtac
   end.
 Ltac debug_leave_reify_rec e :=
   let lvl := reify_debug_level in
-  match lvl with
+  lazymatch lvl with
   | S _ => idtac "<infomsg>reifyf success:" e "</infomsg>"
   | _ => idtac
+  end.
+
+Ltac constr_or_else tac1 tac2 :=
+  match constr:(Set) with
+  | _ => tac1 ()
+  | _ => tac2 ()
+  end.
+Ltac constr_or_else5 tac1 tac2 tac3 tac4 tac5 :=
+  match constr:(Set) with
+  | _ => tac1 ()
+  | _ => tac2 ()
+  | _ => tac3 ()
+  | _ => tac4 ()
+  | _ => tac5 ()
   end.
 
 Ltac reifyf base_type_code interp_base_type op var e :=
@@ -172,80 +186,98 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   let reify_pretag := constr:(@exprf base_type_code interp_base_type op) in
   let reify_tag := constr:(reify_pretag var) in
   let dummy := debug_enter_reifyf e in
-  match constr:(Set) with
-  | _ =>
-    let ret :=
-        lazymatch e with
-        | let x := ?ex in @?eC x =>
-          let dummy := debug_reifyf_case "let in" in
-          let ex := reify_rec ex in
-          let eC := reify_rec eC in
-          mkLetIn ex eC
-        | (dlet x := ?ex in @?eC x) =>
-          let dummy := debug_reifyf_case "dlet in" in
-          let ex := reify_rec ex in
-          let eC := reify_rec eC in
-          mkLetIn ex eC
-        | pair ?a ?b =>
-          let dummy := debug_reifyf_case "pair" in
-          let a := reify_rec a in
-          let b := reify_rec b in
-          mkPair a b
-        | (fun x : ?T => ?C) =>
-          let dummy := debug_reifyf_case "fun" in
-          let t := reify_flat_type T in
-          (* Work around Coq 8.5 and 8.6 bug *)
-          (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
-          (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
-          (* even if its Gallina name matches a Ltac in this tactic. *)
-          let maybe_x := fresh x in
-          let not_x := fresh x in
-          let C' := match constr:(Set) with
-                    | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                                     (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
-                    | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to reify by typeclasses:" e)
-                    end in
-          match constr:(Set) with
-          | _ => lazymatch C'
-                 with fun _ v _ => @?C v => C end
-          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to eliminate function dependencies of:" C')
-          end
-        | match ?ev with pair a b => @?eC a b end =>
-          let dummy := debug_reifyf_case "matchpair" in
-          let T := type of eC in
-          let t := (let T := match (eval cbv beta in T) with _ -> _ -> ?T => T end in reify_flat_type T) in
-          let v := reify_rec ev in
-          let C := reify_rec eC in
-          let ret := mkMatchPair t v C in
-          ret
-        | @fst ?A ?B ?ev =>
-          let dummy := debug_reifyf_case "fst" in
-          let v := reify_rec ev in
-          mkFst v
-        | @snd ?A ?B ?ev =>
-          let dummy := debug_reifyf_case "snd" in
-          let v := reify_rec ev in
-          mkSnd v
-        | ?x =>
-          let dummy := debug_reifyf_case "generic" in
-          let t := lazymatch type of x with ?t => reify_flat_type t end in
-          let retv := match constr:(Set) with
-                      | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
-                      | _ => let op_head := head x in
-                             reify_op op op_head x
-                      | _ => lazymatch x with
-                             | ?F ?args
-                               => lazymatch goal with
-                                  | [ rF : forall x not_x, reify reify_tag (F x) |- _ ]
-                                    => constr:(context_value rF args)
-                                  | [ rF : forall var' x (not_x : var' _), reify (reify_pretag var') (F x) |- _ ]
-                                    => constr:(context_value (rF var) args)
-                                  end
-                             end
-                      | _ => let c := mkConst t x in
-                             constr:(finished_value c)
-                      | _ => constr:(reification_unsuccessful)
-                      end in
+  constr_or_else
+    ltac:(
+    fun _ =>
+      let ret :=
+          lazymatch e with
+          | let x := ?ex in @?eC x =>
+            let dummy := debug_reifyf_case "let in" in
+            let ex := reify_rec ex in
+            let eC := reify_rec eC in
+            mkLetIn ex eC
+          | (dlet x := ?ex in @?eC x) =>
+            let dummy := debug_reifyf_case "dlet in" in
+            let ex := reify_rec ex in
+            let eC := reify_rec eC in
+            mkLetIn ex eC
+          | pair ?a ?b =>
+            let dummy := debug_reifyf_case "pair" in
+            let a := reify_rec a in
+            let b := reify_rec b in
+            mkPair a b
+          | (fun x : ?T => ?C) =>
+            let dummy := debug_reifyf_case "fun" in
+            let t := reify_flat_type T in
+            (* Work around Coq 8.5 and 8.6 bug *)
+            (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
+            (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
+            (* even if its Gallina name matches a Ltac in this tactic. *)
+            let maybe_x := fresh x in
+            let not_x := fresh x in
+            let C' :=
+                constr_or_else
+                  ltac:(
+                  fun _ =>
+                    constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
+                              (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *))
+                         ltac:(
+                  fun _ =>
+                    constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to reify by typeclasses:" e)) in
+            constr_or_else
+              ltac:(
+              fun _ =>
+                lazymatch C'
+                with fun _ v _ => @?C v => C end)
+                     ltac:(
+              fun _ =>
+                constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to eliminate function dependencies of:" C'))
+          | match ?ev with pair a b => @?eC a b end =>
+            let dummy := debug_reifyf_case "matchpair" in
+            let T := type of eC in
+            let t := (let T := lazymatch (eval cbv beta in T) with _ -> _ -> ?T => T end in reify_flat_type T) in
+            let v := reify_rec ev in
+            let C := reify_rec eC in
+            let ret := mkMatchPair t v C in
+            ret
+          | @fst ?A ?B ?ev =>
+            let dummy := debug_reifyf_case "fst" in
+            let v := reify_rec ev in
+            mkFst v
+          | @snd ?A ?B ?ev =>
+            let dummy := debug_reifyf_case "snd" in
+            let v := reify_rec ev in
+            mkSnd v
+          | ?x =>
+            let dummy := debug_reifyf_case "generic" in
+            let t := lazymatch type of x with ?t => reify_flat_type t end in
+            let retv :=
+                constr_or_else5
+                  ltac:(
+                  fun _ =>
+                    let retv := reifyf_var x mkVar in constr:(finished_value retv))
+                         ltac:(
+                  fun _ =>
+                    let op_head := head x in
+                    reify_op op op_head x)
+                                ltac:(
+                  fun _ =>
+                    lazymatch x with
+                    | ?F ?args
+                      => lazymatch goal with
+                         | [ rF : forall x not_x, reify reify_tag (F x) |- _ ]
+                           => constr:(context_value rF args)
+                         | [ rF : forall var' x (not_x : var' _), reify (reify_pretag var') (F x) |- _ ]
+                           => constr:(context_value (rF var) args)
+                         end
+                    end)
+                                       ltac:(
+                  fun _ =>
+                    let c := mkConst t x in
+                    constr:(finished_value c))
+                                              ltac:(
+                  fun _ =>
+                    constr:(reification_unsuccessful)) in
           lazymatch retv with
           | finished_value ?v => v
           | context_value ?rFH ?eargs
@@ -309,9 +341,10 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           end
         end in
     let dummy := debug_leave_reifyf_success e ret in
-    ret
-  | _ => debug_leave_reifyf_failure e
-  end.
+    ret)
+           ltac:(
+    fun _ =>
+      debug_leave_reifyf_failure e).
 
 Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
 => (debug_enter_reify_rec; let e := reifyf base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e)
@@ -345,16 +378,24 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
       (* even if its Gallina name matches a Ltac in this tactic. *)
       let maybe_x := fresh x in
       let not_x := fresh x in
-      let C' := match constr:(Set) with
-                | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                                 (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
-                | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to reify by typeclasses:" e)
-                end in
-      let C := match constr:(Set) with
-               | _ => lazymatch C'
-                      with fun _ v _ => @?C v => C end
-               | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to eliminate function dependencies of:" C')
-               end in
+      let C' :=
+          constr_or_else
+            ltac:(
+            fun _ =>
+              constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
+                        (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *))
+                   ltac:(
+            fun _ =>
+              constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to reify by typeclasses:" e)) in
+      let C :=
+          constr_or_else
+            ltac:(
+            fun _ =>
+              lazymatch C'
+              with fun _ v _ => @?C v => C end)
+                   ltac:(
+            fun _ =>
+              constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to eliminate function dependencies of:" C')) in
       mkAbs t C
     | ?x =>
       let xv := reifyf_term x in
