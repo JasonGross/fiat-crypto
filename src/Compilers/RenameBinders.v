@@ -1,78 +1,143 @@
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.ExprInversion.
+Require Import Crypto.Util.Tactics.Ltac2.
+Import Ltac2.Init.
 
-Ltac uncurry_f f :=
-  let t := type of f in
-  lazymatch eval compute in t with
-  | prod ?a ?b -> ?R
-    => uncurry_f (fun x y => f (@pair a b x y))
-  | ?a -> ?R
-    => let x := fresh in
-       constr:(fun x : a => ltac:(let v := uncurry_f (f x) in exact v))
-  | _ => f
+Ltac2 cbv_all_flags :=
+  {
+    Std.rBeta := true; Std.rMatch := true; Std.rFix := true; Std.rCofix := true;
+    Std.rZeta := true; Std.rDelta := true; Std.rConst := [];
+  }.
+Ltac2 cbv_beta_zeta_flags :=
+  {
+    Std.rBeta := true; Std.rMatch := false; Std.rFix := false; Std.rCofix := false;
+    Std.rZeta := true; Std.rDelta := false; Std.rConst := [];
+  }.
+
+Ltac2 rec renamify_matches_aux (base_name : string) (count : int) (idx : int) (input : constr) :=
+  let make_new_name_ret () :=
+      let name := String.concat base_name (Int.to_string count) in
+      match Ident.of_string name with
+      | None => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "renamify: Invalid identifier: ") (Message.of_string name))))
+      | Some id
+        => (Some id, Int.add count 1, input)
+      end in
+  match Constr.Unsafe.kind input with
+  | Constr.Unsafe.Case cse return_clause discriminee branches
+    => let is_eq := match Constr.Unsafe.kind discriminee with
+                    | Constr.Unsafe.Rel idx'
+                      => Int.equal idx idx'
+                    | _ => false
+                    end in
+       match Int.equal (Array.length branches) 1 with
+       | true
+         => let branch := Array.get branches 0 in
+            match Constr.Unsafe.kind branch with
+            | Constr.Unsafe.Lambda id1 ty1 f
+              => match Constr.Unsafe.kind f with
+                 | Constr.Unsafe.Lambda id2 ty2 body
+                   => let ((id1, id2, body, id, count)) :=
+                          match is_eq with
+                          | true
+                            => let ((id1, count, body)) := renamify_matches_aux base_name count 2 body in
+                               let ((id2, count, body)) := renamify_matches_aux base_name count 1 body in
+                               (id1, id2, body, None, count)
+                          | false
+                            => let ((id, count, body)) := renamify_matches_aux base_name count (Int.add idx 2) body in
+                               (id1, id2, body, id, count)
+                          end in
+                      let branch :=
+                          Constr.Unsafe.make
+                            (Constr.Unsafe.Lambda
+                               id1 ty1
+                               (Constr.Unsafe.make
+                                  (Constr.Unsafe.Lambda id2 ty2 body))) in
+                      Array.set branches 0 branch;
+                        (id, count, Constr.Unsafe.make (Constr.Unsafe.Case cse return_clause discriminee branches))
+                 | _ => make_new_name_ret ()
+                 end
+            | _ => make_new_name_ret ()
+            end
+       | false
+         => make_new_name_ret ()
+       end
+  | _ => make_new_name_ret ()
   end.
-Ltac make_destruct_specialize t with_destruct_specialize_tac :=
-  let do_tac T1 T2 n1 mk_n2 :=
-      pose tt as n1;
-      make_destruct_specialize
-        T1
-        ltac:(fun destruct_specialize_ab
-              => let n2 := mk_n2 () in
-                 pose tt as n2;
-                 make_destruct_specialize
-                   T2
-                   ltac:(fun destruct_specialize_cd
-                         => with_destruct_specialize_tac
-                              ltac:(fun arg f cont =>
-                                      clear n1 n2;
-                                      refine (let '(n1, n2)%core := arg in _);
-                                      clear arg;
-                                      destruct_specialize_ab
-                                        n1 f
-                                        ltac:(fun f => destruct_specialize_cd n2 f cont)))) in
-  lazymatch eval compute in t with
-  | prod (prod ?a ?b) (prod ?c ?d)
-    => let arg1 := fresh "arg" in
-       do_tac (prod a b) (prod c d) arg1 ltac:(fun _ => fresh "arg")
-  | prod (prod ?a ?b) ?c
-    => let arg1 := fresh "arg" in
-       do_tac (prod a b) c arg1 ltac:(fun _ => fresh "x")
-  | prod ?a (prod ?c ?d)
-    => let arg1 := fresh "x" in
-       do_tac a (prod c d) arg1 ltac:(fun _ => fresh "arg")
-  | prod ?a ?b
-    => let arg1 := fresh "x" in
-       do_tac a b arg1 ltac:(fun _ => fresh "x")
-  | _
-    => with_destruct_specialize_tac ltac:(fun arg f cont => cont (f arg))
+Ltac2 renamify_matches (base_name : string) (input : constr) :=
+  let ((_, _, v)) := renamify_matches_aux base_name 0 1 input in
+  v.
+
+Ltac2 renamify (base_name : string) (input : constr) :=
+  let t := Std.eval_cbv cbv_all_flags (Constr.type input) in
+  match Constr.Unsafe.kind (Constr.strip_casts t) with
+  | Constr.Unsafe.Prod id a b
+    => let ret :=
+           '(fun var : $a
+             => ltac2:(let input := '($input &var) in
+                       let input := Std.eval_cbv cbv_all_flags input in
+                       Control.lazymatch0
+                         input
+                         [((pattern:(@Abs ?base_type_code ?op ?var ?src ?dst ?input)),
+                           (fun matches
+                            => let base_type_code := Ident.find @base_type_code matches in
+                               let op := Ident.find @op matches in
+                               let var := Ident.find @var matches in
+                               let src := Ident.find @src matches in
+                               let dst := Ident.find @dst matches in
+                               let input := Ident.find @input matches in
+                               let abs := '(@Abs $base_type_code $op $var $src $dst) in
+                               let arg := match Ident.of_string base_name with
+                                          | Some id => id
+                                          | None => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "renamify: Invalid base_name for identifiers: ") (Message.of_string base_name))))
+                                          end in
+                               let argT := Std.eval_cbv cbv_all_flags '(interp_flat_type $var $src) in
+                               let inputT := Std.eval_cbv cbv_all_flags '(interp_flat_type $var $src -> interp_flat_type $var $dst) in
+                               let f := Constr.Unsafe.make
+                                          (Constr.Unsafe.Lambda
+                                             (Some arg)
+                                             argT
+                                             (Constr.Unsafe.make
+                                                (Constr.Unsafe.App
+                                                   input
+                                                   (Array.make
+                                                      1
+                                                      (Constr.Unsafe.make
+                                                         (Constr.Unsafe.Rel 1)))))) in
+                               let f := Std.eval_cbv cbv_all_flags f in
+                               let f := match Constr.Unsafe.kind f with
+                                        | Constr.Unsafe.Lambda id ty f
+                                          => Constr.Unsafe.make
+                                               (Constr.Unsafe.Lambda
+                                                  id
+                                                  ty
+                                                  (renamify_matches base_name f))
+                                        | _
+                                          => Control.throw (Tactic_failure (Some (Message.concat (Message.of_string "Internal error in renamify: Not a lambda ") (Message.of_constr f))))
+                                        end in
+                               let ret := '($abs $f) in
+                               Control.refine (fun () => ret))
+            )])) in
+       let ret := Std.eval_cbv cbv_beta_zeta_flags '($ret : $t) in
+       ret
+  | _ => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "renamify: Not a product type ") (Message.of_constr t))))
   end.
-Ltac renamify input :=
-  let t := type of input in
-  let t := (eval compute in t) in
-  let ret :=
-      constr:(ltac:(
-                let var := fresh "var" in
-                intro var;
-                let input := constr:(input var) in
-                let input := (eval compute in input) in
-                let arg := fresh "arg" in
-                refine (Abs (fun arg => _));
-                let input := constr:(invert_Abs input) in
-                let t := type of arg in
-                let t := (eval compute in t) in
-                let input := uncurry_f input in
-                let input := (eval cbv iota beta delta [invert_Abs] in input) in
-                make_destruct_specialize
-                  t ltac:(fun do_destruct_specialize
-                          => do_destruct_specialize
-                               arg input
-                               ltac:(fun input => let input := (eval cbv beta in input) in
-                                                  exact input))
-              ) : t) in
-  (eval cbv beta zeta in ret).
+
+Ltac renamify f :=
+  let dummy :=
+      match goal with
+      | _ => Ltac1.save_ltac1_result f;
+             ltac2:(let f := Ltac1.get_ltac1_result () in
+                    let v := renamify "arg" f in
+                    Ltac1.save_ltac2_result v)
+      end in
+  let v := Ltac1.get_ltac2_result () in
+  v.
+
 Notation renamify f :=
   (let t := _ in
    let renamify_F0 : t := f in
-   ((fun renamify_F : t => ltac:(let v := renamify renamify_F in exact v))
+   ((fun renamify_F : t => ltac2:(let v := renamify "arg" &renamify_F in Control.refine (fun () => v)))
       renamify_F0))
     (only parsing).
+
+Global Set Default Proof Mode "Classic".
