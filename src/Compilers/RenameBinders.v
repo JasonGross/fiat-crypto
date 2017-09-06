@@ -2,6 +2,7 @@ Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Util.Tactics.Ltac2.
 Import Ltac2.Init.
+Import Ltac2.Notations.
 
 Ltac2 cbv_all_flags :=
   {
@@ -75,48 +76,40 @@ Ltac2 renamify (base_name : string) (input : constr) :=
            '(fun var : $a
              => ltac2:(let input := '($input &var) in
                        let input := Std.eval_cbv cbv_all_flags input in
-                       Control.lazymatch0
-                         input
-                         [((pattern:(@Abs ?base_type_code ?op ?var ?src ?dst ?input)),
-                           (fun matches
-                            => let base_type_code := Ident.find @base_type_code matches in
-                               let op := Ident.find @op matches in
-                               let var := Ident.find @var matches in
-                               let src := Ident.find @src matches in
-                               let dst := Ident.find @dst matches in
-                               let input := Ident.find @input matches in
-                               let abs := '(@Abs $base_type_code $op $var $src $dst) in
-                               let arg := match Ident.of_string base_name with
-                                          | Some id => id
-                                          | None => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "renamify: Invalid base_name for identifiers: ") (Message.of_string base_name))))
-                                          end in
-                               let argT := Std.eval_cbv cbv_all_flags '(interp_flat_type $var $src) in
-                               let inputT := Std.eval_cbv cbv_all_flags '(interp_flat_type $var $src -> interp_flat_type $var $dst) in
-                               let f := Constr.Unsafe.make
-                                          (Constr.Unsafe.Lambda
-                                             (Some arg)
-                                             argT
-                                             (Constr.Unsafe.make
-                                                (Constr.Unsafe.App
-                                                   input
-                                                   (Array.make
-                                                      1
-                                                      (Constr.Unsafe.make
-                                                         (Constr.Unsafe.Rel 1)))))) in
-                               let f := Std.eval_cbv cbv_all_flags f in
-                               let f := match Constr.Unsafe.kind f with
-                                        | Constr.Unsafe.Lambda id ty f
-                                          => Constr.Unsafe.make
-                                               (Constr.Unsafe.Lambda
-                                                  id
-                                                  ty
-                                                  (renamify_matches base_name f))
-                                        | _
-                                          => Control.throw (Tactic_failure (Some (Message.concat (Message.of_string "Internal error in renamify: Not a lambda ") (Message.of_constr f))))
-                                        end in
-                               let ret := '($abs $f) in
-                               Control.refine (fun () => ret))
-            )])) in
+                       (lazy_match! input with
+                       | @Abs ?base_type_code ?op ?var ?src ?dst ?input
+                         =>let abs := '(@Abs $base_type_code $op $var $src $dst) in
+                           let arg := match Ident.of_string base_name with
+                                      | Some id => id
+                                      | None => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "renamify: Invalid base_name for identifiers: ") (Message.of_string base_name))))
+                                      end in
+                           let argT := Std.eval_cbv cbv_all_flags '(interp_flat_type $var $src) in
+                           let inputT := Std.eval_cbv cbv_all_flags '(interp_flat_type $var $src -> interp_flat_type $var $dst) in
+                           let f := Constr.Unsafe.make
+                                      (Constr.Unsafe.Lambda
+                                         (Some arg)
+                                         argT
+                                         (Constr.Unsafe.make
+                                            (Constr.Unsafe.App
+                                               input
+                                               (Array.make
+                                                  1
+                                                  (Constr.Unsafe.make
+                                                     (Constr.Unsafe.Rel 1)))))) in
+                           let f := Std.eval_cbv cbv_all_flags f in
+                           let f := match Constr.Unsafe.kind f with
+                                    | Constr.Unsafe.Lambda id ty f
+                                      => Constr.Unsafe.make
+                                           (Constr.Unsafe.Lambda
+                                              id
+                                              ty
+                                              (renamify_matches base_name f))
+                                    | _
+                                      => Control.throw (Tactic_failure (Some (Message.concat (Message.of_string "Internal error in renamify: Not a lambda ") (Message.of_constr f))))
+                                    end in
+                           let ret := '($abs $f) in
+                           Control.refine (fun () => ret)
+                        end))) in
        let ret := Std.eval_cbv cbv_beta_zeta_flags '($ret : $t) in
        ret
   | _ => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "renamify: Not a product type ") (Message.of_constr t))))
