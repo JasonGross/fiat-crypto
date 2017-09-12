@@ -141,7 +141,21 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z
 
 c: $(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_JAVA_VO:Display.vo=.h)
 
-$(DISPLAY_NON_JAVA_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
+DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
+DISPLAY_NON_X25519_C64_VO := $(filter-out src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
+DISPLAY_X25519_C64_VO_LADDERSTEP := $(filter %ladderstepDisplay.vo %fesquareDisplay.vo,$(DISPLAY_X25519_C64_VO))
+DISPLAY_X25519_C64_VO_NO_LADDERSTEP := $(filter-out $(DISPLAY_X25519_C64_VO_LADDERSTEP),$(DISPLAY_X25519_C64_VO))
+
+$(DISPLAY_NON_JAVA_VO:Display.vo=DisplayScheduled.log) : %DisplayScheduled.log : %Display.log register-allocate.py
+	./register-allocate.py $< $@
+
+$(DISPLAY_X25519_C64_VO_NO_LADDERSTEP:Display.vo=.c) : %.c : %DisplayScheduled.log extract-function.sh
+	FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM=1 ./extract-function.sh $(patsubst %DisplayScheduled.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_X25519_C64_VO_LADDERSTEP:Display.vo=.c) : %.c : %Display.log extract-function.sh
+	FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_X25519_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
 	FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
 
 $(DISPLAY_NON_JAVA_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
@@ -150,8 +164,6 @@ $(DISPLAY_NON_JAVA_VO:Display.vo=.h) : %.h : %Display.log extract-function-heade
 $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
-
-DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 
 src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
 	src/Specific/X25519/C64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/C64/ $(filter %.c %.s,$^)
