@@ -51,7 +51,7 @@ Section BoundedField25p5.
     all:fin_preglue.
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
-    Time refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
+    Time refine_reflectively_with anf. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
     (*Show Ltac Profile.*)
     (* total time:     19.632s
 
