@@ -658,7 +658,7 @@ def print_imul_constant(reg_out, reg_in, imm, src):
     return ret
 
 
-USE_IMUL = False
+USE_IMUL = True
 def print_mul_by_constant(reg_out, reg_in, constant, src):
     #return '%s <- MULX %s, %s; // %s\n' % (ret_out, reg_in, constant, src)
     ret = ''
@@ -898,6 +898,7 @@ def inline_schedule(sched, input_vars, output_vars):
     for reg in REAL_REGISTERS:
         sched = sched.replace(print_val(reg.lower(), numbered_registers=True),
                               print_val(reg.lower(), numbered_registers=True, final_pass=True))
+    sched = re.sub('^"mov .*$', '', sched, flags=re.MULTILINE)
     ret = ''
     ret += 'uint64_t %s;\n' % ', '.join(output_vars[reg] for reg in output_regs)
     ret += 'uint64_t %s;\n\n' % ', '.join(reg.lower() for reg in TO_BE_RESTORED_REGISTERS)
