@@ -658,17 +658,20 @@ def print_imul_constant(reg_out, reg_in, imm, src):
     return ret
 
 
+USE_IMUL = False
 def print_mul_by_constant(reg_out, reg_in, constant, src):
     #return '%s <- MULX %s, %s; // %s\n' % (ret_out, reg_in, constant, src)
     ret = ''
     #if constant == '0x13':
     #    ret += ('// FIXME: lea for %s\n' % src)
     assert(constant[:2] == '0x')
-    #return ret + \
-    #    print_load_constant('rdx', constant) + \
-    #    print_mulx(reg_out, 'rdx', 'rdx', reg_in, src)
-    return ret + \
-        print_imul_constant(reg_out, reg_in, constant, src)
+    if USE_IMUL:
+        return ret + \
+            print_imul_constant(reg_out, reg_in, constant, src)
+    else:
+        return ret + \
+            print_load_constant('rdx', constant) + \
+            print_mulx(reg_out, 'rdx', 'rdx', reg_in, src)
 
 def print_adx(reg_out, rx1, rx2, bucket):
     #return '%s <- ADX %s, %s; // bucket: %s\n' % (reg_out, rx1, rx2, bucket)

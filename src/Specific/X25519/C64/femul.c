@@ -24,22 +24,25 @@ uint64_t rsp;
 asm (
 "mov %%rsp, %[rsp]\t\n"
 // Convention is low_reg:high_reg
+"mov $0x13, %%rdx\t\n"
 "mov %[mx11], %%r15\t\n"
-"imul $0x13, %%r15, %%r15\t\n" // x48 = x11 * 0x13
+"mulx %%r15, %%r15, %%rdx\t\n" // x48 = x11 * 0x13
 "mov %%r15, %%rdx\t\n"
 "mov %[mx17], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x55_tmp = x48 * x17
 "mov %%r14, %[rx90]\t\n" // bucket: x50_low + x52_low + x54_low + x56_low
 "mov %%r13, %[rx82]\t\n" // bucket: x50_high + x52_high + x54_high + x56_high
+"mov $0x13, %%rdx\t\n"
 "mov %[mx9], %[rx86]\t\n"
-"imul $0x13, %[rx86], %[rx86]\t\n" // x47 = x9 * 0x13
+"mulx %[rx86], %[rx86], %%rdx\t\n" // x47 = x9 * 0x13
 "mov %[rx86], %%rdx\t\n"
 "mov %[mx19], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x53_tmp = x47 * x19
 "add %%r14, %[rx90]\t\n" // bucket: x50_low + x52_low + x54_low + x56_low
 "adc %%r13, %[rx82]\t\n" // bucket: x50_high + x52_high + x54_high + x56_high
+"mov $0x13, %%rdx\t\n"
 "mov %[mx7], %[rx79]\t\n"
-"imul $0x13, %[rx79], %[rx79]\t\n" // x46 = x7 * 0x13
+"mulx %[rx79], %[rx79], %%rdx\t\n" // x46 = x7 * 0x13
 "mov %[rx79], %%rdx\t\n"
 "mov %[mx18], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x51_tmp = x46 * x18
@@ -50,8 +53,9 @@ asm (
 "mulx %%r13, %%r14, %%r13\t\n" // x20_tmp = x5 * x13
 "add %%r14, %[rx90]\t\n" // bucket: x50_low + x52_low + x54_low + x56_low
 "adc %%r13, %[rx82]\t\n" // bucket: x50_high + x52_high + x54_high + x56_high
+"mov $0x13, %%rdx\t\n"
 "mov %[mx10], %[rx79]\t\n"
-"imul $0x13, %[rx79], %[rx79]\t\n" // x45 = x10 * 0x13
+"mulx %[rx79], %[rx79], %%rdx\t\n" // x45 = x10 * 0x13
 "mov %[rx79], %%rdx\t\n"
 "mov %[mx15], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x49_tmp = x45 * x15
@@ -191,7 +195,8 @@ asm (
 "mov %[rx82], %[rx86]\t\n"
 "mov %%rdx, %[rx82]\t\n"
 "shrd $0x33, %[rx82], %[rx86]\t\n" // x81 = x80_low:x80_high >> 0x33
-"imul $0x13, %[rx86], %[rx86]\t\n" // x83 = x81 * 0x13
+"mov $0x13, %%rdx\t\n"
+"mulx %[rx86], %[rx86], %%rdx\t\n" // x83 = x81 * 0x13
 "add %[rx86], %[rx90]\t\n" // bucket: x84 = x70 + x83
 "shr $0x33, %[rx90]\t\n" // x85 = x70 >> 0x33
 "mov %[rx90], %[rx86]\t\n"
