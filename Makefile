@@ -173,9 +173,7 @@ src/Specific/X25519/C64/measurements.txt : %/measurements.txt : %/measure captur
 X25519_ASSEMBLY_GENERATED_FILES := \
 	src/Specific/X25519/Assembly64/scalarmult_noladderstep.c \
 	src/Specific/X25519/Assembly64/femul_scheduled.c \
-	src/Specific/X25519/Assembly64/femul.h \
-	src/Specific/X25519/Assembly64/fesquare.c \
-	src/Specific/X25519/Assembly64/fesquare.h
+	src/Specific/X25519/Assembly64/femul.h
 
 $(X25519_ASSEMBLY_GENERATED_FILES) : src/Specific/X25519/Assembly64/% : src/Specific/X25519/C64/%
 	cp $< $@
