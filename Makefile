@@ -170,14 +170,24 @@ src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $
 src/Specific/X25519/C64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
 	./capture.sh $* 2047
 
-src/Specific/X25519/C64/test_scheduled: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_SCHEDULED_VO:Display.vo=_scheduled.c) $(DISPLAY_X25519_C64_UNSCHEDULED_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/C64/ src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c
+X25519_ASSEMBLY_GENERATED_FILES := \
+	src/Specific/X25519/Assembly64/scalarmult_noladderstep.c \
+	src/Specific/X25519/Assembly64/femul_scheduled.c \
+	src/Specific/X25519/Assembly64/femul.h \
+	src/Specific/X25519/Assembly64/fesquare.c \
+	src/Specific/X25519/Assembly64/fesquare.h
 
-src/Specific/X25519/C64/measure_scheduled: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I liblow -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D UUT=crypto_scalarmult_bench
+$(X25519_ASSEMBLY_GENERATED_FILES) : src/Specific/X25519/Assembly64/% : src/Specific/X25519/C64/%
+	cp $@ $<
 
-src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
-	./capture.sh src/Specific/X25519/C64 2047
+src/Specific/X25519/Assembly64/test: src/Specific/X25519/Assembly64/compiler.sh src/Specific/X25519/x25519_test.c $(X25519_ASSEMBLY_GENERATED_FILES)
+	src/Specific/X25519/Assembly64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/Assembly64/ $(filter %.c %.s,$^)
+
+src/Specific/X25519/Assembly64/measure: src/Specific/X25519/Assembly64/compiler.sh measure.c $(X25519_ASSEMBLY_GENERATED_FILES)
+	src/Specific/X25519/C64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/Assembly64/ $(filter %.c %.s,$^) -D UUT=crypto_scalarmult_bench
+
+src/Specific/X25519/Assembly64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 2047
 
 third_party/openssl-curve25519/measure: third_party/openssl-curve25519/compiler.sh measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
 	third_party/openssl-curve25519/compiler.sh -o $@ -I liblow -I third_party/openssl-curve25519 $(filter %.c %.s,$^) -D UUT=crypto_scalarmult_bench
@@ -236,11 +246,12 @@ src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/icc/compile
 src/Specific/NISTP256/AMD64/icc/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
 	./capture.sh $* 65535
 
-bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt third_party/curve25519-donna-c64/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256-amd64/measurements.txt third_party/openssl-nistz256-adx/measurements.txt third_party/openssl-nistp256c64/measurements.txt
+bench: src/Specific/X25519/C64/measurements.txt src/Specific/X25519/Assembly64/measurements.txt third_party/openssl-curve25519/measurements.txt third_party/curve25519-donna-c64/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256-amd64/measurements.txt third_party/openssl-nistz256-adx/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?
 
-test: src/Specific/X25519/C64/test src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/AMD64/icc/p256_test
+test: src/Specific/X25519/C64/test src/Specific/X25519/Assembly64/test src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/AMD64/icc/p256_test
 	src/Specific/X25519/C64/test
+	src/Specific/X25519/Assembly64/test
 	src/Specific/NISTP256/AMD64/test/feadd_test
 	src/Specific/NISTP256/AMD64/test/femul_test
 	src/Specific/NISTP256/AMD64/test/p256_test
