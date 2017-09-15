@@ -31,7 +31,6 @@
 
 #include "femul.h"
 #include "fesquare.h"
-#include "ladderstep.h"
 
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 
@@ -157,28 +156,32 @@ fmonty(limb *x2, limb *z2, /* output 2Q */
        limb *x, limb *z,   /* input Q */
        limb *xprime, limb *zprime, /* input Q' */
        const limb *qmqp /* input Q - Q' */) {
-  uint64_t out[20];
-  ladderstep(out, qmqp[4], qmqp[3], qmqp[2], qmqp[1], qmqp[0], x[4], x[3], x[2], x[1], x[0], z[4], z[3], z[2], z[1], z[0], xprime[4], xprime[3], xprime[2], xprime[1], xprime[0], zprime[4], zprime[3], zprime[2], zprime[1], zprime[0]);
-  x2[4] = out[ 0];
-  x2[3] = out[ 1];
-  x2[2] = out[ 2];
-  x2[1] = out[ 3];
-  x2[0] = out[ 4];
-  z2[4] = out[ 5];
-  z2[3] = out[ 6];
-  z2[2] = out[ 7];
-  z2[1] = out[ 8];
-  z2[0] = out[ 9];
-  x3[4] = out[10];
-  x3[3] = out[11];
-  x3[2] = out[12];
-  x3[1] = out[13];
-  x3[0] = out[14];
-  z3[4] = out[15];
-  z3[3] = out[16];
-  z3[2] = out[17];
-  z3[1] = out[18];
-  z3[0] = out[19];
+  limb origx[5], origxprime[5], zzz[5], xx[5], zz[5], xxprime[5],
+        zzprime[5], zzzprime[5];
+
+  memcpy(origx, x, 5 * sizeof(limb));
+  fsum(x, z);
+  fdifference_backwards(z, origx);  // does x - z
+
+  memcpy(origxprime, xprime, sizeof(limb) * 5);
+  fsum(xprime, zprime);
+  fdifference_backwards(zprime, origxprime);
+  fmul(xxprime, xprime, z);
+  fmul(zzprime, x, zprime);
+  memcpy(origxprime, xxprime, sizeof(limb) * 5);
+  fsum(xxprime, zzprime);
+  fdifference_backwards(zzprime, origxprime);
+  fsquare_times(x3, xxprime, 1);
+  fsquare_times(zzzprime, zzprime, 1);
+  fmul(z3, zzzprime, qmqp);
+
+  fsquare_times(xx, x, 1);
+  fsquare_times(zz, z, 1);
+  fmul(x2, xx, zz);
+  fdifference_backwards(zz, xx);  // does zz = xx - zz
+  fscalar_product(zzz, zz, 121665);
+  fsum(zzz, xx);
+  fmul(z2, zz, zzz);
 }
 
 // -----------------------------------------------------------------------------
