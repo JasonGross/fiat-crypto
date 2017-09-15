@@ -59,6 +59,8 @@ src/Specific/X25519/Assembly64/fesquare.h
 src/Specific/X25519/Assembly64/ladderstep.c
 src/Specific/X25519/Assembly64/ladderstep_scheduled.c
 src/Specific/X25519/Assembly64/ladderstep.h
+src/Specific/X25519/Assembly64/scalarmult.c
+src/Specific/X25519/Assembly64/scalarmult_noladderstep.c
 src/Specific/X25519/Assembly64/measure
 src/Specific/X25519/Assembly64/test
 third_party/openssl-curve25519/measure

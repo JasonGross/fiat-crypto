@@ -1,0 +1,157 @@
+λ '(x7, x8, x6, x4, x2)%core,
+
+uint64_t x58, x61, x51, x54, x62;
+uint64_t rbp;
+
+asm (
+"mov %rbp, %[rbp]\t\n"
+// Convention is low_reg:high_reg
+"mov $0x2, %rdx\t\n"
+"mov %[mx6], %[rx62]\t\n"
+"mulx %[rx62], %rdx, %[rx62]\t\n" // x11 = x6 * 0x2
+// FIXME: lea for x12 = x11 * 0x13
+"mov $0x13, %rdx\t\n"
+"mulx %[rx62], %rdx, %[rx62]\t\n" // x12 = x11 * 0x13
+"mov %[rx62], %rdx\t\n"
+"mov %[mx8], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x18_tmp = x12 * x8
+"mov %r14, %[rx62]\t\n" // bucket: x17_low + x19_low
+"mov %r13, %[rx54]\t\n" // bucket: x17_high + x19_high
+"mov %[mx2], %rdx\t\n"
+"mov %[mx2], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x15_tmp = x2 * x2
+"add %r14, %[rx62]\t\n" // bucket: x17_low + x19_low
+"adx %r13, %[rx54]\t\n" // bucket: x17_high + x19_high
+// FIXME: lea for x13 = x7 * 0x13
+"mov $0x13, %rdx\t\n"
+"mov %[mx7], %[rx51]\t\n"
+"mulx %[rx51], %rdx, %[rx51]\t\n" // x13 = x7 * 0x13
+"mov $0x2, %rdx\t\n"
+"mulx %[rx51], %rdx, %r10\t\n" // x14 = x13 * 0x2
+"mov %r10, %rdx\t\n"
+"mov %[mx4], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x16_tmp = x14 * x4
+"adc %r14, %[rx62]\t\n" // bucket: x17_low + x19_low
+"adcx $0, %[rx54]\t\n" // bucket: x17_high + x19_high
+"and $0x7ffffffffffff, %[rx62]\t\n" // x42 = x19_low & 0x7ffffffffffff
+"adx %r13, %[rx54]\t\n" // bucket: x17_high + x19_high
+"mov %[rx62], %rdx\t\n"
+"mov %[rx62], %[rx54]\t\n"
+"mov %rdx, %[rx62]\t\n"
+"shrd $0x33, %[rx54], %[rx62]\t\n" // x41 = x19_low:x19_high >> 0x33
+"mov %[rx54], %[rx61]\t\n" // bucket: x22_low + x25_low + x43_low
+// FIXME: lea for x23 = x8 * 0x13
+"mov $0x13, %rdx\t\n"
+"mov %[mx8], %[rx61]\t\n"
+"mulx %[rx61], %rdx, %[rx61]\t\n" // x23 = x8 * 0x13
+"mov %[mx8], %rdx\t\n"
+"mulx %[rx61], %r13, %r14\t\n" // x24_tmp = x8 * x23
+"add %r14, %[rx61]\t\n" // bucket: x22_low + x25_low + x43_low
+"mov %r13, %r8\t\n" // bucket: x22_high + x25_high + x43_high
+"mov $0x2, %rdx\t\n"
+"mov %[mx2], %rdi\t\n"
+"mulx %rdi, %rdx, %rdi\t\n" // x9 = x2 * 0x2
+"mov %rdi, %rdx\t\n"
+"mov %[mx4], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x20_tmp = x9 * x4
+"adc %r14, %[rx61]\t\n" // bucket: x22_low + x25_low + x43_low
+"adx %r13, %r8\t\n" // bucket: x22_high + x25_high + x43_high
+"mov %r10, %rdx\t\n"
+"mov %[mx6], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x21_tmp = x14 * x6
+"adc %r14, %[rx61]\t\n" // bucket: x22_low + x25_low + x43_low
+"adcx $0, %r8\t\n" // bucket: x22_high + x25_high + x43_high
+"and $0x7ffffffffffff, %[rx61]\t\n" // x45 = x43_low & 0x7ffffffffffff
+"adx %r13, %r8\t\n" // bucket: x22_high + x25_high + x43_high
+"mov %[rx61], %rdx\t\n"
+"mov %[rx61], %r8\t\n"
+"mov %rdx, %[rx61]\t\n"
+"shrd $0x33, %r8, %[rx61]\t\n" // x44 = x43_low:x43_high >> 0x33
+"mov %r8, %r10\t\n" // bucket: x28_low + x30_low + x46_low
+"mov %r10, %rdx\t\n"
+"mov %[mx8], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x29_tmp = x14 * x8
+"add %r14, %r10\t\n" // bucket: x28_low + x30_low + x46_low
+"mov %r13, %[rx54]\t\n" // bucket: x28_high + x30_high + x46_high
+"mov %rdi, %rdx\t\n"
+"mov %[mx6], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x26_tmp = x9 * x6
+"adc %r14, %r10\t\n" // bucket: x28_low + x30_low + x46_low
+"adx %r13, %[rx54]\t\n" // bucket: x28_high + x30_high + x46_high
+"mov %[mx4], %rdx\t\n"
+"mov %[mx4], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x27_tmp = x4 * x4
+"adc %r14, %r10\t\n" // bucket: x28_low + x30_low + x46_low
+"adcx $0, %[rx54]\t\n" // bucket: x28_high + x30_high + x46_high
+"and $0x7ffffffffffff, %r10\t\n" // x48 = x46_low & 0x7ffffffffffff
+"adx %r13, %[rx54]\t\n" // bucket: x28_high + x30_high + x46_high
+"mov %r10, %rdx\t\n"
+"mov %r10, %[rx54]\t\n"
+"mov %rdx, %r10\t\n"
+"shrd $0x33, %[rx54], %r10\t\n" // x47 = x46_low:x46_high >> 0x33
+"mov %[rx54], %[rx51]\t\n" // bucket: x33_low + x35_low + x49_low
+"mov %[mx7], %rdx\t\n"
+"mulx %[rx51], %r13, %r14\t\n" // x34_tmp = x7 * x13
+"add %r14, %[rx51]\t\n" // bucket: x33_low + x35_low + x49_low
+"mov %r13, %r8\t\n" // bucket: x33_high + x35_high + x49_high
+"mov %rdi, %rdx\t\n"
+"mov %[mx8], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x31_tmp = x9 * x8
+"adc %r14, %[rx51]\t\n" // bucket: x33_low + x35_low + x49_low
+"adx %r13, %r8\t\n" // bucket: x33_high + x35_high + x49_high
+"mov $0x2, %rdx\t\n"
+"mov %[mx4], %rsi\t\n"
+"mulx %rsi, %rdx, %rsi\t\n" // x10 = x4 * 0x2
+"mov %rsi, %rdx\t\n"
+"mov %[mx6], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x32_tmp = x10 * x6
+"adc %r14, %[rx51]\t\n" // bucket: x33_low + x35_low + x49_low
+"adcx $0, %r8\t\n" // bucket: x33_high + x35_high + x49_high
+"and $0x7ffffffffffff, %[rx51]\t\n" // x51 = x49_low & 0x7ffffffffffff
+"adx %r13, %r8\t\n" // bucket: x33_high + x35_high + x49_high
+"mov %[rx51], %rdx\t\n"
+"mov %[rx51], %r8\t\n"
+"mov %rdx, %[rx51]\t\n"
+"shrd $0x33, %r8, %[rx51]\t\n" // x50 = x49_low:x49_high >> 0x33
+"mov %r8, %[rx54]\t\n" // bucket: x38_low + x40_low + x52_low
+"mov %[mx6], %rdx\t\n"
+"mov %[mx6], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x39_tmp = x6 * x6
+"add %r14, %[rx54]\t\n" // bucket: x38_low + x40_low + x52_low
+"mov %r13, %[rx58]\t\n" // bucket: x38_high + x40_high + x52_high
+"mov %rdi, %rdx\t\n"
+"mov %[mx7], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x36_tmp = x9 * x7
+"adc %r14, %[rx54]\t\n" // bucket: x38_low + x40_low + x52_low
+"adx %r13, %[rx58]\t\n" // bucket: x38_high + x40_high + x52_high
+"mov %rsi, %rdx\t\n"
+"mov %[mx8], %r13\t\n"
+"mulx %r13, %r13, %r14\t\n" // x37_tmp = x10 * x8
+"adc %r14, %[rx54]\t\n" // bucket: x38_low + x40_low + x52_low
+"adcx $0, %[rx58]\t\n" // bucket: x38_high + x40_high + x52_high
+"and $0x7ffffffffffff, %[rx54]\t\n" // x54 = x52_low & 0x7ffffffffffff
+"adx %r13, %[rx58]\t\n" // bucket: x38_high + x40_high + x52_high
+"mov %[rx54], %rdx\t\n"
+"mov %[rx54], %[rx58]\t\n"
+"mov %rdx, %[rx54]\t\n"
+"shrd $0x33, %[rx58], %[rx54]\t\n" // x53 = x52_low:x52_high >> 0x33
+// FIXME: lea for x55 = x53 * 0x13
+"mov $0x13, %rdx\t\n"
+"mulx %[rx58], %rdx, %[rx58]\t\n" // x55 = x53 * 0x13
+"adx %[rx58], %[rx62]\t\n" // bucket: x56 = x42 + x55
+"shr $0x33, %[rx62]\t\n" // x57 = x42 >> 0x33
+"mov %[rx62], %[rx58]\t\n"
+"and $0x7ffffffffffff, %[rx58]\t\n" // x58 = x56 & 0x7ffffffffffff
+"adx %[rx61], %[rx62]\t\n" // bucket: x59 = x57 + x45
+"shr $0x33, %[rx62]\t\n" // x60 = x57 >> 0x33
+"mov %[rx62], %[rx61]\t\n"
+"and $0x7ffffffffffff, %[rx61]\t\n" // x61 = x59 & 0x7ffffffffffff
+"adx %r10, %[rx62]\t\n" // bucket: x62 = x60 + x48
+"mov %[rbp], %rbp\t\n"
+: [rx58] "=&r" (x58), [rx61] "=&r" (x61), [rx51] "=&r" (x51), [rx54] "=&r" (x54), [rx62] "=&r" (x62)
+: [mx6] "m" (x6), [mx7] "m" (x7), [mx4] "m" (x4), [mx2] "m" (x2), [mx8] "m" (x8), [rbp] "m" (rbp)
+: "cc", "rdx", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
+);
+
+
+return (x54, x51, x62, x61, x58))
