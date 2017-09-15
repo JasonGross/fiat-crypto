@@ -106,22 +106,39 @@ fmul(felem output, const felem in2, const felem in) {
   output[0] = out[4];
 }
 
-static void force_inline
+static inline void force_inline
 fsquare_times(felem output, const felem in, limb count) {
-  uint64_t r0 = in[0];
-  uint64_t r1 = in[1];
-  uint64_t r2 = in[2];
-  uint64_t r3 = in[3];
-  uint64_t r4 = in[4];
+  uint128_t t[5];
+  limb r0,r1,r2,r3,r4,c;
+  limb d0,d1,d2,d4,d419;
+
+  r0 = in[0];
+  r1 = in[1];
+  r2 = in[2];
+  r3 = in[3];
+  r4 = in[4];
 
   do {
-    uint64_t out[5];
-    fesquare(out, r4, r3, r2, r1, r0);
-    r4 = out[0];
-    r3 = out[1];
-    r2 = out[2];
-    r1 = out[3];
-    r0 = out[4];
+    d0 = r0 * 2;
+    d1 = r1 * 2;
+    d2 = r2 * 2 * 19;
+    d419 = r4 * 19;
+    d4 = d419 * 2;
+
+    t[0] = ((uint128_t) r0) * r0 + ((uint128_t) d4) * r1 + (((uint128_t) d2) * (r3     ));
+    t[1] = ((uint128_t) d0) * r1 + ((uint128_t) d4) * r2 + (((uint128_t) r3) * (r3 * 19));
+    t[2] = ((uint128_t) d0) * r2 + ((uint128_t) r1) * r1 + (((uint128_t) d4) * (r3     ));
+    t[3] = ((uint128_t) d0) * r3 + ((uint128_t) d1) * r2 + (((uint128_t) r4) * (d419   ));
+    t[4] = ((uint128_t) d0) * r4 + ((uint128_t) d1) * r3 + (((uint128_t) r2) * (r2     ));
+
+                    r0 = (limb)t[0] & 0x7ffffffffffff; c = (limb)(t[0] >> 51);
+    t[1] += c;      r1 = (limb)t[1] & 0x7ffffffffffff; c = (limb)(t[1] >> 51);
+    t[2] += c;      r2 = (limb)t[2] & 0x7ffffffffffff; c = (limb)(t[2] >> 51);
+    t[3] += c;      r3 = (limb)t[3] & 0x7ffffffffffff; c = (limb)(t[3] >> 51);
+    t[4] += c;      r4 = (limb)t[4] & 0x7ffffffffffff; c = (limb)(t[4] >> 51);
+    r0 +=   c * 19; c = r0 >> 51; r0 = r0 & 0x7ffffffffffff;
+    r1 +=   c;      c = r1 >> 51; r1 = r1 & 0x7ffffffffffff;
+    r2 +=   c;
   } while(--count);
 
   output[0] = r0;
