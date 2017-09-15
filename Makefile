@@ -178,7 +178,7 @@ X25519_ASSEMBLY_GENERATED_FILES := \
 	src/Specific/X25519/Assembly64/fesquare.h
 
 $(X25519_ASSEMBLY_GENERATED_FILES) : src/Specific/X25519/Assembly64/% : src/Specific/X25519/C64/%
-	cp $@ $<
+	cp $< $@
 
 src/Specific/X25519/Assembly64/test: src/Specific/X25519/Assembly64/compiler.sh src/Specific/X25519/x25519_test.c $(X25519_ASSEMBLY_GENERATED_FILES)
 	src/Specific/X25519/Assembly64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/Assembly64/ $(filter %.c %.s,$^)

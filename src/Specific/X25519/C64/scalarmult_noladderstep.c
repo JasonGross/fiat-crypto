@@ -41,6 +41,58 @@ typedef uint8_t u8;
 typedef uint64_t limb;
 typedef limb felem[5];
 
+/* Sum two numbers: output += in */
+static inline void force_inline
+fsum(limb *output, const limb *in) {
+  output[0] += in[0];
+  output[1] += in[1];
+  output[2] += in[2];
+  output[3] += in[3];
+  output[4] += in[4];
+}
+
+/* Find the difference of two numbers: output = in - output
+ * (note the order of the arguments!)
+ *
+ * Assumes that out[i] < 2**52
+ * On return, out[i] < 2**55
+ */
+static inline void force_inline
+fdifference_backwards(felem out, const felem in) {
+  /* 152 is 19 << 3 */
+  static const limb two54m152 = (((limb)1) << 54) - 152;
+  static const limb two54m8 = (((limb)1) << 54) - 8;
+
+  out[0] = in[0] + two54m152 - out[0];
+  out[1] = in[1] + two54m8 - out[1];
+  out[2] = in[2] + two54m8 - out[2];
+  out[3] = in[3] + two54m8 - out[3];
+  out[4] = in[4] + two54m8 - out[4];
+}
+
+/* Multiply a number by a scalar: output = in * scalar */
+static inline void force_inline
+fscalar_product(felem output, const felem in, const limb scalar) {
+  uint128_t a;
+
+  a = ((uint128_t) in[0]) * scalar;
+  output[0] = ((limb)a) & 0x7ffffffffffff;
+
+  a = ((uint128_t) in[1]) * scalar + ((limb) (a >> 51));
+  output[1] = ((limb)a) & 0x7ffffffffffff;
+
+  a = ((uint128_t) in[2]) * scalar + ((limb) (a >> 51));
+  output[2] = ((limb)a) & 0x7ffffffffffff;
+
+  a = ((uint128_t) in[3]) * scalar + ((limb) (a >> 51));
+  output[3] = ((limb)a) & 0x7ffffffffffff;
+
+  a = ((uint128_t) in[4]) * scalar + ((limb) (a >> 51));
+  output[4] = ((limb)a) & 0x7ffffffffffff;
+
+  output[0] += (a >> 51) * 19;
+}
+
 static void force_inline
 fmul(felem output, const felem in2, const felem in) {
   uint64_t out[5];
