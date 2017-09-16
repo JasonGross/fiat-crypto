@@ -93,7 +93,7 @@ fscalar_product(felem output, const felem in, const limb scalar) {
   output[0] += (a >> 51) * 19;
 }
 
-static void force_inline
+static void __attribute__((noinline))
 fmul(felem output, const felem in2, const felem in) {
   uint64_t out[5];
   femul(out,
