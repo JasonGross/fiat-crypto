@@ -1,10 +1,7 @@
 λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
 
 uint64_t x89, x79, x86, x82, x90;
-uint64_t rsp;
-
 asm (
-"mov %%rsp, %[rsp]\t\n"
 // Convention is low_reg:high_reg
 "mov $0x13, %%rdx\t\n"
 "mov %[mx11], %%r15\t\n"
@@ -54,37 +51,37 @@ asm (
 "shrd $0x33, %[rx90], %[rx82]\t\n" // x69 = x56_low:x56_high >> 0x33
 "mov %[rx82], %[rx89]\t\n" // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
 "add %%r14, %[rx89]\t\n" // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-"mov %%r13, %%rsp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+"mov %%r13, %%rbp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
 "mov %[rx86], %%rdx\t\n"
 "mov %[mx18], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x59_tmp = x47 * x18
 "add %%r14, %[rx89]\t\n" // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-"adc %%r13, %%rsp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+"adc %%r13, %%rbp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
 "mov %[rx79], %%rdx\t\n"
 "mov %[mx17], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x57_tmp = x45 * x17
 "add %%r14, %[rx89]\t\n" // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-"adc %%r13, %%rsp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+"adc %%r13, %%rbp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
 "mov %[mx5], %%rdx\t\n"
 "mov %[mx15], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x21_tmp = x5 * x15
 "add %%r14, %[rx89]\t\n" // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-"adc %%r13, %%rsp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+"adc %%r13, %%rbp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
 "mov %[mx7], %%rdx\t\n"
 "mov %[mx13], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x22_tmp = x7 * x13
 "add %%r14, %[rx89]\t\n" // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-"adc %%r13, %%rsp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+"adc %%r13, %%rbp\t\n" // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
 "mov $0x7ffffffffffff, %%rdx\t\n"
 "and %%rdx, %[rx89]\t\n" // x73 = x71_low & 0x7ffffffffffff
 "mov %%r15, %%rdx\t\n"
 "mov %[mx18], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x65_tmp = x48 * x18
 "mov %[rx89], %%rdx\t\n"
-"mov %[rx89], %%rsp\t\n"
+"mov %[rx89], %%rbp\t\n"
 "mov %%rdx, %[rx89]\t\n"
-"shrd $0x33, %[rx89], %%rsp\t\n" // x72 = x71_low:x71_high >> 0x33
-"mov %%rsp, %%r15\t\n" // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+"shrd $0x33, %[rx89], %%rbp\t\n" // x72 = x71_low:x71_high >> 0x33
+"mov %%rbp, %%r15\t\n" // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
 "add %%r14, %%r15\t\n" // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
 "mov %%r13, %[rx82]\t\n" // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
 "mov %[rx79], %%rdx\t\n"
@@ -118,37 +115,37 @@ asm (
 "shrd $0x33, %%r15, %[rx82]\t\n" // x75 = x74_low:x74_high >> 0x33
 "mov %[rx82], %[rx79]\t\n" // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
 "add %%r14, %[rx79]\t\n" // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-"mov %%r13, %%rsp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+"mov %%r13, %%rbp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
 "mov %[mx9], %%rdx\t\n"
 "mov %[mx15], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x34_tmp = x9 * x15
 "add %%r14, %[rx79]\t\n" // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-"adc %%r13, %%rsp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+"adc %%r13, %%rbp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
 "mov %[mx7], %%rdx\t\n"
 "mov %[mx17], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x32_tmp = x7 * x17
 "add %%r14, %[rx79]\t\n" // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-"adc %%r13, %%rsp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+"adc %%r13, %%rbp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
 "mov %[mx5], %%rdx\t\n"
 "mov %[mx19], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x29_tmp = x5 * x19
 "add %%r14, %[rx79]\t\n" // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-"adc %%r13, %%rsp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+"adc %%r13, %%rbp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
 "mov %[mx11], %%rdx\t\n"
 "mov %[mx13], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x30_tmp = x11 * x13
 "add %%r14, %[rx79]\t\n" // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-"adc %%r13, %%rsp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+"adc %%r13, %%rbp\t\n" // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
 "mov $0x7ffffffffffff, %%rdx\t\n"
 "and %%rdx, %[rx79]\t\n" // x79 = x77_low & 0x7ffffffffffff
 "mov %[mx9], %%rdx\t\n"
 "mov %[mx17], %%r13\t\n"
 "mulx %%r13, %%r14, %%r13\t\n" // x43_tmp = x9 * x17
 "mov %[rx79], %%rdx\t\n"
-"mov %[rx79], %%rsp\t\n"
+"mov %[rx79], %%rbp\t\n"
 "mov %%rdx, %[rx79]\t\n"
-"shrd $0x33, %[rx79], %%rsp\t\n" // x78 = x77_low:x77_high >> 0x33
-"mov %%rsp, %[rx82]\t\n" // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+"shrd $0x33, %[rx79], %%rbp\t\n" // x78 = x77_low:x77_high >> 0x33
+"mov %%rbp, %[rx82]\t\n" // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
 "add %%r14, %[rx82]\t\n" // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
 "mov %%r13, %[rx86]\t\n" // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
 "mov %[mx7], %%rdx\t\n"
@@ -190,10 +187,9 @@ asm (
 "mov $0x7ffffffffffff, %%rdx\t\n"
 "and %%rdx, %[rx89]\t\n" // x89 = x87 & 0x7ffffffffffff
 "add %%r15, %[rx90]\t\n" // bucket: x90 = x88 + x76
-"mov %[rsp], %%rsp\t\n"
 : [rx89] "=&r" (x89), [rx79] "=&r" (x79), [rx86] "=&r" (x86), [rx82] "=&r" (x82), [rx90] "=&r" (x90)
-: [mx9] "m" (x9), [mx7] "m" (x7), [mx5] "m" (x5), [mx10] "m" (x10), [mx11] "m" (x11), [mx13] "m" (x13), [mx15] "m" (x15), [mx17] "m" (x17), [mx18] "m" (x18), [mx19] "m" (x19), [rsp] "m" (rsp)
-: "cc", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
+: [mx9] "m" (x9), [mx7] "m" (x7), [mx5] "m" (x5), [mx10] "m" (x10), [mx11] "m" (x11), [mx13] "m" (x13), [mx15] "m" (x15), [mx17] "m" (x17), [mx18] "m" (x18), [mx19] "m" (x19)
+: "cc", "rdx", "rbp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 );
 
 

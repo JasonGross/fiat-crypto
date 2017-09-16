@@ -6,8 +6,9 @@ LAMBDA = u'\u03bb'
 
 NAMED_REGISTERS = ('RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI')
 NUMBERED_REGISTERS = tuple('r%d' % i for i in range(16))
-RESERVED_REGISTERS = ('RBP', )
-TO_BE_RESTORED_REGISTERS = ('RSP', )
+RESERVED_REGISTERS = ('RSP', )
+MANDATORY_CLOBBER_REGISTERS = ('RBP', )
+TO_BE_RESTORED_REGISTERS = tuple() # ('RSP', )
 NAMED_REGISTER_MAPPING = dict(('r%d' % i, reg) for i, reg in enumerate(NAMED_REGISTERS))
 REAL_REGISTERS = tuple(list(NAMED_REGISTERS) + list(NUMBERED_REGISTERS))
 REGISTERS = ['reg%d' % i for i in range(13)]
@@ -887,10 +888,12 @@ def inline_schedule(sched, input_vars, output_vars):
     for reg in output_regs:
         sched = sched.replace('%%[%s]' % reg, '%%[r%s]' % output_vars[reg])
     available_registers = available_registers[-len(transient_regs):]
-    assert(len(available_registers) > len(TO_BE_RESTORED_REGISTERS)) # makes the replacement of low registers with ones we have to handle specially easier
-    count = len([reg for reg in TO_BE_RESTORED_REGISTERS if reg.lower() not in available_registers])
+    assert(len(available_registers) > len(TO_BE_RESTORED_REGISTERS) + len(MANDATORY_CLOBBER_REGISTERS)) # makes the replacement of low registers with ones we have to handle specially easier
+    count = len([reg for reg in list(TO_BE_RESTORED_REGISTERS) + list(MANDATORY_CLOBBER_REGISTERS)
+                 if reg.lower() not in available_registers])
     available_registers = [reg.lower() for reg in TO_BE_RESTORED_REGISTERS] + \
-                          [reg for reg in available_registers[count:] if reg.upper() not in TO_BE_RESTORED_REGISTERS]
+                          [reg.lower() for reg in MANDATORY_CLOBBER_REGISTERS] + \
+                          [reg for reg in available_registers[count:] if reg.upper() not in list(TO_BE_RESTORED_REGISTERS) + list(MANDATORY_CLOBBER_REGISTERS)]
     renaming = dict((from_reg, to_reg) for from_reg, to_reg in zip(transient_regs, available_registers[-len(transient_regs):]))
     for from_reg, to_reg in renaming.items():
         sched = sched.replace('%%[%s]' % from_reg, print_val(to_reg, numbered_registers=True))
@@ -900,7 +903,8 @@ def inline_schedule(sched, input_vars, output_vars):
                               print_val(reg.lower(), numbered_registers=True, final_pass=True))
     ret = ''
     ret += 'uint64_t %s;\n' % ', '.join(output_vars[reg] for reg in output_regs)
-    ret += 'uint64_t %s;\n\n' % ', '.join(reg.lower() for reg in TO_BE_RESTORED_REGISTERS)
+    if len(TO_BE_RESTORED_REGISTERS) > 0:
+        ret += 'uint64_t %s;\n\n' % ', '.join(reg.lower() for reg in TO_BE_RESTORED_REGISTERS)
     ret += 'asm (\n'
     for reg in map(str.lower, TO_BE_RESTORED_REGISTERS):
         ret += print_mov_no_adjust('%%[%s]' % reg, print_val(reg, numbered_registers=True, final_pass=True))
