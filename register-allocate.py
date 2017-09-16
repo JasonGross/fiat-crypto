@@ -13,6 +13,7 @@ NAMED_REGISTER_MAPPING = dict(('r%d' % i, reg) for i, reg in enumerate(NAMED_REG
 REAL_REGISTERS = tuple(list(NAMED_REGISTERS) + list(NUMBERED_REGISTERS))
 REGISTERS = ['reg%d' % i for i in range(13)]
 DEFAULT_DIALECT = 'att'
+DROP_MOVS = False
 
 def get_lines(filename):
     with codecs.open(filename, 'r', encoding='utf8') as f:
@@ -901,6 +902,8 @@ def inline_schedule(sched, input_vars, output_vars):
     for reg in REAL_REGISTERS:
         sched = sched.replace(print_val(reg.lower(), numbered_registers=True),
                               print_val(reg.lower(), numbered_registers=True, final_pass=True))
+    if DROP_MOVS:
+        sched = re.sub('^"mov .*$', '', sched, flags=re.MULTILINE)
     ret = ''
     ret += 'uint64_t %s;\n' % ', '.join(output_vars[reg] for reg in output_regs)
     if len(TO_BE_RESTORED_REGISTERS) > 0:
