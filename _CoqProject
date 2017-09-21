@@ -266,6 +266,8 @@ src/Specific/X25519/C32/femul.v
 src/Specific/X25519/C32/femulDisplay.v
 src/Specific/X25519/C32/fesquare.v
 src/Specific/X25519/C32/fesquareDisplay.v
+src/Specific/X25519/C32/ladderstep.v
+src/Specific/X25519/C32/ladderstepDisplay.v
 src/Specific/X25519/C64/femul.v
 src/Specific/X25519/C64/femulDisplay.v
 src/Specific/X25519/C64/fesquare.v

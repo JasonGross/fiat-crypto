@@ -16,7 +16,7 @@ INSTALLDEFAULTROOT := Crypto
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific-c specific-display display \
-	specific non-specific lite only-heavy printlite \
+	specific non-specific slightly-lite lite only-heavy printslightly-lite printlite \
 	curves-proofs no-curves-proofs \
 	test bench c
 
@@ -41,7 +41,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs slightly-lite lite only-heavy printdeps printreversedeps printslightly-lite printlite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -59,7 +59,8 @@ $(VOFILES): | coqprime
 UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo
+SLIGHTLY_LITE_UNMADE_VOFILES := src/Specific/X25519/C32/ladderstep.vo
+LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo $(SLIGHTLY_LITE_UNMADE_VOFILES)
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 
@@ -72,9 +73,13 @@ DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
-ifneq ($(filter lite,$(MAKECMDGOALS)),)
+ifneq ($(filter printlite lite,$(MAKECMDGOALS)),)
 LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
+ifneq ($(filter printslightly-lite slightly-lite,$(MAKECMDGOALS)),)
+SLIGHTLY_LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(SLIGHTLY_LITE_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+SLIGHTLY_LITE_VOFILES := $(filter-out $(SLIGHTLY_LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
 ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
 HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
@@ -90,6 +95,7 @@ endif
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
+slightly-lite: $(SLIGHTLY_LITE_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
@@ -105,6 +111,14 @@ printlite::
 	@echo
 	@echo 'Files Not Made:'
 	@for i in $(sort $(LITE_ALL_UNMADE_VOFILES)); do echo $$i; done
+
+printslightly-lite::
+	@echo 'Files Made:'
+	@for i in $(sort $(SLIGHTLY_LITE_VOFILES)); do echo $$i; done
+	@echo
+	@echo
+	@echo 'Files Not Made:'
+	@for i in $(sort $(SLIGHTLY_LITE_ALL_UNMADE_VOFILES)); do echo $$i; done
 
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
@@ -164,6 +178,7 @@ $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compile
 
 TEST_BINARIES := \
 	src/Specific/X25519/C64/test \
+	src/Specific/X25519/C32/test \
 	src/Specific/NISTP256/AMD64/test/feadd_test \
 	src/Specific/NISTP256/AMD64/test/femul_test \
 	src/Specific/NISTP256/AMD64/test/p256_test \
@@ -171,6 +186,7 @@ TEST_BINARIES := \
 RUN_TEST_BINARIES := $(addsuffix -run,$(TEST_BINARIES))
 MEASUREMENTS := \
 	src/Specific/X25519/C64/measurements.txt \
+	src/Specific/X25519/C32/measurements.txt \
 	third_party/openssl-curve25519/measurements.txt \
 	third_party/curve25519-donna-c64/measurements.txt \
 	third_party/openssl-nistz256-amd64/measurements.txt \
@@ -185,6 +201,12 @@ src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X
 src/Specific/X25519/C64/test: INCLUDE_FOLDER=src/Specific/X25519/C64
 src/Specific/X25519/C64/measure: UUT=crypto_scalarmult_bench
 src/Specific/X25519/C64/measurements.txt: COUNT=2047
+
+src/Specific/X25519/C32/test src/Specific/X25519/C32/measure: $(DISPLAY_X25519_C32_VO:Display.vo=.c) $(DISPLAY_X25519_C32_VO:Display.vo=.h) src/Specific/X25519/C32/scalarmult.c
+src/Specific/X25519/C32/test: src/Specific/X25519/C32/compiler.sh src/Specific/X25519/x25519_test.c
+src/Specific/X25519/C32/test: INCLUDE_FOLDER=src/Specific/X25519/C32
+src/Specific/X25519/C32/measure: UUT=crypto_scalarmult_bench
+src/Specific/X25519/C32/measurements.txt: COUNT=2047
 
 third_party/openssl-curve25519/measure: third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
 third_party/openssl-curve25519/measure: UUT=crypto_scalarmult_bench
