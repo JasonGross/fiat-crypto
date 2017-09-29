@@ -200,9 +200,17 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           (* even if its Gallina name matches a Ltac in this tactic. *)
           let maybe_x := fresh x in
           let not_x := fresh x in
+          let not_not_x := fresh x in
           let C' := match constr:(Set) with
                     | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                                     (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
+                                     match C with
+                                     | not_not_x
+                                       => ltac:(debug_enter_reify_rec;
+                                                let e := (eval cbv delta [not_not_x] in not_not_x) in
+                                                let e := reify_rec e in
+                                                debug_leave_reify_rec e;
+                                                eexact e)
+                                     end) (* [C] here is an open term that references "x" by name *)
                     | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to reify by typeclasses:" e)
                     end in
           match constr:(Set) with
@@ -345,9 +353,17 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
       (* even if its Gallina name matches a Ltac in this tactic. *)
       let maybe_x := fresh x in
       let not_x := fresh x in
+      let not_not_x := fresh x in
       let C' := match constr:(Set) with
                 | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                                 (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
+                                 match C with
+                                 | not_not_x
+                                   => ltac:(debug_enter_reify_rec;
+                                            let e := (eval cbv delta [not_not_x] in not_not_x) in
+                                            let e := reify_rec e in
+                                            debug_leave_reify_rec e;
+                                            eexact e)
+                                 end) (* [C] here is an open term that references "x" by name *)
                 | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to reify by typeclasses:" e)
                 end in
       let C := match constr:(Set) with
@@ -462,8 +478,16 @@ Ltac unique_reify_context_variable base_type_code interp_base_type op F Fbody rT
        | fun x : ?X => ?Fbody'
          => let maybe_x := fresh x in
             let not_x := fresh maybe_x in
+            let not_not_x := fresh not_x in
             let rF := lazymatch constr:(fun var' (x : X) (not_x : var' src) (_ : reify_var_for_in_is base_type_code x src not_x)
-                                        => (_ : reify (reify_pretag var') Fbody'))
+                                        => match Fbody' with
+                                           | not_not_x
+                                             => ltac:(debug_enter_reify_rec;
+                                                      let e := (eval cbv delta [not_not_x] in not_not_x) in
+                                                      let e := reifyf base_type_code interp_base_type op var' e in
+                                                      debug_leave_reify_rec e;
+                                                      eexact e)
+                                           end)
                       with
                       | fun (var' : ?VAR) (x : ?X) (v : ?V) _ => ?C
                         => constr:(fun (var' : VAR) (v : V) => C)
