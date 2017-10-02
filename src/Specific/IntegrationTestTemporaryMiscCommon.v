@@ -124,7 +124,12 @@ Ltac apply_lift_sig :=
 Ltac start_preglue :=
   apply_lift_sig; intros;
   let phi := lazymatch goal with |- { f | ?phi _ = _ } => phi end in
-  eexists_sig_etransitivity; cbv [phi].
+  eexists_sig_etransitivity;
+  first [ cbv [phi]
+        | lazymatch phi with
+          | ?phi ?package
+            => cbv [phi package]
+          end ].
 Ltac do_set_sig f_sig :=
   let fZ := fresh f_sig in
   set (fZ := proj1_sig f_sig);

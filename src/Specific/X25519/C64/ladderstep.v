@@ -1,77 +1,8 @@
-Require Import Coq.Classes.Morphisms.
-
-Require Import Crypto.Specific.X25519.C64.ReificationTypes.
-Require Import Crypto.Specific.X25519.C64.ArithmeticSynthesisTest.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
-Require Import Crypto.Compilers.Z.Bounds.Pipeline.
-
-Require Import Crypto.Util.FixedWordSizes.
-Require Import Coq.ZArith.BinIntDef.
-Require Import Crypto.Curves.Montgomery.XZ.
-Require Import Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift.
-Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Tactics.MoveLetIn.
-Require Import Crypto.Util.Tactics.SetEvars.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Tactics.ETransitivity.
-Require Import Crypto.Util.Notations.
-
-Local Definition phi : feW -> F m :=
-  fun x => B.Positional.Fdecode wt (Tuple.map wordToZ x).
-
-(** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
-Definition FMxzladderstep := @M.donnaladderstep (F m) F.add F.sub F.mul.
-
-Section with_notations.
-  Local Infix "+" := (proj1_sig add_sig).
-  Local Notation "a * b" := (proj1_sig carry_sig (proj1_sig mul_sig a b)).
-  Local Notation "x ^ 2" := (proj1_sig carry_sig (proj1_sig square_sig x)).
-  Local Infix "-" := (proj1_sig sub_sig).
-  Definition Mxzladderstep a24 x1 Q Q'
-    := match Q, Q' with
-       | (x, z), (x', z') =>
-         dlet origx := x in
-         dlet x := x + z in
-         dlet z := origx - z in
-         dlet origx' := x' in
-         dlet x' := x' + z' in
-         dlet z' := origx' - z' in
-         dlet xx' := x' * z in
-         dlet zz' := x * z' in
-         dlet origx' := xx' in
-         dlet xx' := xx' + zz' in
-         dlet zz' := origx' - zz' in
-         dlet x3 := xx'^2 in
-         dlet zzz' := zz'^2 in
-         dlet z3 := zzz' * x1 in
-         dlet xx := x^2 in
-         dlet zz := z^2 in
-         dlet x2 := xx * zz in
-         dlet zz := xx - zz in
-         dlet zzz := zz * a24 in
-         dlet zzz := zzz + xx in
-         dlet z2 := zz * zzz in
-         ((x2, z2), (x3, z3))%core
-       end.
-End with_notations.
-
-
-(** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
-Definition Mxzladderstep_sig
-  : { xzladderstep : tuple Z sz -> tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz * (tuple Z sz * tuple Z sz)
-    | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }.
-Proof.
-  exists Mxzladderstep.
-  intros a24 x1 Q Q' eval.
-  cbv [Mxzladderstep FMxzladderstep M.donnaladderstep].
-  destruct Q, Q'; cbv [map map' fst snd Let_In eval].
-  repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig square_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
-  reflexivity.
-Defined.
+Require Import Crypto.Specific.X25519.C64.ArithmeticSynthesisTest.
+Require Import Crypto.Specific.ArithmeticSynthesisReflectiveFrameworkLadderstep.
+Import ArithmeticSynthesisFramework.Package.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition xzladderstep :
@@ -84,40 +15,13 @@ Definition xzladderstep :
       -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
       -> ((feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
           /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
-         /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (eval (proj1_sig a24_sig)) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
+         /\ Tuple.map (n:=2) (Tuple.map (n:=2) phiW) xz = FMxzladderstep _ (eval (proj1_sig a24_sig)) (phiW x1) (Tuple.map (n:=2) phiW Q) (Tuple.map (n:=2) phiW Q') }.
 Proof.
-  apply_lift_sig.
-  intros a b c; cbv beta iota zeta.
-  lazymatch goal with
-  | [ |- { e | ?A -> ?B -> ?C -> @?E e } ]
-    => refine (proj2_sig_map (P:=fun e => A -> B -> C -> (_:Prop)) _ _)
-  end.
-  { intros ? FINAL.
-    repeat let H := fresh in intro H; specialize (FINAL H).
-    cbv [phi].
-    split; [ refine (proj1 FINAL); shelve | ].
-    do 4 match goal with
-         | [ |- context[Tuple.map (n:=?N) (fun x : ?T => ?f (?g x))] ]
-           => rewrite <- (Tuple.map_map (n:=N) f g
-                          : pointwise_relation _ eq _ (Tuple.map (n:=N) (fun x : T => f (g x))))
-         end.
-    rewrite <- (proj2_sig Mxzladderstep_sig).
-    apply f_equal.
-    cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-    context_to_dlet_in_rhs (@Mxzladderstep _).
-    cbv [Mxzladderstep M.xzladderstep a24_sig].
-    repeat lazymatch goal with
-           | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
-             => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
-           end.
-    cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig square_sig].
-    cbv_runtime.
-    refine (proj2 FINAL). }
-  cbv delta [feW feW_bounded]; cbv beta.
-  (* jgross start here! *)
   Set Ltac Profiling.
   (*
-  Time Glue.refine_to_reflective_glue P.allowable_bit_widths.
+  Time assert_xzladderstep_then synthesized xzladderstep
+       ltac:(preglue_xzladderstep synthesized).
+  Time Glue.refine_to_reflective_glue (64::128::nil)%nat%list.
   Time ReflectiveTactics.refine_with_pipeline_correct default.
   { Time ReflectiveTactics.do_reify. }
   { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
@@ -133,7 +37,8 @@ Proof.
   { Time ReflectiveTactics.unify_abstract_cbv_interp_rhs_reflexivity. }
   { Time abstract ReflectiveTactics.handle_bounds_from_hyps. }
   { Time abstract ReflectiveTactics.handle_boundedness_side_condition. }
-   *)
-  Time refine_reflectively_gen P.allowable_bit_widths default.
+  *)
+  Time pose_xzladderstep synthesized xzladderstep.
   Show Ltac Profile.
+  exact xzladderstep.
 Time Defined.

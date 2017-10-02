@@ -8,6 +8,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Specific.ArithmeticSynthesisFramework.
 Require Export Crypto.Util.Notations.
 
 Global Arguments Pos.to_nat !_ / .
@@ -71,7 +72,12 @@ Ltac try_strip_admit f :=
   | ?P => P
   end.
 Ltac refine_display f :=
-  let do_red F := (eval cbv [f
+  let do_red F := let pkg := lazymatch F with
+                             | context[@ASParams ?pkg]
+                               => pkg
+                             | _ => id
+                             end in
+                  (eval cbv [f
                                proj1_sig fst snd
                                Tuple.map Tuple.map'
                                Lift.lift1_sig Lift.lift2_sig Lift.lift3_sig Lift.lift4_sig Lift.lift4_sig_sig
@@ -86,6 +92,7 @@ Ltac refine_display f :=
                                List.map List.filter List.fold_right List.fold_left
                                Nat.leb Nat.min
                                PeanoNat.Nat.log2 PeanoNat.Nat.log2_iter PeanoNat.Nat.pred
+                               pkg Package.adjusted_bitwidth Package.bounds Package.ASPackage Package.ASParams Package.sz Package.feW Package.feBW Package.lgbitwidth
                                Bounds.bounds_to_base_type
                                interp_flat_type
                                Z.leb Z.compare Pos.compare Pos.compare_cont
@@ -94,11 +101,12 @@ Ltac refine_display f :=
                             ] in F) in
   let ret := display_helper_with_admit (proj1_sig f) in
   let ret := do_red ret in
-  let ret := lazymatch ret with
-             | context[match ?sz with O => _ | _ => _ end] => (eval cbv [sz] in ret)
+  let ret := match ret with
+             | context[match ?sz with 0 => _ | _ => _ end]
+               => (eval cbv [sz] in ret)
              | _ => ret
              end in
-  let ret := (eval simpl @Z.to_nat in ret) in
+   let ret := (eval simpl @Z.to_nat in ret) in
   let ret := (eval cbv [interp_flat_type] in ret) in
   let ret := try_strip_admit ret in
   refine ret.
