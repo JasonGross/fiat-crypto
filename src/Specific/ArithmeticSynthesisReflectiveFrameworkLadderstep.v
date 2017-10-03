@@ -10,6 +10,7 @@ Require Import Crypto.Specific.ArithmeticSynthesisFramework.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Coq.ZArith.BinIntDef.
 Require Import Crypto.Curves.Montgomery.XZ.
+Require Import Crypto.Specific.ArithmeticSynthesisReflectiveFramework.
 Require Import Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
@@ -82,13 +83,12 @@ End with_package.
 
 Ltac assert_xzladderstep_then package xzladderstep cont :=
   let feW' := fresh "feW'" in
-  let feW_bounded' := fresh "feW_bounded'" in
   let phi' := fresh "phi'" in
   let a24_sig' := fresh "a24_sig'" in
   let FMxzladderstep' := fresh "FMxzladderstep'" in
   let wt' := fresh "wt'" in
+  let feW_bounded := (eval_package_red_in package (@feW_bounded _ package)) in
   pose (@feW _ package) as feW';
-  pose (@feW_bounded _ package) as feW_bounded';
   pose (@phiW _ package) as phi';
   pose (@a24_sig _ package) as a24_sig';
   pose (@FMxzladderstep package) as FMxzladderstep';
@@ -98,15 +98,15 @@ Ltac assert_xzladderstep_then package xzladderstep cont :=
             | forall x1 Q Q',
                 let xz := xzladderstep x1 Q Q' in
                 let eval := B.Positional.Fdecode wt' in
-                feW_bounded' x1
-                -> feW_bounded' (fst Q) /\ feW_bounded' (snd Q)
-                -> feW_bounded' (fst Q') /\ feW_bounded' (snd Q')
-                -> ((feW_bounded' (fst (fst xz)) /\ feW_bounded' (snd (fst xz)))
-                    /\ (feW_bounded' (fst (snd xz)) /\ feW_bounded' (snd (snd xz))))
+                feW_bounded x1
+                -> feW_bounded (fst Q) /\ feW_bounded (snd Q)
+                -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
+                -> ((feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
+                    /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
                    /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi') xz = FMxzladderstep' (eval (proj1_sig a24_sig')) (phi' x1) (Tuple.map (n:=2) phi' Q) (Tuple.map (n:=2) phi' Q') });
-  [ cont feW' feW_bounded' phi' a24_sig' FMxzladderstep' wt'
-  | cbv delta [feW' feW_bounded' phi' a24_sig' FMxzladderstep' wt'] in xzladderstep;
-    clear feW' feW_bounded' phi' a24_sig' FMxzladderstep' wt' ].
+  [ cont feW' feW_bounded phi' a24_sig' FMxzladderstep' wt'
+  | cbv delta [feW' feW_bounded phi' a24_sig' FMxzladderstep' wt'] in xzladderstep;
+    clear feW' phi' a24_sig' FMxzladderstep' wt' ].
 
 Ltac preglue_xzladderstep package feW' feW_bounded' phi' a24_sig' FMxzladderstep' wt' :=
   let Mxzladderstep_sig' := fresh "Mxzladderstep_sig'" in
@@ -141,15 +141,24 @@ Ltac preglue_xzladderstep package feW' feW_bounded' phi' a24_sig' FMxzladderstep
            | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
              => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
            end;
+    let mul_sig' := (eval_package_red_in package (@mul_sig _ package)) in
+    let add_sig' := (eval_package_red_in package (@add_sig _ package)) in
+    let sub_sig' := (eval_package_red_in package (@sub_sig _ package)) in
+    let carry_sig' := (eval_package_red_in package (@carry_sig _ package)) in
+    let square_sig' := (eval_package_red_in package (@square_sig _ package)) in
     cbv [sz ASParams ASPackage lgbitwidth package wt_gen
-            proj1_sig mul_sig add_sig sub_sig carry_sig square_sig];
+            proj1_sig
+            mul_sig add_sig sub_sig carry_sig square_sig
+            mul_sig' add_sig' sub_sig' carry_sig' square_sig'];
     cbv_runtime;
     refine (proj2 FINAL)
   | ];
   clear phi' a24_sig' FMxzladderstep' Mxzladderstep_sig' wt';
+  let lgbitwidth' := (eval_package_red_in package (@lgbitwidth package)) in
+  let sz' := (eval_package_red_in package (@sz package)) in
   cbv [feW' feW_bounded' feW feW_bounded
-            ASParams ASPackage package lgbitwidth sz] in *;
-  clear feW' feW_bounded'.
+            ASParams ASPackage package lgbitwidth sz lgbitwidth' sz'] in *;
+  clear feW'.
 
 Ltac refine_reflectively_xzladderstep package :=
   let allowable_bit_widths := constr:(@allowable_bit_widths package) in

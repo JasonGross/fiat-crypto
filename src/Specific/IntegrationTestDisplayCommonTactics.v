@@ -71,6 +71,20 @@ Ltac try_strip_admit f :=
   | fun _ : forall T, T => ?P => P
   | ?P => P
   end.
+Ltac fix_match0 val :=
+  match val with
+  | context[match ?sz with 0 => _ | _ => _ end]
+    => let val := (eval cbv [sz] in val) in
+       fix_match0 val
+  | _ => val
+  end.
+Ltac fix_match_pair val :=
+  match val with
+  | context[match ?v with pair _ _ => _ end]
+    => let val := (eval cbv [v] in val) in
+       fix_match_pair val
+  | _ => val
+  end.
 Ltac refine_display f :=
   let do_red F := let pkg := lazymatch F with
                              | context[@ASParams ?pkg]
@@ -101,12 +115,9 @@ Ltac refine_display f :=
                             ] in F) in
   let ret := display_helper_with_admit (proj1_sig f) in
   let ret := do_red ret in
-  let ret := match ret with
-             | context[match ?sz with 0 => _ | _ => _ end]
-               => (eval cbv [sz] in ret)
-             | _ => ret
-             end in
-   let ret := (eval simpl @Z.to_nat in ret) in
+  let ret := fix_match0 ret in
+  let ret := fix_match_pair ret in
+  let ret := (eval simpl @Z.to_nat in ret) in
   let ret := (eval cbv [interp_flat_type] in ret) in
   let ret := try_strip_admit ret in
   refine ret.

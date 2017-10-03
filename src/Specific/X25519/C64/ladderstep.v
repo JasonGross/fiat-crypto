@@ -22,6 +22,7 @@ Proof.
   Time assert_xzladderstep_then synthesized xzladderstep
        ltac:(preglue_xzladderstep synthesized).
   Time Glue.refine_to_reflective_glue (64::128::nil)%nat%list.
+  Import Pipeline.
   Time ReflectiveTactics.refine_with_pipeline_correct default.
   { Time ReflectiveTactics.do_reify. }
   { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
