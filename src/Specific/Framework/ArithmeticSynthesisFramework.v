@@ -12,6 +12,8 @@ Require Crypto.Util.Tuple.
 Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Util.Tactics.VM.
 Require Import Crypto.Util.QUtil.
+Require Import Crypto.Util.ZUtil.ModInv.
+Require Crypto.Arithmetic.Saturated.MontgomeryAPI.
 
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
@@ -51,6 +53,11 @@ Module MakeArithmeticSynthesisTestTactics (Curve : CurveParameters.CurveParamete
       Z
       ltac:(let v := P.do_compute P.bitwidth in exact v)
              bitwidth.
+  Ltac pose_r bitwidth r :=
+    cache_term_with_type_by
+      positive
+      ltac:(let v := (eval vm_compute in (Z.to_pos (2^bitwidth))) in exact v)
+             r.
   Ltac pose_s s := (* don't want to compute, e.g., [2^255] *)
     cache_term_with_type_by
       Z
@@ -78,10 +85,48 @@ Module MakeArithmeticSynthesisTestTactics (Curve : CurveParameters.CurveParamete
       bool
       ltac:(let v := P.do_compute P.goldilocks in exact v)
              goldilocks.
+  Ltac pose_montgomery montgomery :=
+    cache_term_with_type_by
+      bool
+      ltac:(let v := P.do_compute P.montgomery in exact v)
+             montgomery.
+  Ltac if_cond cond tac id :=
+    lazymatch (eval compute in cond) with
+    | true => tac id
+    | false => constr:(0%Z)
+    end.
   (* These definitions are inferred from those above *)
   Ltac pose_m s c m := (* modulus *)
     let v := (eval vm_compute in (Z.to_pos (s - Associational.eval c))) in
     cache_term v m.
+  Ltac pose_m' montgomery m r m' := (* (-m)⁻¹ mod r *)
+    if_cond
+      montgomery
+      ltac:(cache_term_with_type_by
+              Z
+              ltac:(idtac; let v := (eval vm_compute in (Option.invert_Some (Z.modinv_fueled 10 (-Z.pos m) (Z.pos r)) : Z)) in exact v))
+             m'.
+  Ltac pose_m'_correct montgomery m m' r m'_correct :=
+    if_cond
+      montgomery
+      ltac:(cache_proof_with_type_by
+              ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)
+              ltac:(reflexivity))
+             m'_correct.
+  Ltac pose_r' montgomery m r r' := (* r⁻¹ mod m *)
+    if_cond
+      montgomery
+      ltac:(cache_term_with_type_by
+              Z
+              ltac:(idtac; let v := (eval vm_compute in (Option.invert_Some (Z.modinv_fueled 10 (Z.pos r) (Z.pos m)) : Z)) in exact v))
+             r'.
+  Ltac pose_r'_correct montgomery m r r' r'_correct :=
+    if_cond
+      montgomery
+      ltac:(cache_proof_with_type_by
+              ((Z.pos r * r') mod (Z.pos m) = 1)
+              ltac:(reflexivity))
+             r'_correct.
   Section wt.
     Import QArith Qround.
     Local Coercion QArith_base.inject_Z : Z >-> Q.
@@ -90,6 +135,23 @@ Module MakeArithmeticSynthesisTestTactics (Curve : CurveParameters.CurveParamete
   Ltac pose_wt m sz wt :=
     let v := (eval cbv [wt_gen] in (wt_gen m sz)) in
     cache_term v wt.
+  Ltac pose_p sz wt m p :=
+    let v := (eval vm_compute in ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m)))) in
+    cache_term v p.
+  Ltac pose_m_p montgomery m sz r p m_p :=
+    if_cond
+      montgomery
+      ltac:(cache_proof_with_type_by
+              (Z.pos m = MontgomeryAPI.eval (n:=sz) (Z.pos r) p)
+              ltac:(vm_compute; vm_cast_no_check (eq_refl (Z.pos m))))
+             m_p.
+  Ltac pose_r'_pow_correct montgomery r' sz r p r'_pow_correct :=
+    if_cond
+      montgomery
+      ltac:(cache_proof_with_type_by
+              ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) p = 1)
+              ltac:(vm_compute; reflexivity))
+             r'_pow_correct.
   Ltac pose_sz2 sz sz2 :=
     let v := (eval vm_compute in ((sz * 2) - 1)%nat) in
     cache_term v sz2.
@@ -305,22 +367,19 @@ Module MakeArithmeticSynthesisTestTactics (Curve : CurveParameters.CurveParamete
     cache_term (2^v) sqrt_s.
 
   Ltac pose_goldilocks_mul_sig goldilocks sz wt s c half_sz sqrt_s goldilocks_mul_sig :=
-    lazymatch eval compute in goldilocks with
-    | true
-      => cache_term_with_type_by
-           {mul : (Z^sz -> Z^sz -> Z^sz)%type |
-            forall a b : Z^sz,
-              mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt sqrt_s a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)}
-           ltac:(eexists; cbv beta zeta; intros;
-                 cbv [goldilocks_mul_cps];
-                 repeat autounfold;
-                 basesystem_partial_evaluation_RHS;
-                 do_replace_match_with_destructuring_match_in_goal;
-                 reflexivity)
-                  goldilocks_mul_sig
-    | false
-      => goldilocks_mul_sig
-    end.
+    if_cond
+      goldilocks
+      ltac:(cache_term_with_type_by
+              {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+               forall a b : Z^sz,
+                 mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt sqrt_s a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)}
+              ltac:(eexists; cbv beta zeta; intros;
+                    cbv [goldilocks_mul_cps];
+                    repeat autounfold;
+                    basesystem_partial_evaluation_RHS;
+                    do_replace_match_with_destructuring_match_in_goal;
+                    reflexivity))
+             goldilocks_mul_sig.
 
   Ltac pose_mul_sig sz m wt s c sz2 wt_nonzero mul_sig :=
     cache_term_with_type_by
@@ -586,14 +645,23 @@ print('End MakeArithmeticSynthesisTest.')
   Ltac get_ArithmeticSynthesis_package _ :=
     let sz := fresh "sz" in
     let bitwidth := fresh "bitwidth" in
+    let r := fresh "r" in
     let s := fresh "s" in
     let c := fresh "c" in
     let carry_chains := fresh "carry_chains" in
     let a24 := fresh "a24" in
     let coef_div_modulus := fresh "coef_div_modulus" in
     let goldilocks := fresh "goldilocks" in
+    let montgomery := fresh "montgomery" in
     let m := fresh "m" in
+    let m' := fresh "m'" in
+    let m'_correct := fresh "m'_correct" in
+    let r' := fresh "r'" in
+    let r'_correct := fresh "r'_correct" in
     let wt := fresh "wt" in
+    let p := fresh "p" in
+    let m_p := fresh "m_p" in
+    let r'_pow_correct := fresh "r'_pow_correct" in
     let sz2 := fresh "sz2" in
     let m_enc := fresh "m_enc" in
     let coef := fresh "coef" in
@@ -623,14 +691,23 @@ print('End MakeArithmeticSynthesisTest.')
     let ring := fresh "ring" in
     let sz := pose_sz sz in
     let bitwidth := pose_bitwidth bitwidth in
+    let r := pose_r bitwidth r in
     let s := pose_s s in
     let c := pose_c c in
     let carry_chains := pose_carry_chains carry_chains in
     let a24 := pose_a24 a24 in
     let coef_div_modulus := pose_coef_div_modulus coef_div_modulus in
     let goldilocks := pose_goldilocks goldilocks in
+    let montgomery := pose_montgomery montgomery in
     let m := pose_m s c m in
+    let m' := pose_m' montgomery m r m' in
+    let m'_correct := pose_m'_correct montgomery m m' r m'_correct in
+    let r' := pose_r' montgomery m r r' in
+    let r'_correct := pose_r'_correct montgomery m r r' r'_correct in
     let wt := pose_wt m sz wt in
+    let p := pose_p sz wt m p in
+    let m_p := pose_m_p montgomery m sz r p m_p in
+    let r'_pow_correct := pose_r'_pow_correct montgomery r' sz r p r'_pow_correct in
     let sz2 := pose_sz2 sz sz2 in
     let m_enc := pose_m_enc sz s c wt m_enc in
     let coef := pose_coef sz wt m_enc coef_div_modulus coef in
@@ -658,7 +735,7 @@ print('End MakeArithmeticSynthesisTest.')
     let wt_multiples := pose_wt_multiples wt wt_multiples in
     let freeze_sig := pose_freeze_sig sz m wt c m_enc bitwidth wt_nonzero wt_pos wt_divides wt_multiples freeze_sig in
     let ring := pose_ring sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_sig add_sig sub_sig mul_sig ring in
-    constr:((sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring)).
+    constr:((sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring)).
 
   Ltac make_ArithmeticSynthesis_package _ :=
     lazymatch goal with
@@ -679,76 +756,92 @@ Module MakeArithmeticSynthesisTest (AP : ArithmeticSynthesisPrePackage).
   Ltac AS_reduce_proj x :=
     eval cbv beta iota zeta in x.
 
-  Ltac get_sz _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sz).
+  Ltac get_sz _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sz).
   Notation sz := (ltac:(let v := get_sz () in exact v)) (only parsing).
-  Ltac get_bitwidth _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in bitwidth).
+  Ltac get_bitwidth _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in bitwidth).
   Notation bitwidth := (ltac:(let v := get_bitwidth () in exact v)) (only parsing).
-  Ltac get_s _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in s).
+  Ltac get_r _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in r).
+  Notation r := (ltac:(let v := get_r () in exact v)) (only parsing).
+  Ltac get_s _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in s).
   Notation s := (ltac:(let v := get_s () in exact v)) (only parsing).
-  Ltac get_c _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in c).
+  Ltac get_c _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in c).
   Notation c := (ltac:(let v := get_c () in exact v)) (only parsing).
-  Ltac get_carry_chains _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in carry_chains).
+  Ltac get_carry_chains _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in carry_chains).
   Notation carry_chains := (ltac:(let v := get_carry_chains () in exact v)) (only parsing).
-  Ltac get_a24 _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in a24).
+  Ltac get_a24 _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in a24).
   Notation a24 := (ltac:(let v := get_a24 () in exact v)) (only parsing).
-  Ltac get_coef_div_modulus _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in coef_div_modulus).
+  Ltac get_coef_div_modulus _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in coef_div_modulus).
   Notation coef_div_modulus := (ltac:(let v := get_coef_div_modulus () in exact v)) (only parsing).
-  Ltac get_goldilocks _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in goldilocks).
+  Ltac get_goldilocks _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in goldilocks).
   Notation goldilocks := (ltac:(let v := get_goldilocks () in exact v)) (only parsing).
-  Ltac get_m _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m).
+  Ltac get_m _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m).
   Notation m := (ltac:(let v := get_m () in exact v)) (only parsing).
-  Ltac get_wt _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt).
+  Ltac get_m' _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m').
+  Notation m' := (ltac:(let v := get_m' () in exact v)) (only parsing).
+  Ltac get_m'_correct _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m'_correct).
+  Notation m'_correct := (ltac:(let v := get_m'_correct () in exact v)) (only parsing).
+  Ltac get_r' _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in r').
+  Notation r' := (ltac:(let v := get_r' () in exact v)) (only parsing).
+  Ltac get_r'_correct _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in r'_correct).
+  Notation r'_correct := (ltac:(let v := get_r'_correct () in exact v)) (only parsing).
+  Ltac get_wt _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt).
   Notation wt := (ltac:(let v := get_wt () in exact v)) (only parsing).
-  Ltac get_sz2 _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sz2).
+  Ltac get_p _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in p).
+  Notation p := (ltac:(let v := get_p () in exact v)) (only parsing).
+  Ltac get_m_p _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m_p).
+  Notation m_p := (ltac:(let v := get_m_p () in exact v)) (only parsing).
+  Ltac get_r'_pow_correct _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in r'_pow_correct).
+  Notation r'_pow_correct := (ltac:(let v := get_r'_pow_correct () in exact v)) (only parsing).
+  Ltac get_sz2 _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sz2).
   Notation sz2 := (ltac:(let v := get_sz2 () in exact v)) (only parsing).
-  Ltac get_m_enc _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m_enc).
+  Ltac get_m_enc _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in m_enc).
   Notation m_enc := (ltac:(let v := get_m_enc () in exact v)) (only parsing).
-  Ltac get_coef _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in coef).
+  Ltac get_coef _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in coef).
   Notation coef := (ltac:(let v := get_coef () in exact v)) (only parsing).
-  Ltac get_coef_mod _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in coef_mod).
+  Ltac get_coef_mod _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in coef_mod).
   Notation coef_mod := (ltac:(let v := get_coef_mod () in exact v)) (only parsing).
-  Ltac get_sz_nonzero _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sz_nonzero).
+  Ltac get_sz_nonzero _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sz_nonzero).
   Notation sz_nonzero := (ltac:(let v := get_sz_nonzero () in exact v)) (only parsing).
-  Ltac get_wt_nonzero _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_nonzero).
+  Ltac get_wt_nonzero _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_nonzero).
   Notation wt_nonzero := (ltac:(let v := get_wt_nonzero () in exact v)) (only parsing).
-  Ltac get_wt_nonneg _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_nonneg).
+  Ltac get_wt_nonneg _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_nonneg).
   Notation wt_nonneg := (ltac:(let v := get_wt_nonneg () in exact v)) (only parsing).
-  Ltac get_wt_divides _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_divides).
+  Ltac get_wt_divides _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_divides).
   Notation wt_divides := (ltac:(let v := get_wt_divides () in exact v)) (only parsing).
-  Ltac get_wt_divides' _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_divides').
+  Ltac get_wt_divides' _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_divides').
   Notation wt_divides' := (ltac:(let v := get_wt_divides' () in exact v)) (only parsing).
-  Ltac get_wt_divides_chains _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_divides_chains).
+  Ltac get_wt_divides_chains _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_divides_chains).
   Notation wt_divides_chains := (ltac:(let v := get_wt_divides_chains () in exact v)) (only parsing).
-  Ltac get_zero_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in zero_sig).
+  Ltac get_zero_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in zero_sig).
   Notation zero_sig := (ltac:(let v := get_zero_sig () in exact v)) (only parsing).
-  Ltac get_one_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in one_sig).
+  Ltac get_one_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in one_sig).
   Notation one_sig := (ltac:(let v := get_one_sig () in exact v)) (only parsing).
-  Ltac get_a24_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in a24_sig).
+  Ltac get_a24_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in a24_sig).
   Notation a24_sig := (ltac:(let v := get_a24_sig () in exact v)) (only parsing).
-  Ltac get_add_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in add_sig).
+  Ltac get_add_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in add_sig).
   Notation add_sig := (ltac:(let v := get_add_sig () in exact v)) (only parsing).
-  Ltac get_sub_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sub_sig).
+  Ltac get_sub_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sub_sig).
   Notation sub_sig := (ltac:(let v := get_sub_sig () in exact v)) (only parsing).
-  Ltac get_opp_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in opp_sig).
+  Ltac get_opp_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in opp_sig).
   Notation opp_sig := (ltac:(let v := get_opp_sig () in exact v)) (only parsing).
-  Ltac get_half_sz _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in half_sz).
+  Ltac get_half_sz _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in half_sz).
   Notation half_sz := (ltac:(let v := get_half_sz () in exact v)) (only parsing).
-  Ltac get_half_sz_nonzero _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in half_sz_nonzero).
+  Ltac get_half_sz_nonzero _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in half_sz_nonzero).
   Notation half_sz_nonzero := (ltac:(let v := get_half_sz_nonzero () in exact v)) (only parsing).
-  Ltac get_sqrt_s _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sqrt_s).
+  Ltac get_sqrt_s _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in sqrt_s).
   Notation sqrt_s := (ltac:(let v := get_sqrt_s () in exact v)) (only parsing).
-  Ltac get_mul_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in mul_sig).
+  Ltac get_mul_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in mul_sig).
   Notation mul_sig := (ltac:(let v := get_mul_sig () in exact v)) (only parsing).
-  Ltac get_square_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in square_sig).
+  Ltac get_square_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in square_sig).
   Notation square_sig := (ltac:(let v := get_square_sig () in exact v)) (only parsing).
-  Ltac get_carry_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in carry_sig).
+  Ltac get_carry_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in carry_sig).
   Notation carry_sig := (ltac:(let v := get_carry_sig () in exact v)) (only parsing).
-  Ltac get_wt_pos _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_pos).
+  Ltac get_wt_pos _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_pos).
   Notation wt_pos := (ltac:(let v := get_wt_pos () in exact v)) (only parsing).
-  Ltac get_wt_multiples _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_multiples).
+  Ltac get_wt_multiples _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in wt_multiples).
   Notation wt_multiples := (ltac:(let v := get_wt_multiples () in exact v)) (only parsing).
-  Ltac get_freeze_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in freeze_sig).
+  Ltac get_freeze_sig _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in freeze_sig).
   Notation freeze_sig := (ltac:(let v := get_freeze_sig () in exact v)) (only parsing).
-  Ltac get_ring _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, wt, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in ring).
+  Ltac get_ring _ := let pkg := get_MakeArithmeticSynthesisTest_package () in AS_reduce_proj (let '(sz, bitwidth, r, s, c, carry_chains, a24, coef_div_modulus, goldilocks, m, m', m'_correct, r', r'_correct, wt, p, m_p, r'_pow_correct, sz2, m_enc, coef, coef_mod, sz_nonzero, wt_nonzero, wt_nonneg, wt_divides, wt_divides', wt_divides_chains, zero_sig, one_sig, a24_sig, add_sig, sub_sig, opp_sig, half_sz, half_sz_nonzero, sqrt_s, mul_sig, square_sig, carry_sig, wt_pos, wt_multiples, freeze_sig, ring) := pkg in ring).
   Notation ring := (ltac:(let v := get_ring () in exact v)) (only parsing).
 End MakeArithmeticSynthesisTest.

@@ -20,8 +20,8 @@ Ltac pose_limb_widths wt sz limb_widths :=
     ltac:(fun _ => (eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz))))
            limb_widths.
 
-Ltac get_b_of upper_bound_of_exponent :=
-  constr:(fun exp => {| lower := 0 ; upper := upper_bound_of_exponent exp |}%Z). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
+Ltac get_b_of P_upper_bound_of_exponent :=
+  constr:(fun exp => {| lower := 0 ; upper := P_upper_bound_of_exponent exp |}%Z). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
 
 (* The definition [bounds_exp] is a tuple-version of the limb-widths,
    which are the [exp] argument in [b_of] above, i.e., the approximate
@@ -139,7 +139,7 @@ Ltac pose_phiBW feBW m wt phiBW :=
     ltac:(exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x)))
            phiBW.
 
-Ltac get_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent :=
+Ltac get_ReificationTypes_package' wt sz m wt_nonneg P_upper_bound_of_exponent :=
   let limb_widths := fresh "limb_widths" in
   let bounds_exp := fresh "bounds_exp" in
   let bounds := fresh "bounds" in
@@ -153,7 +153,7 @@ Ltac get_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent :=
   let phiW := fresh "phiW" in
   let phiBW := fresh "phiBW" in
   let limb_widths := pose_limb_widths wt sz limb_widths in
-  let b_of := get_b_of upper_bound_of_exponent in
+  let b_of := get_b_of P_upper_bound_of_exponent in
   let bounds_exp := pose_bounds_exp sz limb_widths bounds_exp in
   let bounds := pose_bounds sz b_of bounds_exp bounds in
   let lgbitwidth := pose_lgbitwidth limb_widths lgbitwidth in
@@ -166,12 +166,24 @@ Ltac get_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent :=
   let phiW := pose_phiW feW m wt phiW in
   let phiBW := pose_phiBW feBW m wt phiBW in
   constr:((feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW)).
-Ltac make_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent :=
+
+Local Ltac combine_pkgs CurveParameters_pkg ArithmeticSynthesisBase_pkg :=
+  let CurveParameters_pkg := (eval hnf in CurveParameters_pkg) in
+  let ArithmeticSynthesisBase_pkg := (eval hnf in ArithmeticSynthesisBase_pkg) in
+  constr:((CurveParameters_pkg, ArithmeticSynthesisBase_pkg)).
+
+Ltac get_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P_upper_bound_of_exponent :=
+  let pkg := combine_pkgs CurveParameters_pkg ArithmeticSynthesisBase_pkg in
+  lazymatch pkg with
+  | ((?sz, ?bitwidth, ?s, ?c, ?carry_chains, ?a24, ?coef_div_modulus, ?goldilocks, ?montgomery, ?modinv_fuel), (?r, ?m, ?m', ?r', ?m'_correct, ?r'_correct, ?wt, ?sz2, ?half_sz, ?half_sz_nonzero, ?m_enc, ?coef, ?coef_mod, ?sz_nonzero, ?wt_nonzero, ?wt_nonneg, ?wt_divides, ?wt_divides', ?wt_divides_chains, ?wt_pos, ?wt_multiples))
+    => get_ReificationTypes_package' wt sz m wt_nonneg P_upper_bound_of_exponent
+  end.
+Ltac make_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P_upper_bound_of_exponent :=
   lazymatch goal with
   | [ |- { T : _ & T } ] => eexists
   | [ |- _ ] => idtac
   end;
-  let pkg := get_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent in
+  let pkg := get_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P_upper_bound_of_exponent in
   exact pkg.
 
 Module Type ReificationTypesPrePackage.
