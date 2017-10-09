@@ -20,7 +20,7 @@ Ltac pose_limb_widths wt sz limb_widths :=
     ltac:(fun _ => (eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz))))
            limb_widths.
 
-Ltac get_b_of P_upper_bound_of_exponent :=
+Ltac get_b_of upper_bound_of_exponent :=
   constr:(fun exp => {| lower := 0 ; upper := P_upper_bound_of_exponent exp |}%Z). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
 
 (* The definition [bounds_exp] is a tuple-version of the limb-widths,
@@ -33,7 +33,8 @@ Ltac pose_bounds_exp sz limb_widths bounds_exp :=
                (Tuple.from_list sz limb_widths eq_refl))
            bounds_exp.
 
-Ltac pose_bounds sz b_of bounds_exp bounds :=
+Ltac pose_bounds sz upper_bound_of_exponent bounds_exp bounds :=
+  let b_of := get_b_of upper_bound_of_exponent in
   pose_term_with_type
     (Tuple.tuple zrange sz)
     ltac:(fun _ => eval compute in
@@ -139,7 +140,7 @@ Ltac pose_phiBW feBW m wt phiBW :=
     ltac:(exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x)))
            phiBW.
 
-Ltac get_ReificationTypes_package' wt sz m wt_nonneg P_upper_bound_of_exponent :=
+Ltac get_ReificationTypes_package' wt sz m wt_nonneg upper_bound_of_exponent :=
   let limb_widths := fresh "limb_widths" in
   let bounds_exp := fresh "bounds_exp" in
   let bounds := fresh "bounds" in
@@ -153,9 +154,8 @@ Ltac get_ReificationTypes_package' wt sz m wt_nonneg P_upper_bound_of_exponent :
   let phiW := fresh "phiW" in
   let phiBW := fresh "phiBW" in
   let limb_widths := pose_limb_widths wt sz limb_widths in
-  let b_of := get_b_of P_upper_bound_of_exponent in
   let bounds_exp := pose_bounds_exp sz limb_widths bounds_exp in
-  let bounds := pose_bounds sz b_of bounds_exp bounds in
+  let bounds := pose_bounds sz upper_bound_of_exponent bounds_exp bounds in
   let lgbitwidth := pose_lgbitwidth limb_widths lgbitwidth in
   let bitwidth := pose_bitwidth lgbitwidth bitwidth in
   let feZ := pose_feZ sz feZ in
