@@ -4,7 +4,7 @@ Require Import Crypto.Specific.Framework.ArithmeticSynthesis.FreezePackage.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.KaratsubaPackage.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.LadderstepPackage.
 Require Import Crypto.Specific.Framework.CurveParametersPackage.
-Require Import Crypto.Specific.Framework.ReificationTypes.
+Require Import Crypto.Specific.Framework.ReificationTypesPackage.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.BoundedWord.
