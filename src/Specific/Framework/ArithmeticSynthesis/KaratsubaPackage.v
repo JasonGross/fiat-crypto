@@ -8,27 +8,27 @@ Require Import Crypto.Specific.Framework.ArithmeticSynthesis.DefaultsPackage.
 
 
 Ltac add_mul_sig pkg :=
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let wt := Tag.get pkg TAG.wt in
-  let s := Tag.get pkg TAG.s in
-  let c := Tag.get pkg TAG.c in
-  let half_sz := Tag.get pkg TAG.half_sz in
-  let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
-  let mul_sig := fresh "mul_sig" in
   if_goldilocks
-    ltac:(fun _ => let mul_sig := pose_mul_sig sz m wt s c half_sz wt_nonzero mul_sig in
+    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let wt := Tag.get pkg TAG.wt in
+                   let s := Tag.get pkg TAG.s in
+                   let c := Tag.get pkg TAG.c in
+                   let half_sz := Tag.get pkg TAG.half_sz in
+                   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
+                   let mul_sig := fresh "mul_sig" in
+                   let mul_sig := pose_mul_sig sz m wt s c half_sz wt_nonzero mul_sig in
                    Tag.update pkg TAG.mul_sig mul_sig)
     ltac:(fun _ => pkg)
     ().
 Ltac add_square_sig pkg :=
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let wt := Tag.get pkg TAG.wt in
-  let mul_sig := Tag.get pkg TAG.mul_sig in
-  let square_sig := fresh "square_sig" in
   if_goldilocks
-    ltac:(fun _ => let square_sig := pose_square_sig sz m wt mul_sig square_sig in
+    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let wt := Tag.get pkg TAG.wt in
+                   let mul_sig := Tag.get pkg TAG.mul_sig in
+                   let square_sig := fresh "square_sig" in
+                   let square_sig := pose_square_sig sz m wt mul_sig square_sig in
                    Tag.update pkg TAG.square_sig square_sig)
     ltac:(fun _ => pkg)
     ().

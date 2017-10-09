@@ -70,17 +70,19 @@ def split_args(name, args_str, indent=''):
 
 def make_add_from_pose(name, args_str, indent='', only_if=None):
     args, pass_args, extract_args, pass_args_str, extract_args_str = split_args(name, args_str, indent=indent)
-    ret = r'''%(indent)sLtac add_%(name)s pkg %(pass_args_str)s:=%(extract_args_str)s
+    ret = r'''%(indent)sLtac add_%(name)s pkg %(pass_args_str)s:=''' % locals()
+    body = r'''%(extract_args_str)s
 %(indent)s  let %(name)s := fresh "%(name)s" in
 %(indent)s  ''' % locals()
+    body += r'''let %(name)s := pose_%(name)s %(args_str)s in
+%(indent)s  Tag.update pkg TAG.%(name)s %(name)s''' % locals()
     if only_if is None:
-        ret += r'''let %(name)s := pose_%(name)s %(args_str)s in
-%(indent)s  Tag.update pkg TAG.%(name)s %(name)s.
-''' % locals()
+        ret += body + '.\n'
     else:
-        ret += r'''if_%(only_if)s
-%(indent)s    ltac:(fun _ => let %(name)s := pose_%(name)s %(args_str)s in
-%(indent)s                   Tag.update pkg TAG.%(name)s %(name)s)
+        body = body.strip('\n ').replace('\n', '\n                 ')
+        ret += r'''
+%(indent)s  if_%(only_if)s
+%(indent)s    ltac:(fun _ => %(body)s)
 %(indent)s    ltac:(fun _ => pkg)
 %(indent)s    ().''' % locals()
     return ret

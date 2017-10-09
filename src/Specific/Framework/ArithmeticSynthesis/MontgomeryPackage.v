@@ -11,270 +11,270 @@ Module TAG.
 End TAG.
 
 Ltac add_m_enc_correct_montgomery pkg :=
-  let m := Tag.get pkg TAG.m in
-  let sz := Tag.get pkg TAG.sz in
-  let r := Tag.get pkg TAG.r in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
   if_montgomery
-    ltac:(fun _ => let m_enc_correct_montgomery := pose_m_enc_correct_montgomery m sz r m_enc m_enc_correct_montgomery in
+    ltac:(fun _ => let m := Tag.get pkg TAG.m in
+                   let sz := Tag.get pkg TAG.sz in
+                   let r := Tag.get pkg TAG.r in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+                   let m_enc_correct_montgomery := pose_m_enc_correct_montgomery m sz r m_enc m_enc_correct_montgomery in
                    Tag.update pkg TAG.m_enc_correct_montgomery m_enc_correct_montgomery)
     ltac:(fun _ => pkg)
     ().
 Ltac add_r'_pow_correct pkg :=
-  let r' := Tag.get pkg TAG.r' in
-  let sz := Tag.get pkg TAG.sz in
-  let r := Tag.get pkg TAG.r in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let r'_pow_correct := fresh "r'_pow_correct" in
   if_montgomery
-    ltac:(fun _ => let r'_pow_correct := pose_r'_pow_correct r' sz r m_enc r'_pow_correct in
+    ltac:(fun _ => let r' := Tag.get pkg TAG.r' in
+                   let sz := Tag.get pkg TAG.sz in
+                   let r := Tag.get pkg TAG.r in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r'_pow_correct := fresh "r'_pow_correct" in
+                   let r'_pow_correct := pose_r'_pow_correct r' sz r m_enc r'_pow_correct in
                    Tag.update pkg TAG.r'_pow_correct r'_pow_correct)
     ltac:(fun _ => pkg)
     ().
 Ltac add_montgomery_to_F pkg :=
-  let m := Tag.get pkg TAG.m in
-  let sz := Tag.get pkg TAG.sz in
-  let r' := Tag.get pkg TAG.r' in
-  let montgomery_to_F := fresh "montgomery_to_F" in
   if_montgomery
-    ltac:(fun _ => let montgomery_to_F := pose_montgomery_to_F m sz r' montgomery_to_F in
+    ltac:(fun _ => let m := Tag.get pkg TAG.m in
+                   let sz := Tag.get pkg TAG.sz in
+                   let r' := Tag.get pkg TAG.r' in
+                   let montgomery_to_F := fresh "montgomery_to_F" in
+                   let montgomery_to_F := pose_montgomery_to_F m sz r' montgomery_to_F in
                    Tag.update pkg TAG.montgomery_to_F montgomery_to_F)
     ltac:(fun _ => pkg)
     ().
 Ltac add_r_big pkg :=
-  let r := Tag.get pkg TAG.r in
-  let r_big := fresh "r_big" in
   if_montgomery
-    ltac:(fun _ => let r_big := pose_r_big r r_big in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let r_big := fresh "r_big" in
+                   let r_big := pose_r_big r r_big in
                    Tag.update pkg TAG.r_big r_big)
     ltac:(fun _ => pkg)
     ().
 Ltac add_m_big pkg :=
-  let m := Tag.get pkg TAG.m in
-  let m_big := fresh "m_big" in
   if_montgomery
-    ltac:(fun _ => let m_big := pose_m_big m m_big in
+    ltac:(fun _ => let m := Tag.get pkg TAG.m in
+                   let m_big := fresh "m_big" in
+                   let m_big := pose_m_big m m_big in
                    Tag.update pkg TAG.m_big m_big)
     ltac:(fun _ => pkg)
     ().
 Ltac add_m_enc_small pkg :=
-  let sz := Tag.get pkg TAG.sz in
-  let r := Tag.get pkg TAG.r in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let m_enc_small := fresh "m_enc_small" in
   if_montgomery
-    ltac:(fun _ => let m_enc_small := pose_m_enc_small sz r m_enc m_enc_small in
+    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+                   let r := Tag.get pkg TAG.r in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let m_enc_small := fresh "m_enc_small" in
+                   let m_enc_small := pose_m_enc_small sz r m_enc m_enc_small in
                    Tag.update pkg TAG.m_enc_small m_enc_small)
     ltac:(fun _ => pkg)
     ().
 Ltac add_map_m_enc pkg :=
-  let sz := Tag.get pkg TAG.sz in
-  let r := Tag.get pkg TAG.r in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let map_m_enc := fresh "map_m_enc" in
   if_montgomery
-    ltac:(fun _ => let map_m_enc := pose_map_m_enc sz r m_enc map_m_enc in
+    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+                   let r := Tag.get pkg TAG.r in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let map_m_enc := fresh "map_m_enc" in
+                   let map_m_enc := pose_map_m_enc sz r m_enc map_m_enc in
                    Tag.update pkg TAG.map_m_enc map_m_enc)
     ltac:(fun _ => pkg)
     ().
 Ltac add_mul_ext pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let r' := Tag.get pkg TAG.r' in
-  let r'_correct := Tag.get pkg TAG.r'_correct in
-  let m' := Tag.get pkg TAG.m' in
-  let m'_correct := Tag.get pkg TAG.m'_correct in
-  let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
-  let r_big := Tag.get pkg TAG.r_big in
-  let m_big := Tag.get pkg TAG.m_big in
-  let m_enc_small := Tag.get pkg TAG.m_enc_small in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let mul_ext := fresh "mul_ext" in
   if_montgomery
-    ltac:(fun _ => let mul_ext := pose_mul_ext r sz m m_enc r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small montgomery_to_F mul_ext in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r' := Tag.get pkg TAG.r' in
+                   let r'_correct := Tag.get pkg TAG.r'_correct in
+                   let m' := Tag.get pkg TAG.m' in
+                   let m'_correct := Tag.get pkg TAG.m'_correct in
+                   let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
+                   let r_big := Tag.get pkg TAG.r_big in
+                   let m_big := Tag.get pkg TAG.m_big in
+                   let m_enc_small := Tag.get pkg TAG.m_enc_small in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let mul_ext := fresh "mul_ext" in
+                   let mul_ext := pose_mul_ext r sz m m_enc r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small montgomery_to_F mul_ext in
                    Tag.update pkg TAG.mul_ext mul_ext)
     ltac:(fun _ => pkg)
     ().
 Ltac add_add_ext pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let r' := Tag.get pkg TAG.r' in
-  let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
-  let r_big := Tag.get pkg TAG.r_big in
-  let m_big := Tag.get pkg TAG.m_big in
-  let m_enc_small := Tag.get pkg TAG.m_enc_small in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let add_ext := fresh "add_ext" in
   if_montgomery
-    ltac:(fun _ => let add_ext := pose_add_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_big m_enc_small montgomery_to_F add_ext in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r' := Tag.get pkg TAG.r' in
+                   let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
+                   let r_big := Tag.get pkg TAG.r_big in
+                   let m_big := Tag.get pkg TAG.m_big in
+                   let m_enc_small := Tag.get pkg TAG.m_enc_small in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let add_ext := fresh "add_ext" in
+                   let add_ext := pose_add_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_big m_enc_small montgomery_to_F add_ext in
                    Tag.update pkg TAG.add_ext add_ext)
     ltac:(fun _ => pkg)
     ().
 Ltac add_sub_ext pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let r' := Tag.get pkg TAG.r' in
-  let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
-  let r_big := Tag.get pkg TAG.r_big in
-  let m_enc_small := Tag.get pkg TAG.m_enc_small in
-  let map_m_enc := Tag.get pkg TAG.map_m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let sub_ext := fresh "sub_ext" in
   if_montgomery
-    ltac:(fun _ => let sub_ext := pose_sub_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F sub_ext in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r' := Tag.get pkg TAG.r' in
+                   let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
+                   let r_big := Tag.get pkg TAG.r_big in
+                   let m_enc_small := Tag.get pkg TAG.m_enc_small in
+                   let map_m_enc := Tag.get pkg TAG.map_m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let sub_ext := fresh "sub_ext" in
+                   let sub_ext := pose_sub_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F sub_ext in
                    Tag.update pkg TAG.sub_ext sub_ext)
     ltac:(fun _ => pkg)
     ().
 Ltac add_opp_ext pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let r' := Tag.get pkg TAG.r' in
-  let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
-  let r_big := Tag.get pkg TAG.r_big in
-  let m_enc_small := Tag.get pkg TAG.m_enc_small in
-  let map_m_enc := Tag.get pkg TAG.map_m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let opp_ext := fresh "opp_ext" in
   if_montgomery
-    ltac:(fun _ => let opp_ext := pose_opp_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F opp_ext in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r' := Tag.get pkg TAG.r' in
+                   let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
+                   let r_big := Tag.get pkg TAG.r_big in
+                   let m_enc_small := Tag.get pkg TAG.m_enc_small in
+                   let map_m_enc := Tag.get pkg TAG.map_m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let opp_ext := fresh "opp_ext" in
+                   let opp_ext := pose_opp_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F opp_ext in
                    Tag.update pkg TAG.opp_ext opp_ext)
     ltac:(fun _ => pkg)
     ().
 Ltac add_nonzero_ext pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let r' := Tag.get pkg TAG.r' in
-  let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
-  let r'_pow_correct := Tag.get pkg TAG.r'_pow_correct in
-  let r_big := Tag.get pkg TAG.r_big in
-  let m_big := Tag.get pkg TAG.m_big in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let nonzero_ext := fresh "nonzero_ext" in
   if_montgomery
-    ltac:(fun _ => let nonzero_ext := pose_nonzero_ext r sz m m_enc r' m_enc_correct_montgomery r'_pow_correct r_big m_big montgomery_to_F nonzero_ext in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r' := Tag.get pkg TAG.r' in
+                   let m_enc_correct_montgomery := Tag.get pkg TAG.m_enc_correct_montgomery in
+                   let r'_pow_correct := Tag.get pkg TAG.r'_pow_correct in
+                   let r_big := Tag.get pkg TAG.r_big in
+                   let m_big := Tag.get pkg TAG.m_big in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let nonzero_ext := fresh "nonzero_ext" in
+                   let nonzero_ext := pose_nonzero_ext r sz m m_enc r' m_enc_correct_montgomery r'_pow_correct r_big m_big montgomery_to_F nonzero_ext in
                    Tag.update pkg TAG.nonzero_ext nonzero_ext)
     ltac:(fun _ => pkg)
     ().
 Ltac add_mul_sig pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let mul_ext := Tag.get pkg TAG.mul_ext in
-  let mul_sig := fresh "mul_sig" in
   if_montgomery
-    ltac:(fun _ => let mul_sig := pose_mul_sig r sz montgomery_to_F mul_ext mul_sig in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let mul_ext := Tag.get pkg TAG.mul_ext in
+                   let mul_sig := fresh "mul_sig" in
+                   let mul_sig := pose_mul_sig r sz montgomery_to_F mul_ext mul_sig in
                    Tag.update pkg TAG.mul_sig mul_sig)
     ltac:(fun _ => pkg)
     ().
 Ltac add_mul_bounded pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let mul_ext := Tag.get pkg TAG.mul_ext in
-  let mul_sig := Tag.get pkg TAG.mul_sig in
-  let mul_bounded := fresh "mul_bounded" in
   if_montgomery
-    ltac:(fun _ => let mul_bounded := pose_mul_bounded r sz m_enc montgomery_to_F mul_ext mul_sig mul_bounded in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let mul_ext := Tag.get pkg TAG.mul_ext in
+                   let mul_sig := Tag.get pkg TAG.mul_sig in
+                   let mul_bounded := fresh "mul_bounded" in
+                   let mul_bounded := pose_mul_bounded r sz m_enc montgomery_to_F mul_ext mul_sig mul_bounded in
                    Tag.update pkg TAG.mul_bounded mul_bounded)
     ltac:(fun _ => pkg)
     ().
 Ltac add_add_sig pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let add_ext := Tag.get pkg TAG.add_ext in
-  let add_sig := fresh "add_sig" in
   if_montgomery
-    ltac:(fun _ => let add_sig := pose_add_sig r sz m_enc montgomery_to_F add_ext add_sig in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let add_ext := Tag.get pkg TAG.add_ext in
+                   let add_sig := fresh "add_sig" in
+                   let add_sig := pose_add_sig r sz m_enc montgomery_to_F add_ext add_sig in
                    Tag.update pkg TAG.add_sig add_sig)
     ltac:(fun _ => pkg)
     ().
 Ltac add_add_bounded pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let add_ext := Tag.get pkg TAG.add_ext in
-  let add_sig := Tag.get pkg TAG.add_sig in
-  let add_bounded := fresh "add_bounded" in
   if_montgomery
-    ltac:(fun _ => let add_bounded := pose_add_bounded r sz m_enc montgomery_to_F add_ext add_sig add_bounded in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let add_ext := Tag.get pkg TAG.add_ext in
+                   let add_sig := Tag.get pkg TAG.add_sig in
+                   let add_bounded := fresh "add_bounded" in
+                   let add_bounded := pose_add_bounded r sz m_enc montgomery_to_F add_ext add_sig add_bounded in
                    Tag.update pkg TAG.add_bounded add_bounded)
     ltac:(fun _ => pkg)
     ().
 Ltac add_sub_sig pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let sub_ext := Tag.get pkg TAG.sub_ext in
-  let sub_sig := fresh "sub_sig" in
   if_montgomery
-    ltac:(fun _ => let sub_sig := pose_sub_sig r sz m_enc montgomery_to_F sub_ext sub_sig in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let sub_ext := Tag.get pkg TAG.sub_ext in
+                   let sub_sig := fresh "sub_sig" in
+                   let sub_sig := pose_sub_sig r sz m_enc montgomery_to_F sub_ext sub_sig in
                    Tag.update pkg TAG.sub_sig sub_sig)
     ltac:(fun _ => pkg)
     ().
 Ltac add_sub_bounded pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let sub_ext := Tag.get pkg TAG.sub_ext in
-  let sub_sig := Tag.get pkg TAG.sub_sig in
-  let sub_bounded := fresh "sub_bounded" in
   if_montgomery
-    ltac:(fun _ => let sub_bounded := pose_sub_bounded r sz m_enc montgomery_to_F sub_ext sub_sig sub_bounded in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let sub_ext := Tag.get pkg TAG.sub_ext in
+                   let sub_sig := Tag.get pkg TAG.sub_sig in
+                   let sub_bounded := fresh "sub_bounded" in
+                   let sub_bounded := pose_sub_bounded r sz m_enc montgomery_to_F sub_ext sub_sig sub_bounded in
                    Tag.update pkg TAG.sub_bounded sub_bounded)
     ltac:(fun _ => pkg)
     ().
 Ltac add_opp_sig pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let opp_ext := Tag.get pkg TAG.opp_ext in
-  let opp_sig := fresh "opp_sig" in
   if_montgomery
-    ltac:(fun _ => let opp_sig := pose_opp_sig r sz m_enc montgomery_to_F opp_ext opp_sig in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let opp_ext := Tag.get pkg TAG.opp_ext in
+                   let opp_sig := fresh "opp_sig" in
+                   let opp_sig := pose_opp_sig r sz m_enc montgomery_to_F opp_ext opp_sig in
                    Tag.update pkg TAG.opp_sig opp_sig)
     ltac:(fun _ => pkg)
     ().
 Ltac add_opp_bounded pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let opp_ext := Tag.get pkg TAG.opp_ext in
-  let opp_sig := Tag.get pkg TAG.opp_sig in
-  let opp_bounded := fresh "opp_bounded" in
   if_montgomery
-    ltac:(fun _ => let opp_bounded := pose_opp_bounded r sz m_enc montgomery_to_F opp_ext opp_sig opp_bounded in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let opp_ext := Tag.get pkg TAG.opp_ext in
+                   let opp_sig := Tag.get pkg TAG.opp_sig in
+                   let opp_bounded := fresh "opp_bounded" in
+                   let opp_bounded := pose_opp_bounded r sz m_enc montgomery_to_F opp_ext opp_sig opp_bounded in
                    Tag.update pkg TAG.opp_bounded opp_bounded)
     ltac:(fun _ => pkg)
     ().
 Ltac add_nonzero_sig pkg :=
-  let r := Tag.get pkg TAG.r in
-  let sz := Tag.get pkg TAG.sz in
-  let m := Tag.get pkg TAG.m in
-  let m_enc := Tag.get pkg TAG.m_enc in
-  let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
-  let nonzero_ext := Tag.get pkg TAG.nonzero_ext in
-  let nonzero_sig := fresh "nonzero_sig" in
   if_montgomery
-    ltac:(fun _ => let nonzero_sig := pose_nonzero_sig r sz m m_enc montgomery_to_F nonzero_ext nonzero_sig in
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let nonzero_ext := Tag.get pkg TAG.nonzero_ext in
+                   let nonzero_sig := fresh "nonzero_sig" in
+                   let nonzero_sig := pose_nonzero_sig r sz m m_enc montgomery_to_F nonzero_ext nonzero_sig in
                    Tag.update pkg TAG.nonzero_sig nonzero_sig)
     ltac:(fun _ => pkg)
     ().
