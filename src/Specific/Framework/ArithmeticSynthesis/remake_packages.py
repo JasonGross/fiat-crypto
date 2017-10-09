@@ -4,6 +4,8 @@ import re, os
 import io
 
 PACKAGE_NAMES = ['../CurveParameters.v']
+CP_LIST = ['../CurveParameters.v']
+NORMAL_PACKAGE_NAMES = []
 ALL_FILE_NAMES = PACKAGE_NAMES # + PACKAGE_CP_NAMES + WITH_CURVE_BASE_NAMES + ['../ReificationTypes.v']
 CONFIGS = ('goldilocks', 'montgomery')
 
@@ -128,13 +130,13 @@ Require Import Crypto.Specific.Framework.Packages.
     if add_package:
         ret += (r'''
 
-Module Make%(extra_modname_prefix)s%(modname)sTest (PKG : PrePackage).
-  Module Import Make%(extra_modname_prefix)s%(modname)sTestInternal := MakePackageBase PKG.
+Module Make%(extra_modname_prefix)s%(modname)sPackage (PKG : PrePackage).
+  Module Import Make%(extra_modname_prefix)s%(modname)sPackageInternal := MakePackageBase PKG.
 ''' % locals())
         for name, args in fns[fname]:
             ret += ("\n  Ltac get_%s _ := get TAG.%s." % (name, name))
             ret += ("\n  Notation %s := (ltac:(let v := get_%s () in exact v)) (only parsing)." % (name, name))
-        ret += ('\nEnd Make%(extra_modname_prefix)s%(modname)sTest.\n' % locals())
+        ret += ('\nEnd Make%(extra_modname_prefix)s%(modname)sPackage.\n' % locals())
     return ret
 
 def write_package(fname, pkg):
@@ -149,11 +151,12 @@ def update_CurveParameters(fname='../CurveParameters.v'):
     ret = '  %s' % header
     for name, args in fns[fname]:
         ret += '\n' + make_add_from_pose(name, args, indent='  ')
-    for name in CONFIGS:
-        ret += '\n' + make_if(name, indent='  ')
     ret += '\n' + make_add_all(fname, indent='  ')
     ret += endline
-    pkg = make_package(fname)
+    prefix = ''
+    for name in CONFIGS:
+        prefix += '\n' + make_if(name, indent='')
+    pkg = make_package(fname, prefix=prefix)
     do_replace(fname, (header,), ret)
     write_package(fname, pkg)
 

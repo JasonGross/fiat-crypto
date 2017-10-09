@@ -1,16 +1,12 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
-Require Crypto.Specific.Framework.CurveParameters.
+Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
 Require Import Crypto.Util.QUtil.
 Require Import Crypto.Util.Decidable.
 Require Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.CacheTerm.
-
-Local Open Scope list_scope.
-Local Open Scope Z_scope.
-Local Infix "^" := Tuple.tuple : type_scope.
 
   (* emacs for adjusting definitions *)
   (* Query replace regexp (default Definition \([a-zA-Z_0-9]+\) : \([A-Za-z0-9_]+\) := P.compute \(.*\)\.\(.*\) -> Ltac pose_\1 \1 :=\4^J  cache_term_with_type_by^J      \2^J      ltac:(let v := P.do_compute \3 in exact v)^J      \1.):  *)

@@ -247,22 +247,6 @@ Module FillCurveParameters (P : CurveParameters).
     let modinv_fuel := pose_modinv_fuel modinv_fuel in
     Tag.update pkg TAG.modinv_fuel modinv_fuel.
 
-  Ltac if_goldilocks pkg tac_true tac_false arg :=
-    let goldilocks := Tag.get pkg TAG.goldilocks in
-    let goldilocks := (eval vm_compute in (goldilocks : bool)) in
-    lazymatch goldilocks with
-    | true => tac_true arg
-    | false => tac_false arg
-    end.
-
-  Ltac if_montgomery pkg tac_true tac_false arg :=
-    let montgomery := Tag.get pkg TAG.montgomery in
-    let montgomery := (eval vm_compute in (montgomery : bool)) in
-    lazymatch montgomery with
-    | true => tac_true arg
-    | false => tac_false arg
-    end.
-
   Ltac add_CurveParameters_package pkg :=
     let pkg := add_sz pkg in
     let pkg := add_bitwidth pkg in

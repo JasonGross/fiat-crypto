@@ -2,9 +2,25 @@
 Require Export Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.Packages.
 
+Ltac if_goldilocks pkg tac_true tac_false arg :=
+  let goldilocks := Tag.get pkg TAG.goldilocks in
+  let goldilocks := (eval vm_compute in (goldilocks : bool)) in
+  lazymatch goldilocks with
+  | true => tac_true arg
+  | false => tac_false arg
+  end.
 
-Module MakeCurveParametersTest (PKG : PrePackage).
-  Module Import MakeCurveParametersTestInternal := MakePackageBase PKG.
+Ltac if_montgomery pkg tac_true tac_false arg :=
+  let montgomery := Tag.get pkg TAG.montgomery in
+  let montgomery := (eval vm_compute in (montgomery : bool)) in
+  lazymatch montgomery with
+  | true => tac_true arg
+  | false => tac_false arg
+  end.
+
+
+Module MakeCurveParametersPackage (PKG : PrePackage).
+  Module Import MakeCurveParametersPackageInternal := MakePackageBase PKG.
 
   Ltac get_sz _ := get TAG.sz.
   Notation sz := (ltac:(let v := get_sz () in exact v)) (only parsing).
@@ -26,4 +42,4 @@ Module MakeCurveParametersTest (PKG : PrePackage).
   Notation montgomery := (ltac:(let v := get_montgomery () in exact v)) (only parsing).
   Ltac get_modinv_fuel _ := get TAG.modinv_fuel.
   Notation modinv_fuel := (ltac:(let v := get_modinv_fuel () in exact v)) (only parsing).
-End MakeCurveParametersTest.
+End MakeCurveParametersPackage.
