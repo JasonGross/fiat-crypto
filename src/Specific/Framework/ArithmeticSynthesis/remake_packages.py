@@ -3,10 +3,10 @@ from __future__ import with_statement
 import re, os
 import io
 
-PACKAGE_NAMES = ['../CurveParameters.v']
-CP_LIST = ['../CurveParameters.v']
-NORMAL_PACKAGE_NAMES = []
-ALL_FILE_NAMES = PACKAGE_NAMES # + PACKAGE_CP_NAMES + WITH_CURVE_BASE_NAMES + ['../ReificationTypes.v']
+PACKAGE_NAMES = [('../CurveParameters.v', [])]
+CP_LIST = ['../CurveParametersPackage.v']
+NORMAL_PACKAGE_NAMES = [('Base.v', CP_LIST)]
+ALL_FILE_NAMES = PACKAGE_NAMES + NORMAL_PACKAGE_NAMES # PACKAGE_CP_NAMES + WITH_CURVE_BASE_NAMES + ['../ReificationTypes.v']
 CONFIGS = ('goldilocks', 'montgomery')
 
 EXCLUDES = ('constr:((wt_divides_chain, wt_divides_chains))', )
@@ -18,14 +18,14 @@ fns = {}
 PY_FILE_NAME = os.path.basename(__file__)
 
 def init_contents(lines=lines, contents=contents):
-    for fname in ALL_FILE_NAMES:
+    for fname, deps in ALL_FILE_NAMES:
         with open(fname, 'r') as f:
             contents[fname] = f.read()
     lines.update(dict((k, v.split('\n')) for k, v in contents.items()))
 
 def init_fns(lines=lines, fns=fns):
     header = 'Ltac pose_'
-    for fname in ALL_FILE_NAMES:
+    for fname, deps in ALL_FILE_NAMES:
         stripped_lines = [i.strip() for i in lines[fname]]
         fns[fname] = [(name, args.strip())
                       for line in stripped_lines
@@ -59,13 +59,21 @@ def split_args(name, args_str, indent=''):
         extract_args_str = nl_indent + nl_indent.join('let %s := Tag.get pkg TAG.%s in' % (arg, arg) for arg in extract_args)
     return args, pass_args, extract_args, pass_args_str, extract_args_str
 
-def make_add_from_pose(name, args_str, indent=''):
+def make_add_from_pose(name, args_str, indent='', only_if=None):
     args, pass_args, extract_args, pass_args_str, extract_args_str = split_args(name, args_str, indent=indent)
     ret = r'''%(indent)sLtac add_%(name)s pkg %(pass_args_str)s:=%(extract_args_str)s
 %(indent)s  let %(name)s := fresh "%(name)s" in
-%(indent)s  let %(name)s := pose_%(name)s %(args_str)s in
+%(indent)s  ''' % locals()
+    if only_if is None:
+        ret += r'''let %(name)s := pose_%(name)s %(args_str)s in
 %(indent)s  Tag.update pkg TAG.%(name)s %(name)s.
 ''' % locals()
+    else:
+        ret += r'''if_%(only_if)s
+%(indent)s    ltac:(fun _ => let %(name)s := pose_%(name)s %(args_str)s in
+%(indent)s                   Tag.update pkg TAG.%(name)s %(name)s)
+%(indent)s    ltac:(fun _ => pkg)
+%(indent)s    ().''' % locals()
     return ret
 
 def make_add_all(fname, indent=''):
