@@ -30,7 +30,7 @@ Ltac solve_constant_sig :=
   end.
 
 (* Performs a full carry loop (as specified by carry_chain) *)
-Ltac pose_carry_sig' sz m wt s c carry_chains wt_nonzero wt_divides_chains carry_sig :=
+Ltac pose_carry_sig sz m wt s c carry_chains wt_nonzero wt_divides_chains carry_sig :=
   cache_term_with_type_by
     {carry : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
@@ -45,25 +45,25 @@ Ltac pose_carry_sig' sz m wt s c carry_chains wt_nonzero wt_divides_chains carry
           solve_op_F wt x; reflexivity)
            carry_sig.
 
-Ltac pose_zero_sig' sz m wt zero_sig :=
+Ltac pose_zero_sig sz m wt zero_sig :=
   cache_term_with_type_by
     { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}
     solve_constant_sig
     zero_sig.
 
-Ltac pose_one_sig' sz m wt one_sig :=
+Ltac pose_one_sig sz m wt one_sig :=
   cache_term_with_type_by
     { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}
     solve_constant_sig
     one_sig.
 
-Ltac pose_a24_sig' sz m wt a24 a24_sig :=
+Ltac pose_a24_sig sz m wt a24 a24_sig :=
   cache_term_with_type_by
     { a24t : Z^sz | Positional.Fdecode (m:=m) wt a24t = F.of_Z m a24 }
     solve_constant_sig
     a24_sig.
 
-Ltac pose_add_sig' sz m wt wt_nonzero add_sig :=
+Ltac pose_add_sig sz m wt wt_nonzero add_sig :=
   cache_term_with_type_by
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
       forall a b : Z^sz,
@@ -79,7 +79,7 @@ Ltac pose_add_sig' sz m wt wt_nonzero add_sig :=
           solve_op_F wt x; reflexivity)
            add_sig.
 
-Ltac pose_sub_sig' sz m wt wt_nonzero coef sub_sig :=
+Ltac pose_sub_sig sz m wt wt_nonzero coef sub_sig :=
   cache_term_with_type_by
     {sub : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
@@ -95,7 +95,7 @@ Ltac pose_sub_sig' sz m wt wt_nonzero coef sub_sig :=
           solve_op_F wt x; reflexivity)
            sub_sig.
 
-Ltac pose_opp_sig' sz m wt wt_nonzero coef opp_sig :=
+Ltac pose_opp_sig sz m wt wt_nonzero coef opp_sig :=
   cache_term_with_type_by
     {opp : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
@@ -111,7 +111,7 @@ Ltac pose_opp_sig' sz m wt wt_nonzero coef opp_sig :=
            opp_sig.
 
 
-Ltac pose_mul_sig' P_default_mul P_extra_prove_mul_eq sz m wt s c sz2 wt_nonzero mul_sig :=
+Ltac pose_mul_sig P_default_mul P_extra_prove_mul_eq sz m wt s c sz2 wt_nonzero mul_sig :=
   cache_term_with_type_by
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
@@ -132,7 +132,7 @@ Ltac pose_mul_sig' P_default_mul P_extra_prove_mul_eq sz m wt s c sz2 wt_nonzero
            mul_sig.
 
 
-Ltac pose_square_sig' P_default_square P_extra_prove_square_eq sz m wt s c sz2 wt_nonzero square_sig :=
+Ltac pose_square_sig P_default_square P_extra_prove_square_eq sz m wt s c sz2 wt_nonzero square_sig :=
   cache_term_with_type_by
     {square : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
@@ -151,22 +151,7 @@ Ltac pose_square_sig' P_default_square P_extra_prove_square_eq sz m wt s c sz2 w
           break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring)
            square_sig.
 
-Ltac pose_square_sig_from_mul_sig' sz m wt mul_sig square_sig :=
-  cache_term_with_type_by
-    {square : (Z^sz -> Z^sz)%type |
-     forall a : Z^sz,
-       let eval := Positional.Fdecode (m := m) wt in
-       Positional.Fdecode (m := m) wt (square a) = (eval a * eval a)%F}
-    ltac:(idtac;
-          let a := fresh "a" in
-          eexists; cbv beta zeta; intros a;
-          rewrite <-(proj2_sig mul_sig);
-          apply f_equal;
-          cbv [proj1_sig mul_sig];
-          reflexivity)
-           square_sig.
-
-Ltac pose_ring' sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_sig add_sig sub_sig mul_sig ring :=
+Ltac pose_ring sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_sig add_sig sub_sig mul_sig ring :=
   cache_term
     (Ring.ring_by_isomorphism
        (F := F m)

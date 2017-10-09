@@ -46,8 +46,7 @@ Section with_notations.
        end.
 End with_notations.
 
-(** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
-Ltac pose_Mxzladderstep_sig' sz wt m add_sig sub_sig mul_sig square_sig carry_sig Mxzladderstep_sig :=
+Ltac pose_Mxzladderstep_sig sz wt m add_sig sub_sig mul_sig square_sig carry_sig Mxzladderstep_sig :=
   cache_term_with_type_by
     { xzladderstep : tuple Z sz -> tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz * (tuple Z sz * tuple Z sz)
     | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (m:=m) (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }

@@ -21,7 +21,7 @@ Local Infix "^" := Tuple.tuple : type_scope.
 Local Ltac rewrite_eval_freeze_with_c c' :=
   rewrite eval_freeze with (c:=c').
 
-Ltac pose_freeze_sig' sz m wt c m_enc bitwidth wt_nonzero wt_pos wt_divides wt_multiples freeze_sig :=
+Ltac pose_freeze_sig sz m wt c m_enc bitwidth wt_nonzero wt_pos wt_divides wt_multiples freeze_sig :=
   cache_term_with_type_by
     {freeze : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,

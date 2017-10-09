@@ -13,6 +13,7 @@ Require Import Crypto.Util.Tactics.VM.
 Require Import Crypto.Util.QUtil.
 Require Import Crypto.Util.ZUtil.ModInv.
 
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.SquareFromMul.
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
 
@@ -128,9 +129,12 @@ Ltac internal_pose_mul_sig_from_goldilocks_mul_sig sz m wt s c half_sz sqrt_s go
           reflexivity)
            mul_sig.
 
-Ltac pose_mul_sig' sz m wt s c half_sz wt_nonzero mul_sig :=
+Ltac pose_mul_sig sz m wt s c half_sz wt_nonzero mul_sig :=
   let sqrt_s := fresh "sqrt_s" in
   let goldilocks_mul_sig := fresh "goldilocks_mul_sig" in
   let sqrt_s := internal_pose_sqrt_s s sqrt_s in
   let goldilocks_mul_sig := internal_pose_goldilocks_mul_sig sz wt s c half_sz sqrt_s goldilocks_mul_sig in
   internal_pose_mul_sig_from_goldilocks_mul_sig sz m wt s c half_sz sqrt_s goldilocks_mul_sig wt_nonzero mul_sig.
+
+Ltac pose_square_sig sz m wt mul_sig square_sig :=
+  SquareFromMul.pose_square_sig sz m wt mul_sig square_sig.

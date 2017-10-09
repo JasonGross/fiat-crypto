@@ -255,6 +255,7 @@ src/Specific/Framework/ArithmeticSynthesis/KaratsubaPackage.v
 src/Specific/Framework/ArithmeticSynthesis/Ladderstep.v
 src/Specific/Framework/ArithmeticSynthesis/LadderstepPackage.v
 src/Specific/Framework/ArithmeticSynthesis/Montgomery.v
+src/Specific/Framework/ArithmeticSynthesis/SquareFromMul.v
 src/Specific/NISTP256/AMD128/CurveParameters.v
 src/Specific/NISTP256/AMD128/Synthesis.v
 src/Specific/NISTP256/AMD128/feadd.v
