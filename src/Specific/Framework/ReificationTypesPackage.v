@@ -13,14 +13,14 @@ Ltac add_limb_widths pkg :=
   let wt := Tag.get pkg TAG.wt in
   let sz := Tag.get pkg TAG.sz in
   let limb_widths := fresh "limb_widths" in
-  let limb_widths := pose_limb_widths wt sz limb_widths in
+  let limb_widths := pose_local_limb_widths wt sz limb_widths in
   Tag.local_update pkg TAG.limb_widths limb_widths.
 
 Ltac add_bounds_exp pkg :=
   let sz := Tag.get pkg TAG.sz in
   let limb_widths := Tag.get pkg TAG.limb_widths in
   let bounds_exp := fresh "bounds_exp" in
-  let bounds_exp := pose_bounds_exp sz limb_widths bounds_exp in
+  let bounds_exp := pose_local_bounds_exp sz limb_widths bounds_exp in
   Tag.local_update pkg TAG.bounds_exp bounds_exp.
 
 Ltac add_bounds pkg :=
@@ -28,25 +28,25 @@ Ltac add_bounds pkg :=
   let upper_bound_of_exponent := Tag.get pkg TAG.upper_bound_of_exponent in
   let bounds_exp := Tag.get pkg TAG.bounds_exp in
   let bounds := fresh "bounds" in
-  let bounds := pose_bounds sz upper_bound_of_exponent bounds_exp bounds in
+  let bounds := pose_local_bounds sz upper_bound_of_exponent bounds_exp bounds in
   Tag.local_update pkg TAG.bounds bounds.
 
 Ltac add_lgbitwidth pkg :=
   let limb_widths := Tag.get pkg TAG.limb_widths in
   let lgbitwidth := fresh "lgbitwidth" in
-  let lgbitwidth := pose_lgbitwidth limb_widths lgbitwidth in
+  let lgbitwidth := pose_local_lgbitwidth limb_widths lgbitwidth in
   Tag.local_update pkg TAG.lgbitwidth lgbitwidth.
 
 Ltac add_bitwidth pkg :=
   let lgbitwidth := Tag.get pkg TAG.lgbitwidth in
   let bitwidth := fresh "bitwidth" in
-  let bitwidth := pose_bitwidth lgbitwidth bitwidth in
+  let bitwidth := pose_local_bitwidth lgbitwidth bitwidth in
   Tag.local_update pkg TAG.bitwidth bitwidth.
 
 Ltac add_feZ pkg :=
   let sz := Tag.get pkg TAG.sz in
   let feZ := fresh "feZ" in
-  let feZ := pose_feZ sz feZ in
+  let feZ := pose_local_feZ sz feZ in
   Tag.local_update pkg TAG.feZ feZ.
 
 Ltac add_feW pkg :=

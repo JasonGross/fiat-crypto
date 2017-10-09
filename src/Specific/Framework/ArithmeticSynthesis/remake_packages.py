@@ -80,7 +80,7 @@ def make_add_from_pose(name, args_str, indent='', only_if=None, local=False):
     body = r'''%(extract_args_str)s
 %(indent)s  let %(name)s := fresh "%(name)s" in
 %(indent)s  ''' % locals()
-    body += r'''let %(name)s := pose_%(name)s %(args_str)s in
+    body += r'''let %(name)s := pose_%(local_str)s%(name)s %(args_str)s in
 %(indent)s  Tag.%(local_str)supdate pkg TAG.%(name)s %(name)s''' % locals()
     if only_if is None:
         ret += body + '.\n'
