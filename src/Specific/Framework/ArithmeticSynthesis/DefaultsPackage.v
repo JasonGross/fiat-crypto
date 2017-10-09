@@ -128,7 +128,7 @@ Ltac add_Defaults_package pkg P_default_mul P_extra_prove_mul_eq P_default_squar
   let pkg := add_mul_sig pkg P_default_mul P_extra_prove_mul_eq in
   let pkg := add_square_sig pkg P_default_square P_extra_prove_square_eq in
   let pkg := add_ring pkg in
-  pkg.
+  Tag.strip_local pkg.
 
 
 Module MakeDefaultsPackage (PKG : PrePackage).

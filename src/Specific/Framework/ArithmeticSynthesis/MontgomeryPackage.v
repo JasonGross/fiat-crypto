@@ -300,7 +300,7 @@ Ltac add_Montgomery_package pkg :=
   let pkg := add_opp_sig pkg in
   let pkg := add_opp_bounded pkg in
   let pkg := add_nonzero_sig pkg in
-  pkg.
+  Tag.strip_local pkg.
 
 
 Module MakeMontgomeryPackage (PKG : PrePackage).

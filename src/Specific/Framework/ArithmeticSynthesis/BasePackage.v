@@ -178,7 +178,7 @@ Ltac add_Base_package pkg :=
   let pkg := add_wt_divides_chains pkg in
   let pkg := add_wt_pos pkg in
   let pkg := add_wt_multiples pkg in
-  pkg.
+  Tag.strip_local pkg.
 
 
 Module MakeBasePackage (PKG : PrePackage).

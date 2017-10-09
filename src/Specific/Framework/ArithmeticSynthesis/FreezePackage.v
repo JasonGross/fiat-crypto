@@ -26,7 +26,7 @@ Ltac add_freeze_sig pkg :=
 
 Ltac add_Freeze_package pkg :=
   let pkg := add_freeze_sig pkg in
-  pkg.
+  Tag.strip_local pkg.
 
 
 Module MakeFreezePackage (PKG : PrePackage).

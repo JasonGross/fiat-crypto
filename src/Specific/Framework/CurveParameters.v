@@ -258,5 +258,5 @@ Module FillCurveParameters (P : CurveParameters).
     let pkg := add_goldilocks pkg in
     let pkg := add_montgomery pkg in
     let pkg := add_modinv_fuel pkg in
-    pkg.
+    Tag.strip_local pkg.
 End FillCurveParameters.

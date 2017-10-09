@@ -25,7 +25,7 @@ Ltac add_Mxzladderstep_sig pkg :=
 
 Ltac add_Ladderstep_package pkg :=
   let pkg := add_Mxzladderstep_sig pkg in
-  pkg.
+  Tag.strip_local pkg.
 
 
 Module MakeLadderstepPackage (PKG : PrePackage).

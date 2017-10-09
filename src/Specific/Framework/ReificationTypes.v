@@ -15,7 +15,7 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
 
-Ltac pose_limb_widths wt sz limb_widths :=
+Ltac pose_local_limb_widths wt sz limb_widths :=
   pose_term_with
     ltac:(fun _ => (eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz))))
            limb_widths.
@@ -26,14 +26,14 @@ Ltac get_b_of upper_bound_of_exponent :=
 (* The definition [bounds_exp] is a tuple-version of the limb-widths,
    which are the [exp] argument in [b_of] above, i.e., the approximate
    base-2 exponent of the bounds on the limb in that position. *)
-Ltac pose_bounds_exp sz limb_widths bounds_exp :=
+Ltac pose_local_bounds_exp sz limb_widths bounds_exp :=
   pose_term_with_type
     (Tuple.tuple Z sz)
     ltac:(fun _ => eval compute in
                (Tuple.from_list sz limb_widths eq_refl))
            bounds_exp.
 
-Ltac pose_bounds sz upper_bound_of_exponent bounds_exp bounds :=
+Ltac pose_local_bounds sz upper_bound_of_exponent bounds_exp bounds :=
   let b_of := get_b_of upper_bound_of_exponent in
   pose_term_with_type
     (Tuple.tuple zrange sz)
@@ -41,17 +41,17 @@ Ltac pose_bounds sz upper_bound_of_exponent bounds_exp bounds :=
                (Tuple.map (fun e => b_of e) bounds_exp))
            bounds.
 
-Ltac pose_lgbitwidth limb_widths lgbitwidth :=
+Ltac pose_local_lgbitwidth limb_widths lgbitwidth :=
   pose_term_with
     ltac:(fun _ => eval compute in (Z.to_nat (Z.log2_up (List.fold_right Z.max 0 limb_widths))))
            lgbitwidth.
 
-Ltac pose_bitwidth lgbitwidth bitwidth :=
+Ltac pose_local_bitwidth lgbitwidth bitwidth :=
   pose_term_with
     ltac:(fun _ => eval compute in (2^lgbitwidth)%nat)
            bitwidth.
 
-Ltac pose_feZ sz feZ :=
+Ltac pose_local_feZ sz feZ :=
   pose_term_with
     ltac:(fun _ => constr:(tuple Z sz))
            feZ.
@@ -139,81 +139,3 @@ Ltac pose_phiBW feBW m wt phiBW :=
     (feBW -> F m)
     ltac:(exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x)))
            phiBW.
-
-Ltac get_ReificationTypes_package' wt sz m wt_nonneg upper_bound_of_exponent :=
-  let limb_widths := fresh "limb_widths" in
-  let bounds_exp := fresh "bounds_exp" in
-  let bounds := fresh "bounds" in
-  let lgbitwidth := fresh "lgbitwidth" in
-  let bitwidth := fresh "bitwidth" in
-  let feZ := fresh "feZ" in
-  let feW := fresh "feW" in
-  let feW_bounded := fresh "feW_bounded" in
-  let feBW := fresh "feBW" in
-  let feBW_bounded := fresh "feBW_bounded" in
-  let phiW := fresh "phiW" in
-  let phiBW := fresh "phiBW" in
-  let limb_widths := pose_limb_widths wt sz limb_widths in
-  let bounds_exp := pose_bounds_exp sz limb_widths bounds_exp in
-  let bounds := pose_bounds sz upper_bound_of_exponent bounds_exp bounds in
-  let lgbitwidth := pose_lgbitwidth limb_widths lgbitwidth in
-  let bitwidth := pose_bitwidth lgbitwidth bitwidth in
-  let feZ := pose_feZ sz feZ in
-  let feW := pose_feW sz lgbitwidth feW in
-  let feW_bounded := pose_feW_bounded feW bounds feW_bounded in
-  let feBW := pose_feBW sz bitwidth bounds feBW in
-  let feBW_bounded := pose_feBW_bounded wt sz feBW bitwidth bounds m wt_nonneg feBW_bounded in
-  let phiW := pose_phiW feW m wt phiW in
-  let phiBW := pose_phiBW feBW m wt phiBW in
-  constr:((feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW)).
-
-Local Ltac combine_pkgs CurveParameters_pkg ArithmeticSynthesisBase_pkg :=
-  let CurveParameters_pkg := (eval hnf in CurveParameters_pkg) in
-  let ArithmeticSynthesisBase_pkg := (eval hnf in ArithmeticSynthesisBase_pkg) in
-  constr:((CurveParameters_pkg, ArithmeticSynthesisBase_pkg)).
-
-Ltac get_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P_upper_bound_of_exponent :=
-  let pkg := combine_pkgs CurveParameters_pkg ArithmeticSynthesisBase_pkg in
-  lazymatch pkg with
-  | ((?sz, ?bitwidth, ?s, ?c, ?carry_chains, ?a24, ?coef_div_modulus, ?goldilocks, ?montgomery, ?modinv_fuel), (?r, ?m, ?m', ?r', ?m'_correct, ?r'_correct, ?wt, ?sz2, ?half_sz, ?half_sz_nonzero, ?m_enc, ?coef, ?coef_mod, ?sz_nonzero, ?wt_nonzero, ?wt_nonneg, ?wt_divides, ?wt_divides', ?wt_divides_chains, ?wt_pos, ?wt_multiples))
-    => get_ReificationTypes_package' wt sz m wt_nonneg P_upper_bound_of_exponent
-  end.
-Ltac make_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P_upper_bound_of_exponent :=
-  lazymatch goal with
-  | [ |- { T : _ & T } ] => eexists
-  | [ |- _ ] => idtac
-  end;
-  let pkg := get_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P_upper_bound_of_exponent in
-  exact pkg.
-
-Module Type ReificationTypesPrePackage.
-  Parameter ReificationTypes_package' : { T : _ & T }.
-  Parameter ReificationTypes_package : projT1 ReificationTypes_package'.
-End ReificationTypesPrePackage.
-
-Module MakeReificationTypes (RP : ReificationTypesPrePackage).
-  Ltac get_ReificationTypes_package _ := eval hnf in RP.ReificationTypes_package.
-  Ltac RT_reduce_proj x :=
-    eval cbv beta iota zeta in x.
-  (**
-<<
-terms = 'feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW'
-for i in terms.split(', '):
-    print("  Ltac get_%s _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(%s) := pkg in %s)." % (i, terms, i))
-    print("  Notation %s := (ltac:(let v := get_%s () in exact v)) (only parsing)." % (i, i))
->> *)
-  Ltac get_feZ _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feZ).
-  Notation feZ := (ltac:(let v := get_feZ () in exact v)) (only parsing).
-  Ltac get_feW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feW).
-  Notation feW := (ltac:(let v := get_feW () in exact v)) (only parsing).
-  Ltac get_feW_bounded _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feW_bounded).
-  Notation feW_bounded := (ltac:(let v := get_feW_bounded () in exact v)) (only parsing).
-  Ltac get_feBW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feBW).
-  Notation feBW := (ltac:(let v := get_feBW () in exact v)) (only parsing).
-  Ltac get_feBW_bounded _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feBW_bounded).
-  Notation feBW_bounded := (ltac:(let v := get_feBW_bounded () in exact v)) (only parsing).
-  Ltac get_phiW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in phiW).
-  Notation phiW := (ltac:(let v := get_phiW () in exact v)) (only parsing).
-  Ltac get_phiBW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in phiBW).
-  Notation phiBW := (ltac:(let v := get_phiBW () in exact v)) (only parsing).
-End MakeReificationTypes.
