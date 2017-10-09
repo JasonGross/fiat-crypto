@@ -23,4 +23,6 @@ Module Tag.
     end.
 
   Notation get ctx key' := ltac:(let v := get ctx key' in exact v) (only parsing).
+
+  Notation empty := (@nil tagged).
 End Tag.
