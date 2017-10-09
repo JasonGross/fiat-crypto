@@ -10,7 +10,9 @@ CP_BASE_DEFAULTS_LIST = ['../CurveParametersPackage.v', 'BasePackage.v', 'Defaul
 NORMAL_PACKAGE_NAMES = [('Base.v', (CP_LIST, None)),
                         ('Defaults.v', (CP_BASE_LIST, None)),
                         ('Freeze.v', (CP_BASE_LIST, None)),
-                        ('Karatsuba.v', (CP_BASE_DEFAULTS_LIST, 'goldilocks'))]
+                        ('Ladderstep.v', (CP_BASE_DEFAULTS_LIST, None)),
+                        ('Karatsuba.v', (CP_BASE_DEFAULTS_LIST, 'goldilocks')),
+                        ('Montgomery.v', (CP_BASE_DEFAULTS_LIST, 'montgomery'))]
 ALL_FILE_NAMES = PACKAGE_NAMES + NORMAL_PACKAGE_NAMES # PACKAGE_CP_NAMES + WITH_CURVE_BASE_NAMES + ['../ReificationTypes.v']
 CONFIGS = ('goldilocks', 'montgomery')
 
