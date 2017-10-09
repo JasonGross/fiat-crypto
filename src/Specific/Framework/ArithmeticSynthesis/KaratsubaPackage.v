@@ -4,10 +4,8 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 Require Import Crypto.Specific.Framework.CurveParametersPackage.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.BasePackage.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.DefaultsPackage.
 
-Module TAG.
-  Inductive tags := mul_sig | square_sig.
-End TAG.
 
 Ltac add_mul_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -38,13 +36,3 @@ Ltac add_Karatsuba_package pkg :=
   let pkg := add_mul_sig pkg in
   let pkg := add_square_sig pkg in
   pkg.
-
-
-Module MakeKaratsubaPackage (PKG : PrePackage).
-  Module Import MakeKaratsubaPackageInternal := MakePackageBase PKG.
-
-  Ltac get_mul_sig _ := get TAG.mul_sig.
-  Notation mul_sig := (ltac:(let v := get_mul_sig () in exact v)) (only parsing).
-  Ltac get_square_sig _ := get TAG.square_sig.
-  Notation square_sig := (ltac:(let v := get_square_sig () in exact v)) (only parsing).
-End MakeKaratsubaPackage.

@@ -147,13 +147,14 @@ Require Import Crypto.Util.TagList.
 ''' % locals())
     if prefix is not None:
         ret += prefix
-    if add_package:
+    new_names = [name for name, args in fns[fname] if name not in existing_tags]
+    if add_package and len(new_names) > 0:
         ret += (r'''
 
 Module Make%(extra_modname_prefix)s%(modname)sPackage (PKG : PrePackage).
   Module Import Make%(extra_modname_prefix)s%(modname)sPackageInternal := MakePackageBase PKG.
 ''' % locals())
-        for name, args in fns[fname]:
+        for name in new_names:
             ret += ("\n  Ltac get_%s _ := get TAG.%s." % (name, name))
             ret += ("\n  Notation %s := (ltac:(let v := get_%s () in exact v)) (only parsing)." % (name, name))
         ret += ('\nEnd Make%(extra_modname_prefix)s%(modname)sPackage.\n' % locals())
@@ -162,6 +163,7 @@ Module Make%(extra_modname_prefix)s%(modname)sPackage (PKG : PrePackage).
 def make_tags(fname, deps):
     existing_tags = get_existing_tags(fname, deps)
     new_tags = [name for name, args in fns[fname] if name not in existing_tags]
+    if len(new_tags) == 0: return ''
     names = ' | '.join(new_tags)
     return r'''Module TAG.
   Inductive tags := %s.
