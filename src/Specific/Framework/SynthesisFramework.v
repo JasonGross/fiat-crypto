@@ -19,7 +19,17 @@ End Exports.
 Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
   Module P := FillCurveParameters Curve.
 
-  Ltac get_synthesis_package _ :=
+  Ltac add_Synthesis_package pkg :=
+    let pkg := P.add_CurveParameters_package pkg in
+    let pkg := add_Base_package pkg in
+    let pkg := add_ReificationTypes_package pkg in
+    let pkg := add_Freeze_package pkg in
+    let pkg := add_Karatsuba_package pkg in
+
+
+    let pkg := add_Ladderstep_package pkg in
+
+
     let CurveParameters_pkg := P.get_CurveParameters_package () in
     let ArithmeticSynthesisBase_pkg := get_ArithmeticSynthesisBase_package CurveParameters_pkg in
     let ReificationTypes_pkg := get_ReificationTypes_package CurveParameters_pkg ArithmeticSynthesisBase_pkg P.upper_bound_of_exponent in
