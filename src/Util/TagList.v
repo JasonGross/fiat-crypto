@@ -35,24 +35,30 @@ Module Tag.
   Ltac local_update ctx key value :=
     constr:(add_local key value ctx).
 
-  Ltac get_gen ctx key' default :=
+  Ltac get_gen_cont ctx key' tac_found tac_not_found allow_unfound :=
     lazymatch (eval hnf in ctx) with
     | context[{| key := key' ; value := ?value' |}]
-      => value'
-    | context[add_gen ?key' ?value' _ _] => value'
-    | context[add_local ?key' ?value' _] => value'
-    | context[add ?key' ?value' _] => value'
-    | _ => default ()
+      => tac_found value'
+    | context[add_gen ?key' ?value' _ _] => tac_found value'
+    | context[add_local ?key' ?value' _] => tac_found value'
+    | context[add ?key' ?value' _] => tac_found value'
+    | _ => lazymatch allow_unfound with
+           | true => tac_not_found ()
+           end
     end.
 
+  Ltac update_if_not_exists ctx key value :=
+    get_gen_cont
+      ctx key
+      ltac:(fun value' => ctx)
+             ltac:(fun _ => update ctx key value)
+                    true.
+
+  Ltac get_gen ctx key' default :=
+    get_gen_cont ctx key' ltac:(fun v => v) default true.
+
   Ltac get_error ctx key' :=
-    lazymatch (eval hnf in ctx) with
-    | context[{| key := key' ; value := ?value' |}]
-      => value'
-    | context[add_gen ?key' ?value' _ _] => value'
-    | context[add_local ?key' ?value' _] => value'
-    | context[add ?key' ?value' _] => value'
-    end.
+    get_gen_cont ctx key' ltac:(fun v => v) ltac:(fun _ => constr:(I)) false.
 
   Ltac get ctx key' := get_gen ctx key' ltac:(fun _ => constr:(I)).
 
