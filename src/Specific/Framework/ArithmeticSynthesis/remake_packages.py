@@ -8,7 +8,7 @@ CP_LIST = ['../CurveParametersPackage.v']
 CP_BASE_LIST = ['../CurveParametersPackage.v', 'BasePackage.v']
 CP_BASE_DEFAULTS_LIST = ['../CurveParametersPackage.v', 'BasePackage.v', 'DefaultsPackage.v']
 NORMAL_PACKAGE_NAMES = [('Base.v', (CP_LIST, None)),
-                        ('Defaults.v', (CP_BASE_LIST, None)),
+                        ('Defaults.v', (CP_BASE_LIST, 'not_exists')),
                         ('../ReificationTypes.v', (CP_BASE_LIST, None)),
                         ('Freeze.v', (CP_BASE_LIST, None)),
                         ('Ladderstep.v', (CP_BASE_DEFAULTS_LIST, None)),
@@ -77,11 +77,15 @@ def make_add_from_pose(name, args_str, indent='', only_if=None, local=False):
     args, pass_args, extract_args, pass_args_str, extract_args_str = split_args(name, args_str, indent=indent)
     ret = r'''%(indent)sLtac add_%(name)s pkg %(pass_args_str)s:=''' % locals()
     local_str = ('local_' if local else '')
+    if_not_exists_str = ''
+    if only_if == 'not_exists':
+        if_not_exists_str = '_if_not_exists'
+        only_if = None
     body = r'''%(extract_args_str)s
 %(indent)s  let %(name)s := fresh "%(name)s" in
 %(indent)s  ''' % locals()
     body += r'''let %(name)s := pose_%(local_str)s%(name)s %(args_str)s in
-%(indent)s  Tag.%(local_str)supdate pkg TAG.%(name)s %(name)s''' % locals()
+%(indent)s  Tag.%(local_str)supdate%(if_not_exists_str)s pkg TAG.%(name)s %(name)s''' % locals()
     if only_if is None:
         ret += body + '.\n'
     else:
@@ -158,7 +162,7 @@ Require Import Crypto.Util.TagList.
     if prefix is not None:
         ret += prefix
     new_names = [name for name, args, local in fns[fname] if name not in existing_tags and not local]
-    if add_package and len(new_names) > 0:
+    if add_package: # and len(new_names) > 0:
         ret += (r'''
 
 Module Make%(extra_modname_prefix)s%(modname)sPackage (PKG : PrePackage).

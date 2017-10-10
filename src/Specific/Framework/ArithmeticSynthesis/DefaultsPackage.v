@@ -20,7 +20,7 @@ Ltac add_carry_sig pkg :=
   let wt_divides_chains := Tag.get pkg TAG.wt_divides_chains in
   let carry_sig := fresh "carry_sig" in
   let carry_sig := pose_carry_sig sz m wt s c carry_chains wt_nonzero wt_divides_chains carry_sig in
-  Tag.update pkg TAG.carry_sig carry_sig.
+  Tag.update_if_not_exists pkg TAG.carry_sig carry_sig.
 
 Ltac add_zero_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -28,7 +28,7 @@ Ltac add_zero_sig pkg :=
   let wt := Tag.get pkg TAG.wt in
   let zero_sig := fresh "zero_sig" in
   let zero_sig := pose_zero_sig sz m wt zero_sig in
-  Tag.update pkg TAG.zero_sig zero_sig.
+  Tag.update_if_not_exists pkg TAG.zero_sig zero_sig.
 
 Ltac add_one_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -36,7 +36,7 @@ Ltac add_one_sig pkg :=
   let wt := Tag.get pkg TAG.wt in
   let one_sig := fresh "one_sig" in
   let one_sig := pose_one_sig sz m wt one_sig in
-  Tag.update pkg TAG.one_sig one_sig.
+  Tag.update_if_not_exists pkg TAG.one_sig one_sig.
 
 Ltac add_a24_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -45,7 +45,7 @@ Ltac add_a24_sig pkg :=
   let a24 := Tag.get pkg TAG.a24 in
   let a24_sig := fresh "a24_sig" in
   let a24_sig := pose_a24_sig sz m wt a24 a24_sig in
-  Tag.update pkg TAG.a24_sig a24_sig.
+  Tag.update_if_not_exists pkg TAG.a24_sig a24_sig.
 
 Ltac add_add_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -54,7 +54,7 @@ Ltac add_add_sig pkg :=
   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
   let add_sig := fresh "add_sig" in
   let add_sig := pose_add_sig sz m wt wt_nonzero add_sig in
-  Tag.update pkg TAG.add_sig add_sig.
+  Tag.update_if_not_exists pkg TAG.add_sig add_sig.
 
 Ltac add_sub_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -64,7 +64,7 @@ Ltac add_sub_sig pkg :=
   let coef := Tag.get pkg TAG.coef in
   let sub_sig := fresh "sub_sig" in
   let sub_sig := pose_sub_sig sz m wt wt_nonzero coef sub_sig in
-  Tag.update pkg TAG.sub_sig sub_sig.
+  Tag.update_if_not_exists pkg TAG.sub_sig sub_sig.
 
 Ltac add_opp_sig pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -74,7 +74,7 @@ Ltac add_opp_sig pkg :=
   let coef := Tag.get pkg TAG.coef in
   let opp_sig := fresh "opp_sig" in
   let opp_sig := pose_opp_sig sz m wt wt_nonzero coef opp_sig in
-  Tag.update pkg TAG.opp_sig opp_sig.
+  Tag.update_if_not_exists pkg TAG.opp_sig opp_sig.
 
 Ltac add_mul_sig pkg P_default_mul P_extra_prove_mul_eq :=
   let sz := Tag.get pkg TAG.sz in
@@ -86,7 +86,7 @@ Ltac add_mul_sig pkg P_default_mul P_extra_prove_mul_eq :=
   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
   let mul_sig := fresh "mul_sig" in
   let mul_sig := pose_mul_sig P_default_mul P_extra_prove_mul_eq sz m wt s c sz2 wt_nonzero mul_sig in
-  Tag.update pkg TAG.mul_sig mul_sig.
+  Tag.update_if_not_exists pkg TAG.mul_sig mul_sig.
 
 Ltac add_square_sig pkg P_default_square P_extra_prove_square_eq :=
   let sz := Tag.get pkg TAG.sz in
@@ -98,7 +98,7 @@ Ltac add_square_sig pkg P_default_square P_extra_prove_square_eq :=
   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
   let square_sig := fresh "square_sig" in
   let square_sig := pose_square_sig P_default_square P_extra_prove_square_eq sz m wt s c sz2 wt_nonzero square_sig in
-  Tag.update pkg TAG.square_sig square_sig.
+  Tag.update_if_not_exists pkg TAG.square_sig square_sig.
 
 Ltac add_ring pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -115,7 +115,7 @@ Ltac add_ring pkg :=
   let mul_sig := Tag.get pkg TAG.mul_sig in
   let ring := fresh "ring" in
   let ring := pose_ring sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_sig add_sig sub_sig mul_sig ring in
-  Tag.update pkg TAG.ring ring.
+  Tag.update_if_not_exists pkg TAG.ring ring.
 
 Ltac add_Defaults_package pkg P_default_mul P_extra_prove_mul_eq P_default_square P_extra_prove_square_eq :=
   let pkg := add_carry_sig pkg in
