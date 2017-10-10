@@ -52,9 +52,12 @@ Ltac pose_local_lgbitwidth limb_widths lgbitwidth :=
     ltac:(fun _ => eval compute in (Z.to_nat (Z.log2_up (List.fold_right Z.max 0 limb_widths))))
            lgbitwidth.
 
-Ltac pose_adjusted_bitwidth lgbitwidth adjusted_bitwidth :=
-  let v := (eval compute in (2^lgbitwidth)%nat) in
-  cache_term v adjusted_bitwidth.
+Ltac pose_local_adjusted_bitwidth' lgbitwidth adjusted_bitwidth' :=
+  pose_term_with
+    ltac:(fun _ => eval compute in (2^lgbitwidth)%nat)
+           adjusted_bitwidth'.
+Ltac pose_adjusted_bitwidth adjusted_bitwidth' adjusted_bitwidth :=
+  cache_term adjusted_bitwidth' adjusted_bitwidth.
 
 Ltac pose_local_feZ sz feZ :=
   pose_term_with
@@ -71,20 +74,20 @@ Ltac pose_feW_bounded feW bounds feW_bounded :=
     (feW -> Prop)
     ltac:(let v := eval cbv [bounds] in (fun w : feW => is_bounded_by None bounds (map wordToZ w)) in exact_no_check v)
            feW_bounded.
-Ltac pose_feBW sz adjusted_bitwidth bounds feBW :=
+Ltac pose_feBW sz adjusted_bitwidth' bounds feBW :=
   cache_term_with_type_by
     Type
-    ltac:(let v := eval cbv [adjusted_bitwidth bounds] in (BoundedWord sz adjusted_bitwidth bounds) in exact v)
+    ltac:(let v := eval cbv [adjusted_bitwidth' bounds] in (BoundedWord sz adjusted_bitwidth' bounds) in exact v)
            feBW.
 
 Lemma feBW_bounded_helper'
-      sz adjusted_bitwidth bounds
-      (feBW := BoundedWord sz adjusted_bitwidth bounds)
+      sz adjusted_bitwidth' bounds
+      (feBW := BoundedWord sz adjusted_bitwidth' bounds)
       (wt : nat -> Z)
       (Hwt : forall i, 0 <= wt i)
   : forall (a : feBW),
     B.Positional.eval wt (map lower bounds)
-    <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth bounds a)
+    <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a)
     <= B.Positional.eval wt (map upper bounds).
 Proof.
   let a := fresh "a" in
@@ -111,15 +114,15 @@ Proof.
       nia. } }
 Qed.
 Lemma feBW_bounded_helper
-      sz adjusted_bitwidth bounds
-      (feBW := BoundedWord sz adjusted_bitwidth bounds)
+      sz adjusted_bitwidth' bounds
+      (feBW := BoundedWord sz adjusted_bitwidth' bounds)
       (wt : nat -> Z)
       (Hwt : forall i, 0 <= wt i)
       l u
   : l <= B.Positional.eval wt (map lower bounds)
     /\ B.Positional.eval wt (map upper bounds) < u
     -> forall (a : feBW),
-      l <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth bounds a) < u.
+      l <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < u.
 Proof.
   intros [Hl Hu] a; split;
     [ eapply Z.le_trans | eapply Z.le_lt_trans ];
@@ -127,10 +130,10 @@ Proof.
     assumption.
 Qed.
 
-Ltac pose_feBW_bounded wt sz feBW adjusted_bitwidth bounds m wt_nonneg feBW_bounded :=
+Ltac pose_feBW_bounded wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded :=
   cache_proof_with_type_by
-    (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth bounds a) < 2 * Z.pos m)
-    ltac:(apply (@feBW_bounded_helper sz adjusted_bitwidth bounds wt wt_nonneg);
+    (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < 2 * Z.pos m)
+    ltac:(apply (@feBW_bounded_helper sz adjusted_bitwidth' bounds wt wt_nonneg);
           vm_compute; clear; split; congruence)
            feBW_bounded.
 

@@ -6,7 +6,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := limb_widths | bounds_exp | bounds | bound1 | lgbitwidth | adjusted_bitwidth | feZ | feW | feW_bounded | feBW | feBW_bounded | phiW | phiBW.
+  Inductive tags := limb_widths | bounds_exp | bounds | bound1 | lgbitwidth | adjusted_bitwidth' | adjusted_bitwidth | feZ | feW | feW_bounded | feBW | feBW_bounded | phiW | phiBW.
 End TAG.
 
 Ltac add_limb_widths pkg :=
@@ -43,10 +43,16 @@ Ltac add_lgbitwidth pkg :=
   let lgbitwidth := pose_local_lgbitwidth limb_widths lgbitwidth in
   Tag.local_update pkg TAG.lgbitwidth lgbitwidth.
 
-Ltac add_adjusted_bitwidth pkg :=
+Ltac add_adjusted_bitwidth' pkg :=
   let lgbitwidth := Tag.get pkg TAG.lgbitwidth in
+  let adjusted_bitwidth' := fresh "adjusted_bitwidth'" in
+  let adjusted_bitwidth' := pose_local_adjusted_bitwidth' lgbitwidth adjusted_bitwidth' in
+  Tag.local_update pkg TAG.adjusted_bitwidth' adjusted_bitwidth'.
+
+Ltac add_adjusted_bitwidth pkg :=
+  let adjusted_bitwidth' := Tag.get pkg TAG.adjusted_bitwidth' in
   let adjusted_bitwidth := fresh "adjusted_bitwidth" in
-  let adjusted_bitwidth := pose_adjusted_bitwidth lgbitwidth adjusted_bitwidth in
+  let adjusted_bitwidth := pose_adjusted_bitwidth adjusted_bitwidth' adjusted_bitwidth in
   Tag.update pkg TAG.adjusted_bitwidth adjusted_bitwidth.
 
 Ltac add_feZ pkg :=
@@ -71,22 +77,22 @@ Ltac add_feW_bounded pkg :=
 
 Ltac add_feBW pkg :=
   let sz := Tag.get pkg TAG.sz in
-  let adjusted_bitwidth := Tag.get pkg TAG.adjusted_bitwidth in
+  let adjusted_bitwidth' := Tag.get pkg TAG.adjusted_bitwidth' in
   let bounds := Tag.get pkg TAG.bounds in
   let feBW := fresh "feBW" in
-  let feBW := pose_feBW sz adjusted_bitwidth bounds feBW in
+  let feBW := pose_feBW sz adjusted_bitwidth' bounds feBW in
   Tag.update pkg TAG.feBW feBW.
 
 Ltac add_feBW_bounded pkg :=
   let wt := Tag.get pkg TAG.wt in
   let sz := Tag.get pkg TAG.sz in
   let feBW := Tag.get pkg TAG.feBW in
-  let adjusted_bitwidth := Tag.get pkg TAG.adjusted_bitwidth in
+  let adjusted_bitwidth' := Tag.get pkg TAG.adjusted_bitwidth' in
   let bounds := Tag.get pkg TAG.bounds in
   let m := Tag.get pkg TAG.m in
   let wt_nonneg := Tag.get pkg TAG.wt_nonneg in
   let feBW_bounded := fresh "feBW_bounded" in
-  let feBW_bounded := pose_feBW_bounded wt sz feBW adjusted_bitwidth bounds m wt_nonneg feBW_bounded in
+  let feBW_bounded := pose_feBW_bounded wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded in
   Tag.update pkg TAG.feBW_bounded feBW_bounded.
 
 Ltac add_phiW pkg :=
@@ -111,6 +117,7 @@ Ltac add_ReificationTypes_package pkg :=
   let pkg := add_bounds pkg in
   let pkg := add_bound1 pkg in
   let pkg := add_lgbitwidth pkg in
+  let pkg := add_adjusted_bitwidth' pkg in
   let pkg := add_adjusted_bitwidth pkg in
   let pkg := add_feZ pkg in
   let pkg := add_feW pkg in
