@@ -12,13 +12,9 @@ Require Import Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Decidable.
 
-Require Import Crypto.Util.Tactics.PoseTermWithName.
-Require Import Crypto.Util.Tactics.CacheTerm.
-
-Ltac pose_local_limb_widths wt sz limb_widths :=
-  pose_term_with
-    ltac:(fun _ => (eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz))))
-           limb_widths.
+Ltac solve_local_limb_widths wt sz :=
+  let v := (eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz))) in
+  exact v.
 
 Ltac get_b_of upper_bound_of_exponent :=
   constr:(fun exp => {| lower := 0 ; upper := upper_bound_of_exponent exp |}%Z). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
@@ -26,59 +22,77 @@ Ltac get_b_of upper_bound_of_exponent :=
 (* The definition [bounds_exp] is a tuple-version of the limb-widths,
    which are the [exp] argument in [b_of] above, i.e., the approximate
    base-2 exponent of the bounds on the limb in that position. *)
-Ltac pose_local_bounds_exp sz limb_widths bounds_exp :=
-  pose_term_with_type
-    (Tuple.tuple Z sz)
-    ltac:(fun _ => eval compute in
-               (Tuple.from_list sz limb_widths eq_refl))
-           bounds_exp.
+Notation bounds_exp_type sz :=
+  (Z^sz)%type
+    (only parsing).
+Ltac solve_local_bounds_exp limb_widths :=
+  lazymatch goal with
+  | [ |- bounds_exp_type ?sz ]
+    => let v := (eval compute in
+                    (Tuple.from_list sz limb_widths eq_refl)) in
+       exact v
+  end.
 
-Ltac pose_local_bounds sz upper_bound_of_exponent bounds_exp bounds :=
-  let b_of := get_b_of upper_bound_of_exponent in
-  pose_term_with_type
-    (Tuple.tuple zrange sz)
-    ltac:(fun _ => eval compute in
-               (Tuple.map (fun e => b_of e) bounds_exp))
-           bounds.
+Notation bounds_type sz :=
+  (zrange^sz)%type
+    (only parsing).
+Ltac solve_local_bounds upper_bound_of_exponent bounds_exp :=
+  lazymatch goal with
+  | [ |- bounds_type ?sz ]
+    => let b_of := get_b_of upper_bound_of_exponent in
+       let v := (eval compute in
+                    (Tuple.map (fun e => b_of e) bounds_exp)) in
+       exact v
+  end.
 
-Ltac pose_bound1 r bound1 :=
-  cache_term_with_type_by
-    zrange
-    ltac:(exact {| lower := 0 ; upper := Z.pos r-1 |})
-           bound1.
+Notation bound1_type :=
+  zrange
+    (only parsing).
 
-Ltac pose_local_lgbitwidth limb_widths lgbitwidth :=
-  pose_term_with
-    ltac:(fun _ => eval compute in (Z.to_nat (Z.log2_up (List.fold_right Z.max 0 limb_widths))))
-           lgbitwidth.
+Ltac solve_bound1 r :=
+  lazymatch goal with
+  | [ |- bound1_type ]
+    => exact {| lower := 0 ; upper := Z.pos r-1 |}
+  end.
 
-Ltac pose_local_adjusted_bitwidth' lgbitwidth adjusted_bitwidth' :=
-  pose_term_with
-    ltac:(fun _ => eval compute in (2^lgbitwidth)%nat)
-           adjusted_bitwidth'.
-Ltac pose_adjusted_bitwidth adjusted_bitwidth' adjusted_bitwidth :=
-  cache_term adjusted_bitwidth' adjusted_bitwidth.
+Ltac pose_local_lgbitwidth limb_widths :=
+  let v := (eval compute in (Z.to_nat (Z.log2_up (List.fold_right Z.max 0 limb_widths)))) in
+  exact v.
 
-Ltac pose_local_feZ sz feZ :=
-  pose_term_with
-    ltac:(fun _ => constr:(tuple Z sz))
-           feZ.
+Ltac solve_local_adjusted_bitwidth' lgbitwidth :=
+  let v := (eval compute in (2^lgbitwidth)%nat) in
+  exact v.
+Ltac solve_adjusted_bitwidth adjusted_bitwidth' :=
+  exact adjusted_bitwidth'.
 
-Ltac pose_feW sz lgbitwidth feW :=
-  cache_term_with_type_by
-    Type
-    ltac:(let v := eval cbv [lgbitwidth] in (tuple (wordT lgbitwidth) sz) in exact v)
-           feW.
-Ltac pose_feW_bounded feW bounds feW_bounded :=
-  cache_term_with_type_by
-    (feW -> Prop)
-    ltac:(let v := eval cbv [bounds] in (fun w : feW => is_bounded_by None bounds (map wordToZ w)) in exact_no_check v)
-           feW_bounded.
-Ltac pose_feBW sz adjusted_bitwidth' bounds feBW :=
-  cache_term_with_type_by
-    Type
-    ltac:(let v := eval cbv [adjusted_bitwidth' bounds] in (BoundedWord sz adjusted_bitwidth' bounds) in exact v)
-           feBW.
+Ltac solve_local_feZ sz :=
+  exact (Z^sz)%type.
+
+Notation feW_type :=
+  Type
+    (only parsing).
+
+Ltac solve_feW sz lgbitwidth :=
+  lazymatch goal with
+  | [ |- feW_type ]
+    => let v := eval cbv [lgbitwidth] in (tuple (wordT lgbitwidth) sz) in exact v
+  end.
+Notation feW_bounded_type feW :=
+  (feW -> Prop)
+    (only parsing).
+Ltac solve_feW_bounded bounds :=
+  lazymatch goal with
+  | [ |- feW_bounded_type ?feW ]
+    => let v := eval cbv [bounds] in (fun w : feW => is_bounded_by None bounds (map wordToZ w)) in exact_no_check v
+  end.
+Notation feBW_type :=
+  Type
+    (only parsing).
+Ltac solve_feBW sz adjusted_bitwidth' bounds :=
+  lazymatch goal with
+  | [ |- feBW_type ]
+    => let v := eval cbv [adjusted_bitwidth' bounds] in (BoundedWord sz adjusted_bitwidth' bounds) in exact v
+  end.
 
 Lemma feBW_bounded_helper'
       sz adjusted_bitwidth' bounds
@@ -130,20 +144,31 @@ Proof.
     assumption.
 Qed.
 
-Ltac pose_feBW_bounded wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded :=
-  cache_proof_with_type_by
-    (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < 2 * Z.pos m)
-    ltac:(apply (@feBW_bounded_helper sz adjusted_bitwidth' bounds wt wt_nonneg);
-          vm_compute; clear; split; congruence)
-           feBW_bounded.
+Notation feBW_bounded_prop wt sz feBW adjusted_bitwidth' bounds m :=
+  (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < 2 * Z.pos m)
+    (only parsing).
 
-Ltac pose_phiW feW m wt phiW :=
-  cache_term_with_type_by
-    (feW -> F m)
-    ltac:(exact (fun x : feW => B.Positional.Fdecode wt (Tuple.map wordToZ x)))
-           phiW.
-Ltac pose_phiBW feBW m wt phiBW :=
-  cache_term_with_type_by
-    (feBW -> F m)
-    ltac:(exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x)))
-           phiBW.
+Ltac solve_feBW_bounded wt_nonneg :=
+  lazymatch goal with
+  | [ |- feBW_bounded_prop ?wt ?sz ?feBW ?adjusted_bitwidth' ?bounds ?m ]
+    => apply (@feBW_bounded_helper sz adjusted_bitwidth' bounds wt wt_nonneg);
+         vm_compute; clear; split; congruence
+  end.
+
+Notation phiW_type feW m :=
+  (feW -> F m)
+    (only parsing).
+
+Ltac solve_phiW wt :=
+  lazymatch goal with
+  | [ |- phiW_type ?feW ?m ]
+    => exact (fun x : feW => B.Positional.Fdecode wt (Tuple.map wordToZ x))
+  end.
+Notation phiBW_type feBW m :=
+  (feBW -> F m)
+    (only parsing).
+Ltac solve_phiBW wt :=
+  lazymatch goal with
+  | [ |- phiBW_type ?feBW ?m ]
+    => exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x))
+  end.

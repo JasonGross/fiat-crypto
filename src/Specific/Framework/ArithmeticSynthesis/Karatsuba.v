@@ -3,6 +3,7 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Crypto.Specific.Framework.CurveParameters.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Defaults.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
 Require Import Crypto.Arithmetic.Karatsuba.
@@ -14,8 +15,6 @@ Require Import Crypto.Util.QUtil.
 Require Import Crypto.Util.ZUtil.ModInv.
 
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.SquareFromMul.
-Require Import Crypto.Util.Tactics.PoseTermWithName.
-Require Import Crypto.Util.Tactics.CacheTerm.
 
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
@@ -24,9 +23,9 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Infix "^" := Tuple.tuple : type_scope.
 
 (** XXX TODO(jadep) FIXME: Is sqrt(s) the right thing to pass to goldilocks_mul_cps (the original code hard-coded 2^224 *)
-Ltac internal_pose_sqrt_s s sqrt_s :=
+Ltac solve_sqrt_s s :=
   let v := (eval vm_compute in (Z.log2 s / 2)) in
-  cache_term (2^v) sqrt_s.
+  exact (2^v).
 
 Ltac basesystem_partial_evaluation_RHS :=
   let t0 := (match goal with
@@ -89,52 +88,65 @@ Ltac basesystem_partial_evaluation_RHS :=
        (@runtime_mul));
    [ replace_with_vm_compute t1; clear t1 | reflexivity ].
 
-Ltac internal_pose_goldilocks_mul_sig sz wt s c half_sz sqrt_s goldilocks_mul_sig :=
-  cache_term_with_type_by
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
-     forall a b : Z^sz,
-       mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt sqrt_s a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)}
-    ltac:(eexists; cbv beta zeta; intros;
-          cbv [goldilocks_mul_cps];
-          repeat autounfold;
-          basesystem_partial_evaluation_RHS;
-          do_replace_match_with_destructuring_match_in_goal;
-          reflexivity)
-           goldilocks_mul_sig.
+Notation goldilocks_mul_sig_type goldilocks sz wt s c half_sz sqrt_s :=
+  (if goldilocks
+   then {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+         forall a b : Z^sz%nat%type,
+           mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz%nat%type) wt sqrt_s a b (fun ab => Positional.reduce_cps (n:=sz%nat%type) wt s c ab id)}
+   else True)
+    (only parsing).
 
-Ltac internal_pose_mul_sig_from_goldilocks_mul_sig sz m wt s c half_sz sqrt_s goldilocks_mul_sig wt_nonzero mul_sig :=
-  cache_term_with_type_by
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
-     forall a b : Z^sz,
-       let eval := Positional.Fdecode (m := m) wt in
-       Positional.Fdecode (m := m) wt (mul a b) = (eval a * eval b)%F}
-    ltac:(idtac;
-          let a := fresh "a" in
-          let b := fresh "b" in
-          eexists; cbv beta zeta; intros a b;
-          pose proof wt_nonzero;
-          let x := constr:(
-                     goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt sqrt_s a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)) in
-          F_mod_eq;
-          transitivity (Positional.eval wt x); repeat autounfold;
+Ltac solve_goldilocks_mul_sig :=
+  lazymatch goal with
+  | [ |- goldilocks_mul_sig_type ?goldilocks ?sz ?wt ?s ?c ?half_sz ?sqrt_s ]
+    => lazymatch (eval compute in goldilocks) with
+       | true
+         => change goldilocks with true; cbv beta iota;
+            eexists; cbv beta zeta; intros;
+            cbv [goldilocks_mul_cps];
+            repeat autounfold;
+            basesystem_partial_evaluation_RHS;
+            do_replace_match_with_destructuring_match_in_goal;
+            reflexivity
+       | false
+         => exact I
+       end
+  end.
 
-          [
-          | autorewrite with uncps push_id push_basesystem_eval;
-            apply goldilocks_mul_correct; try assumption; cbv; congruence ];
-          cbv [mod_eq]; apply f_equal2;
-          [ | reflexivity ];
-          apply f_equal;
-          etransitivity; [|apply (proj2_sig goldilocks_mul_sig)];
-          cbv [proj1_sig goldilocks_mul_sig];
-          reflexivity)
-           mul_sig.
+Ltac solve_mul_sig goldilocks s c half_sz sqrt_s goldilocks_mul_sig wt_nonzero :=
+  lazymatch (eval compute in goldilocks) with
+  | true
+    => lazymatch goal with
+       | [ |- mul_sig_type ?sz ?m ?wt ]
+         => idtac;
+            let a := fresh "a" in
+            let b := fresh "b" in
+            eexists; cbv beta zeta; intros a b;
+            pose proof wt_nonzero;
+            let x := constr:(
+                       goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt sqrt_s a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)) in
+            F_mod_eq;
+            transitivity (Positional.eval wt x); repeat autounfold;
 
-Ltac pose_mul_sig sz m wt s c half_sz wt_nonzero mul_sig :=
-  let sqrt_s := fresh "sqrt_s" in
-  let goldilocks_mul_sig := fresh "goldilocks_mul_sig" in
-  let sqrt_s := internal_pose_sqrt_s s sqrt_s in
-  let goldilocks_mul_sig := internal_pose_goldilocks_mul_sig sz wt s c half_sz sqrt_s goldilocks_mul_sig in
-  internal_pose_mul_sig_from_goldilocks_mul_sig sz m wt s c half_sz sqrt_s goldilocks_mul_sig wt_nonzero mul_sig.
+            [
+            | autorewrite with uncps push_id push_basesystem_eval;
+              apply goldilocks_mul_correct; try assumption; cbv; congruence ];
+            cbv [mod_eq]; apply f_equal2;
+            [ | reflexivity ];
+            apply f_equal;
+            etransitivity; [|apply (proj2_sig goldilocks_mul_sig)];
+            cbv [proj1_sig goldilocks_mul_sig];
+            reflexivity
+       end
+  | false => idtac
+  end.
 
-Ltac pose_square_sig sz m wt mul_sig square_sig :=
-  SquareFromMul.pose_square_sig sz m wt mul_sig square_sig.
+Notation square_sig_type sz m wt :=
+  (SquareFromMul.square_sig_type sz m wt)
+    (only parsing).
+
+Ltac solve_square_sig goldilocks mul_sig :=
+  lazymatch (eval compute in goldilocks) with
+  | true => SquareFromMul.solve_square_sig mul_sig
+  | false => idtac
+  end.

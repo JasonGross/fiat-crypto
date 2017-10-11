@@ -1,17 +1,15 @@
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.BasePackage.
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.DefaultsPackage.
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.FreezePackage.
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.KaratsubaPackage.
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.LadderstepPackage.
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.MontgomeryPackage.
-Require Import Crypto.Specific.Framework.CurveParametersPackage.
-Require Import Crypto.Specific.Framework.ReificationTypesPackage.
-Require Import Crypto.Specific.Framework.MontgomeryReificationTypesPackage.
-Require Import Crypto.Specific.Framework.Packages.
+Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Base.
+Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Defaults.
+Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Freeze.
+Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Karatsuba.
+Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Ladderstep.
+Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Montgomery.
+Require Export Crypto.Specific.Framework.CurveParameters.
+Require Export Crypto.Specific.Framework.ReificationTypes.
+Require Export Crypto.Specific.Framework.MontgomeryReificationTypes.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.BoundedWord.
-Require Import Crypto.Util.TagList.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
@@ -21,14 +19,25 @@ Module Export Exports.
   Export ArithmeticSynthesis.Freeze.Exports.
 End Exports.
 
-(* Alisases for exporting *)
-Module Type PrePackage := PrePackage.
-Module Tag.
-  Notation Context := Tag.Context (only parsing).
-End Tag.
-
 Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
   Module P := FillCurveParameters Curve.
+
+  Include P.Solvers.
+
+  Ltac solve_mul_sig goldilocks s c half_sz sqrt_s sz2 goldilocks_mul_sig wt_nonzero :=
+    let P_default_mul _ := P.default_mul in
+    let P_extra_prove_mul_eq _ := P.extra_prove_mul_eq in
+    Karatsuba.solve_mul_sig goldilocks s c half_sz sqrt_s goldilocks_mul_sig wt_nonzero;
+    Defaults.solve_mul_sig P_default_mul P_extra_prove_mul_eq s c sz2 wt_nonzero.
+
+  Ltac solve_square_sig goldilocks mul_sig s c sz2 wt_nonzero :=
+    let P_default_square _ := P.default_square in
+    let P_extra_prove_square_eq _ := P.extra_prove_square_eq in
+    Karatsuba.solve_square_sig goldilocks mul_sig;
+    Defaults.solve_square_sig P_default_square P_extra_prove_square_eq s c sz2 wt_nonzero.
+
+  Notation
+
 
   Ltac add_Synthesis_package pkg :=
     let P_default_mul _ := P.default_mul in

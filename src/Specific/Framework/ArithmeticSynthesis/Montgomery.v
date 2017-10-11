@@ -212,143 +212,230 @@ Local Definition for_assumptions
 
 Print Assumptions for_assumptions.
 
-Ltac pose_m' modinv_fuel m r m' := (* (-m)⁻¹ mod r *)
-  pose_modinv modinv_fuel (-Z.pos m) (Z.pos r) m'.
-Ltac pose_r' modinv_fuel m r r' := (* r⁻¹ mod m *)
-  pose_modinv modinv_fuel (Z.pos r) (Z.pos m) r'.
+Local Ltac if_montgomery montgomery tac :=
+  lazymatch (eval compute in montgomery) with
+  | true => tac
+  | false => exact I
+  end.
+Local Ltac if_montgomery_for_notation montgomery t :=
+  lazymatch (eval compute in montgomery) with
+  | true => exact t
+  | false => exact True
+  end.
+Local Notation if_montgomery montgomery t :=
+  (match montgomery with
+   | true => t
+   | false => True
+   end)
+    (only parsing).
 
-Ltac pose_m'_correct m m' r m'_correct :=
-  pose_correct_if_Z
-    m'
-    ltac:(fun _ => constr:((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r))
-           m'_correct.
-Ltac pose_r'_correct m r r' r'_correct :=
-  pose_correct_if_Z
-    r'
-    ltac:(fun _ => constr:((Z.pos r * r') mod (Z.pos m) = 1))
-           r'_correct.
+Ltac solve_m' montgomery modinv_fuel m r := (* (-m)⁻¹ mod r *)
+  if_montgomery montgomery ltac:(idtac; solve_modinv modinv_fuel (-Z.pos m) (Z.pos r)).
+Ltac solve_r' montgomery modinv_fuel m r := (* r⁻¹ mod m *)
+  if_montgomery montgomery ltac:(idtac; solve_modinv modinv_fuel (Z.pos r) (Z.pos m)).
 
-Ltac pose_m_enc_correct_montgomery m sz r m_enc m_enc_correct_montgomery :=
-  cache_proof_with_type_by
-    (Z.pos m = MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc)
-    ltac:(vm_compute; vm_cast_no_check (eq_refl (Z.pos m)))
-           m_enc_correct_montgomery.
+Notation m'_correct_prop montgomery m m' r :=
+  (if_montgomery montgomery ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r))
+    (only parsing).
+Ltac solve_m'_correct :=
+  lazymatch goal with
+  | [ |- m'_correct_prop ?montgomery ?m ?m' ?r ]
+    => vm_compute; constructor
+  end.
+Notation r'_correct_prop montgomery m r r' :=
+  (if_montgomery montgomery ((Z.pos r * r') mod (Z.pos m) = 1))
+    (only parsing).
+Ltac solve_r'_correct :=
+  lazymatch goal with
+  | [ |- r'_correct_prop ?montgomery ?m ?r ?r' ]
+    => vm_compute; constructor
+  end.
 
-Ltac pose_r'_pow_correct r' sz r m_enc r'_pow_correct :=
-  cache_proof_with_type_by
-    ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc = 1)
-    ltac:(vm_compute; reflexivity)
-           r'_pow_correct.
+Notation m_enc_correct_montgomery_prop montgomery m sz r m_enc :=
+  (if_montgomery montgomery (Z.pos m = MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc))
+    (only parsing).
 
-Ltac pose_montgomery_to_F sz m r' montgomery_to_F :=
-  let v := (eval cbv [montgomery_to_F_gen] in (montgomery_to_F_gen sz m r')) in
-  cache_term v montgomery_to_F.
+Ltac solve_m_enc_correct_montgomery :=
+  lazymatch goal with
+  | [ |- m_enc_correct_montgomery_prop ?montgomery ?m ?sz ?r ?m_enc ]
+    => vm_compute; constructor
+  end.
 
-Ltac pose_r_big r r_big :=
-  cache_proof_with_type_by
-    (Z.pos r > 1)
-    ltac:(vm_compute; reflexivity)
-           r_big.
+Notation r'_pow_correct_prop montgomery r' sz r m_enc :=
+  (if_montgomery montgomery ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc = 1))
+    (only parsing).
 
-Ltac pose_m_big m m_big :=
-  cache_proof_with_type_by
-    (1 < Z.pos m)
-    ltac:(vm_compute; reflexivity)
-           m_big.
+Ltac solve_r'_pow_correct :=
+  lazymatch goal with
+  | [ |- r'_pow_correct_prop ?montgomery ?r' ?sz ?r ?m_enc ]
+    => vm_compute; constructor
+  end.
 
-Ltac pose_m_enc_small sz r m_enc m_enc_small :=
-  cache_proof_with_type_by
-    (small (n:=sz) (Z.pos r) m_enc)
-    ltac:(pose (small_Decidable (n:=sz) (bound:=Z.pos r)); vm_decide_no_check)
-           m_enc_small.
+Ltac solve_montgomery_to_F sz m r' :=
+  lazymatch type of r' with
+  | Z
+    => let v := (eval cbv [montgomery_to_F_gen] in (montgomery_to_F_gen sz m r')) in
+       exact v
+  | True
+    => exact I
+  end.
 
-Ltac pose_map_m_enc sz r m_enc map_m_enc :=
-  cache_proof_with_type_by
-    (Tuple.map (n:=sz) (Z.land (Z.pos r - 1)) m_enc = m_enc)
-    ltac:(pose (@dec_eq_prod); pose dec_eq_Z; vm_decide_no_check)
-           map_m_enc.
+Notation r_big_prop r :=
+  (Z.pos r > 1)
+    (only parsing).
 
-Ltac internal_pose_sig_by_eq ty sigl tac_eq id :=
-  cache_term_with_type_by
-    ty
-    ltac:(eapply (@sig_by_eq _ _ sigl _); tac_eq ())
-           id.
+Ltac solve_r_big :=
+  lazymatch goal with
+  | [ |- r_big_prop ?r ]
+    => vm_compute; reflexivity
+  end.
+
+Notation m_big_prop m :=
+  (1 < Z.pos m)
+    (only parsing).
+
+Ltac solve_m_big :=
+  lazymatch goal with
+  | [ |- m_big_prop ?m ]
+    => vm_compute; reflexivity
+  end.
+
+Notation m_enc_small_prop montgomery sz r m_enc :=
+  (if_montgomery montgomery (small (n:=sz) (Z.pos r) m_enc))
+    (only parsing).
+
+Ltac solve_m_enc_small :=
+  lazymatch goal with
+  | [ |- m_enc_small_prop ?montgomery ?sz ?r ?m_enc ]
+    => if_montgomery
+         montgomery
+         ltac:(pose (small_Decidable (n:=sz) (bound:=Z.pos r)); vm_decide_no_check)
+  end.
+
+Notation map_m_enc_prop montgomery sz r m_enc :=
+  (if_montgomery montgomery (Tuple.map (n:=sz) (Z.land (Z.pos r - 1)) m_enc = m_enc))
+    (only parsing).
+
+Ltac solve_map_m_enc :=
+  lazymatch goal with
+  | [ |- map_m_enc_prop ?montgomery ?sz ?r ?m_enc ]
+    => if_montgomery montgomery
+                     ltac:(pose (@dec_eq_prod); pose dec_eq_Z; vm_decide_no_check)
+  end.
+
+Ltac internal_solve_sig_by_eq ty sigl tac_eq id :=
+  refine (_ : ty);
+  eapply (@sig_by_eq _ _ sigl _); tac_eq ().
 
 Import ModularArithmetic.
 
 Local Ltac reduce_eq _ :=
   cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp runtime_lor Let_In].
 
-Ltac pose_mul_ext r sz m m_enc r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small montgomery_to_F mul_ext :=
-  internal_pose_sig_by_eq
-    { f:Z^sz -> Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      (forall (A : Z^sz) (_ : small (Z.pos r) A)
-              (B : Z^sz) (_ : small (Z.pos r) B),
-          montgomery_to_F (eval (f A B))
-          = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F)
-      /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
-                 (B : Z^sz) (_ : small (Z.pos r) B),
-             (eval B < eval m_enc -> 0 <= eval (f A B) < eval m_enc)%Z) }
-    (@mul_ext_gen r sz m m_enc r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small)
-    ltac:(fun _ => reduce_eq (); reflexivity)
-           mul_ext.
-
-Ltac pose_add_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_big m_enc_small montgomery_to_F add_ext :=
-  internal_pose_sig_by_eq
-    { f:Z^sz -> Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      ((forall (A : Z^sz) (_ : small (Z.pos r) A)
+Notation mul_ext_type montgomery sz r montgomery_to_F m_enc :=
+  (if_montgomery
+     montgomery
+     { f:Z^sz -> Z^sz -> Z^sz
+     | let eval := MontgomeryAPI.eval (Z.pos r) in
+       (forall (A : Z^sz) (_ : small (Z.pos r) A)
                (B : Z^sz) (_ : small (Z.pos r) B),
-           (eval A < eval m_enc
-            -> eval B < eval m_enc
-            -> montgomery_to_F (eval (f A B))
-               = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F))
-       /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
-                  (B : Z^sz) (_ : small (Z.pos r) B),
-              (eval A < eval m_enc
-               -> eval B < eval m_enc
-               -> 0 <= eval (f A B) < eval m_enc)))%Z }
-    (@add_ext_gen r sz m m_enc r' m_enc_correct_montgomery r_big m_big m_enc_small)
-    ltac:(fun _ => reduce_eq (); reflexivity)
-           add_ext.
+           montgomery_to_F%F (eval (f A B))
+           = F.mul (montgomery_to_F (eval A)) (montgomery_to_F (eval B)))
+       /\ (forall (A' : Z^sz) (_ : small (Z.pos r) A')
+                  (B' : Z^sz) (_ : small (Z.pos r) B'),
+              (eval B' < eval m_enc -> 0 <= eval (f A' B') < eval m_enc)%Z) })
+    (only parsing).
+Ltac solve_mul_ext m r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small :=
+  lazymatch goal with
+  | [ |- mul_ext_type ?montgomery ?sz ?r ?montgomery_to_F ?m_enc ]
+    => if_montgomery
+         montgomery
+         ltac:(idtac;
+               internal_solve_sig_by_eq
+                 (@mul_ext_gen r sz m m_enc r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small))
+  end.
 
-Ltac pose_sub_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F sub_ext :=
-  internal_pose_sig_by_eq
-    { f:Z^sz -> Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      ((forall (A : Z^sz) (_ : small (Z.pos r) A)
-               (B : Z^sz) (_ : small (Z.pos r) B),
-           (eval A < eval m_enc
-            -> eval B < eval m_enc
-            -> montgomery_to_F (eval (f A B))
-               = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F))
-       /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
-                  (B : Z^sz) (_ : small (Z.pos r) B),
-              (eval A < eval m_enc
-               -> eval B < eval m_enc
-               -> 0 <= eval (f A B) < eval m_enc)))%Z }
-    (@sub_ext_gen r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc)
-    ltac:(fun _ => reduce_eq (); reflexivity)
-           sub_ext.
+Notation add_ext_type montgomery sz r montgomery_to_F m_enc :=
+  (if_montgomery
+     montgomery
+     { f:Z^sz -> Z^sz -> Z^sz
+     | let eval := MontgomeryAPI.eval (Z.pos r) in
+       ((forall (A : Z^sz) (_ : small (Z.pos r) A)
+                (B : Z^sz) (_ : small (Z.pos r) B),
+            (eval A < eval m_enc%Z
+             -> eval B < eval m_enc%Z
+             -> montgomery_to_F%F (eval (f A B))
+                = F.add (montgomery_to_F (eval A)) (montgomery_to_F (eval B))))
+        /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
+                   (B : Z^sz) (_ : small (Z.pos r) B),
+               (eval A < eval m_enc
+                -> eval B < eval m_enc
+                -> 0 <= eval (f A B) < eval m_enc)%Z)) })
+    (only parsing).
+Ltac solve_add_ext m r' r'_correct m' m'_correct m_enc_correct_montgomery r_big m_big m_enc_small :=
+  lazymatch goal with
+  | [ |- add_ext_type ?montgomery ?sz ?r ?montgomery_to_F ?m_enc ]
+    => if_montgomery
+         montgomery
+         ltac:(idtac;
+               internal_solve_sig_by_eq
+                 (@add_ext_gen r sz m m_enc r' m_enc_correct_montgomery r_big m_big m_enc_small))
+  end.
 
-Ltac pose_opp_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F opp_ext :=
-  internal_pose_sig_by_eq
-    { f:Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      ((forall (A : Z^sz) (_ : small (Z.pos r) A),
-           (eval A < eval m_enc
-            -> montgomery_to_F (eval (f A))
-               = (F.opp (montgomery_to_F (eval A)))%F))
-       /\ (forall (A : Z^sz) (_ : small (Z.pos r) A),
-              (eval A < eval m_enc
-               -> 0 <= eval (f A) < eval m_enc)))%Z }
-    (@opp_ext_gen r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc)
-    ltac:(fun _ => reduce_eq (); reflexivity)
-           opp_ext.
 
-Ltac pose_nonzero_ext r sz m m_enc r' m_enc_correct_montgomery r'_pow_correct r_big m_big montgomery_to_F nonzero_ext :=
-  internal_pose_sig_by_eq
+Notation sub_ext_type montgomery sz r montgomery_to_F m_enc :=
+  (if_montgomery
+     montgomery
+     { f:Z^sz -> Z^sz -> Z^sz
+     | let eval := MontgomeryAPI.eval (Z.pos r) in
+       ((forall (A : Z^sz) (_ : small (Z.pos r) A)
+                (B : Z^sz) (_ : small (Z.pos r) B),
+            (eval A < eval m_enc%Z
+             -> eval B < eval m_enc%Z
+             -> montgomery_to_F%F (eval (f A B))
+                = F.sub (montgomery_to_F (eval A)) (montgomery_to_F (eval B))))
+        /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
+                   (B : Z^sz) (_ : small (Z.pos r) B),
+               (eval A < eval m_enc
+                -> eval B < eval m_enc
+                -> 0 <= eval (f A B) < eval m_enc)%Z)) })
+    (only parsing).
+
+Ltac solve_sub_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F :=
+  lazymatch goal with
+  | [ |- sub_ext_type ?montgomery ?sz ?r ?montgomery_to_F ?m_enc ]
+    => if_montgomery
+         montgomery
+         ltac:(idtac;
+               internal_solve_sig_by_eq
+                 (@sub_ext_gen r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc))
+  end.
+
+Notation opp_ext_type montgomery sz r montgomery_to_F m_enc :=
+  (if_montgomery
+     montgomery
+     { f:Z^sz -> Z^sz
+     | let eval := MontgomeryAPI.eval (Z.pos r) in
+       ((forall (A : Z^sz) (_ : small (Z.pos r) A),
+            (eval A < eval m_enc%Z
+             -> montgomery_to_F%F (eval (f A))
+                = (F.opp (montgomery_to_F (eval A)))%F))
+        /\ (forall (A : Z^sz) (_ : small (Z.pos r) A),
+               ((eval A < eval m_enc
+                 -> 0 <= eval (f A) < eval m_enc))%Z)) })
+    (only parsing).
+Ltac solve_opp_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc montgomery_to_F opp_ext :=
+ lazymatch goal with
+  | [ |- opp_ext_type ?montgomery ?sz ?r ?montgomery_to_F ?m_enc ]
+    => if_montgomery
+         montgomery
+         ltac:(idtac;
+               internal_solve_sig_by_eq
+                 (@opp_ext_gen r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map_m_enc))
+ end.
+
+Ltac solve_nonzero_ext r sz m m_enc r' m_enc_correct_montgomery r'_pow_correct r_big m_big montgomery_to_F nonzero_ext :=
+  internal_solve_sig_by_eq
     { f:Z^sz -> Z
     | let eval := MontgomeryAPI.eval (Z.pos r) in
       forall (A : Z^sz) (_ : small (Z.pos r) A),
@@ -358,134 +445,174 @@ Ltac pose_nonzero_ext r sz m m_enc r' m_enc_correct_montgomery r'_pow_correct r_
     ltac:(fun _ => reduce_eq (); reflexivity)
            nonzero_ext.
 
-Ltac pose_mul_sig r sz montgomery_to_F mul_ext mul_sig :=
-  cache_term_with_type_by
-    { f:Z^sz -> Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      forall (A : Z^sz) (_ : small (Z.pos r) A)
-             (B : Z^sz) (_ : small (Z.pos r) B),
-        montgomery_to_F (eval (f A B))
-        = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F }
-    ltac:(idtac;
-          let v := (eval cbv [proj1_sig mul_ext_gen mul_ext sig_by_eq] in (proj1_sig mul_ext)) in
-          (exists v);
-          abstract apply (proj2_sig mul_ext))
-           mul_sig.
+Notation mul_sig_type r sz montgomery_to_F :=
+  { f:Z^sz -> Z^sz -> Z^sz
+  | let eval := MontgomeryAPI.eval (Z.pos r) in
+    forall (A : Z^sz) (_ : small (Z.pos r) A)
+           (B : Z^sz) (_ : small (Z.pos r) B),
+      montgomery_to_F%F (eval (f A B))
+      = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F }
+    (only parsing).
 
-Ltac pose_mul_bounded r sz m_enc montgomery_to_F mul_ext mul_sig mul_bounded :=
-  cache_proof_with_type_by
-    (let eval := MontgomeryAPI.eval (Z.pos r) in
-     forall (A : Z^sz) (_ : small (Z.pos r) A)
-            (B : Z^sz) (_ : small (Z.pos r) B),
-       (eval B < eval m_enc
-        -> 0 <= eval (proj1_sig mul_sig A B) < eval m_enc)%Z)
-    ltac:(apply (proj2_sig mul_ext))
-           mul_bounded.
+Ltac solve_mul_sig mul_ext :=
+  lazymatch goal with
+  | [ |- mul_sig_type ?r ?sz ?montgomery_to_F ]
+    => idtac;
+       let v := (eval cbv [proj1_sig mul_ext_gen mul_ext sig_by_eq] in (proj1_sig mul_ext)) in
+       (exists v);
+       abstract apply (proj2_sig mul_ext)
+  end.
 
+Notation mul_bounded_prop r sz m_enc mul_sig :=
+  (let eval := MontgomeryAPI.eval (Z.pos r) in
+   forall (A : Z^sz) (_ : small (Z.pos r) A)
+          (B : Z^sz) (_ : small (Z.pos r) B),
+     (eval B < eval m_enc
+      -> 0 <= eval (proj1_sig mul_sig A B) < eval m_enc)%Z)
+    (only parsing).
 
-Ltac pose_add_sig r sz m_enc montgomery_to_F add_ext add_sig :=
-  cache_term_with_type_by
-    { f:Z^sz -> Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      forall (A : Z^sz) (_ : small (Z.pos r) A)
-             (B : Z^sz) (_ : small (Z.pos r) B),
-        (eval A < eval m_enc
-         -> eval B < eval m_enc
-         -> montgomery_to_F (eval (f A B))
-            = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F)%Z }
-    ltac:(idtac;
-          let v := (eval cbv [proj1_sig add_ext_gen add_ext sig_by_eq] in (proj1_sig add_ext)) in
-          (exists v);
-          abstract apply (proj2_sig add_ext))
-           add_sig.
-
-Ltac pose_add_bounded r sz m_enc montgomery_to_F add_ext add_sig add_bounded :=
-  cache_proof_with_type_by
-    (let eval := MontgomeryAPI.eval (Z.pos r) in
-     (forall (A : Z^sz) (_ : small (Z.pos r) A)
-             (B : Z^sz) (_ : small (Z.pos r) B),
-         (eval A < eval m_enc
-          -> eval B < eval m_enc
-          -> 0 <= eval (proj1_sig add_sig A B) < eval m_enc))%Z)
-    ltac:(apply (proj2_sig add_ext))
-           add_bounded.
+Ltac solve_mul_bounded montgomery_to_F mul_ext :=
+  lazymatch goal with
+  | [ |- mul_bounded_prop ?montgomery ?r ?sz ?m_enc ?mul_sig ]
+    => apply (proj2_sig mul_ext)
+  end.
 
 
-Ltac pose_sub_sig r sz m_enc montgomery_to_F sub_ext sub_sig :=
-  cache_term_with_type_by
-    { f:Z^sz -> Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      forall (A : Z^sz) (_ : small (Z.pos r) A)
-             (B : Z^sz) (_ : small (Z.pos r) B),
-        (eval A < eval m_enc
-         -> eval B < eval m_enc
-         -> montgomery_to_F (eval (f A B))
-            = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F)%Z }
-    ltac:(idtac;
-          let v := (eval cbv [proj1_sig sub_ext_gen sub_ext sig_by_eq] in (proj1_sig sub_ext)) in
-          (exists v);
-          abstract apply (proj2_sig sub_ext))
-           sub_sig.
-
-Ltac pose_sub_bounded r sz m_enc montgomery_to_F sub_ext sub_sig sub_bounded :=
-  cache_proof_with_type_by
-    (let eval := MontgomeryAPI.eval (Z.pos r) in
-     (forall (A : Z^sz) (_ : small (Z.pos r) A)
-             (B : Z^sz) (_ : small (Z.pos r) B),
-         (eval A < eval m_enc
-          -> eval B < eval m_enc
-          -> 0 <= eval (proj1_sig sub_sig A B) < eval m_enc))%Z)
-    ltac:(apply (proj2_sig sub_ext))
-           sub_bounded.
+Notation add_sig_type r sz m_enc montgomery_to_F :=
+  { f:Z^sz -> Z^sz -> Z^sz
+  | let eval := MontgomeryAPI.eval (Z.pos r) in
+    forall (A : Z^sz) (_ : small (Z.pos r) A)
+           (B : Z^sz) (_ : small (Z.pos r) B),
+      (eval A < eval m_enc
+       -> eval B < eval m_enc
+       -> montgomery_to_F%F (eval (f A B))
+          = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F)%Z }
+    (only parsing).
 
 
-Ltac pose_opp_sig r sz m_enc montgomery_to_F opp_ext opp_sig :=
-  cache_term_with_type_by
-    { f:Z^sz -> Z^sz
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      forall (A : Z^sz) (_ : small (Z.pos r) A),
-        (eval A < eval m_enc
-         -> montgomery_to_F (eval (f A))
-            = (F.opp (montgomery_to_F (eval A)))%F)%Z }
-    ltac:(idtac;
-          let v := (eval cbv [proj1_sig opp_ext_gen opp_ext sig_by_eq] in (proj1_sig opp_ext)) in
-          (exists v);
-          abstract apply (proj2_sig opp_ext))
-           opp_sig.
+Ltac solve_add_sig add_ext :=
+  lazymatch goal with
+  | [ |- add_sig_type ?r ?sz ?m_enc ?montgomery_to_F ]
+    => idtac;
+       let v := (eval cbv [proj1_sig add_ext_gen add_ext sig_by_eq] in (proj1_sig add_ext)) in
+       (exists v);
+       abstract apply (proj2_sig add_ext)
+  end.
 
-Ltac pose_opp_bounded r sz m_enc montgomery_to_F opp_ext opp_sig opp_bounded :=
-  cache_proof_with_type_by
-    (let eval := MontgomeryAPI.eval (Z.pos r) in
-     (forall (A : Z^sz) (_ : small (Z.pos r) A),
-         (eval A < eval m_enc
-          -> 0 <= eval (proj1_sig opp_sig A) < eval m_enc))%Z)
-    ltac:(apply (proj2_sig opp_ext))
-           opp_bounded.
+Notation add_bounded_prop r sz m_enc add_sig :=
+  (let eval := MontgomeryAPI.eval (Z.pos r)%Z in
+   (forall (A : Z^sz) (_ : small (Z.pos r) A)
+           (B : Z^sz) (_ : small (Z.pos r) B),
+       (eval A < eval m_enc
+        -> eval B < eval m_enc
+        -> 0 <= eval (proj1_sig add_sig A B) < eval m_enc))%Z)
+    (only parsing).
+
+Ltac solve_add_bounded montgomery_to_F add_ext :=
+  lazymatch goal with
+  | [ |- add_bounded_prop ?montgomery ?r ?sz ?m_enc ?add_sig ]
+    => apply (proj2_sig add_ext)
+  end.
 
 
-Ltac pose_nonzero_sig r sz m m_enc montgomery_to_F nonzero_ext nonzero_sig :=
-  cache_term_with_type_by
-    { f:Z^sz -> Z
-    | let eval := MontgomeryAPI.eval (Z.pos r) in
-      forall (A : Z^sz) (_ : small (Z.pos r) A),
-        (eval A < eval m_enc
-         -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }
-    ltac:(idtac;
-          let v := (eval cbv [proj1_sig nonzero_ext_gen nonzero_ext sig_by_eq] in (proj1_sig nonzero_ext)) in
-          (exists v);
-          abstract apply (proj2_sig nonzero_ext))
-           nonzero_sig.
+Notation sub_sig_type r sz m_enc montgomery_to_F :=
+  { f:Z^sz -> Z^sz -> Z^sz
+  | let eval := MontgomeryAPI.eval (Z.pos r) in
+    forall (A : Z^sz) (_ : small (Z.pos r) A)
+           (B : Z^sz) (_ : small (Z.pos r) B),
+      (eval A < eval m_enc
+       -> eval B < eval m_enc
+       -> montgomery_to_F%F (eval (f A B))
+          = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F)%Z }
+    (only parsing).
 
-Ltac pose_ring ring :=
+
+Ltac solve_sub_sig sub_ext :=
+  lazymatch goal with
+  | [ |- sub_sig_type ?r ?sz ?m_enc ?montgomery_to_F ]
+    => idtac;
+       let v := (eval cbv [proj1_sig sub_ext_gen sub_ext sig_by_eq] in (proj1_sig sub_ext)) in
+       (exists v);
+       abstract apply (proj2_sig sub_ext)
+  end.
+
+Notation sub_bounded_prop r sz m_enc sub_sig :=
+  (let eval := MontgomeryAPI.eval (Z.pos r)%Z in
+   (forall (A : Z^sz) (_ : small (Z.pos r) A)
+           (B : Z^sz) (_ : small (Z.pos r) B),
+       (eval A < eval m_enc
+        -> eval B < eval m_enc
+        -> 0 <= eval (proj1_sig sub_sig A B) < eval m_enc))%Z)
+    (only parsing).
+
+Ltac solve_sub_bounded montgomery_to_F sub_ext :=
+  lazymatch goal with
+  | [ |- sub_bounded_prop ?montgomery ?r ?sz ?m_enc ?sub_sig ]
+    => apply (proj2_sig sub_ext)
+  end.
+
+
+Notation opp_sig_type r sz m_enc montgomery_to_F :=
+  { f:Z^sz -> Z^sz
+  | let eval := MontgomeryAPI.eval (Z.pos r) in
+    forall (A : Z^sz) (_ : small (Z.pos r) A),
+      (eval A < eval m_enc
+       -> montgomery_to_F%F (eval (f A))
+          = (F.opp (montgomery_to_F (eval A)))%F)%Z }
+    (only parsing).
+
+
+Ltac solve_opp_sig opp_ext :=
+  lazymatch goal with
+  | [ |- opp_sig_type ?r ?sz ?m_enc ?montgomery_to_F ]
+    => idtac;
+       let v := (eval cbv [proj1_sig opp_ext_gen opp_ext sig_by_eq] in (proj1_sig opp_ext)) in
+       (exists v);
+       abstract apply (proj2_sig opp_ext)
+  end.
+
+Notation opp_bounded_prop r sz m_enc opp_sig :=
+  (let eval := MontgomeryAPI.eval (Z.pos r)%Z in
+   (forall (A : Z^sz) (_ : small (Z.pos r) A),
+       (eval A < eval m_enc
+        -> 0 <= eval (proj1_sig opp_sig A) < eval m_enc))%Z)
+    (only parsing).
+
+Ltac solve_opp_bounded montgomery_to_F opp_ext :=
+  lazymatch goal with
+  | [ |- opp_bounded_prop ?montgomery ?r ?sz ?m_enc ?opp_sig ]
+    => apply (proj2_sig opp_ext)
+  end.
+
+
+Notation nonzero_sig_type r sz m m_enc montgomery_to_F :=
+  { f:Z^sz -> Z
+  | let eval := MontgomeryAPI.eval (Z.pos r) in
+    forall (A : Z^sz) (_ : small (Z.pos r) A),
+      (eval A < eval m_enc
+       -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }
+    (only parsing).
+
+
+Ltac solve_nonzero_sig nonzero_ext :=
+  lazymatch goal with
+  | [ |- nonzero_sig_type ?r ?sz ?m ?m_enc ?montgomery_to_F ]
+    => idtac;
+       let v := (eval cbv [proj1_sig nonzero_ext_gen nonzero_ext sig_by_eq] in (proj1_sig nonzero_ext)) in
+       (exists v);
+       abstract apply (proj2_sig nonzero_ext)
+  end.
+
+Ltac solve_ring:=
   (* FIXME: TODO *)
-  cache_term
+  exact
     I
-    ring.
+.
 
 (* disable default unused things *)
-Ltac pose_carry_sig carry_sig :=
-  cache_term tt carry_sig.
-Ltac pose_freeze_sig freeze_sig :=
-  cache_term tt freeze_sig.
-Ltac pose_Mxzladderstep_sig Mxzladderstep_sig :=
-  cache_term tt Mxzladderstep_sig.
+Ltac solve_carry_sig:=
+  exact tt.
+Ltac solve_freeze_sig:=
+  exact tt.
+Ltac solve_Mxzladderstep_sig:=
+  exact tt.

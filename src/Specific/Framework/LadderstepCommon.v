@@ -43,27 +43,3 @@ Section with_notations.
          ((x2, z2), (x3, z3))%core
        end.
 End with_notations.
-
-Notation Mxzladderstep_sig_type sz wt m :=
-  { xzladderstep : tuple Z sz -> tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz * (tuple Z sz * tuple Z sz)
-  | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (m:=m) (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }
-    (only parsing).
-
-Ltac solve_Mxzladderstep_sig add_sig sub_sig mul_sig square_sig carry_sig :=
-  lazymatch goal with
-  | [ |- Mxzladderstep_sig_type ?sz ?wt ?m ]
-    => (exists (Mxzladderstep sz (proj1_sig add_sig) (proj1_sig sub_sig) (proj1_sig mul_sig) (proj1_sig square_sig) (proj1_sig carry_sig)));
-       let a24 := fresh "a24" in
-       let x1 := fresh "x1" in
-       let Q := fresh "Q" in
-       let Q' := fresh "Q'" in
-       let eval := fresh "eval" in
-       intros a24 x1 Q Q' eval;
-       cbv [Mxzladderstep FMxzladderstep M.donnaladderstep];
-       destruct Q, Q'; cbv [map map' fst snd Let_In eval];
-       repeat match goal with
-              | [ |- context[@proj1_sig ?a ?b ?s] ]
-                => rewrite !(@proj2_sig a b s)
-              end;
-       reflexivity
-  end.

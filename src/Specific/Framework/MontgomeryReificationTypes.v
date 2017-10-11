@@ -14,34 +14,47 @@ Require Import Crypto.Util.Decidable.
 
 Require Crypto.Arithmetic.Saturated.MontgomeryAPI.
 
-Require Import Crypto.Util.Tactics.PoseTermWithName.
-Require Import Crypto.Util.Tactics.CacheTerm.
+Notation meval_type feBW :=
+  (feBW -> Z)
+    (only parsing).
 
-Ltac pose_meval feBW r meval :=
-  cache_term_with_type_by
-    (feBW -> Z)
-    ltac:(exact (fun x : feBW => MontgomeryAPI.eval (Z.pos r) (BoundedWordToZ _ _ _ x)))
-           meval.
+Ltac solve_meval r :=
+  lazymatch goal with
+  | [ |- meval_type ?feBW ]
+    => exact (fun x : feBW => MontgomeryAPI.eval (Z.pos r) (BoundedWordToZ _ _ _ x))
+  end.
 
-Ltac pose_feBW_small sz feBW meval r m_enc feBW_small :=
-  cache_term
+Ltac solve_feBW_small sz feBW meval r m_enc :=
+  exact
     { v : feBW | meval v < MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc }
-    feBW_small.
+.
 
-Ltac pose_feBW_of_feBW_small feBW feBW_small feBW_of_feBW_small :=
-  cache_term_with_type_by
-    (feBW_small -> feBW)
-    ltac:(refine (@proj1_sig _ _))
-           feBW_of_feBW_small.
+Notation feBW_of_feBW_small_type feBW feBW_small :=
+  (feBW_small -> feBW)
+    (only parsing).
 
-Ltac pose_phiM feBW m meval montgomery_to_F phiM :=
-  cache_term_with_type_by
-    (feBW -> F m)
-    ltac:(exact (fun x : feBW => montgomery_to_F (meval x)))
-           phiM.
+Ltac solve_feBW_of_feBW_small :=
+  lazymatch goal with
+  | [ |- feBW_of_feBW_small_type ?feBW ?feBW_small ]
+    => refine (@proj1_sig _ _)
+  end.
 
-Ltac pose_phiM_small feBW_small feBW_of_feBW_small m meval montgomery_to_F phiM_small :=
-  cache_term_with_type_by
-    (feBW_small -> F m)
-    ltac:(exact (fun x : feBW_small => montgomery_to_F (meval (feBW_of_feBW_small x))))
-           phiM_small.
+Notation phiM_type feBW m :=
+  (feBW -> F m)
+    (only parsing).
+
+Ltac solve_phiM meval montgomery_to_F :=
+  lazymatch goal with
+  | [ |- phiM_type ?feBW ?m ]
+    => exact (fun x : feBW => montgomery_to_F (meval x))
+  end.
+
+Notation phiM_small_type feBW_small m :=
+  (feBW_small -> F m)
+    (only parsing).
+
+Ltac solve_phiM_small feBW_of_feBW_small meval montgomery_to_F :=
+  lazymatch goal with
+  | [ |- phiM_small_type ?feBW_small ?m ]
+    => exact (fun x : feBW_small => montgomery_to_F (meval (feBW_of_feBW_small x)))
+  end.
