@@ -35,6 +35,7 @@ src/Arithmetic/Saturated/Freeze.v
 src/Arithmetic/Saturated/MontgomeryAPI.v
 src/Arithmetic/Saturated/MulSplit.v
 src/Arithmetic/Saturated/UniformWeight.v
+src/Arithmetic/Saturated/UniformWeightInstances.v
 src/Arithmetic/Saturated/Wrappers.v
 src/Compilers/CommonSubexpressionElimination.v
 src/Compilers/CommonSubexpressionEliminationDenote.v
@@ -222,9 +223,10 @@ src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Spec/Test/X25519.v
-src/Specific/ArithmeticSynthesisTest.v
 src/Specific/ArithmeticSynthesisTest130.v
+src/Specific/CurveParameters.v
 src/Specific/IntegrationTestDisplayCommon.v
+src/Specific/IntegrationTestDisplayCommonTactics.v
 src/Specific/IntegrationTestFreeze.v
 src/Specific/IntegrationTestFreezeDisplay.v
 src/Specific/IntegrationTestKaratsubaMul.v
@@ -260,6 +262,16 @@ src/Specific/NISTP256/AMD64/fesubDisplay.v
 src/Specific/NISTP256/FancyMachine256/Barrett.v
 src/Specific/NISTP256/FancyMachine256/Core.v
 src/Specific/NISTP256/FancyMachine256/Montgomery.v
+src/Specific/X25519/C32/ArithmeticSynthesisTest.v
+src/Specific/X25519/C32/CurveParameters.v
+src/Specific/X25519/C32/ReificationTypes.v
+src/Specific/X25519/C32/femul.v
+src/Specific/X25519/C32/femulDisplay.v
+src/Specific/X25519/C32/fesquare.v
+src/Specific/X25519/C32/fesquareDisplay.v
+src/Specific/X25519/C64/ArithmeticSynthesisTest.v
+src/Specific/X25519/C64/CurveParameters.v
+src/Specific/X25519/C64/ReificationTypes.v
 src/Specific/X25519/C64/femul.v
 src/Specific/X25519/C64/femulDisplay.v
 src/Specific/X25519/C64/fesquare.v
@@ -306,6 +318,7 @@ src/Util/Sigma.v
 src/Util/Sum.v
 src/Util/Sumbool.v
 src/Util/Tactics.v
+src/Util/TagList.v
 src/Util/Tower.v
 src/Util/Tuple.v
 src/Util/Unit.v
@@ -343,6 +356,7 @@ src/Util/Tactics/Head.v
 src/Util/Tactics/MoveLetIn.v
 src/Util/Tactics/Not.v
 src/Util/Tactics/OnSubterms.v
+src/Util/Tactics/PoseTermWithName.v
 src/Util/Tactics/PrintContext.v
 src/Util/Tactics/Revert.v
 src/Util/Tactics/RewriteHyp.v
@@ -365,6 +379,7 @@ src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/Definitions.v
 src/Util/ZUtil/Div.v
 src/Util/ZUtil/EquivModulo.v
+src/Util/ZUtil/Ge.v
 src/Util/ZUtil/Hints.v
 src/Util/ZUtil/Land.v
 src/Util/ZUtil/ModInv.v

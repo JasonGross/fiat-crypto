@@ -1,5 +1,5 @@
-Require Import Crypto.Specific.X25519.C64.ReificationTypes.
-Require Import Crypto.Specific.X25519.C64.ArithmeticSynthesisTest.
+Require Import Crypto.Specific.X25519.C32.ReificationTypes.
+Require Import Crypto.Specific.X25519.C32.ArithmeticSynthesisTest.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.BoundedWord.
@@ -7,12 +7,12 @@ Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
 (* TODO : change this to field once field isomorphism happens *)
-Definition square :
-  { square : feBW -> feBW
-  | forall a, phiBW (square a) = F.mul (phiBW a) (phiBW a) }.
+Definition mul :
+  { mul : feBW -> feBW -> feBW
+  | forall a b, phiBW (mul a b) = F.mul (phiBW a) (phiBW b) }.
 Proof.
   start_preglue.
-  do_rewrite_with_1sig_add_carry square_sig carry_sig; cbv_runtime.
+  do_rewrite_with_2sig_add_carry mul_sig carry_sig; cbv_runtime.
   all:fin_preglue.
   (* jgross start here! *)
   (*Set Ltac Profiling.*)

@@ -17,7 +17,8 @@ INSTALLDEFAULTROOT := Crypto
 	install-coqprime clean-coqprime coqprime \
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite \
-	curves-proofs no-curves-proofs \
+	curves-proofs no-curves-proofs no-curves-proofs-non-specific \
+	selected-specific selected-speicifc-display selected-test selected-bench selected-c \
 	test bench c
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
@@ -41,7 +42,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -56,23 +57,28 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
+UNMADE_VOFILES := src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo
+LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo src/Specific/X25519/C32/%.vo
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
+NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
+
+SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% third_party/%
+SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(VOFILES))
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
-NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
+NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VOFILES))
 SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
+SELECTED_SPECIFIC_DISPLAY_VO := $(filter $(SELECTED_PATTERN),$(DISPLAY_VO))
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
-ifneq ($(filter lite,$(MAKECMDGOALS)),)
+ifneq ($(filter printlite lite,$(MAKECMDGOALS)),)
 LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
@@ -83,8 +89,15 @@ ifneq ($(filter no-curves-proofs,$(MAKECMDGOALS)),)
 NO_CURVES_PROOFS_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 NO_CURVES_PROOFS_VOFILES := $(filter-out $(NO_CURVES_PROOFS_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
+ifneq ($(filter no-curves-proofs-non-specific,$(MAKECMDGOALS)),)
+NO_CURVES_PROOFS_NON_SPECIFIC_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+NO_CURVES_PROOFS_NON_SPECIFIC_VOFILES := $(filter-out $(NO_CURVES_PROOFS_NON_SPECIFIC_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
 ifneq ($(filter curves-proofs,$(MAKECMDGOALS)),)
 CURVES_PROOFS_VOFILES := $(call vo_closure,$(CURVES_PROOFS_PRE_VOFILES))
+endif
+ifneq ($(filter selected-specific,$(MAKECMDGOALS)),)
+SELECTED_SPECIFIC_VOFILES := $(call vo_closure,$(SELECTED_SPECIFIC_PRE_VOFILES))
 endif
 
 specific: $(SPECIFIC_VO) coqprime
@@ -94,8 +107,12 @@ lite: $(LITE_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
+no-curves-proofs-non-specific: $(NO_CURVES_PROOFS_NON_SPECIFIC_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
-specific-c: $(SPECIFIC_DISPLAY_VO:Display.vo=.c) coqprime
+specific-c: $(SPECIFIC_DISPLAY_VO:Display.vo=.c) $(SPECIFIC_DISPLAY_VO:Display.vo=.h) coqprime
+selected-specific: $(SELECTED_SPECIFIC_VOFILES) coqprime
+selected-specific-display: $(SELECTED_SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
+selected-c: $(SELECTED_SPECIFIC_DISPLAY_VO:Display.vo=.c) $(SELECTED_SPECIFIC_DISPLAY_VO:Display.vo=.h) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 
 printlite::
@@ -110,10 +127,9 @@ COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
 ifneq ($(PROFILE),)
-OTHERFLAGS += -profile-ltac -w "-notation-overridden"
-else
-OTHERFLAGS += -w "-notation-overridden"
+OTHERFLAGS += -profile-ltac
 endif
+OTHERFLAGS += -w "-notation-overridden"
 endif
 
 COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)
@@ -133,7 +149,7 @@ etc/tscfreq: etc/tscfreq.c
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:$$/printenv::/g' > $@ && rm -f Makefile-old
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' > $@ && rm -f Makefile-old
 
 $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z/CNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*Display > $@"
@@ -141,87 +157,122 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z
 
 c: $(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_JAVA_VO:Display.vo=.h)
 
-$(DISPLAY_NON_JAVA_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
-	FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
+DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
+DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO)
+DISPLAY_NON_JAVA_C64_VO := $(filter-out $(DISPLAY_NON_JAVA_C32_VO),$(DISPLAY_NON_JAVA_VO))
 
-$(DISPLAY_NON_JAVA_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
-	./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+$(DISPLAY_NON_JAVA_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
+	BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_C32_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
+	BITWIDTH=32 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_C64_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
+	BITWIDTH=64 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_C32_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
+	BITWIDTH=32 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
 
 $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 
-DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
+TEST_BINARIES := \
+	src/Specific/X25519/C64/test \
+	src/Specific/NISTP256/AMD64/test/feadd_test \
+	src/Specific/NISTP256/AMD64/test/femul_test \
+	src/Specific/NISTP256/AMD64/test/p256_test \
+	src/Specific/NISTP256/AMD64/icc/p256_test
+RUN_TEST_BINARIES := $(addsuffix -run,$(TEST_BINARIES))
+MEASUREMENTS := \
+	src/Specific/X25519/C64/measurements.txt \
+	third_party/openssl-curve25519/measurements.txt \
+	third_party/curve25519-donna-c64/measurements.txt \
+	third_party/openssl-nistz256-amd64/measurements.txt \
+	third_party/openssl-nistz256-adx/measurements.txt \
+	third_party/openssl-nistp256c64/measurements.txt \
+	src/Specific/NISTP256/AMD64/measurements.txt \
+	src/Specific/NISTP256/AMD64/icc/measurements.txt
+MEASURE_BINARIES := $(addsuffix measure,$(dir $(MEASUREMENTS)))
 
-src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/test -I liblow -I src/Specific/X25519/C64/ src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c
+SELECTED_TEST_BINARIES := $(filter $(SELECTED_PATTERN),$(TEST_BINARIES))
+RUN_SELECTED_TEST_BINARIES := $(filter $(SELECTED_PATTERN),$(RUN_TEST_BINARIES))
+SELECTED_MEASUREMENTS := $(filter $(SELECTED_PATTERN),$(MEASUREMENTS))
 
-src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I liblow -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D UUT=crypto_scalarmult_bench
+src/Specific/X25519/C64/test src/Specific/X25519/C64/measure: $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
+src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c
+src/Specific/X25519/C64/test: INCLUDE_FOLDER=src/Specific/X25519/C64
+src/Specific/X25519/C64/measure: UUT=crypto_scalarmult_bench
+src/Specific/X25519/C64/measurements.txt: COUNT=2047
 
-src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
-	./capture.sh src/Specific/X25519/C64 2047
+third_party/openssl-curve25519/measure: third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
+third_party/openssl-curve25519/measure: UUT=crypto_scalarmult_bench
+third_party/openssl-curve25519/measurements.txt: COUNT=2047
 
-third_party/openssl-curve25519/measure:  third_party/openssl-curve25519/compiler.sh third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
-	third_party/openssl-curve25519/compiler.sh -o third_party/openssl-curve25519/measure measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c -I liblow -I third_party/openssl-curve25519 -D UUT=crypto_scalarmult_bench
+third_party/curve25519-donna-c64/measure: third_party/curve25519-donna-c64/crypto_scalarmult_bench.c third_party/curve25519-donna-c64/curve25519-donna-c64.c
+third_party/curve25519-donna-c64/measure: UUT=crypto_scalarmult_bench
+third_party/curve25519-donna-c64/measurements.txt: COUNT=2047
 
-third_party/openssl-curve25519/measurements.txt: third_party/openssl-curve25519/measure capture.sh
-	./capture.sh third_party/openssl-curve25519 2047
+third_party/openssl-nistz256-amd64/measure: third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s third_party/openssl-nistz256-amd64/nistz256.h
+third_party/openssl-nistz256-amd64/measure: UUT=bench_madd
+third_party/openssl-nistz256-amd64/measurements.txt: COUNT=65535
 
-third_party/openssl-nistz256-amd64/measure:  third_party/openssl-nistz256-amd64/compiler.sh third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s third_party/openssl-nistz256-amd64/nistz256.h
-	third_party/openssl-nistz256-amd64/compiler.sh -o third_party/openssl-nistz256-amd64/measure measure.c third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s -I liblow -I third_party/openssl-nistz256-amd64 -D UUT=bench_madd
+third_party/openssl-nistz256-adx/measure: third_party/openssl-nistz256-adx/bench_madd.c third_party/openssl-nistz256-adx/cpu_intel.c third_party/openssl-nistz256-adx/ecp_nistz256-x86_64.s third_party/openssl-nistz256-adx/nistz256.h
+third_party/openssl-nistz256-adx/measure: UUT=bench_madd
+third_party/openssl-nistz256-adx/measurements.txt: COUNT=65535
 
-third_party/openssl-nistz256-amd64/measurements.txt: third_party/openssl-nistz256-amd64/measure capture.sh
-	./capture.sh third_party/openssl-nistz256-amd64 65535
+third_party/openssl-nistp256c64/measure: third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h
+third_party/openssl-nistp256c64/measure: UUT=bench_madd
+third_party/openssl-nistp256c64/measurements.txt: COUNT=65535
 
-third_party/openssl-nistz256-adx/measure:  third_party/openssl-nistz256-adx/compiler.sh third_party/openssl-nistz256-adx/bench_madd.c third_party/openssl-nistz256-adx/cpu_intel.c third_party/openssl-nistz256-adx/ecp_nistz256-x86_64.s third_party/openssl-nistz256-adx/nistz256.h
-	third_party/openssl-nistz256-adx/compiler.sh -o third_party/openssl-nistz256-adx/measure measure.c third_party/openssl-nistz256-adx/bench_madd.c third_party/openssl-nistz256-adx/cpu_intel.c third_party/openssl-nistz256-adx/ecp_nistz256-x86_64.s -I liblow -I third_party/openssl-nistz256-adx -D UUT=bench_madd
+src/Specific/NISTP256/AMD64/measure: src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.h src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c
+src/Specific/NISTP256/AMD64/measure: UUT=bench_madd
+src/Specific/NISTP256/AMD64/measurements.txt: COUNT=65535
 
-third_party/openssl-nistz256-adx/measurements.txt: third_party/openssl-nistz256-adx/measure capture.sh
-	./capture.sh third_party/openssl-nistz256-adx 65535
+src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c liblow/cmovznz.c
+src/Specific/NISTP256/AMD64/icc/measure: UUT=bench_madd
+src/Specific/NISTP256/AMD64/icc/measurements.txt: COUNT=65535
 
-third_party/openssl-nistp256c64/measure:  third_party/openssl-nistp256c64/compiler.sh third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h
-	third_party/openssl-nistp256c64/compiler.sh -o third_party/openssl-nistp256c64/measure measure.c third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h -I liblow -I third_party/openssl-nistp256c64 -D UUT=bench_madd
 
-third_party/openssl-nistp256c64/measurements.txt: third_party/openssl-nistp256c64/measure capture.sh
-	./capture.sh third_party/openssl-nistp256c64 65535
+src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/test/p256_test: src/Specific/NISTP256/AMD64/compiler.sh liblow/cmovznz.c
+src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/test/p256_test: INCLUDE_FOLDER=src/Specific/NISTP256/AMD64/
 
-src/Specific/NISTP256/AMD64/test/feadd_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/feadd_test.c liblow/cmovznz.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/feadd.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/feadd_test.c liblow/cmovznz.c
+src/Specific/NISTP256/AMD64/test/feadd_test: src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/test/feadd_test.c
 
-src/Specific/NISTP256/AMD64/test/femul_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/femul.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
+src/Specific/NISTP256/AMD64/test/femul_test: src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/test/femul_test.c
 
-src/Specific/NISTP256/AMD64/test/p256_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/test/p256_test.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/p256.h
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c liblow/cmovznz.c -I liblow -I src/Specific/NISTP256/AMD64/
-
-src/Specific/NISTP256/AMD64/measure:  src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.h src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c measure.c src/Specific/NISTP256/AMD64/compiler.sh measure.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/*.c -I src/Specific/NISTP256/AMD64/ measure.c -D UUT=bench_madd -I liblow liblow/*.c
-
-src/Specific/NISTP256/AMD64/measurements.txt: src/Specific/NISTP256/AMD64/measure capture.sh
-	./capture.sh src/Specific/NISTP256/AMD64 65535
-
-src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c extract-function.sh
-	(cd src/Specific/NISTP256/AMD64 && ( FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ../../../../extract-function.sh "stdint" < /dev/null | grep -v stdint && sed 's:^uint64_t:static inline &:' ../../../../liblow/cmovznz.c && echo fenz.c feadd.c fesub.c femul.c p256_jacobian_add_affine.c | xargs -n1 grep -A99999 void -- ) | sed 's:^void force_inline:static inline void force_inline:' | grep -v liblow > icc/combined.c )
+src/Specific/NISTP256/AMD64/test/p256_test: src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/p256.h
 
 src/Specific/NISTP256/AMD64/icc/p256_test: src/Specific/NISTP256/AMD64/icc/compiler.sh src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/p256.h
-	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/p256_test src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s -I src/Specific/NISTP256/AMD64/
+src/Specific/NISTP256/AMD64/icc/p256_test: INCLUDE_FOLDER=src/Specific/NISTP256/AMD64/
 
-src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/icc/compiler.sh src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c
-	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/measure src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c -I liblow -I src/Specific/NISTP256/AMD64 measure.c -D UUT=bench_madd
+$(TEST_BINARIES):
+	$(filter %/compiler.sh,$^) -o $@ -I liblow -I $(INCLUDE_FOLDER) $(filter %.c %.s,$^)
 
-src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/icc/measure capture.sh
-	./capture.sh src/Specific/NISTP256/AMD64/icc 65535
+$(MEASURE_BINARIES) : %/measure : %/compiler.sh measure.c
+	$*/compiler.sh -o $@ -I liblow -I $* $(filter %.c %.s,$^) -D UUT=$(UUT)
 
-bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256-amd64/measurements.txt third_party/openssl-nistz256-adx/measurements.txt third_party/openssl-nistp256c64/measurements.txt
+$(MEASUREMENTS) : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* $(COUNT)
+
+src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c extract-function.sh
+	(cd src/Specific/NISTP256/AMD64 && ( BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ../../../../extract-function.sh "stdint" < /dev/null | grep -v stdint && sed 's:^uint64_t:static inline &:' ../../../../liblow/cmovznz.c && echo fenz.c feadd.c fesub.c femul.c p256_jacobian_add_affine.c | xargs -n1 grep -A99999 void -- ) | sed 's:^void force_inline:static inline void force_inline:' | grep -v liblow > icc/combined.c )
+
+bench: $(MEASUREMENTS)
 	head -999999 $?
 
-test: src/Specific/X25519/C64/test src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/AMD64/icc/p256_test
-	src/Specific/X25519/C64/test
-	src/Specific/NISTP256/AMD64/test/feadd_test
-	src/Specific/NISTP256/AMD64/test/femul_test
-	src/Specific/NISTP256/AMD64/test/p256_test
-	src/Specific/NISTP256/AMD64/icc/p256_test
+selected-bench: $(SELECTED_MEASUREMENTS)
+	head -999999 $?
+
+
+.PHONY: $(RUN_TEST_BINARIES)
+$(RUN_TEST_BINARIES) : %-run : %
+	$<
+
+test: $(RUN_TEST_BINARIES)
+
+selected-test: $(RUN_SELECTED_TEST_BINARIES)
 
 clean::
 	rm -f Makefile.coq

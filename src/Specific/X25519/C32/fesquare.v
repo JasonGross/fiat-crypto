@@ -1,5 +1,5 @@
-Require Import Crypto.Specific.X25519.C64.ReificationTypes.
-Require Import Crypto.Specific.X25519.C64.ArithmeticSynthesisTest.
+Require Import Crypto.Specific.X25519.C32.ReificationTypes.
+Require Import Crypto.Specific.X25519.C32.ArithmeticSynthesisTest.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.BoundedWord.
