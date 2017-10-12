@@ -33,12 +33,21 @@ Check ring.
 Eval cbv [B.Positional.eq] in (@B.Positional.eq wt sz m).
 Check Expr.
 Notation Expr := (Expr Syntax.base_type Syntax.op).
+Local Notation interp_flat_type := (interp_flat_type Syntax.interp_base_type).
+Import RawCurveParameters.
+Local Coercion Z.to_nat : Z >-> nat.
+Local Definition Compose {A B C} (f : Expr (B -> C)) (g : Expr (A -> B)) : Expr (A -> C)
+  := fun var => Syntax.Abs (fun v => LetIn (invert_Abs (g var) v)
+                                           (invert_Abs (f var))).
+Local Infix "∘" := Compose : expr_scope.
+Local Infix "^" := Syntax.tuple : ctype_scope.
+Local Notation Interp := (Syntax.Interp Syntax.interp_op).
 Record SynthesisOutput (curve : RawCurveParameters.CurveParameters) :=
   {
-    m := Z.to_pos (RawCurveParameters.s curve - B.Associational.eval (RawCurveParameters.c curve))%Z;
-    rT := Syntax.tuple (Tbase (TWord (Z.to_nat (Z.log2_up bitwidth)))) (RawCurveParameters.sz curve);
-    T' := interp_flat_type Syntax.interp_base_type rT;
-    RT := Syntax.Arrow Unit rT;
+    m := Z.to_pos (curve.(s) - B.Associational.eval curve.(c))%Z;
+    rT := ((Tbase (TWord (Z.log2_up curve.(bitwidth))))^curve.(sz))%ctype;
+    T' := interp_flat_type rT;
+    RT := (Unit -> rT)%ctype;
 
     encode : F m -> Expr RT
     (*:= _*);
@@ -46,82 +55,61 @@ Record SynthesisOutput (curve : RawCurveParameters.CurveParameters) :=
     (*:= _*);
     zero : Expr RT;
     one : Expr RT;
-    add : Expr (Syntax.Arrow (rT * rT) rT); (* does not include carry *)
-    sub : Expr (Syntax.Arrow (rT * rT) rT); (* does not include carry *)
-    mul : Expr (Syntax.Arrow (rT * rT) rT); (* includes carry *)
-    square : Expr (Syntax.Arrow rT rT); (* includes carry *)
-    opp : Expr (Syntax.Arrow rT rT); (* does not include carry *)
-    carry : Expr (Syntax.Arrow rT rT);
-    carry_add : Expr (Syntax.Arrow (rT * rT) rT)
-    := fun var => Syntax.Abs (fun v => LetIn (invert_Abs (add var) v) (invert_Abs (carry var)) );
-    carry_sub : Expr (Syntax.Arrow (rT * rT) rT)
-    := fun var => Syntax.Abs (fun v => LetIn (invert_Abs (sub var) v) (invert_Abs (carry var)) );
-    carry_opp : Expr (Syntax.Arrow rT rT)
-    := fun var => Syntax.Abs (fun v => LetIn (invert_Abs (opp var) v) (invert_Abs (carry var)) );
+    add : Expr (rT * rT -> rT); (* does not include carry *)
+    sub : Expr (rT * rT -> rT); (* does not include carry *)
+    mul : Expr (rT * rT -> rT); (* includes carry *)
+    square : Expr (rT -> rT); (* includes carry *)
+    opp : Expr (rT -> rT); (* does not include carry *)
+    carry : Expr (rT -> rT);
+    carry_add : Expr (rT * rT -> rT)
+    := (carry ∘ add)%expr;
+    carry_sub : Expr (rT * rT -> rT)
+    := (carry ∘ sub)%expr;
+    carry_opp : Expr (rT -> rT)
+    := (carry ∘ opp)%expr;
 
     P : T' -> Prop;
 
     encode_correct : forall v, _;
-    encode_sig := fun v => exist P (Syntax.Interp Syntax.interp_op (encode v) tt) (encode_correct v);
+    encode_sig := fun v => exist P (Interp (encode v) tt) (encode_correct v);
 
-    (*zero_correct : zero = Syntax.Interp Syntax.interp_op (encode 0%F) tt; (* which equality to use here? *)
-    one_correct : one = Syntax.Interp Syntax.interp_op (encode 1%F) tt;*)
+    decode_sig := fun v : sig P => decode (proj1_sig v);
+
+    zero_correct : zero = encode 0%F; (* which equality to use here? *)
+    one_correct : one = encode 1%F;
     zero_sig := encode_sig 0%F;
     one_sig := encode_sig 1%F;
 
-    opp_correct := _;
+    opp_correct : forall x, P x -> P (Interp carry_opp x);
+    opp_sig := fun x => exist P _ (@opp_correct (proj1_sig x) (proj2_sig x));
+
+    add_correct : forall x y, P x -> P y -> P (Interp carry_add (x, y));
+    add_sig := fun x y => exist P _ (@add_correct (proj1_sig x) (proj1_sig y) (proj2_sig x) (proj2_sig y));
+
+    sub_correct : forall x y, P x -> P y -> P (Interp carry_sub (x, y));
+    sub_sig := fun x y => exist P _ (@sub_correct (proj1_sig x) (proj1_sig y) (proj2_sig x) (proj2_sig y));
+
+    mul_correct : forall x y, P x -> P y -> P (Interp mul (x, y));
+    mul_sig := fun x y => exist P _ (@mul_correct (proj1_sig x) (proj1_sig y) (proj2_sig x) (proj2_sig y));
 
 
     T := { v : T' | P v };
     eqT : T -> T -> Prop
     := fun x y => eq (decode (proj1_sig x)) (decode (proj1_sig y));
     ring : @Hierarchy.ring
-             T eqT zero_sig one_sig opp_sig carry_add carry_sub mul;
-  }.
-
-
-    T' := Syntax.interp_flat_type Syntax.interp_base_type rT;
-    T := { v :
-         |
-
-  }.
-    eqT : T -> T -> Prop;
-    encode : F m -> T;
-    decode : T -> F m;
-    zero : _;
-    one : _;
-    opp : _;
-    add : _;
-    sub : _;
-    mul : _;
-    ring : @Hierarchy.ring T eqT zero one opp add sub mul;
+             T eqT zero_sig one_sig opp_sig add_sig sub_sig mul_sig;
     encode_homomorphism
     : @Ring.is_homomorphism
-        (F m) eq 1 F.add F.mul
-        T eqT one add mul
-        encode;
+        (F m) eq 1%F F.add F.mul
+        T eqT one_sig add_sig mul_sig
+        encode_sig;
     decode_homomorphism
     : @Ring.is_homomorphism
-        T eqT one add mul
-        (F m) eq 1 F.add F.mul
-        decode;
-    a24t : if RawCurveParameters.montgomery curve return Type then unit else T;
-    xzladderstep : if RawCurveParameters.montgomery curve return Type then unit else (T -> T -> T * T -> T * T -> (T * T) * (T * T));
-    xzladderstep_correct
-    : (if RawCurveParameters.montgomery curve as mont
-          return (if mont return Type then unit else T)
-                 -> (if mont return Type then unit else (T -> T -> T * T -> T * T -> (T * T) * (T * T)))
-                 -> Prop
-       then fun _ _ => True
-       else fun a24' xzladderstep
-            => forall x1 Q Q',
-                Tuple.fieldwise
-                  (n:=2) (Tuple.fieldwise (n:=2) eq)
-                  (Tuple.map (n:=2) (Tuple.map (n:=2) decode) (xzladderstep a24' x1 Q Q'))
-                  (@XZ.M.xzladderstep (F m) F.add F.sub F.mul (F.of_Z m a24) (decode x1) (Tuple.map (n:=2) decode Q) (Tuple.map (n:=2) decode Q')))
-        a24t xzladderstep
-
+        T eqT one_sig add_sig mul_sig
+        (F m) eq 1%F F.add F.mul
+        decode_sig
   }.
+
 Record SynthesisOutput (curve : RawCurveParameters.CurveParameters) :=
   {
     m := Z.to_pos (RawCurveParameters.s curve - B.Associational.eval (RawCurveParameters.c curve))%Z;
