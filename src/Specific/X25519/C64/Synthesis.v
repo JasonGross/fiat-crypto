@@ -39,6 +39,7 @@ Local Coercion Z.to_nat : Z >-> nat.
 Local Definition Compose {A B C} (f : Expr (B -> C)) (g : Expr (A -> B)) : Expr (A -> C)
   := fun var => Syntax.Abs (fun v => LetIn (invert_Abs (g var) v)
                                            (invert_Abs (f var))).
+Require Import Crypto.Compilers.Tuple.
 Local Infix "∘" := Compose : expr_scope.
 Local Infix "^" := Syntax.tuple : ctype_scope.
 Local Notation Interp := (Syntax.Interp Syntax.interp_op).
@@ -50,7 +51,7 @@ Record SynthesisOutput (curve : RawCurveParameters.CurveParameters) :=
     RT := (Unit -> rT)%ctype;
 
     encode : F m -> Expr RT
-    (*:= _*);
+    (*:= fun v => Syntax.Abs (fun _ => *);
     decode : T' -> F m
     (*:= _*);
     zero : Expr RT;
