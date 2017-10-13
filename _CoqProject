@@ -232,6 +232,7 @@ src/Specific/Framework/MontgomeryReificationTypes.v
 src/Specific/Framework/MontgomeryReificationTypesPackage.v
 src/Specific/Framework/OutputType.v
 src/Specific/Framework/Packages.v
+src/Specific/Framework/Pipeline.v
 src/Specific/Framework/RawCurveParameters.v
 src/Specific/Framework/ReificationTypes.v
 src/Specific/Framework/ReificationTypesPackage.v
