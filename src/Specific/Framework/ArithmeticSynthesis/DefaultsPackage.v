@@ -33,8 +33,10 @@ Ltac add_zero_sig pkg :=
     ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
                    let m := Tag.get pkg TAG.m in
                    let wt := Tag.get pkg TAG.wt in
+                   let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
+                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
                    let zero_sig := fresh "zero_sig" in
-                   let zero_sig := pose_zero_sig sz m wt zero_sig in
+                   let zero_sig := pose_zero_sig sz m wt sz_nonzero sz_le_log2_m zero_sig in
                    constr:(zero_sig)).
 Ltac add_one_sig pkg :=
   Tag.update_by_tac_if_not_exists
@@ -43,8 +45,10 @@ Ltac add_one_sig pkg :=
     ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
                    let m := Tag.get pkg TAG.m in
                    let wt := Tag.get pkg TAG.wt in
+                   let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
+                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
                    let one_sig := fresh "one_sig" in
-                   let one_sig := pose_one_sig sz m wt one_sig in
+                   let one_sig := pose_one_sig sz m wt sz_nonzero sz_le_log2_m one_sig in
                    constr:(one_sig)).
 Ltac add_a24_sig pkg :=
   Tag.update_by_tac_if_not_exists

@@ -31,6 +31,22 @@ Ltac solve_constant_sig :=
        (exists t; vm_decide)
   end.
 
+Local Ltac solve_constant_local_sig :=
+  idtac;
+  lazymatch goal with
+  | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
+    => (exists (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v)));
+       lazymatch goal with
+       | [ sz_nonzero : sz <> 0%nat, sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos M) |- _ ]
+         => clear -sz_nonzero sz_le_log2_m
+       end
+  end;
+  abstract (
+      setoid_rewrite Positional.Fdecode_Fencode_id;
+      [ reflexivity
+      | auto using wt_gen0_1, wt_gen_nonzero, wt_gen_divides', div_mod.. ]
+    ).
+
 Section gen.
   Context (m : positive)
           (sz : nat)
@@ -42,11 +58,13 @@ Section gen.
           (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m))
           (m_correct : Z.pos m = s - Associational.eval c).
 
+  Local Notation wt := (wt_gen m sz).
+
   (* Performs a full carry loop (as specified by carry_chain) *)
   Definition carry_sig'
     : { carry : (Z^sz -> Z^sz)%type
       | forall a : Z^sz,
-          let eval := Positional.Fdecode (m := m) (wt_gen m sz) in
+          let eval := Positional.Fdecode (m := m) wt in
           eval (carry a) = eval a }.
   Proof.
     let a := fresh "a" in
@@ -83,6 +101,14 @@ Section gen.
       apply f_equal.
     reflexivity.
   Defined.
+
+  Definition zero_sig'
+    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}.
+  Proof. solve_constant_local_sig. Defined.
+
+  Definition one_sig'
+    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 1%F}.
+  Proof. solve_constant_local_sig. Defined.
 End gen.
 
 Ltac pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct carry_sig :=
@@ -100,16 +126,16 @@ Ltac pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m
           reflexivity)
            carry_sig.
 
-Ltac pose_zero_sig sz m wt zero_sig :=
-  cache_term_with_type_by
+Ltac pose_zero_sig sz m wt sz_nonzero sz_le_log2_m zero_sig :=
+  cache_vm_sig_with_type_by
     { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}
-    solve_constant_sig
+    ltac:(exact (zero_sig' m sz sz_nonzero sz_le_log2_m))
     zero_sig.
 
-Ltac pose_one_sig sz m wt one_sig :=
-  cache_term_with_type_by
+Ltac pose_one_sig sz m wt sz_nonzero sz_le_log2_m one_sig :=
+  cache_vm_sig_with_type_by
     { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}
-    solve_constant_sig
+    ltac:(exact (one_sig' m sz sz_nonzero sz_le_log2_m))
     one_sig.
 
 Ltac pose_a24_sig sz m wt a24 a24_sig :=
