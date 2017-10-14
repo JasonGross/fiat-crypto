@@ -19,10 +19,12 @@ Ltac add_carry_sig pkg :=
                    let s := Tag.get pkg TAG.s in
                    let c := Tag.get pkg TAG.c in
                    let carry_chains := Tag.get pkg TAG.carry_chains in
-                   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
-                   let wt_divides_chains := Tag.get pkg TAG.wt_divides_chains in
+                   let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
+                   let s_nonzero := Tag.get pkg TAG.s_nonzero in
+                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
+                   let m_correct := Tag.get pkg TAG.m_correct in
                    let carry_sig := fresh "carry_sig" in
-                   let carry_sig := pose_carry_sig sz m wt s c carry_chains wt_nonzero wt_divides_chains carry_sig in
+                   let carry_sig := pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct carry_sig in
                    constr:(carry_sig)).
 Ltac add_zero_sig pkg :=
   Tag.update_by_tac_if_not_exists

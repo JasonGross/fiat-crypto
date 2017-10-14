@@ -4,9 +4,11 @@ Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Base.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
 Require Crypto.Util.Tuple.
@@ -29,20 +31,73 @@ Ltac solve_constant_sig :=
        (exists t; vm_decide)
   end.
 
-(* Performs a full carry loop (as specified by carry_chain) *)
-Ltac pose_carry_sig sz m wt s c carry_chains wt_nonzero wt_divides_chains carry_sig :=
-  cache_term_with_type_by
+Section gen.
+  Context (m : positive)
+          (sz : nat)
+          (s : Z)
+          (c : list limb)
+          (carry_chains : list (list nat))
+          (sz_nonzero : sz <> 0%nat)
+          (s_nonzero : s <> 0)
+          (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m))
+          (m_correct : Z.pos m = s - Associational.eval c).
+
+  (* Performs a full carry loop (as specified by carry_chain) *)
+  Definition carry_sig'
+    : { carry : (Z^sz -> Z^sz)%type
+      | forall a : Z^sz,
+          let eval := Positional.Fdecode (m := m) (wt_gen m sz) in
+          eval (carry a) = eval a }.
+  Proof.
+    let a := fresh "a" in
+    eexists; cbv beta zeta; intros a.
+    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen_nonzero m sz); pose proof div_mod.
+    pose proof (wt_gen_divides_chains m sz sz_nonzero sz_le_log2_m carry_chains).
+    pose proof (wt_gen_divides' m sz sz_nonzero sz_le_log2_m).
+    let wt := constr:(wt_gen m sz) in
+    let x := constr:(chained_carries' sz wt s c a carry_chains) in
+    F_mod_eq;
+      transitivity (Positional.eval wt x); repeat autounfold;
+        [|autorewrite with uncps push_id push_basesystem_eval ].
+    Focus 2.
+    { cbv [chained_carries'].
+      change a with (id a) at 2.
+      revert a; induction carry_chains as [|carry_chain carry_chains' IHcarry_chains];
+        [ reflexivity | destruct_head_hnf' and ]; intros.
+      rewrite step_chained_carries_cps'.
+      destruct (length carry_chains') eqn:Hlenc.
+      { destruct carry_chains'; [ | simpl in Hlenc; congruence ].
+        destruct_head'_and;
+          autorewrite with uncps push_id push_basesystem_eval;
+          reflexivity. }
+      { repeat autounfold;
+          autorewrite with uncps push_id push_basesystem_eval.
+        unfold chained_carries'.
+        rewrite IHcarry_chains by auto.
+        repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
+        rewrite Positional.eval_carry by auto.
+        rewrite Positional.eval_chained_carries by auto; reflexivity. } }
+    Unfocus.
+    cbv [mod_eq]; apply f_equal2; [|reflexivity];
+      apply f_equal.
+    reflexivity.
+  Defined.
+End gen.
+
+Ltac pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct carry_sig :=
+  cache_sig_with_type_by
     {carry : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (carry a) = eval a}
-    ltac:(idtac;
-          let a := fresh "a" in
-          eexists; cbv beta zeta; intros a;
-          pose proof wt_nonzero; pose proof div_mod;
-          pose_proof_tuple wt_divides_chains;
-          let x := make_chained_carries_cps sz wt s c a carry_chains in
-          solve_op_F wt x; reflexivity)
+    ltac:(eexists; intros; etransitivity;
+          [ apply f_equal
+          | exact (proj2_sig (carry_sig' m sz s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct) _) ];
+          cbv [proj1_sig carry_sig' chained_carries_cps' chained_carries_cps'_step];
+          repeat autounfold;
+          basesystem_partial_evaluation_RHS;
+          reflexivity)
            carry_sig.
 
 Ltac pose_zero_sig sz m wt zero_sig :=
