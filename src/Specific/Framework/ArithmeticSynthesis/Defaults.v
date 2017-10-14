@@ -4,9 +4,11 @@ Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Base.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
 Require Crypto.Util.Tuple.
@@ -28,6 +30,165 @@ Ltac solve_constant_sig :=
                     (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v))) in
        (exists t; vm_decide)
   end.
+
+Section gen.
+  Context (m : positive)
+          (sz : nat)
+          (s : Z)
+          (c : list limb)
+          (carry_chains : list (list nat))
+          (sz_nonzero : sz <> 0%nat)
+          (s_nonzero : s <> 0)
+          (m_big : Z.of_nat sz <= Z.log2_up (Z.pos m))
+          (m_good : Z.pos m = s - Associational.eval c).
+
+  Definition carry_sig'
+    : { carry : (Z^sz -> Z^sz)%type
+      | forall a : Z^sz,
+          let eval := Positional.Fdecode (m := m) (wt_gen m sz) in
+          eval (carry a) = eval a }.
+  Proof.
+    let a := fresh "a" in
+    eexists; cbv beta zeta; intros a.
+    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen_nonzero m sz); pose proof div_mod.
+    pose proof (wt_gen_divides_chains m sz sz_nonzero m_big carry_chains).
+    pose proof (wt_gen_divides' m sz sz_nonzero m_big).
+    let wt := constr:(wt_gen m sz) in
+    let x := constr:(chained_carries' sz wt s c a carry_chains) in
+    F_mod_eq;
+      transitivity (Positional.eval wt x); repeat autounfold;
+        [|autorewrite with uncps push_id push_basesystem_eval ].
+    Focus 2.
+    { cbv [chained_carries'].
+      change a with (id a) at 2.
+      revert a; induction carry_chains as [|carry_chain carry_chains' IHcarry_chains];
+        [ reflexivity | destruct_head_hnf' and ]; intros.
+      rewrite step_chained_carries_cps'.
+      destruct (length carry_chains') eqn:Hlenc.
+      { destruct carry_chains'; [ | simpl in Hlenc; congruence ].
+        destruct_head'_and;
+          autorewrite with uncps push_id push_basesystem_eval;
+          reflexivity. }
+      { repeat autounfold;
+          autorewrite with uncps push_id push_basesystem_eval.
+        unfold chained_carries'.
+        rewrite IHcarry_chains by auto.
+        repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
+        rewrite Positional.eval_carry by auto.
+        rewrite Positional.eval_chained_carries by auto; reflexivity. } }
+    Unfocus.
+    cbv [mod_eq]; apply f_equal2; [|reflexivity];
+      apply f_equal.
+    reflexivity.
+  Defined.
+    cbv [wt_gen QArith_base.inject_Z QArith_base.Qdiv QArith_base.Qmult QArith_base.Qnum QArith_base.Qden Qround.Qceiling QArith_base.Qopp Qround.Qfloor QArith_base.Qinv Z.of_nat].
+    rewrite Pos.mul_1_l, Pos.mul_1_r.
+
+    About nat_rect.
+    repeat match goal with
+           | [ |- context G[let (x, y) := match ?v with
+                                          | 0 => ?a
+                                          | Z.pos p => @?P p
+                                          | Z.neg n => @?N n
+                                          end
+                            in @?Q x y] ]
+             => let G' := context G[match v with
+                                    | 0 => let (x, y) := a in Q x y
+                                    | Z.pos p => let (x, y) := P p in Q x y
+                                    | Z.neg p => let (x, y) := N p in Q x y
+                                    end] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+           | [ |- context G[match match ?v with O => ?Oc | S n => @?Sc n end with
+                            | 0 => ?a
+                            | Z.pos p => @?P p
+                            | Z.neg n => @?N n
+                            end] ]
+             => let G' := context G[nat_rect (fun _ => _)
+                                             match Oc with
+                                             | 0 => a
+                                             | Z.pos p => P p
+                                             | Z.neg p => N p
+                                             end
+                                             (fun n _ => match Sc n with
+                                                         | 0 => a
+                                                         | Z.pos p => P p
+                                                         | Z.neg p => N p
+                                                         end) v] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+           | [ |- context G[?f (nat_rect _ ?Oc (fun n _ => @?Sc n) ?v)] ]
+             => let G' := context G[nat_rect (fun _ => _) (f Oc) (fun n _ => f (Sc n)) v] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+           | [ |- context G[?f match ?v with O => ?Oc | S n => @?Sc n end] ]
+             => let G' := context G[nat_rect (fun _ => _) (f Oc) (fun n _ => f (Sc n)) v] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+           | [ |- context G[nat_rect
+                              (fun _ => _) ?Ocf ?Scf
+                              match ?v with O => ?Oc | S n => @?Sc n end] ]
+             => let G' := context G[match f, v with
+                                    | O, O => Ocf Oc
+                                    | S n, O => Scf n Oc
+                                    | O, S n => Ocf (Sc n)
+                                    | S f, S v => Scf f (Sc v)
+                                    end] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+           | _ => progress autorewrite with zsimplify_const
+           end.
+    lazymatch goal with
+           | [ |- context G[nat_rect
+                              (fun _ => _) ?Ocf ?Scf
+                              match ?v with O => ?Oc | S n => @?Sc n end] ]
+               => idtac end.
+           | [ |- context G[nat_rect
+                       (fun _ => _) ?Ocf ?Scf
+                       match ?v with O => ?Oc | S n => @?Sc n end] ]
+      => idtac
+    end.
+             => let G' := context G[match f, v with
+                                    | O, O => Ocf Oc
+                                    | S n, O => Scf n Oc
+                                    | O, S n => Ocf (Sc n)
+                                    | S f, S v => Scf f (Sc v)
+                                    end] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+
+    end.
+    .| [ |- context G[?f match ?v with O => ?Oc | S n => @?Sc n end] ]
+      => let G' := context G[nat_rect (fun _ => _) (f Oc) (fun n _ => f (Sc n)) v] in
+         cut G'; [ destruct v; exact (fun k => k) | ];
+           cbv beta iota zeta
+    end.
+    | [ |- context G[match ?f with O => ?Ocf | S n => @?Scf n end
+                       match ?v with O => ?Oc | S n => @?Sc n end] ]
+      => idtac end.
+      => let G' := context G[match f, v with
+                                    | O, O => Ocf Oc
+                                    | S n, O => Scf n Oc
+                                    | O, S n => Ocf (Sc n)
+                                    | S f, S v => Scf f (Sc v)
+                                    end] in
+                cut G'; [ destruct v; exact (fun k => k) | ];
+                  cbv beta iota zeta
+    end.
+    .
+
+          basesystem_partial_evaluation_RHS.
+          do_replace_match_with_destructuring_match_in_goal.
+
+    Locate Ltac solve_op_mod_eq.
+    Print Ltac solve_op_F.
+    solve_op_F (wt_gen m sz) x.
+    pose x.
+    let x := make_chained_carries_cps sz wt s c a carry_chains in
+    pose x.
+          solve_op_F wt x; reflexivity)
+           carry_sig.
 
 (* Performs a full carry loop (as specified by carry_chain) *)
 Ltac pose_carry_sig sz m wt s c carry_chains wt_nonzero wt_divides_chains carry_sig :=
