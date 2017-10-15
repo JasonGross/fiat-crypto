@@ -53,12 +53,41 @@ Section gen.
           (s : Z)
           (c : list limb)
           (carry_chains : list (list nat))
+          (coef_div_modulus : nat)
+          (mul_code : option (Z^sz -> Z^sz -> Z^sz))
+          (square_code : option (Z^sz -> Z^sz))
           (sz_nonzero : sz <> 0%nat)
           (s_nonzero : s <> 0)
           (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m))
           (m_correct : Z.pos m = s - Associational.eval c).
 
   Local Notation wt := (wt_gen m sz).
+  Local Notation coef := (coef' m sz coef_div_modulus).
+  Local Notation sz2 := (sz2' sz).
+  Local Notation wt_divides' := (wt_gen_divides' m sz sz_nonzero sz_le_log2_m).
+  Local Notation wt_nonzero := (wt_gen_nonzero m sz).
+
+  (* side condition needs cbv [Positional.mul_cps Positional.reduce_cps]. *)
+  Context (mul_code_correct
+           : match mul_code with
+             | None => True
+             | Some v
+               => forall a b,
+                 v a b
+                 = Positional.mul_cps (n:=sz) (m:=sz2) wt a b
+                                      (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)
+             end)
+          (square_code_correct
+           : match square_code with
+             | None => True
+             | Some v
+               => forall a,
+                 v a
+                 = Positional.mul_cps (n:=sz) (m:=sz2) wt a a
+                                      (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)
+             end).
+
+
 
   (* Performs a full carry loop (as specified by carry_chain) *)
   Definition carry_sig'
@@ -70,15 +99,11 @@ Section gen.
     let a := fresh "a" in
     eexists; cbv beta zeta; intros a.
     pose proof (wt_gen0_1 m sz).
-    pose proof (wt_gen_nonzero m sz); pose proof div_mod.
+    pose proof wt_nonzero; pose proof div_mod.
     pose proof (wt_gen_divides_chains m sz sz_nonzero sz_le_log2_m carry_chains).
-    pose proof (wt_gen_divides' m sz sz_nonzero sz_le_log2_m).
-    let wt := constr:(wt_gen m sz) in
+    pose proof wt_divides'.
     let x := constr:(chained_carries' sz wt s c a carry_chains) in
-    F_mod_eq;
-      transitivity (Positional.eval wt x); repeat autounfold;
-        [|autorewrite with uncps push_id push_basesystem_eval ].
-    Focus 2.
+    presolve_op_F constr:(wt) x; [ reflexivity | ].
     { cbv [chained_carries'].
       change a with (id a) at 2.
       revert a; induction carry_chains as [|carry_chain carry_chains' IHcarry_chains];
@@ -96,36 +121,222 @@ Section gen.
         repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
         rewrite Positional.eval_carry by auto.
         rewrite Positional.eval_chained_carries by auto; reflexivity. } }
-    Unfocus.
-    cbv [mod_eq]; apply f_equal2; [|reflexivity];
-      apply f_equal.
+  Defined.
+
+  Definition constant_sig' v
+    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = v}.
+  Proof. solve_constant_local_sig. Defined.
+
+  Definition zero_sig'
+    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}
+    := Eval hnf in constant_sig' _.
+
+  Definition one_sig'
+    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 1%F}
+    := Eval hnf in constant_sig' _.
+
+  Definition add_sig'
+    : { add : (Z^sz -> Z^sz -> Z^sz)%type
+      | forall a b : Z^sz,
+          let eval := Positional.Fdecode (m:=m) wt in
+          eval (add a b) = (eval a + eval b)%F }.
+  Proof.
+    eexists; cbv beta zeta; intros a b.
+    pose proof wt_nonzero.
+    pose proof (wt_gen0_1 m sz).
+    let x := constr:(
+               Positional.add_cps (n := sz) wt a b id) in
+    presolve_op_F constr:(wt) x; [ reflexivity | ].
     reflexivity.
   Defined.
 
-  Definition zero_sig'
-    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}.
-  Proof. solve_constant_local_sig. Defined.
+  Definition sub_sig'
+    : { sub : (Z^sz -> Z^sz -> Z^sz)%type
+      | forall a b : Z^sz,
+          let eval := Positional.Fdecode (m:=m) wt in
+          eval (sub a b) = (eval a - eval b)%F }.
+  Proof.
+    let a := fresh "a" in
+    let b := fresh "b" in
+    eexists; cbv beta zeta; intros a b.
+    pose proof wt_nonzero.
+    pose proof (wt_gen0_1 m sz).
+    pose proof (coef_mod' m sz coef_div_modulus sz_le_log2_m).
+    let x := constr:(
+               Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
+    presolve_op_F constr:(wt) x; [ reflexivity | ].
+    reflexivity.
+  Defined.
 
-  Definition one_sig'
-    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 1%F}.
-  Proof. solve_constant_local_sig. Defined.
+  Definition opp_sig'
+    : { opp : (Z^sz -> Z^sz)%type
+      | forall a : Z^sz,
+          let eval := Positional.Fdecode (m := m) wt in
+          eval (opp a) = F.opp (eval a) }.
+  Proof.
+    eexists; cbv beta zeta; intros a.
+    pose proof wt_nonzero.
+    pose proof (wt_gen0_1 m sz).
+    pose proof (coef_mod' m sz coef_div_modulus sz_le_log2_m).
+    let x := constr:(
+               Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
+    presolve_op_F constr:(wt) x; [ reflexivity | ].
+    reflexivity.
+  Defined.
+
+  Definition mul_sig'
+    : { mul : (Z^sz -> Z^sz -> Z^sz)%type
+      | forall a b : Z^sz,
+          let eval := Positional.Fdecode (m := m) wt in
+          eval (mul a b) = (eval a * eval b)%F }.
+  Proof.
+    eexists; cbv beta zeta; intros a b.
+    pose proof wt_nonzero.
+    pose proof (wt_gen0_1 m sz).
+    pose proof (sz2'_nonzero sz sz_nonzero).
+    let x := constr:(
+               Positional.mul_cps (n:=sz) (m:=sz2) wt a b
+                                  (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
+    presolve_op_F constr:(wt) x; [ | reflexivity ].
+    let rhs := match goal with |- _ = ?rhs => rhs end in
+    transitivity (match mul_code with
+                  | None => rhs
+                  | Some v => v a b
+                  end);
+      [ reflexivity | ].
+    destruct mul_code; try reflexivity.
+    transitivity (Positional.mul_cps (n:=sz) (m:=sz2) wt a b
+                                     (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)); [ | reflexivity ].
+    auto.
+  Defined.
+
+  Definition square_sig'
+    : { square : (Z^sz -> Z^sz)%type
+      | forall a : Z^sz,
+          let eval := Positional.Fdecode (m := m) wt in
+          eval (square a) = (eval a * eval a)%F }.
+  Proof.
+    eexists; cbv beta zeta; intros a.
+    pose proof wt_nonzero.
+    pose proof (wt_gen0_1 m sz).
+    pose proof (sz2'_nonzero sz sz_nonzero).
+    let x := constr:(
+               Positional.mul_cps (n:=sz) (m:=sz2) wt a a
+                                  (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
+    presolve_op_F constr:(wt) x; [ | reflexivity ].
+    let rhs := match goal with |- _ = ?rhs => rhs end in
+    transitivity (match square_code with
+                  | None => rhs
+                  | Some v => v a
+                  end);
+      [ reflexivity | ].
+    destruct square_code; try reflexivity.
+    transitivity (Positional.mul_cps (n:=sz) (m:=sz2) wt a a
+                                     (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)); [ | reflexivity ].
+    auto.
+  Defined.
+
+  Let ring_pkg : { T : _ & T }.
+  Proof.
+    eexists.
+    refine (fun zero_sig one_sig add_sig sub_sig mul_sig opp_sig
+            => Ring.ring_by_isomorphism
+                 (F := F m)
+                 (H := Z^sz)
+                 (phi := Positional.Fencode wt)
+                 (phi' := Positional.Fdecode wt)
+                 (zero := proj1_sig zero_sig)
+                 (one := proj1_sig one_sig)
+                 (opp := proj1_sig opp_sig)
+                 (add := proj1_sig add_sig)
+                 (sub := proj1_sig sub_sig)
+                 (mul := proj1_sig mul_sig)
+                 (phi'_zero := _)
+                 (phi'_one := _)
+                 (phi'_opp := _)
+                 (Positional.Fdecode_Fencode_id
+                    (sz_nonzero := sz_nonzero)
+                    (div_mod := div_mod)
+                    wt (wt_gen0_1 m sz) wt_nonzero wt_divides')
+                 (Positional.eq_Feq_iff wt)
+                 _ _ _);
+      lazymatch goal with
+      | [ |- context[@proj1_sig ?A ?P ?x] ]
+        => pattern (@proj1_sig A P x);
+             exact (@proj2_sig A P x)
+      end.
+  Defined.
+
+  Definition ring' zero_sig one_sig add_sig sub_sig mul_sig opp_sig
+    := Eval cbv [ring_pkg projT2] in
+        projT2 ring_pkg zero_sig one_sig add_sig sub_sig mul_sig opp_sig.
 End gen.
 
-Ltac pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct carry_sig :=
+Ltac internal_solve_code_correct P_tac :=
+  hnf;
+  lazymatch goal with
+  | [ |- True ] => constructor
+  | _
+    => cbv [Positional.mul_cps Positional.reduce_cps];
+       intros;
+       repeat autounfold;
+       basesystem_partial_evaluation_RHS;
+       P_tac ();
+       break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring
+  end.
+
+Ltac pose_mul_code_correct P_extra_prove_mul_eq sz sz2 wt s c mul_code mul_code_correct :=
+  cache_proof_with_type_by
+    (match mul_code with
+     | None => True
+     | Some v
+       => forall a b,
+         v a b
+         = Positional.mul_cps (n:=sz) (m:=sz2) wt a b
+                              (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)
+     end)
+    ltac:(internal_solve_code_correct P_extra_prove_mul_eq)
+           mul_code_correct.
+
+Ltac pose_square_code_correct P_extra_prove_square_eq sz sz2 wt s c square_code square_code_correct :=
+  cache_proof_with_type_by
+    (match square_code with
+     | None => True
+     | Some v
+       => forall a,
+         v a
+         = Positional.mul_cps (n:=sz) (m:=sz2) wt a a
+                              (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)
+     end)
+    ltac:(internal_solve_code_correct P_extra_prove_square_eq)
+           square_code_correct.
+
+Ltac cache_sig_with_type_by_existing_sig ty existing_sig id :=
   cache_sig_with_type_by
-    {carry : (Z^sz -> Z^sz)%type |
-     forall a : Z^sz,
-       let eval := Positional.Fdecode (m := m) wt in
-       eval (carry a) = eval a}
+    ty
     ltac:(eexists; intros; etransitivity;
           [ apply f_equal
-          | exact (proj2_sig (carry_sig' m sz s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct) _) ];
-          cbv [proj1_sig carry_sig' chained_carries_cps' chained_carries_cps'_step];
+          | apply (proj2_sig existing_sig) ];
+          cbv [proj1_sig
+                 carry_sig' chained_carries_cps' chained_carries_cps'_step
+                 zero_sig' one_sig' add_sig' sub_sig' mul_sig' square_sig' opp_sig'
+                 Positional.mul_cps Positional.reduce_cps
+              ];
           repeat autounfold;
           basesystem_partial_evaluation_RHS;
           do_replace_match_with_destructuring_match_in_goal;
           reflexivity)
-           carry_sig.
+           id.
+
+
+Ltac pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct carry_sig :=
+  cache_sig_with_type_by_existing_sig
+    {carry : (Z^sz -> Z^sz)%type |
+     forall a : Z^sz,
+       let eval := Positional.Fdecode (m := m) wt in
+       eval (carry a) = eval a}
+    (carry_sig' m sz s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m_correct)
+    carry_sig.
 
 Ltac pose_zero_sig sz m wt sz_nonzero sz_le_log2_m zero_sig :=
   cache_vm_sig_with_type_by
@@ -145,93 +356,50 @@ Ltac pose_a24_sig sz m wt a24 a24_sig :=
     solve_constant_sig
     a24_sig.
 
-Ltac pose_add_sig sz m wt wt_nonzero add_sig :=
-  cache_term_with_type_by
+Ltac pose_add_sig sz m wt sz_nonzero add_sig :=
+  cache_sig_with_type_by_existing_sig
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
       forall a b : Z^sz,
         let eval := Positional.Fdecode (m:=m) wt in
         eval (add a b) = (eval a + eval b)%F }
-    ltac:(idtac;
-          let a := fresh "a" in
-          let b := fresh "b" in
-          eexists; cbv beta zeta; intros a b;
-          pose proof wt_nonzero;
-          let x := constr:(
-                     Positional.add_cps (n := sz) wt a b id) in
-          solve_op_F wt x; reflexivity)
-           add_sig.
+    (add_sig' m sz sz_nonzero)
+    add_sig.
 
-Ltac pose_sub_sig sz m wt wt_nonzero coef sub_sig :=
-  cache_term_with_type_by
+Ltac pose_sub_sig sz m wt coef_div_modulus sz_le_log2_m sub_sig :=
+  cache_sig_with_type_by_existing_sig
     {sub : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
        let eval := Positional.Fdecode (m:=m) wt in
        eval (sub a b) = (eval a - eval b)%F}
-    ltac:(idtac;
-          let a := fresh "a" in
-          let b := fresh "b" in
-          eexists; cbv beta zeta; intros a b;
-          pose proof wt_nonzero;
-          let x := constr:(
-                     Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
-          solve_op_F wt x; reflexivity)
-           sub_sig.
+    (sub_sig' m sz coef_div_modulus sz_le_log2_m)
+    sub_sig.
 
-Ltac pose_opp_sig sz m wt wt_nonzero coef opp_sig :=
-  cache_term_with_type_by
+Ltac pose_opp_sig sz m wt coef_div_modulus sz_le_log2_m opp_sig :=
+  cache_sig_with_type_by_existing_sig
     {opp : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (opp a) = F.opp (eval a)}
-    ltac:(idtac;
-          let a := fresh in
-          eexists; cbv beta zeta; intros a;
-          pose proof wt_nonzero;
-          let x := constr:(
-                     Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
-          solve_op_F wt x; reflexivity)
-           opp_sig.
+    (opp_sig' m sz coef_div_modulus sz_le_log2_m)
+    opp_sig.
 
-
-Ltac pose_mul_sig P_default_mul P_extra_prove_mul_eq sz m wt s c sz2 wt_nonzero mul_sig :=
-  cache_term_with_type_by
+Ltac pose_mul_sig sz m wt s c mul_code sz_nonzero s_nonzero m_correct mul_code_correct mul_sig :=
+  cache_sig_with_type_by_existing_sig
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (mul a b) = (eval a * eval b)%F}
-    ltac:(idtac;
-          let a := fresh "a" in
-          let b := fresh "b" in
-          eexists; cbv beta zeta; intros a b;
-          pose proof wt_nonzero;
-          let x := constr:(
-                     Positional.mul_cps (n:=sz) (m:=sz2) wt a b
-                                        (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
-          solve_op_F wt x;
-          P_default_mul ();
-          P_extra_prove_mul_eq ();
-          break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring)
-           mul_sig.
+    (mul_sig' m sz s c mul_code sz_nonzero s_nonzero m_correct mul_code_correct)
+    mul_sig.
 
-
-Ltac pose_square_sig P_default_square P_extra_prove_square_eq sz m wt s c sz2 wt_nonzero square_sig :=
-  cache_term_with_type_by
+Ltac pose_square_sig sz m wt s c square_code sz_nonzero s_nonzero m_correct square_code_correct square_sig :=
+  cache_sig_with_type_by_existing_sig
     {square : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (square a) = (eval a * eval a)%F}
-    ltac:(idtac;
-          let a := fresh "a" in
-          eexists; cbv beta zeta; intros a;
-          pose proof wt_nonzero;
-          let x := constr:(
-                     Positional.mul_cps (n:=sz) (m:=sz2) wt a a
-                                        (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
-          solve_op_F wt x;
-          P_default_square ();
-          P_extra_prove_square_eq ();
-          break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring)
-           square_sig.
+    (square_sig' m sz s c square_code sz_nonzero s_nonzero m_correct square_code_correct)
+    square_sig.
 
 Ltac pose_ring sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_sig add_sig sub_sig mul_sig ring :=
   cache_term
