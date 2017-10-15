@@ -1,0 +1,2157 @@
+COQDEP src/Util/Tactics/CacheTerm.v
+COQDEP src/Specific/Framework/ArithmeticSynthesis/DefaultsPackage.v
+COQDEP src/Specific/Framework/ArithmeticSynthesis/BasePackage.v
+COQDEP src/Specific/Framework/ArithmeticSynthesis/Defaults.v
+COQDEP src/Specific/Framework/ArithmeticSynthesis/Base.v
+COQDEP src/Specific/Framework/ReificationTypesPackage.v
+COQDEP src/Specific/Framework/ReificationTypes.v
+COQDEP src/Specific/Framework/CurveParametersPackage.v
+COQDEP src/Specific/Framework/CurveParameters.v
+COQDEP src/Compilers/Reify.v
+COQDEP src/Arithmetic/Core.v
+/home/jgross/.local64/coq/coq-8.7+beta2/bin/coq_makefile -f _CoqProject INSTALLDEFAULTROOT = Crypto -o Makefile-old
+COQ_MAKEFILE -f _CoqProject > Makefile.coq
+make --no-print-directory -C coqprime
+ECHO > _CoqProject
+make[1]: Nothing to be done for 'all'.
+COQC src/Util/Tactics/CacheTerm.v
+COQC src/Arithmetic/Core.v
+COQC src/Compilers/Reify.v
+src/Util/Tactics/CacheTerm (real: 0.06, user: 0.04, sys: 0.02, mem: 51568 ko)
+COQC src/Specific/Framework/CurveParameters.v
+COQC src/Compilers/InterpRewriting.v
+src/Specific/Framework/CurveParameters (real: 0.40, user: 0.31, sys: 0.08, mem: 375472 ko)
+COQC src/Specific/Framework/CurveParametersPackage.v
+src/Compilers/Reify (real: 0.53, user: 0.48, sys: 0.05, mem: 456784 ko)
+COQC src/Compilers/Z/Reify.v
+src/Compilers/InterpRewriting (real: 0.53, user: 0.46, sys: 0.06, mem: 440120 ko)
+COQC src/Compilers/Z/Bounds/Pipeline/Definition.v
+src/Specific/Framework/CurveParametersPackage (real: 0.40, user: 0.32, sys: 0.08, mem: 362596 ko)
+src/Compilers/Z/Reify (real: 0.66, user: 0.56, sys: 0.10, mem: 494416 ko)
+COQC src/Compilers/Z/Bounds/Pipeline/Glue.v
+src/Compilers/Z/Bounds/Pipeline/Glue (real: 0.65, user: 0.57, sys: 0.07, mem: 496328 ko)
+src/Compilers/Z/Bounds/Pipeline/Definition (real: 4.80, user: 4.70, sys: 0.08, mem: 576592 ko)
+COQC src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.v
+src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics (real: 1.10, user: 1.00, sys: 0.10, mem: 545884 ko)
+COQC src/Compilers/Z/Bounds/Pipeline.v
+src/Compilers/Z/Bounds/Pipeline (real: 0.83, user: 0.72, sys: 0.10, mem: 540776 ko)
+src/Arithmetic/Core (real: 9.88, user: 9.76, sys: 0.12, mem: 572028 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/HelperTactics.v
+COQC src/Arithmetic/Karatsuba.v
+COQC src/Arithmetic/Saturated/Core.v
+COQC src/Specific/Framework/ArithmeticSynthesis/Ladderstep.v
+COQC src/Arithmetic/Saturated/MulSplit.v
+COQC src/Specific/Framework/ReificationTypes.v
+src/Specific/Framework/ArithmeticSynthesis/Ladderstep (real: 0.82, user: 0.70, sys: 0.10, mem: 530696 ko)
+src/Specific/Framework/ArithmeticSynthesis/HelperTactics (real: 1.01, user: 0.91, sys: 0.09, mem: 528488 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/SquareFromMul.v
+COQC src/Specific/Framework/ArithmeticSynthesis/Base.v
+src/Specific/Framework/ReificationTypes (real: 1.10, user: 0.91, sys: 0.12, mem: 546304 ko)
+src/Specific/Framework/ArithmeticSynthesis/SquareFromMul (real: 0.86, user: 0.70, sys: 0.15, mem: 528904 ko)
+src/Specific/Framework/ArithmeticSynthesis/Base (real: 1.16, user: 1.04, sys: 0.10, mem: 532648 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/BasePackage.v
+COQC src/Specific/Framework/ArithmeticSynthesis/Defaults.v
+src/Specific/Framework/ArithmeticSynthesis/BasePackage (real: 0.84, user: 0.77, sys: 0.06, mem: 530260 ko)
+COQC src/Specific/Framework/ReificationTypesPackage.v
+src/Specific/Framework/ArithmeticSynthesis/Defaults (real: 1.34, user: 1.19, sys: 0.12, mem: 533000 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/DefaultsPackage.v
+src/Specific/Framework/ReificationTypesPackage (real: 0.87, user: 0.76, sys: 0.11, mem: 535940 ko)
+src/Arithmetic/Saturated/MulSplit (real: 3.98, user: 3.87, sys: 0.10, mem: 545364 ko)
+src/Specific/Framework/ArithmeticSynthesis/DefaultsPackage (real: 0.84, user: 0.70, sys: 0.13, mem: 531840 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/LadderstepPackage.v
+src/Specific/Framework/ArithmeticSynthesis/LadderstepPackage (real: 0.89, user: 0.76, sys: 0.12, mem: 533984 ko)
+src/Arithmetic/Saturated/Core (real: 6.28, user: 6.07, sys: 0.12, mem: 561024 ko)
+COQC src/Arithmetic/Saturated/Wrappers.v
+COQC src/Arithmetic/Saturated/UniformWeight.v
+src/Arithmetic/Saturated/Wrappers (real: 0.89, user: 0.77, sys: 0.09, mem: 527884 ko)
+COQC src/Arithmetic/Saturated/Freeze.v
+src/Arithmetic/Saturated/UniformWeight (real: 1.15, user: 1.03, sys: 0.08, mem: 529116 ko)
+COQC src/Arithmetic/Saturated/AddSub.v
+COQC src/Arithmetic/Saturated/UniformWeightInstances.v
+src/Arithmetic/Saturated/UniformWeightInstances (real: 0.82, user: 0.72, sys: 0.10, mem: 526668 ko)
+src/Arithmetic/Saturated/Freeze (real: 1.82, user: 1.72, sys: 0.10, mem: 535616 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/Freeze.v
+src/Specific/Framework/ArithmeticSynthesis/Freeze (real: 0.83, user: 0.70, sys: 0.13, mem: 530708 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/FreezePackage.v
+src/Specific/Framework/ArithmeticSynthesis/FreezePackage (real: 0.80, user: 0.68, sys: 0.11, mem: 532412 ko)
+src/Arithmetic/Saturated/AddSub (real: 8.70, user: 8.61, sys: 0.08, mem: 550680 ko)
+COQC src/Arithmetic/Saturated/MontgomeryAPI.v
+src/Arithmetic/Karatsuba (real: 23.50, user: 23.34, sys: 0.12, mem: 595824 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/Karatsuba.v
+src/Specific/Framework/ArithmeticSynthesis/Karatsuba (real: 0.86, user: 0.76, sys: 0.09, mem: 533328 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/KaratsubaPackage.v
+src/Arithmetic/Saturated/MontgomeryAPI (real: 8.29, user: 8.15, sys: 0.13, mem: 572668 ko)
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Definition.v
+COQC src/Specific/Framework/MontgomeryReificationTypes.v
+src/Specific/Framework/ArithmeticSynthesis/KaratsubaPackage (real: 0.83, user: 0.71, sys: 0.12, mem: 532652 ko)
+src/Arithmetic/MontgomeryReduction/WordByWord/Definition (real: 0.90, user: 0.76, sys: 0.11, mem: 532412 ko)
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.v
+src/Specific/Framework/MontgomeryReificationTypes (real: 0.91, user: 0.76, sys: 0.12, mem: 538492 ko)
+src/Arithmetic/MontgomeryReduction/WordByWord/Proofs (real: 3.02, user: 2.92, sys: 0.08, mem: 551620 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/Montgomery.v
+Closed under the global context
+src/Specific/Framework/ArithmeticSynthesis/Montgomery (real: 4.04, user: 3.92, sys: 0.11, mem: 597552 ko)
+COQC src/Specific/Framework/ArithmeticSynthesis/MontgomeryPackage.v
+src/Specific/Framework/ArithmeticSynthesis/MontgomeryPackage (real: 0.88, user: 0.76, sys: 0.10, mem: 547452 ko)
+COQC src/Specific/Framework/MontgomeryReificationTypesPackage.v
+src/Specific/Framework/MontgomeryReificationTypesPackage (real: 0.89, user: 0.78, sys: 0.10, mem: 553824 ko)
+COQC src/Specific/Framework/SynthesisFramework.v
+src/Specific/Framework/SynthesisFramework (real: 1.15, user: 1.05, sys: 0.10, mem: 633368 ko)
+COQC src/Specific/X25519/C64/Synthesis.v
+COQC src/Specific/X25519/C32/Synthesis.v
+COQC src/Specific/X2555/C128/Synthesis.v
+COQC src/Specific/X2448/Karatsuba/C64/Synthesis.v
+COQC src/Specific/NISTP256/AMD128/Synthesis.v
+COQC src/Specific/NISTP256/AMD64/Synthesis.v
+src/Specific/NISTP256/AMD128/Synthesis (real: 4.39, user: 4.14, sys: 0.10, mem: 647788 ko)
+COQC src/Specific/montgomery64_2e127m1/Synthesis.v
+File "./src/Specific/montgomery64_2e127m1/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "BasePackage.add_Base_package",
+"BasePackage.add_half_sz_nonzero", "Base.pose_half_sz_nonzero",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+compute; congruence) and "congruence", last call failed.
+congruence failed.
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e127m1/Synthesis (real: 1.35, user: 1.09, sys: 0.19, mem: 628248 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e127m1/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e127m1/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e129m25/Synthesis.v
+src/Specific/X2555/C128/Synthesis (real: 6.85, user: 6.68, sys: 0.11, mem: 668740 ko)
+COQC src/Specific/montgomery64_2e130m5/Synthesis.v
+File "./src/Specific/montgomery64_2e129m25/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 65 :: BinNums.Zpos 64 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 64, BinNums.Zpos 65) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 18446744073709551615 |},
+           {| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 340282366920938463481821351505477763047" with
+ "BinNums.Zpos 680564733841876926926749214863536422887".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e129m25/Synthesis (real: 1.46, user: 1.26, sys: 0.14, mem: 629472 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e129m25/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e129m25/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e137m13/Synthesis.v
+File "./src/Specific/montgomery64_2e130m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 65 :: BinNums.Zpos 65 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 65, BinNums.Zpos 65) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |},
+           {| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 680564733841876926945195958937245974523" with
+ "BinNums.Zpos 1361129467683753853853498429727072845819".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e130m5/Synthesis (real: 1.39, user: 1.25, sys: 0.13, mem: 629768 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e130m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e130m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e140m27/Synthesis.v
+File "./src/Specific/montgomery64_2e137m13/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 69 :: BinNums.Zpos 68 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 68, BinNums.Zpos 69) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 295147905179352825855 |},
+           {| ZRange.lower := 0; ZRange.upper := 590295810358705651711 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 5444517870735015415985842785193287483379" with
+ "BinNums.Zpos 174224571863520493293247799005065324265459".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e137m13/Synthesis (real: 1.50, user: 1.27, sys: 0.16, mem: 632880 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e137m13/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e137m13/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e141m9/Synthesis.v
+File "./src/Specific/montgomery64_2e140m27/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 70 :: BinNums.Zpos 70 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 70, BinNums.Zpos 70) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 1180591620717411303423 |},
+           {| ZRange.lower := 0; ZRange.upper := 1180591620717411303423 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 21778071482940061662818119752276867284965" with
+ "BinNums.Zpos 1393796574908163946345982392040522594123749".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e140m27/Synthesis (real: 1.42, user: 1.21, sys: 0.19, mem: 629388 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e140m27/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e140m27/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e150m5/Synthesis.v
+File "./src/Specific/montgomery64_2e141m9/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 71 :: BinNums.Zpos 70 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 70, BinNums.Zpos 71) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 1180591620717411303423 |},
+           {| ZRange.lower := 0; ZRange.upper := 2361183241434822606847 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 21778071482940061663998711372994278588407" with
+ "BinNums.Zpos 2787593149816327892691964784081045188247543".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e141m9/Synthesis (real: 1.45, user: 1.26, sys: 0.14, mem: 629052 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e141m9/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e141m9/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e150m3/Synthesis.v
+src/Specific/NISTP256/AMD64/Synthesis (real: 10.34, user: 10.07, sys: 0.15, mem: 661924 ko)
+COQC src/Specific/montgomery64_2e152m17/Synthesis.v
+File "./src/Specific/montgomery64_2e150m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 75 :: BinNums.Zpos 75 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 75, BinNums.Zpos 75) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |},
+           {| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 696898287454081973210751681139144749219835"
+with "BinNums.Zpos 1427247692705959881058285969449495136382746619".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e150m5/Synthesis (real: 1.36, user: 1.20, sys: 0.14, mem: 629260 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e150m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e150m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e158m15/Synthesis.v
+File "./src/Specific/montgomery64_2e150m3/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 75 :: BinNums.Zpos 75 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 75, BinNums.Zpos 75) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |},
+           {| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 696898287454081973210751681139144749219837"
+with "BinNums.Zpos 1427247692705959881058285969449495136382746621".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e150m3/Synthesis (real: 1.39, user: 1.24, sys: 0.13, mem: 629156 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e150m3/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e150m3/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e165m25/Synthesis.v
+File "./src/Specific/montgomery64_2e152m17/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 76 :: BinNums.Zpos 76 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 76, BinNums.Zpos 76) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 75557863725914323419135 |},
+           {| ZRange.lower := 0; ZRange.upper := 75557863725914323419135 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 1393796574908163946421521809022363207991279"
+with "BinNums.Zpos 5708990770823839524233143877797980545530986479".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e152m17/Synthesis (real: 1.46, user: 1.27, sys: 0.13, mem: 630768 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e152m17/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e152m17/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e166m5/Synthesis.v
+src/Specific/X25519/C64/Synthesis (real: 12.37, user: 12.16, sys: 0.12, mem: 685548 ko)
+COQC src/Specific/montgomery64_2e171m19/Synthesis.v
+File "./src/Specific/montgomery64_2e158m15/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 79 :: BinNums.Zpos 79 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 79, BinNums.Zpos 79) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 604462909807314587353087 |},
+           {| ZRange.lower := 0; ZRange.upper := 604462909807314587353087 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 11150372599265311571372303599387421630791665"
+with "BinNums.Zpos 365375409332725729550921208179070754913983135729".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e158m15/Synthesis (real: 1.39, user: 1.20, sys: 0.16, mem: 630488 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e158m15/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e158m15/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e174m17/Synthesis.v
+File "./src/Specific/montgomery64_2e165m25/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 83 :: BinNums.Zpos 82 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 82, BinNums.Zpos 83) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 4835703278458516698824703 |},
+           {| ZRange.lower := 0; ZRange.upper := 9671406556917033397649407 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 89202980794122492575814261200766405712019431"
+with "BinNums.Zpos 46768052394588893382517914646921056628989841375207".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e165m25/Synthesis (real: 1.51, user: 1.35, sys: 0.14, mem: 630428 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e165m25/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e165m25/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e174m3/Synthesis.v
+File "./src/Specific/montgomery64_2e166m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 83 :: BinNums.Zpos 83 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 83, BinNums.Zpos 83) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 9671406556917033397649407 |},
+           {| ZRange.lower := 0; ZRange.upper := 9671406556917033397649407 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 178405961588244985141957134291359851735941115"
+with "BinNums.Zpos 93536104789177786765035829293842113257979682750459".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e166m5/Synthesis (real: 1.47, user: 1.26, sys: 0.16, mem: 630168 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e166m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e166m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e189m25/Synthesis.v
+File "./src/Specific/montgomery64_2e171m19/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 86 :: BinNums.Zpos 85 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 85, BinNums.Zpos 86) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 77371252455336267181195263 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 713623846352979940606514218733339761663016941"
+with "BinNums.Zpos 2993155353253689176481146537402947624255349848014829".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e171m19/Synthesis (real: 1.40, user: 1.25, sys: 0.14, mem: 629240 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e171m19/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e171m19/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e190m11/Synthesis.v
+File "./src/Specific/montgomery64_2e174m17/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 87 :: BinNums.Zpos 87 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 87, BinNums.Zpos 87) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 154742504910672534362390527 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 154742504910672534362390527 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 2854495385411919762271314425362918733418332143"
+with "BinNums.Zpos 23945242826029513411849172299223580994042798784118767".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e174m17/Synthesis (real: 1.50, user: 1.34, sys: 0.14, mem: 629872 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e174m17/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e174m17/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e191m19/Synthesis.v
+File "./src/Specific/montgomery64_2e174m3/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 87 :: BinNums.Zpos 87 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 87, BinNums.Zpos 87) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 154742504910672534362390527 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 154742504910672534362390527 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 2854495385411919762271314425362918733418332157"
+with "BinNums.Zpos 23945242826029513411849172299223580994042798784118781".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e174m3/Synthesis (real: 1.47, user: 1.32, sys: 0.12, mem: 629668 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e174m3/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e174m3/Synthesis.vo] Error 1
+COQC src/Specific/solinas64_2e127m1/Synthesis.v
+File "./src/Specific/montgomery64_2e189m25/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 95 :: BinNums.Zpos 94 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 94, BinNums.Zpos 95) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 19807040628566084398385987583 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 39614081257132168796771975167 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 365375409332725729590535289417756179637045559271" with
+ "BinNums.Zpos 784637716923335095479473677900958302012794430558004314087".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e189m25/Synthesis (real: 1.51, user: 1.34, sys: 0.13, mem: 628876 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e189m25/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e189m25/Synthesis.vo] Error 1
+COQC src/Specific/montgomery32_2e127m1/Synthesis.v
+File "./src/Specific/montgomery64_2e190m11/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 95 :: BinNums.Zpos 95 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 95, BinNums.Zpos 95) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 39614081257132168796771975167 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 39614081257132168796771975167 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 730750818665451459141456497596826934551028695029" with
+ "BinNums.Zpos 1569275433846670190958947355801916604025588861116008628213".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e190m11/Synthesis (real: 1.50, user: 1.36, sys: 0.13, mem: 630196 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e190m11/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e190m11/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e194m33/Synthesis.v
+File "./src/Specific/montgomery64_2e191m19/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 96 :: BinNums.Zpos 95 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 95, BinNums.Zpos 96) : Tuple.tuple BinNums.Z sz)
+ : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 39614081257132168796771975167 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 79228162514264337593543950335 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 730750818665451459181070578853959103347800670189" with
+ "BinNums.Zpos 3138550867693340381917894711603833208051177722232017256429".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e191m19/Synthesis (real: 1.52, user: 1.33, sys: 0.16, mem: 630168 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e191m19/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e191m19/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e196m15/Synthesis.v
+File "./src/Specific/montgomery32_2e127m1/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 43 :: BinNums.Zpos 42 :: BinNums.Zpos 42 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 42, BinNums.Zpos 42, BinNums.Zpos 43)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 4398046511103 |},
+           {| ZRange.lower := 0; ZRange.upper := 4398046511103 |},
+           {| ZRange.lower := 0; ZRange.upper := 8796093022207 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 81129638433477700891985674502143" with
+ "BinNums.Zpos 170141183460469231731687303715884105727".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e127m1/Synthesis (real: 1.44, user: 1.31, sys: 0.12, mem: 630328 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e127m1/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e127m1/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e198m17/Synthesis.v
+File "./src/Specific/montgomery64_2e194m33/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 65 :: BinNums.Zpos 65 :: BinNums.Zpos 64 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 64, BinNums.Zpos 65, BinNums.Zpos 65)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 18446744073709551615 |},
+           {| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |},
+           {| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 6277101735386680764176071790128604879584176795969512275935"
+with
+ "BinNums.Zpos 25108406941546723055343157692830665664409421777856138051551".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e194m33/Synthesis (real: 1.51, user: 1.38, sys: 0.12, mem: 628500 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e194m33/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e194m33/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e206m5/Synthesis.v
+File "./src/Specific/montgomery64_2e196m15/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 66 :: BinNums.Zpos 65 :: BinNums.Zpos 65 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 65, BinNums.Zpos 65, BinNums.Zpos 66)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |},
+           {| ZRange.lower := 0; ZRange.upper := 36893488147419103231 |},
+           {| ZRange.lower := 0; ZRange.upper := 73786976294838206463 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 12554203470773361528011861213336271295723425728580965892081"
+with
+ "BinNums.Zpos 100433627766186892221372630771322662657637687111424552206321".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e196m15/Synthesis (real: 1.54, user: 1.39, sys: 0.12, mem: 631436 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e196m15/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e196m15/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e212m29/Synthesis.v
+File "./src/Specific/montgomery64_2e198m17/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 66 :: BinNums.Zpos 66 :: BinNums.Zpos 66 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 66, BinNums.Zpos 66, BinNums.Zpos 66)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 73786976294838206463 |},
+           {| ZRange.lower := 0; ZRange.upper := 73786976294838206463 |},
+           {| ZRange.lower := 0; ZRange.upper := 73786976294838206463 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 25108406941546723056364004793593481054854885832372571340783"
+with
+ "BinNums.Zpos 401734511064747568885490523085290650630550748445698208825327".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e198m17/Synthesis (real: 1.54, user: 1.36, sys: 0.16, mem: 629816 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e198m17/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e198m17/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e213m3/Synthesis.v
+File "./src/Specific/montgomery64_2e206m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 69 :: BinNums.Zpos 69 :: BinNums.Zpos 68 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 68, BinNums.Zpos 69, BinNums.Zpos 69)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 295147905179352825855 |},
+           {| ZRange.lower := 0; ZRange.upper := 590295810358705651711 |},
+           {| ZRange.lower := 0; ZRange.upper := 590295810358705651711 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 100433627766186892231921384145871755025574149008094362861563"
+with
+ "BinNums.Zpos
+    102844034832575377634685573909834406561420991602098741459288059".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e206m5/Synthesis (real: 1.54, user: 1.40, sys: 0.12, mem: 630512 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e206m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e206m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e221m3/Synthesis.v
+File "./src/Specific/montgomery64_2e212m29/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 71 :: BinNums.Zpos 71 :: BinNums.Zpos 70 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 70, BinNums.Zpos 71, BinNums.Zpos 71)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 1180591620717411303423 |},
+           {| ZRange.lower := 0; ZRange.upper := 2361183241434822606847 |},
+           {| ZRange.lower := 0; ZRange.upper := 2361183241434822606847 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 401734511064747568928706383684249835492742060086893884735459"
+with
+ "BinNums.Zpos
+    6582018229284824168619876730229402019930943462534319453394436067".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e212m29/Synthesis (real: 1.57, user: 1.36, sys: 0.18, mem: 630312 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e212m29/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e212m29/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e222m117/Synthesis.v
+File "./src/Specific/montgomery64_2e213m3/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 71 :: BinNums.Zpos 71 :: BinNums.Zpos 71 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 71, BinNums.Zpos 71, BinNums.Zpos 71)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 2361183241434822606847 |},
+           {| ZRange.lower := 0; ZRange.upper := 2361183241434822606847 |},
+           {| ZRange.lower := 0; ZRange.upper := 2361183241434822606847 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 803469022129495137814196906769540486123292808532592093560829"
+with
+ "BinNums.Zpos
+    13164036458569648337239753460458804039861886925068638906788872189".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e213m3/Synthesis (real: 1.52, user: 1.38, sys: 0.13, mem: 631436 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e213m3/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e213m3/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e226m5/Synthesis.v
+File "./src/Specific/montgomery64_2e221m3/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 74 :: BinNums.Zpos 74 :: BinNums.Zpos 73 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 73, BinNums.Zpos 74, BinNums.Zpos 74)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 9444732965739290427391 |},
+           {| ZRange.lower := 0; ZRange.upper := 18889465931478580854783 |},
+           {| ZRange.lower := 0; ZRange.upper := 18889465931478580854783 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 3213876088517980551432033046042445253186309230155689422225405"
+with
+ "BinNums.Zpos
+    3369993333393829974333376885877453834204643052817571560137951281149".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e221m3/Synthesis (real: 1.53, user: 1.38, sys: 0.13, mem: 631520 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e221m3/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e221m3/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e230m27/Synthesis.v
+src/Specific/solinas64_2e127m1/Synthesis (real: 5.34, user: 4.95, sys: 0.18, mem: 666072 ko)
+COQC src/Specific/montgomery64_2e235m15/Synthesis.v
+File "./src/Specific/montgomery64_2e222m117/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 74 :: BinNums.Zpos 74 :: BinNums.Zpos 74 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 74, BinNums.Zpos 74, BinNums.Zpos 74)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 18889465931478580854783 |},
+           {| ZRange.lower := 0; ZRange.upper := 18889465931478580854783 |},
+           {| ZRange.lower := 0; ZRange.upper := 18889465931478580854783 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 6427752177035961102515957230724770458230715217721275092828043"
+with
+ "BinNums.Zpos
+    6739986666787659948666753771754907668409286105635143120275902562187".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e222m117/Synthesis (real: 1.55, user: 1.39, sys: 0.12, mem: 630696 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e222m117/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e222m117/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e243m9/Synthesis.v
+File "./src/Specific/montgomery64_2e226m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 76 :: BinNums.Zpos 75 :: BinNums.Zpos 75 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 75, BinNums.Zpos 75, BinNums.Zpos 76)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |},
+           {| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |},
+           {| ZRange.lower := 0; ZRange.upper := 75557863725914323419135 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 12855504354071922205032254743816461854962691188657012825128955"
+with
+ "BinNums.Zpos
+    107839786668602559178668060348078522694548577690162289924414440996859".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e226m5/Synthesis (real: 1.54, user: 1.39, sys: 0.14, mem: 632624 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e226m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e226m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e251m9/Synthesis.v
+File "./src/Specific/montgomery64_2e230m27/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 77 :: BinNums.Zpos 77 :: BinNums.Zpos 76 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 76, BinNums.Zpos 77, BinNums.Zpos 77)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 75557863725914323419135 |},
+           {| ZRange.lower := 0; ZRange.upper := 151115727451828646838271 |},
+           {| ZRange.lower := 0; ZRange.upper := 151115727451828646838271 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 25711008708143844411458646344908008594734846590706053722144741"
+with
+ "BinNums.Zpos
+    1725436586697640946858688965569256363112777243042596638790631055949797".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e230m27/Synthesis (real: 1.52, user: 1.37, sys: 0.14, mem: 631500 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e230m27/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e230m27/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e255m765/Synthesis.v
+File "./src/Specific/montgomery64_2e235m15/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 79 :: BinNums.Zpos 78 :: BinNums.Zpos 78 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 78, BinNums.Zpos 78, BinNums.Zpos 79)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 302231454903657293676543 |},
+           {| ZRange.lower := 0; ZRange.upper := 302231454903657293676543 |},
+           {| ZRange.lower := 0; ZRange.upper := 604462909807314587353087 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos
+    102844034832575377640260419927100141408945902258716640945373169" with
+ "BinNums.Zpos
+    55213970774324510299478046898216203619608871777363092441300193790394353".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e235m15/Synthesis (real: 1.55, user: 1.40, sys: 0.12, mem: 631568 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e235m15/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e235m15/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e255m19/Synthesis.v
+File "./src/Specific/montgomery64_2e243m9/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 81 :: BinNums.Zpos 81 :: BinNums.Zpos 81 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 81, BinNums.Zpos 81, BinNums.Zpos 81)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 2417851639229258349412351 |},
+           {| ZRange.lower := 0; ZRange.upper := 2417851639229258349412351 |},
+           {| ZRange.lower := 0; ZRange.upper := 2417851639229258349412351 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos
+    822752278660603021122085741393369577838393739179964407557914615" with
+ "BinNums.Zpos
+    14134776518227074636666380005943348126619871175004951664972849610340958199".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e243m9/Synthesis (real: 1.51, user: 1.29, sys: 0.17, mem: 632316 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e243m9/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e243m9/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e192m2e64m1/Synthesis.v
+File "./src/Specific/montgomery64_2e251m9/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 84 :: BinNums.Zpos 84 :: BinNums.Zpos 83 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 83, BinNums.Zpos 84, BinNums.Zpos 84)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 9671406556917033397649407 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 19342813113834066795298815 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 19342813113834066795298815 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos
+    3291009114642412084666749948008824059310922554922016072110440439" with
+ "BinNums.Zpos
+    3618502788666131106986593281521497120414687020801267626233049500247285301239".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e251m9/Synthesis (real: 1.52, user: 1.39, sys: 0.12, mem: 630108 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e251m9/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e251m9/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e216m2e108m1/Synthesis.v
+File "./src/Specific/montgomery64_2e255m765/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 85 :: BinNums.Zpos 85 :: BinNums.Zpos 85 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 85, BinNums.Zpos 85, BinNums.Zpos 85)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 38685626227668133590597631 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos
+    13164036458569648337953376966529417059491252054199703103093079299" with
+ "BinNums.Zpos
+    57896044618658097711785492504343953926634992332820282019728792003956564819203".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e255m765/Synthesis (real: 1.55, user: 1.37, sys: 0.16, mem: 631416 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e255m765/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e255m765/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e224m2e96p1/Synthesis.v
+File "./src/Specific/montgomery64_2e255m19/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 85 :: BinNums.Zpos 85 :: BinNums.Zpos 85 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 85, BinNums.Zpos 85, BinNums.Zpos 85)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 38685626227668133590597631 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos
+    13164036458569648337953376966529417059491252054199703103093080045" with
+ "BinNums.Zpos
+    57896044618658097711785492504343953926634992332820282019728792003956564819949".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e255m19/Synthesis (real: 1.55, user: 1.40, sys: 0.13, mem: 633348 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e255m19/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e255m19/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e255m2e4m2e1m1/Synthesis.v
+File "./src/Specific/montgomery64_2e224m2e96p1/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 75 :: BinNums.Zpos 75 :: BinNums.Zpos 74 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 74, BinNums.Zpos 75, BinNums.Zpos 75)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 18889465931478580854783 |},
+           {| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |},
+           {| ZRange.lower := 0; ZRange.upper := 37778931862957161709567 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 6427752177035961102864406374451811406112713568875867279458305"
+with
+ "BinNums.Zpos
+    26959946667150639794667015087019630673557916260026308143510066298881".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e224m2e96p1/Synthesis (real: 1.55, user: 1.40, sys: 0.13, mem: 630440 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e224m2e96p1/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e224m2e96p1/Synthesis.vo] Error 1
+COQC src/Specific/solinas64_2e129m25/Synthesis.v
+File "./src/Specific/montgomery64_2e255m2e4m2e1m1/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 85 :: BinNums.Zpos 85 :: BinNums.Zpos 85 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 85, BinNums.Zpos 85, BinNums.Zpos 85)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({|
+            ZRange.lower := 0;
+            ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 38685626227668133590597631 |},
+           {|
+           ZRange.lower := 0;
+           ZRange.upper := 38685626227668133590597631 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos
+    13164036458569648337953376966529417059491252054199703103093080045" with
+ "BinNums.Zpos
+    57896044618658097711785492504343953926634992332820282019728792003956564819949".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e255m2e4m2e1m1/Synthesis (real: 1.56, user: 1.41, sys: 0.13, mem: 633112 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e255m2e4m2e1m1/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e255m2e4m2e1m1/Synthesis.vo] Error 1
+COQC src/Specific/solinas64_2e130m5/Synthesis.v
+src/Specific/montgomery64_2e192m2e64m1/Synthesis (real: 4.87, user: 4.69, sys: 0.14, mem: 650160 ko)
+COQC src/Specific/solinas64_2e137m13/Synthesis.v
+src/Specific/solinas64_2e129m25/Synthesis (real: 5.89, user: 5.68, sys: 0.18, mem: 670088 ko)
+COQC src/Specific/solinas64_2e140m27/Synthesis.v
+src/Specific/solinas64_2e130m5/Synthesis (real: 6.03, user: 5.77, sys: 0.16, mem: 670232 ko)
+COQC src/Specific/solinas64_2e141m9/Synthesis.v
+File "./src/Specific/montgomery64_2e216m2e108m1/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 72 :: BinNums.Zpos 72 :: BinNums.Zpos 72 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 72, BinNums.Zpos 72, BinNums.Zpos 72)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 4722366482869645213695 |},
+           {| ZRange.lower := 0; ZRange.upper := 4722366482869645213695 |},
+           {| ZRange.lower := 0; ZRange.upper := 4722366482869645213695 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 6 : nat
+adjusted_bitwidth' := 64 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify
+ "BinNums.Zpos 1606938044258990275628734095904734260109839209015192961679359"
+with
+ "BinNums.Zpos
+    105312291668557186697918027683670107800341436973822328098290401279".
+
+Command exited with non-zero status 1
+src/Specific/montgomery64_2e216m2e108m1/Synthesis (real: 8.63, user: 8.44, sys: 0.14, mem: 652276 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery64_2e216m2e108m1/Synthesis.vo' failed
+make: *** [src/Specific/montgomery64_2e216m2e108m1/Synthesis.vo] Error 1
+COQC src/Specific/solinas64_2e150m5/Synthesis.v
+src/Specific/solinas64_2e137m13/Synthesis (real: 6.07, user: 5.90, sys: 0.13, mem: 661368 ko)
+COQC src/Specific/solinas64_2e150m3/Synthesis.v
+src/Specific/solinas64_2e140m27/Synthesis (real: 6.20, user: 5.89, sys: 0.13, mem: 669392 ko)
+COQC src/Specific/solinas64_2e152m17/Synthesis.v
+src/Specific/solinas64_2e141m9/Synthesis (real: 6.25, user: 5.99, sys: 0.16, mem: 683720 ko)
+COQC src/Specific/solinas64_2e158m15/Synthesis.v
+src/Specific/solinas64_2e150m5/Synthesis (real: 6.44, user: 6.07, sys: 0.16, mem: 665844 ko)
+COQC src/Specific/solinas64_2e165m25/Synthesis.v
+src/Specific/solinas64_2e150m3/Synthesis (real: 6.52, user: 6.18, sys: 0.14, mem: 671032 ko)
+COQC src/Specific/solinas64_2e166m5/Synthesis.v
+src/Specific/solinas64_2e152m17/Synthesis (real: 6.52, user: 6.13, sys: 0.18, mem: 661868 ko)
+COQC src/Specific/solinas64_2e174m17/Synthesis.v
+src/Specific/solinas64_2e158m15/Synthesis (real: 6.60, user: 6.34, sys: 0.16, mem: 666080 ko)
+COQC src/Specific/solinas64_2e174m3/Synthesis.v
+src/Specific/solinas64_2e165m25/Synthesis (real: 6.41, user: 6.17, sys: 0.18, mem: 670492 ko)
+COQC src/Specific/solinas64_2e192m2e64m1/Synthesis.v
+src/Specific/solinas64_2e166m5/Synthesis (real: 6.71, user: 6.46, sys: 0.20, mem: 671960 ko)
+COQC src/Specific/montgomery32_2e129m25/Synthesis.v
+src/Specific/X25519/C32/Synthesis (real: 47.29, user: 45.76, sys: 0.20, mem: 826604 ko)
+COQC src/Specific/montgomery32_2e130m5/Synthesis.v
+File "./src/Specific/montgomery32_2e129m25/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 33
+                :: BinNums.Zpos 32
+                   :: BinNums.Zpos 32 :: BinNums.Zpos 32 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 32, BinNums.Zpos 32, BinNums.Zpos 32,
+               BinNums.Zpos 33)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+           {| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+           {| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+           {| ZRange.lower := 0; ZRange.upper := 8589934591 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 340282366920938463463374607436063178727" with
+ "BinNums.Zpos 680564733841876926926749214863536422887".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e129m25/Synthesis (real: 1.52, user: 1.36, sys: 0.14, mem: 629432 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e129m25/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e129m25/Synthesis.vo] Error 1
+COQC src/Specific/montgomery32_2e137m13/Synthesis.v
+File "./src/Specific/montgomery32_2e130m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 33
+                :: BinNums.Zpos 32
+                   :: BinNums.Zpos 33 :: BinNums.Zpos 32 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 32, BinNums.Zpos 33, BinNums.Zpos 32,
+               BinNums.Zpos 33)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+           {| ZRange.lower := 0; ZRange.upper := 8589934591 |},
+           {| ZRange.lower := 0; ZRange.upper := 4294967295 |},
+           {| ZRange.lower := 0; ZRange.upper := 8589934591 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 340282367000166625977638945029607129083" with
+ "BinNums.Zpos 1361129467683753853853498429727072845819".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e130m5/Synthesis (real: 1.39, user: 1.25, sys: 0.12, mem: 630428 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e130m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e130m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery32_2e140m27/Synthesis.v
+File "./src/Specific/montgomery32_2e137m13/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 35
+                :: BinNums.Zpos 34
+                   :: BinNums.Zpos 34 :: BinNums.Zpos 34 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 34, BinNums.Zpos 34, BinNums.Zpos 34,
+               BinNums.Zpos 35)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 17179869183 |},
+           {| ZRange.lower := 0; ZRange.upper := 17179869183 |},
+           {| ZRange.lower := 0; ZRange.upper := 17179869183 |},
+           {| ZRange.lower := 0; ZRange.upper := 34359738367 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 1361129467921438341451631674758898122739" with
+ "BinNums.Zpos 174224571863520493293247799005065324265459".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e137m13/Synthesis (real: 1.45, user: 1.32, sys: 0.12, mem: 630920 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e137m13/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e137m13/Synthesis.vo] Error 1
+COQC src/Specific/montgomery32_2e141m9/Synthesis.v
+File "./src/Specific/montgomery32_2e140m27/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 35
+                :: BinNums.Zpos 35
+                   :: BinNums.Zpos 35 :: BinNums.Zpos 35 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 35, BinNums.Zpos 35, BinNums.Zpos 35,
+               BinNums.Zpos 35)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 34359738367 |},
+           {| ZRange.lower := 0; ZRange.upper := 34359738367 |},
+           {| ZRange.lower := 0; ZRange.upper := 34359738367 |},
+           {| ZRange.lower := 0; ZRange.upper := 34359738367 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 2722258935922104845435974431154984976357" with
+ "BinNums.Zpos 1393796574908163946345982392040522594123749".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e140m27/Synthesis (real: 1.43, user: 1.25, sys: 0.14, mem: 630576 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e140m27/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e140m27/Synthesis.vo] Error 1
+COQC src/Specific/montgomery32_2e150m5/Synthesis.v
+src/Specific/solinas64_2e174m17/Synthesis (real: 6.96, user: 6.71, sys: 0.16, mem: 671768 ko)
+COQC src/Specific/montgomery32_2e150m3/Synthesis.v
+File "./src/Specific/montgomery32_2e141m9/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 36
+                :: BinNums.Zpos 35
+                   :: BinNums.Zpos 35 :: BinNums.Zpos 35 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 35, BinNums.Zpos 35, BinNums.Zpos 35,
+               BinNums.Zpos 36)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 34359738367 |},
+           {| ZRange.lower := 0; ZRange.upper := 34359738367 |},
+           {| ZRange.lower := 0; ZRange.upper := 34359738367 |},
+           {| ZRange.lower := 0; ZRange.upper := 68719476735 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 2722258935922104845435974431189344714743" with
+ "BinNums.Zpos 2787593149816327892691964784081045188247543".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e141m9/Synthesis (real: 1.46, user: 1.31, sys: 0.14, mem: 631172 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e141m9/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e141m9/Synthesis.vo] Error 1
+COQC src/Specific/montgomery32_2e152m17/Synthesis.v
+src/Specific/solinas64_2e174m3/Synthesis (real: 7.00, user: 6.69, sys: 0.17, mem: 671860 ko)
+COQC src/Specific/montgomery32_2e158m15/Synthesis.v
+src/Specific/solinas64_2e192m2e64m1/Synthesis (real: 7.15, user: 6.97, sys: 0.12, mem: 671992 ko)
+COQC src/Specific/montgomery64_2e256m189/Synthesis.v
+File "./src/Specific/montgomery32_2e150m5/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 38
+                :: BinNums.Zpos 37
+                   :: BinNums.Zpos 38 :: BinNums.Zpos 37 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 37, BinNums.Zpos 38, BinNums.Zpos 37,
+               BinNums.Zpos 38)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 137438953471 |},
+           {| ZRange.lower := 0; ZRange.upper := 274877906943 |},
+           {| ZRange.lower := 0; ZRange.upper := 137438953471 |},
+           {| ZRange.lower := 0; ZRange.upper := 274877906943 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 10889035746461405069798489772765430677499" with
+ "BinNums.Zpos 1427247692705959881058285969449495136382746619".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e150m5/Synthesis (real: 1.40, user: 1.20, sys: 0.15, mem: 630160 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e150m5/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e150m5/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e266m3/Synthesis.v
+File "./src/Specific/montgomery32_2e150m3/Synthesis.v", line 6, characters 9-31:
+Error:
+In nested Ltac calls to "make_Synthesis_package", "get_Synthesis_package",
+"add_Synthesis_package", "MontgomeryPackage.add_Montgomery_package",
+"MontgomeryPackage.add_m_enc_correct_montgomery",
+"CurveParametersPackage.if_montgomery", "tac_true" (bound to
+fun _ =>
+  let m := TagList.Tag.get pkg BasePackage.TAG.m in
+  let sz := TagList.Tag.get pkg CurveParameters.TAG.sz in
+  let r := TagList.Tag.get pkg BasePackage.TAG.r in
+  let m_enc := TagList.Tag.get pkg BasePackage.TAG.m_enc in
+  let m_enc_correct_montgomery := fresh "m_enc_correct_montgomery" in
+  let m_enc_correct_montgomery :=
+   Montgomery.pose_m_enc_correct_montgomery m sz r m_enc
+    m_enc_correct_montgomery
+  in
+  TagList.Tag.update pkg MontgomeryPackage.TAG.m_enc_correct_montgomery
+   m_enc_correct_montgomery), "Montgomery.pose_m_enc_correct_montgomery",
+"CacheTerm.cache_proof_with_type_by",
+"CacheTerm.cache_term_with_type_by_gen", "abstract_tac" (bound to
+fun id' => abstract (tac) using id'), "tac" (bound to
+vm_compute; reflexivity) and "reflexivity", last call failed.
+In environment
+limb_widths := (BinNums.Zpos 38
+                :: BinNums.Zpos 37
+                   :: BinNums.Zpos 38 :: BinNums.Zpos 37 :: nil)%list
+ : list BinNums.Z
+bounds_exp := ((BinNums.Zpos 37, BinNums.Zpos 38, BinNums.Zpos 37,
+               BinNums.Zpos 38)
+               :
+               Tuple.tuple BinNums.Z sz) : Tuple.tuple BinNums.Z sz
+bounds := (({| ZRange.lower := 0; ZRange.upper := 137438953471 |},
+           {| ZRange.lower := 0; ZRange.upper := 274877906943 |},
+           {| ZRange.lower := 0; ZRange.upper := 137438953471 |},
+           {| ZRange.lower := 0; ZRange.upper := 274877906943 |})
+           :
+           Tuple.tuple ZRange.zrange sz) : Tuple.tuple ZRange.zrange sz
+lgbitwidth := 5 : nat
+adjusted_bitwidth' := 32 : nat
+feZ := Tuple.tuple BinNums.Z sz : Type
+Unable to unify "BinNums.Zpos 10889035746461405069798489772765430677501" with
+ "BinNums.Zpos 1427247692705959881058285969449495136382746621".
+
+Command exited with non-zero status 1
+src/Specific/montgomery32_2e150m3/Synthesis (real: 1.44, user: 1.26, sys: 0.16, mem: 629792 ko)
+Makefile.coq:636: recipe for target 'src/Specific/montgomery32_2e150m3/Synthesis.vo' failed
+make: *** [src/Specific/montgomery32_2e150m3/Synthesis.vo] Error 1
+COQC src/Specific/montgomery64_2e285m9/Synthesis.v
