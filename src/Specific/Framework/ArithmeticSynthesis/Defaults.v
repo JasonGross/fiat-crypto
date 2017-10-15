@@ -123,6 +123,7 @@ Ltac pose_carry_sig sz m wt s c carry_chains sz_nonzero s_nonzero sz_le_log2_m m
           cbv [proj1_sig carry_sig' chained_carries_cps' chained_carries_cps'_step];
           repeat autounfold;
           basesystem_partial_evaluation_RHS;
+          do_replace_match_with_destructuring_match_in_goal;
           reflexivity)
            carry_sig.
 
