@@ -36,7 +36,7 @@ Module Columns.
                {T} (f : (Z*Z^n3)->T) :=
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.to_associational_cps weight q
-        (fun Q => B.Associational.sat_mul_cps (mul_split_cps := @Z.mul_split_cps') s P Q
+        (fun Q => B.Associational.sat_mul_cps (mul_split_cps := @Z.mul_split_cps) s P Q
         (fun PQ => Columns.from_associational_cps weight n3 PQ
         (fun R => Columns.compact_cps (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) (add_get_carry_cps:=@Z.add_get_carry_full_cps) weight R f)))).
 

@@ -3,24 +3,23 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.IdfunWithAlt.
-Require Import Crypto.Util.CPSUtil.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.Tactics.VM.
 
 Create HintDb arithmetic_cps_unfolder.
-Create HintDb parameterized_sig_unfolder discriminated.
 
 Hint Unfold Core.div Core.modulo : arithmetic_cps_unfolder.
 
 Ltac make_parameterized_sig t :=
   refine (_ : { v : _ | v = t });
-  eexists; repeat autounfold with parameterized_sig_unfolder;
+  eexists;
+  cbv delta [t];
+  repeat autounfold with basesystem_partial_evaluation_unfolder arithmetic_cps_unfolder;
   cbv delta [t
-               Core.B.Positional.chained_carries_reduce_cps_step
                B.limb ListUtil.sum ListUtil.sum_firstn
                CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
                Decidable.dec Decidable.dec_eq_Z
-               id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
+               id_tuple_with_alt id_tuple'_with_alt
                Z.add_get_carry_full Z.mul_split
                Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
                Z.add_get_carry_cps];
@@ -29,15 +28,75 @@ Ltac make_parameterized_sig t :=
 
 Notation parameterize_sig t := ltac:(let v := t in make_parameterized_sig v) (only parsing).
 
+Ltac refresh x :=
+  let maybe_x := fresh x in
+  let maybe_x := fresh x in
+  let maybe_x := fresh x in
+  let not_x := fresh x in
+  not_x.
+Ltac pattern_let_in_tuple_under_binders t Z let_inZ let_inZZ :=
+  match t with
+  | (fun x : nat => _)
+    => let x' := refresh x in
+       let ret
+           := constr:(
+                fun x' : nat
+                => ltac:(
+                     let v := (eval cbv beta in (t x')) in
+                     lazymatch v with
+                     | context[Tuple.tuple _ x']
+                       => let v := (eval pattern (@Let_In Z (fun _ => Tuple.tuple Z x')),
+                                    (@Let_In (Z * Z)%type (fun _ => Tuple.tuple Z x'))
+                                     in v) in
+                          let v := match v with ?v _ _ => v end in
+                          let v := (eval cbv beta in (v (let_inZ x') (let_inZZ x'))) in
+                          exact v
+                     end)) in
+       ret
+  | (fun x : ?X => _)
+    => let x' := refresh x in
+       let ret
+           := constr:(
+                fun x' : X
+                => ltac:(
+                     let v := (eval cbv beta in (t x')) in
+                     let v := pattern_let_in_tuple_under_binders v Z let_inZ let_inZZ in
+                     exact v)) in
+       ret
+  end.
+
+Ltac pattern_strip_full_extra t :=
+  let t := (eval cbv beta in (t Z (@LetIn.Let_In))) in
+  let t := constr:(fun (let_inZ : forall n, Z -> (Z -> Tuple.tuple Z n) -> Tuple.tuple Z n)
+                       (let_inZZ : forall n, Z * Z -> (Z * Z -> Tuple.tuple Z n) -> Tuple.tuple Z n)
+                   => ltac:(let liZ := constr:(let_inZ) in
+                            let liZZ := constr:(let_inZZ) in
+                            let v := match t with
+                                     | _ => pattern_let_in_tuple_under_binders t Z liZ liZZ
+                                     | _ => t
+                                     end in
+                            exact v)) in
+  let t := (eval pattern Z, (@Let_In) in t) in
+  let t := match t with ?t _ _ => t end in
+  t.
+Ltac apply_patterned_full_extra t :=
+  eval cbv beta in
+    (fun Z Let_In
+     => t Z Let_In
+          (fun n : nat => @Let_In Z (fun _ => Tuple.tuple Z n))
+          (fun n : nat => @Let_In (Z * Z)%type (fun _ => Tuple.tuple Z n))).
+
 Ltac make_parameterized_from_sig t_sig :=
   let t := (eval cbv [proj1_sig t_sig] in (proj1_sig t_sig)) in
-  let t := pattern_strip t in
+  let t := pattern_strip_full t in
+  let t := pattern_strip_full_extra t in
   exact t.
 
 Notation parameterize_from_sig t := ltac:(let v := t in make_parameterized_from_sig v) (only parsing).
 
 Ltac make_parameterized_eq t t_sig :=
-  let t := apply_patterned t in
+  let t := apply_patterned_full_extra t in
+  let t := apply_patterned_full t in
   exact (proj2_sig t_sig : t = _).
 
 Notation parameterize_eq t t_sig := ltac:(let v := t in let v_sig := t_sig in make_parameterized_eq v v_sig) (only parsing).
@@ -66,7 +125,7 @@ for i in eval multerm mul_cps mul split_cps split reduce_cps reduce negate_snd_c
 done
 echo "  End Associational."
 echo "  Module Positional."
-for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_nth place_cps place from_associational_cps from_associational carry_cps carry chained_carries_cps chained_carries encode add_cps mul_cps reduce_cps carry_reduce_cps  chained_carries_reduce_cps_step chained_carries_reduce_cps chained_carries_reduce negate_snd_cps split_cps scmul_cps unbalanced_sub_cps sub_cps sub opp_cps Fencode Fdecode eval_from select_cps select; do
+for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_nth place_cps place from_associational_cps from_associational carry_cps carry chained_carries_cps chained_carries encode add_cps mul_cps reduce_cps carry_reduce_cps negate_snd_cps split_cps scmul_cps unbalanced_sub_cps sub_cps sub opp_cps Fencode Fdecode eval_from select_cps select; do
   echo "    Definition ${i}_sig := parameterize_sig (@Core.B.Positional.${i}).";
   echo "    Definition ${i} := parameterize_from_sig ${i}_sig.";
   echo "    Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
@@ -283,24 +342,6 @@ done
     Definition carry_reduce_cps_eq := parameterize_eq carry_reduce_cps carry_reduce_cps_sig.
     Hint Unfold carry_reduce_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_reduce_cps_eq : pattern_runtime.
-
-    Definition chained_carries_reduce_cps_step_sig := parameterize_sig (@Core.B.Positional.chained_carries_reduce_cps_step).
-    Definition chained_carries_reduce_cps_step := parameterize_from_sig chained_carries_reduce_cps_step_sig.
-    Definition chained_carries_reduce_cps_step_eq := parameterize_eq chained_carries_reduce_cps_step chained_carries_reduce_cps_step_sig.
-    Hint Unfold chained_carries_reduce_cps_step : basesystem_partial_evaluation_unfolder.
-    Hint Rewrite <- chained_carries_reduce_cps_step_eq : pattern_runtime.
-
-    Definition chained_carries_reduce_cps_sig := parameterize_sig (@Core.B.Positional.chained_carries_reduce_cps).
-    Definition chained_carries_reduce_cps := parameterize_from_sig chained_carries_reduce_cps_sig.
-    Definition chained_carries_reduce_cps_eq := parameterize_eq chained_carries_reduce_cps chained_carries_reduce_cps_sig.
-    Hint Unfold chained_carries_reduce_cps : basesystem_partial_evaluation_unfolder.
-    Hint Rewrite <- chained_carries_reduce_cps_eq : pattern_runtime.
-
-    Definition chained_carries_reduce_sig := parameterize_sig (@Core.B.Positional.chained_carries_reduce).
-    Definition chained_carries_reduce := parameterize_from_sig chained_carries_reduce_sig.
-    Definition chained_carries_reduce_eq := parameterize_eq chained_carries_reduce chained_carries_reduce_sig.
-    Hint Unfold chained_carries_reduce : basesystem_partial_evaluation_unfolder.
-    Hint Rewrite <- chained_carries_reduce_eq : pattern_runtime.
 
     Definition negate_snd_cps_sig := parameterize_sig (@Core.B.Positional.negate_snd_cps).
     Definition negate_snd_cps := parameterize_from_sig negate_snd_cps_sig.
