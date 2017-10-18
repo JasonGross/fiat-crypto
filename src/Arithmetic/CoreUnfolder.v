@@ -8,20 +8,22 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.Tactics.VM.
 
 Create HintDb arithmetic_cps_unfolder.
+Create HintDb parameterized_sig_unfolder discriminated.
 
 Hint Unfold Core.div Core.modulo : arithmetic_cps_unfolder.
 
 Ltac make_parameterized_sig t :=
   refine (_ : { v : _ | v = t });
-  eexists; cbv delta [t
-                        Core.B.Positional.chained_carries_reduce_cps_step
-                        B.limb ListUtil.sum ListUtil.sum_firstn
-                        CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
-                        Decidable.dec Decidable.dec_eq_Z
-                        id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
-                        Z.add_get_carry_full Z.mul_split
-                        Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
-                        Z.add_get_carry_cps];
+  eexists; repeat autounfold with parameterized_sig_unfolder;
+  cbv delta [t
+               Core.B.Positional.chained_carries_reduce_cps_step
+               B.limb ListUtil.sum ListUtil.sum_firstn
+               CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
+               Decidable.dec Decidable.dec_eq_Z
+               id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
+               Z.add_get_carry_full Z.mul_split
+               Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
+               Z.add_get_carry_cps];
   repeat autorewrite with pattern_runtime;
   reflexivity.
 

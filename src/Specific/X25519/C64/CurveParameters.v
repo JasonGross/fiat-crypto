@@ -22,7 +22,6 @@ Definition curve : CurveParameters :=
     karatsuba := None;
     montgomery := false;
     freeze := Some true;
-    ladderstep := true;
 
     mul_code := Some (fun a b =>
       (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)

@@ -1,8 +1,7 @@
-λ x : word128 * word128,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x1, x2)%core,
- uint128_t x3 = (x2 | x1);
- return x3)
-x
-     : word128 * word128 → ReturnType uint128_t
+nonzero = λ var : Z.Syntax.base_type → Type,
+λ '(x0, x1)%core,
+uint128_t x2 = (x1 | x0);
+return x2
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint128_t * uint128_t -> uint128_t)
+
+Argument scope is [function_scope]

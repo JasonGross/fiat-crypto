@@ -14,6 +14,14 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Decidable.
 
+Require Crypto.Specific.Framework.CurveParameters.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Base.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Solinas.
+Require Import Crypto.Util.SideConditions.CorePackages.
+Require Import Crypto.Util.SideConditions.ReductionPackages.
+
+
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
 

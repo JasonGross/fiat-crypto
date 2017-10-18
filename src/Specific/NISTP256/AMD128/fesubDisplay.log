@@ -1,14 +1,11 @@
-λ x x0 : word128 * word128,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x4, x5, (x6, x7))%core,
- uint128_t x9, uint8_t x10 = subborrow_u128(0x0, x5, x7);
- uint128_t x12, uint8_t x13 = subborrow_u128(x10, x4, x6);
- uint128_t x14 = cmovznz128(x13, 0x0, 0xffffffffffffffffffffffffffffffffL);
- uint128_t x15 = (x14 & 0xffffffffffffffffffffffffL);
- uint128_t x17, uint8_t x18 = addcarryx_u128(0x0, x9, x15);
- uint128_t x19 = (x14 & 0xffffffff000000010000000000000000L);
- uint128_t x21, uint8_t _ = addcarryx_u128(x18, x12, x19);
- (Return x21, Return x17))
-(x, x0)%core
-     : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)
+sub = λ var : Z.Syntax.base_type → Type,
+λ '(x2, x3, (x4, x5))%core,
+uint128_t x7, uint8_t x8 = subborrow_u128(0x0, x3, x5);
+uint128_t x10, uint8_t x11 = subborrow_u128(x8, x2, x4);
+uint128_t x12 = cmovznz128(x11, 0x0, 0xffffffffffffffffffffffffffffffffL);
+uint128_t x14, uint8_t x15 = addcarryx_u128(0x0, x7, (x12 & 0xffffffffffffffffffffffffL));
+uint128_t x17, uint8_t _ = addcarryx_u128(x15, x10, (x12 & 0xffffffff000000010000000000000000L));
+(Return x17, Return x14)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint128_t * uint128_t * (uint128_t * uint128_t) -> uint128_t * uint128_t)
+
+Argument scope is [function_scope]

@@ -236,7 +236,6 @@ def make_curve_parameters(parameters):
                                          sz)
     replacements['coef_div_modulus_raw'] = replacements.get('coef_div_modulus', '0')
     replacements['freeze'] = fix_option(nested_list_to_string(replacements.get('freeze', 'freeze' in parameters.get('operations', []))))
-    replacements['ladderstep'] = nested_list_to_string(replacements.get('ladderstep', any(f in parameters.get('operations', []) for f in ('ladderstep', 'xzladderstep'))))
     for k, scope_string in (('upper_bound_of_exponent_loose', ''),
                             ('upper_bound_of_exponent_tight', ''),
                             ('allowable_bit_widths', '%nat'),
@@ -278,7 +277,6 @@ Definition curve : CurveParameters :=
     karatsuba := %(karatsuba)s;
     montgomery := %(montgomery)s;
     freeze := %(freeze)s;
-    ladderstep := %(ladderstep)s;
 
     mul_code := %(mul)s;
 
@@ -297,133 +295,39 @@ Ltac extra_prove_square_eq _ := %(extra_prove_square_eq)s.
     return ret
 
 def make_synthesis(prefix):
-    return r"""Require Import Crypto.Specific.Framework.SynthesisFramework.
+    ret = r"""Require Import Crypto.Specific.Framework.Synthesis.
 Require Import %s.CurveParameters.
 
-Module P <: PrePackage.
-  Definition package : Tag.Context.
-  Proof. make_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq. Defined.
-End P.
+Definition curve := fill_defaults curve.
 
-Module Export S := PackageSynthesis P.
+Definition package : SynthesisOutput curve.
+Proof.
+  Set Ltac Profiling.
+  Time synthesize ().
+  Show Ltac Profile.
+Time Defined.
+
+Time Print Assumptions package.
 """ % prefix
+    return ret
 
 def make_synthesized_arg(fearg, prefix, montgomery=False):
-    def make_from_arg(arg, nargs, phi_arg_postfix='', phi_output_postfix='', prefix=prefix):
-        LETTERS = 'abcdefghijklmnopqrstuvwxyz'
-        assert(nargs <= len(LETTERS))
-        arg_names = ' '.join(LETTERS[:nargs])
-        if not montgomery:
-            arg_types = ' -> '.join(['feBW%s' % phi_arg_postfix] * nargs)
-            mapped_args = ' '.join('(phiBW%s %s)' % (phi_arg_postfix, l)
-                                   for l in LETTERS[:nargs])
-            feBW_output = 'feBW' + phi_output_postfix
-            phi_output = 'phiBW' + phi_output_postfix
-        else:
-            arg_types = ' -> '.join(['feBW_small'] * nargs)
-            mapped_args = ' '.join('(phiM_small %s)' % l
-                                   for l in LETTERS[:nargs])
-            feBW_output = 'feBW_small'
-            phi_output = 'phiM_small'
-        return locals()
-    GEN_PREARG = r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+    def make_from_proj(def_name, proj_name, prefix=prefix, invert_Some=''):
+        return r"""Require Import Crypto.Specific.Framework.Synthesis.
 Require Import %(prefix)s.Synthesis.
 
-(* TODO : change this to field once field isomorphism happens *)
-Definition %(arg)s :
-  { %(arg)s : %(arg_types)s -> %(feBW_output)s
-  | forall %(arg_names)s, %(phi_output)s (%(arg)s %(arg_names)s) = """
-    GEN_MIDARG = "F.%(arg)s %(mapped_args)s"
-    SQUARE_MIDARG = "F.mul %(mapped_args)s %(mapped_args)s"
-    CARRY_MIDARG = "%(mapped_args)s"
-    GEN_POSTARG = r""" }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_%(arg)s ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions %(arg)s.
-"""
-    GEN_ARG = GEN_PREARG + GEN_MIDARG + GEN_POSTARG
-    SQUARE_ARG = GEN_PREARG + SQUARE_MIDARG + GEN_POSTARG
-    CARRY_ARG = GEN_PREARG + CARRY_MIDARG + GEN_POSTARG
-    nargs_map = {'mul':2, 'sub':2, 'add':2, 'square':1, 'opp':1, 'carry':1}
-    special_args = {'fecarry':CARRY_ARG, 'fecarry_square':SQUARE_ARG, 'fesquare':SQUARE_ARG}
-    if fearg in ('fecarry_mul', 'fecarry_sub', 'fecarry_add', 'fecarry_square', 'fecarry_opp'):
-        nargs = nargs_map[fearg.split('_')[-1]]
-        ARG = special_args.get(fearg, GEN_ARG)
-        return ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_tight', phi_output_postfix='_tight')
-    elif fearg in ('femul', 'fesquare', 'fecarry'):
-        ARG = special_args.get(fearg, GEN_ARG)
-        nargs = nargs_map[fearg[2:]]
-        return ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_loose', phi_output_postfix='_tight')
-    if fearg in ('fesub', 'feadd', 'feopp'):
-        nargs = nargs_map[fearg[2:]]
-        return GEN_ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_tight', phi_output_postfix='_loose')
-    elif fearg in ('freeze',):
-        return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition freeze :
-  { freeze : feBW_tight -> feBW_limbwidths
-  | forall a, phiBW_limbwidths (freeze a) = phiBW_tight a }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_freeze ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions freeze.
-""" % {'prefix':prefix}
-    elif fearg in ('fenz',):
-        assert(fearg == 'fenz')
+Time Definition %(def_name)s := Eval lazy in %(invert_Some)spackage.(opsW).(%(proj_name)s).
+""" % locals()
+    if fearg in ('fezero', 'feone', 'feadd', 'fesub', 'fecarry_mul', 'fecarry_square', 'feopp', 'fecarry', 'fecarry_add', 'fecarry_sub', 'fecarry_opp'):
+        return make_from_proj(fearg[2:], fearg[2:])
+    elif fearg in ('femul', 'fesquare'):
+        return make_from_proj(fearg[2:], 'carry_' + fearg[2:])
+    elif fearg in ('freeze', ):
+        assert(not montgomery)
+        return make_from_proj(fearg, fearg, invert_Some='invert_Some ')
+    elif fearg in ('nonzero', 'fenz'):
         assert(montgomery)
-        full_arg = 'nonzero'
-        return r"""Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-Local Open Scope Z_scope.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition %(full_arg)s :
-  { %(full_arg)s : feBW_small -> BoundedWord.BoundedWord 1 adjusted_bitwidth bound1
-  | forall a, (BoundedWord.BoundedWordToZ _ _ _ (%(full_arg)s a) =? 0) = (if Decidable.dec (phiM_small a = F.of_Z m 0) then true else false) }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_%(full_arg)s ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions %(full_arg)s.
-""" % {'prefix':prefix, 'full_arg':full_arg}
-    elif fearg in ('ladderstep', 'xzladderstep'):
-        return r"""Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Ladderstep.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition xzladderstep :
-  { xzladderstep : feW -> feW * feW -> feW * feW -> feW * feW * (feW * feW)
-  | forall x1 Q Q',
-      let xz := xzladderstep x1 Q Q' in
-      let eval := B.Positional.Fdecode wt in
-      feW_tight_bounded x1
-      -> feW_tight_bounded (fst Q) /\ feW_tight_bounded (snd Q)
-      -> feW_tight_bounded (fst Q') /\ feW_tight_bounded (snd Q')
-      -> ((feW_tight_bounded (fst (fst xz)) /\ feW_tight_bounded (snd (fst xz)))
-          /\ (feW_tight_bounded (fst (snd xz)) /\ feW_tight_bounded (snd (snd xz))))
-         /\ Tuple.map (n:=2) (Tuple.map (n:=2) phiW) xz = FMxzladderstep (m:=m) (eval (proj1_sig a24_sig)) (phiW x1) (Tuple.map (n:=2) phiW Q) (Tuple.map (n:=2) phiW Q') }.
-Proof.
-  Set Ltac Profiling.
-  synthesize_xzladderstep ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions xzladderstep.
-""" % {'prefix':prefix}
+        return make_from_proj('nonzero', 'nonzero', invert_Some='invert_Some ')
     else:
         print('ERROR: Unsupported operation: %s' % fearg)
         raise ArgumentError
@@ -435,19 +339,17 @@ def make_display_arg(fearg, prefix):
     if fearg in ('femul', 'fesub', 'feadd', 'fesquare', 'feopp', 'fecarry',
                  'fecarry_mul', 'fecarry_sub', 'fecarry_add', 'fecarry_square', 'fecarry_opp'):
         function_name = fearg[2:]
-    elif fearg in ('freeze', 'xzladderstep'):
+    elif fearg in ('nonzero', 'freeze'):
         pass
     elif fearg in ('fenz',):
         function_name = 'nonzero'
-    elif fearg in ('ladderstep', ):
-        function_name = 'xzladderstep'
     else:
         print('ERROR: Unsupported operation: %s' % fearg)
         raise ArgumentError
     return r"""Require Import %(prefix)s.%(file_name)s.
 Require Import Crypto.Specific.Framework.IntegrationTestDisplayCommon.
 
-Check display %(function_name)s.
+Print %(file_name)s.%(function_name)s.
 """ % locals()
 
 def make_compiler(compiler):
