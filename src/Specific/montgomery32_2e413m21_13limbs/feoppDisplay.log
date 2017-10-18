@@ -1,0 +1,33 @@
+opp = λ var : Z.Syntax.base_type → Type,
+λ '(x22, x23, x21, x19, x17, x15, x13, x11, x9, x7, x5, x3, x1)%core,
+uint32_t x25, uint8_t x26 = subborrow_u32(0x0, 0x0, x1);
+uint32_t x28, uint8_t x29 = subborrow_u32(x26, 0x0, x3);
+uint32_t x31, uint8_t x32 = subborrow_u32(x29, 0x0, x5);
+uint32_t x34, uint8_t x35 = subborrow_u32(x32, 0x0, x7);
+uint32_t x37, uint8_t x38 = subborrow_u32(x35, 0x0, x9);
+uint32_t x40, uint8_t x41 = subborrow_u32(x38, 0x0, x11);
+uint32_t x43, uint8_t x44 = subborrow_u32(x41, 0x0, x13);
+uint32_t x46, uint8_t x47 = subborrow_u32(x44, 0x0, x15);
+uint32_t x49, uint8_t x50 = subborrow_u32(x47, 0x0, x17);
+uint32_t x52, uint8_t x53 = subborrow_u32(x50, 0x0, x19);
+uint32_t x55, uint8_t x56 = subborrow_u32(x53, 0x0, x21);
+uint32_t x58, uint8_t x59 = subborrow_u32(x56, 0x0, x23);
+uint32_t x61, uint8_t x62 = subborrow_u32(x59, 0x0, x22);
+uint32_t x63 = cmovznz32(x62, 0x0, 0xffffffff);
+uint32_t x65, uint8_t x66 = addcarryx_u32(0x0, x25, (x63 & 0xffffffeb));
+uint32_t x68, uint8_t x69 = addcarryx_u32(x66, x28, (x63 & 0xffffffff));
+uint32_t x71, uint8_t x72 = addcarryx_u32(x69, x31, (x63 & 0xffffffff));
+uint32_t x74, uint8_t x75 = addcarryx_u32(x72, x34, (x63 & 0xffffffff));
+uint32_t x77, uint8_t x78 = addcarryx_u32(x75, x37, (x63 & 0xffffffff));
+uint32_t x80, uint8_t x81 = addcarryx_u32(x78, x40, (x63 & 0xffffffff));
+uint32_t x83, uint8_t x84 = addcarryx_u32(x81, x43, (x63 & 0xffffffff));
+uint32_t x86, uint8_t x87 = addcarryx_u32(x84, x46, (x63 & 0xffffffff));
+uint32_t x89, uint8_t x90 = addcarryx_u32(x87, x49, (x63 & 0xffffffff));
+uint32_t x92, uint8_t x93 = addcarryx_u32(x90, x52, (x63 & 0xffffffff));
+uint32_t x95, uint8_t x96 = addcarryx_u32(x93, x55, (x63 & 0xffffffff));
+uint32_t x98, uint8_t x99 = addcarryx_u32(x96, x58, (x63 & 0xffffffff));
+uint32_t x101, uint8_t _ = addcarryx_u32(x99, x61, (x63 & 0x1fffffff));
+(Return x101, Return x98, Return x95, Return x92, Return x89, Return x86, Return x83, Return x80, Return x77, Return x74, Return x71, Return x68, Return x65)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t -> uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
+
+Argument scope is [function_scope]

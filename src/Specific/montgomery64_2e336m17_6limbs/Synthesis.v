@@ -1,9 +1,13 @@
-Require Import Crypto.Specific.Framework.SynthesisFramework.
+Require Import Crypto.Specific.Framework.Synthesis.
 Require Import Crypto.Specific.montgomery64_2e336m17_6limbs.CurveParameters.
 
-Module P <: PrePackage.
-  Definition package : Tag.Context.
-  Proof. make_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq. Defined.
-End P.
+Definition curve := fill_defaults curve.
 
-Module Export S := PackageSynthesis P.
+Definition package : SynthesisOutput curve.
+Proof.
+  Set Ltac Profiling.
+  Time synthesize ().
+  Show Ltac Profile.
+Time Defined.
+
+(* Time Print Assumptions package. *)

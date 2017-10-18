@@ -1,14 +1,4 @@
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Specific.Framework.Synthesis.
 Require Import Crypto.Specific.solinas64_2e251m9_5limbs.Synthesis.
 
-(* TODO : change this to field once field isomorphism happens *)
-Definition freeze :
-  { freeze : feBW_tight -> feBW_limbwidths
-  | forall a, phiBW_limbwidths (freeze a) = phiBW_tight a }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_freeze ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions freeze.
+Time Definition freeze := Eval lazy in invert_Some package.(opsW).(freeze).

@@ -22,7 +22,6 @@ Definition curve : CurveParameters :=
     karatsuba := None;
     montgomery := false;
     freeze := Some false;
-    ladderstep := false;
 
     mul_code := None;
 

@@ -1,7 +1,6 @@
-λ x x0 : word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x6, x7, x5, (x10, x11, x9))%core,
- (((0x7fffffffffe + x6) - x10), ((0x7fffffffffe + x7) - x11), ((0xffffffffffe + x5) - x9)))
-(x, x0)%core
-     : word64 * word64 * word64 → word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t)
+sub = λ var : Z.Syntax.base_type → Type,
+λ '(x4, x5, x3, (x8, x9, x7))%core,
+(((0x7fffffffffe + x4) - x8), ((0x7fffffffffe + x5) - x9), ((0xffffffffffe + x3) - x7))
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint64_t * uint64_t * uint64_t * (uint64_t * uint64_t * uint64_t) -> uint64_t * uint64_t * uint64_t)
+
+Argument scope is [function_scope]

@@ -1,19 +1,18 @@
-λ x : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x23, x24, x22, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
- uint32_t x25 = (x24 | x23);
- uint32_t x26 = (x22 | x25);
- uint32_t x27 = (x20 | x26);
- uint32_t x28 = (x18 | x27);
- uint32_t x29 = (x16 | x28);
- uint32_t x30 = (x14 | x29);
- uint32_t x31 = (x12 | x30);
- uint32_t x32 = (x10 | x31);
- uint32_t x33 = (x8 | x32);
- uint32_t x34 = (x6 | x33);
- uint32_t x35 = (x4 | x34);
- uint32_t x36 = (x2 | x35);
- return x36)
-x
-     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType uint32_t
+nonzero = λ var : Z.Syntax.base_type → Type,
+λ '(x22, x23, x21, x19, x17, x15, x13, x11, x9, x7, x5, x3, x1)%core,
+uint32_t x24 = (x23 | x22);
+uint32_t x25 = (x21 | x24);
+uint32_t x26 = (x19 | x25);
+uint32_t x27 = (x17 | x26);
+uint32_t x28 = (x15 | x27);
+uint32_t x29 = (x13 | x28);
+uint32_t x30 = (x11 | x29);
+uint32_t x31 = (x9 | x30);
+uint32_t x32 = (x7 | x31);
+uint32_t x33 = (x5 | x32);
+uint32_t x34 = (x3 | x33);
+uint32_t x35 = (x1 | x34);
+return x35
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t -> uint32_t)
+
+Argument scope is [function_scope]

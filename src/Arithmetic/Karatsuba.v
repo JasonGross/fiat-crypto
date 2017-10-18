@@ -81,7 +81,7 @@ Context (weight : nat -> Z)
     actually run and a version to bounds-check, along with a proof
     that they are exactly equal. This works around cases where the
     bounds proof requires high-level reasoning. *)
-  Local Notation id_with_alt_bounds_cps := id_tuple_with_alt_cps'.
+  Local Notation id_with_alt_bounds_cps := id_tuple_with_alt_cps.
 
   (*
     If:
@@ -137,8 +137,8 @@ Context (weight : nat -> Z)
       (fun sum_y => mul_cps weight sum_x sum_y
       (fun mul_sumxy =>
 
-      id_with_alt_bounds_cps (fun f =>
-      (unbalanced_sub_cps weight mul_sumxy z0 f)) (fun f =>
+      id_with_alt_bounds_cps (fun _ f =>
+      (unbalanced_sub_cps weight mul_sumxy z0 f)) (fun _ f =>
 
       (mul_cps weight (fst x0_x1) (snd y0_y1)
       (fun x0_y1 => mul_cps weight (snd x0_x1) (fst y0_y1)

@@ -34,7 +34,6 @@ Record CurveParameters :=
     karatsuba : option bool; (* defaults to false, currently unused *)
     montgomery : bool;
     freeze : option bool; (* defaults to true iff [s = 2^(base * sz)] *)
-    ladderstep : bool;
 
     mul_code : option (Z^sz -> Z^sz -> Z^sz);
     square_code : option (Z^sz -> Z^sz);
@@ -62,7 +61,6 @@ Declare Reduction cbv_RawCurveParameters
             karatsuba
             montgomery
             freeze
-            ladderstep
             mul_code
             square_code
             upper_bound_of_exponent_tight
