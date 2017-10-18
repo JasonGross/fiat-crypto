@@ -13,6 +13,7 @@ src/Algebra/Nsatz.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Arithmetic/Core.v
+src/Arithmetic/CoreCompiler.v
 src/Arithmetic/CoreUnfolder.v
 src/Arithmetic/Karatsuba.v
 src/Arithmetic/ModularArithmeticPre.v
@@ -33,6 +34,7 @@ src/Arithmetic/Saturated/AddSub.v
 src/Arithmetic/Saturated/Core.v
 src/Arithmetic/Saturated/CoreUnfolder.v
 src/Arithmetic/Saturated/Freeze.v
+src/Arithmetic/Saturated/FreezeCompiler.v
 src/Arithmetic/Saturated/FreezeUnfolder.v
 src/Arithmetic/Saturated/MontgomeryAPI.v
 src/Arithmetic/Saturated/MulSplit.v
