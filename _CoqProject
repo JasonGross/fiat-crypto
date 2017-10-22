@@ -15,6 +15,7 @@ src/Algebra/ScalarMult.v
 src/Arithmetic/Core.v
 src/Arithmetic/CoreCompiler.v
 src/Arithmetic/CoreUnfolder.v
+src/Arithmetic/CoreUnfolder_bak.v
 src/Arithmetic/Karatsuba.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
