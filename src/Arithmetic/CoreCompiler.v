@@ -22,14 +22,10 @@ Import ZUtil.Definitions.
 Require Import Crypto.Util.Curry.
 Import Arithmetic.Core ZUtil.Definitions ZUtil.CPS Util.IdfunWithAlt.
 
-Local Notation exprZv var t
+Local Notation exprZ
   := (@Syntax.exprf
         ZExtended.Syntax.base_type
-        ZExtended.Syntax.op
-        var
-        t).
-Local Notation exprZ t
-  := (forall var, exprZv var t).
+        ZExtended.Syntax.op).
 Local Notation tZ := (Tbase TZ).
 Local Notation tBool := (Tbase TBool).
 
@@ -42,9 +38,9 @@ Ltac fix_arg ty arg :=
            (fun a : A
             => let arg' := arg a in
                ltac:(let v := fix_arg B arg' in exact v)))
-  | exprZ tZ
-    => constr:((fun var' => Op (var:=var') (ConstZ arg) TT)
-               : interp_flat_type (fun t => exprZ (Tbase t)) tZ)
+  | @exprZ ?var' tZ
+    => constr:(Op (var:=var') (ConstZ arg) TT
+               : interp_flat_type (fun t => @exprZ var' (Tbase t)) tZ)
   | (?A * ?B)%type
     => let arg' := open_constr:(_) in
        let arg1 := open_constr:(fst arg') in
@@ -59,8 +55,8 @@ Ltac fix_arg ty arg :=
        | ?T => let dummy := match goal with _ => idtac "Warning: fix_arg: Unhandled type" T end in
                ret
        end
-  | Tuple.tuple (exprZ (Tbase TZ)) ?n'
-    => constr:(flat_interp_tuple (interp_base_type:=fun ty' => exprZ (Tbase ty')) (T:=tZ) (n:=n') arg)
+  | Tuple.tuple (?f (Tbase TZ)) ?n'
+    => constr:(flat_interp_tuple (interp_base_type:=fun ty' => f (Tbase ty')) (T:=tZ) (n:=n') arg)
   | _ => constr:(arg : ty)
   end.
 Ltac fix_args t :=
@@ -74,24 +70,19 @@ Ltac fix_args t :=
   | _ => t
   end.
 
-Definition of_tuple_var {n : nat} (ts : Tuple.tuple (exprZ tZ) n)
-  : exprZ (tZ^n)
-  := fun var
-     => SmartMap.SmartPairf (flat_interp_untuple (n:=n) (interp_base_type:=fun ty' => Syntax.exprf _ _ (Tbase ty')) (T:=tZ) (Tuple.map (fun e => e var) ts)).
-(*Definition of_tuple_var {var : base_type -> Type} {n : nat} (ts : Tuple.tuple (exprZ var tZ) n)
-  := SmartMap.SmartPairf (flat_interp_untuple (n:=n) (interp_base_type:=fun ty' => @Compilers.Syntax.exprf _ op var (Tbase ty')) (T:=tZ) ts).*)
+Definition of_tuple_var {var : base_type -> Type} {n : nat} (ts : Tuple.tuple (@exprZ var tZ) n)
+  := SmartMap.SmartPairf (flat_interp_untuple (n:=n) (interp_base_type:=fun ty' => @Compilers.Syntax.exprf _ op var (Tbase ty')) (T:=tZ) ts).
 Check of_tuple_var.
 Require Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.ZExtended.InlineConstAndOp.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.Eta.
 
-Definition under_cps_post_compile {T} (v : exprZ T)
-  : exprZ T
-  := fun var
-     => let t := linearizef (inline_const_and_opf (v _)) in
-        let t := exprf_eta t in
-        t.
+Definition under_cps_post_compile {var T} (v : @exprZ (fun ty => @exprZ var (Tbase ty)) T)
+  : @exprZ (fun ty => @exprZ var (Tbase ty)) T
+  := let t := linearizef (inline_const_and_opf v) in
+     let t := exprf_eta t in
+     t.
 
 
 
@@ -117,8 +108,8 @@ Local Notation lift3 f :=
   (fun x y z => Op f (Pair (Pair x y) z)).
 
 
-Ltac compile t :=
-  let exprZvt := constr:(fun var n => (exprZv var (tuple tZ n))) in
+Ltac compile varf extraVar SmartVarVarf t :=
+  let exprZf := constr:(fun var n => (@exprZ (varf var) (tuple tZ n))) in
   let t := (eval cbv beta zeta in
                ltac:(let v := fresh in
                      pose t as v;
@@ -138,7 +129,7 @@ Ltac compile t :=
            fun (var : base_type -> Type) (n : nat)
            => ltac:(
                 let t := (eval cbv beta in (t var n)) in
-                let T := (eval cbv beta in (exprZvt var n)) in
+                let T := (eval cbv beta in (exprZf var n)) in
                 let t := (eval
                             pattern
                             (@LetIn.Let_In Z (fun _ => T)),
@@ -151,6 +142,7 @@ Ltac compile t :=
                           Z.mul, Z.add, Z.opp, Z.shiftr, Z.shiftl, Z.land, Z.lor,
                           Z.modulo, Z.div, Z.log2, Z.pow, Z.ones,
                           2%Z, 1%Z, 0%Z
+
                            in t) in
                 let t := match t with ?t
                                        _
@@ -172,17 +164,15 @@ Ltac compile t :=
                 exact t)) in
   let t := (eval cbv beta iota zeta in
                (fun var n
-                => (*let var' := (fun ty => exprZ var (Tbase ty)) in
-                   let f_type := interp_flat_type var' (Prod tZ tZ) -> _ in*)
+                => let var' := (fun ty => @exprZ var (Tbase ty)) in
+                   let f_type := interp_flat_type var' (Prod tZ tZ) -> _ in
                    let t'
-                       := t var n (exprZ tZ)
-                            (fun v' f
-                             => LetIn (v' _)
-                                      (fun args => f (SmartMap.SmartVarVarf args) _))(*
-                            (fun v' f => LetIn (extraVar (fst v')) (fun v'0 => LetIn (extraVar (snd v')) (fun v'1 => f (SmartMap.SmartVarVarf v'0, SmartMap.SmartVarVarf v'1))))
-                            (fun x y z (f : f_type) => LetIn (var:=varf var) (Op AddGetCarry (Pair (Pair x y) z)) (fun args => f (SmartMap.SmartVarVarf args)))
-                            (fun x y z (f : f_type) => LetIn (var:=varf var) (Op MulSplitAtBitwidth (Pair (Pair x y) z)) (fun args => f (SmartMap.SmartVarVarf args)))
-                            (fun x y f => Op BoolCase (Pair (Pair (Op Zeqb (Pair x y)) (f true)) (f false)))
+                       := t var n (@exprZ var tZ)
+                            (fun v' f => LetIn (extraVar v') (fun args => f (SmartVarVarf args)))
+                            (fun v' f => LetIn (extraVar (fst v')) (fun v'0 => LetIn (extraVar (snd v')) (fun v'1 => f (SmartVarVarf v'0, SmartVarVarf v'1))))
+                            (fun x y z (f : f_type) => LetIn (var:=varf var) (Op AddGetCarry (Pair (Pair (extraVar x) (extraVar y)) (extraVar z))) (fun args => f (SmartVarVarf args)))
+                            (fun x y z (f : f_type) => LetIn (var:=varf var) (Op MulSplitAtBitwidth (Pair (Pair (extraVar x) (extraVar y)) (extraVar z))) (fun args => f (SmartVarVarf args)))
+                            (fun x y f => Op BoolCase (Pair (Pair (Op Zeqb (Pair (extraVar x) (extraVar y))) (f true)) (f false)))
                             (lift3 Zselect)
                             (lift2 Zmul) (lift2 Zadd) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zland) (lift2 Zlor)
                             (lift2 Zmul) (lift2 Zadd) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zshiftl) (lift2 Zland) (lift2 Zlor)
@@ -190,15 +180,13 @@ Ltac compile t :=
                             (Op (ConstZ 2%Z) TT) (Op (ConstZ 1%Z) TT) (Op (ConstZ 0%Z) TT)
                             (fun ts => LetIn (under_cps_post_compile (of_tuple_var (Tuple.map extraVar ts)))
                                              (fun v => SmartMap.SmartPairf (SmartMap.SmartVarfMap (fun _ v => extraVar v) v))) in
-               ltac:(let v := fix_args t' in exact v)*) in t'
+               ltac:(let v := fix_args t' in exact v)
            )) in
   t.
 
 
-Definition post_compile {n} {src} (t : forall var, interp_flat_type (fun t => exprZv var (Tbase t)) src -> exprZv var (tZ ^ n))
-  := let t := fun var => Syntax.Abs
-                           (var:=var)
-                           (fun args => t var (SmartMap.SmartVarVarf args)) in
+Definition post_compile {n} {src} (t : forall var : base_type -> Type, interp_flat_type (fun t => @exprZ var (Tbase t)) src -> @exprZ (fun t => @exprZ var (Tbase t)) (tZ ^ n))
+  := let t := fun var => Syntax.Abs (fun args => StripExpr.strip_exprf (t var (SmartMap.SmartVarfMap (fun t v => Var v) args))) in
      let t := Linearize (InlineConstAndOp t) in
      let t := ExprEta t in
      t.
@@ -212,9 +200,11 @@ Ltac post_compile t :=
 Definition compiled_preadd_sig (weight : nat -> Z) (n : nat)
   : { t : _ & t }.
 Proof.
-  eexists. (* (fun t => exprZ var (Tbase t)) *)
-  let t := compile (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (exprZv var (tuple tZ n)) f) in
-  pose t.
+  eexists. (* (fun t => @exprZ var (Tbase t)) *)
+  let SmartVarVarf := uconstr:((*SmartMap.SmartVarVarf*)fun v => v) in
+  let extraVar := uconstr:(fun v => Var v) in
+  let varf := uconstr:(fun var ty => @exprZ var (Tbase ty)) in
+  let t := compile varf extraVar SmartVarVarf (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (@exprZ (varf var) (tuple tZ n)) f) in
   let t := post_compile (fun var xy => t var n weight xy) in
   exact t.
 Defined.
@@ -258,7 +248,7 @@ Definition compiled_add_sig (weight : nat -> Z) (n : nat)
       | (forall v, Z.Syntax.Interp add v = flat_interp_untuple (T:=Tbase Z.Syntax.TZ) (@Core.B.Positional.add_cps weight n (flat_interp_tuple (fst v)) (flat_interp_tuple (snd v)) _ id))
         /\ Wf add }.
 Proof.
-  let t := compile (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (exprZ (fun t => exprZ var (Tbase t)) (tuple tZ n)) f) in
+  let t := compile (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (@exprZ (fun t => @exprZ var (Tbase t)) (tuple tZ n)) f) in
   let t := post_compile (fun var xy => t var n weight xy) in
   idtac t;
   let T := type of t in pose T.
@@ -371,19 +361,19 @@ Inductive exprZ {var : base_type -> Set} : type -> Set :=
 | LetIn {tx tC} (ex : exprZ tx) (eC : interp_type_gen var tx -> exprZ tC)
   : exprZ tC.
 
-Fixpoint of_tuple' {var T n} : Tuple.tuple' (exprZ var T) n -> exprZ var (tuple' T n)
+Fixpoint of_tuple' {var T n} : Tuple.tuple' (@exprZ var T) n -> @exprZ var (tuple' T n)
   := match n with
      | 0 => fun x => x
      | S n' => fun xy : (Tuple.tuple' (exprZ _) _ * exprZ _)%type
                => Pair (of_tuple' (fst xy)) (snd xy)
      end.
-Definition of_tuple {var T n} : Tuple.tuple (exprZ var T) n -> exprZ var (tuple T n)
+Definition of_tuple {var T n} : Tuple.tuple (@exprZ var T) n -> @exprZ var (tuple T n)
   := match n with
      | 0 => fun x => TT
      | S n' => of_tuple'
      end.
 
-Fixpoint compile {var T} (e : exprZ var T)
+Fixpoint compile {var T} (e : @exprZ var T)
   : @Syntax.exprf base_type op var T
   := match e with
      | Op src dst opv args
@@ -410,6 +400,6 @@ Definition compiled_add_sig (weight : nat -> Z) (n : nat)
       | (forall v, Syntax.Interp add v = flat_interp_untuple (T:=Tbase Syntax.TZ) (@Core.B.Positional.add_cps weight n (flat_interp_tuple (fst v)) (flat_interp_tuple (snd v)) _ id))
         /\ Wf add }.
 Proof.
-  let t := compile (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (exprZ (fun t => exprZ var (Tbase t)) (tuple tZ n)) f) in
+  let t := compile (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (@exprZ (fun t => @exprZ var (Tbase t)) (tuple tZ n)) f) in
   let t := post_compile (fun var xy => t var n weight xy) in
   let T := type of t in pose T.
