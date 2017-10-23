@@ -74,6 +74,7 @@ Definition of_tuple_var {var : base_type -> Type} {n : nat} (ts : Tuple.tuple (@
   := SmartMap.SmartPairf (flat_interp_untuple (n:=n) (interp_base_type:=fun ty' => @Compilers.Syntax.exprf _ op var (Tbase ty')) (T:=tZ) ts).
 Check of_tuple_var.
 Require Crypto.Compilers.ExprInversion.
+Require Import Crypto.Compilers.ZExtended.InlineConstAndOp.
 Require Import Crypto.Compilers.ZExtended.InlineConstAndOpByRewrite.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.Eta.
@@ -106,6 +107,12 @@ Local Notation lift2 f :=
   (fun x y => Op f (Pair x y)).
 Local Notation lift3 f :=
   (fun x y z => Op f (Pair (Pair x y) z)).
+Local Notation elift1 f :=
+  (fun x => under_cps_post_compile (Op f x)).
+Local Notation elift2 f :=
+  (fun x y => under_cps_post_compile (Op f (Pair x y))).
+Local Notation elift3 f :=
+  (fun x y z => under_cps_post_compile (Op f (Pair (Pair x y) z))).
 
 
 Ltac compile varf extraVar SmartVarVarf t :=
@@ -172,22 +179,21 @@ Ltac compile varf extraVar SmartVarVarf t :=
                             (fun v' f => LetIn (extraVar (fst v')) (fun v'0 => LetIn (extraVar (snd v')) (fun v'1 => f (SmartVarVarf v'0, SmartVarVarf v'1))))
                             (fun x y z (f : f_type) => LetIn (var:=varf var) (Op AddGetCarry (Pair (Pair (extraVar x) (extraVar y)) (extraVar z))) (fun args => f (SmartVarVarf args)))
                             (fun x y z (f : f_type) => LetIn (var:=varf var) (Op MulSplitAtBitwidth (Pair (Pair (extraVar x) (extraVar y)) (extraVar z))) (fun args => f (SmartVarVarf args)))
-                            (fun x y f => Op BoolCase (Pair (Pair (Op Zeqb (Pair (extraVar x) (extraVar y))) (f true)) (f false)))
+                            (fun x y f => under_cps_post_compile (Op BoolCase (Pair (Pair (Op Zeqb (Pair (extraVar x) (extraVar y))) (f true)) (f false))))
                             (lift3 Zselect)
                             (lift2 Zmul) (lift2 Zadd) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zland) (lift2 Zlor)
                             (lift2 Zmul) (lift2 Zadd) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zshiftl) (lift2 Zland) (lift2 Zlor)
                             (lift2 Zmodulo) (lift2 Zdiv) (lift1 Zlog2) (lift2 Zpow) (lift1 Zones)
                             (Op (ConstZ 2%Z) TT) (Op (ConstZ 1%Z) TT) (Op (ConstZ 0%Z) TT)
-                            (fun ts => LetIn (under_cps_post_compile (of_tuple_var (Tuple.map extraVar ts)))
-                                             (fun v => SmartMap.SmartPairf (SmartMap.SmartVarfMap (fun _ v => extraVar v) v))) in
+                            (fun ts => under_cps_post_compile (of_tuple_var (Tuple.map extraVar ts))) in
                ltac:(let v := fix_args t' in exact v)
            )) in
   t.
 
 
-Definition post_compile {n} {src} (t : forall var : base_type -> Type, interp_flat_type (fun t => @exprZ var (Tbase t)) src -> @exprZ (fun t => @exprZ var (Tbase t)) (tZ ^ n))
-  := let t := fun var => Syntax.Abs (fun args => StripExpr.strip_exprf (t var (SmartMap.SmartVarfMap (fun t v => Var v) args))) in
-     let t := Linearize (InlineConstAndOp t) in
+Definition post_compile {n} {src} (t : forall var : base_type -> Type, interp_flat_type (fun t => @exprZ var (Tbase t)) src -> @exprZ var (tZ ^ n))
+  := let t := fun var => Syntax.Abs (fun args => t var (SmartMap.SmartVarfMap (fun t v => Var v) args)) in
+     let t := Linearize (InlineConstAndOp.InlineConstAndOp t) in
      let t := ExprEta t in
      t.
 
@@ -201,9 +207,9 @@ Definition compiled_preadd_sig (weight : nat -> Z) (n : nat)
   : { t : _ & t }.
 Proof.
   eexists. (* (fun t => @exprZ var (Tbase t)) *)
-  let SmartVarVarf := uconstr:((*SmartMap.SmartVarVarf*)fun v => v) in
-  let extraVar := uconstr:(fun v => Var v) in
-  let varf := uconstr:(fun var ty => @exprZ var (Tbase ty)) in
+  let SmartVarVarf := uconstr:(SmartMap.SmartVarVarf) in
+  let extraVar := uconstr:(fun v => v) in
+  let varf := uconstr:(fun var => var) in
   let t := compile varf extraVar SmartVarVarf (fun var n f weight xy => @Core.B.Positional.add_cps weight n (fst xy) (snd xy) (@exprZ (varf var) (tuple tZ n)) f) in
   let t := post_compile (fun var xy => t var n weight xy) in
   exact t.
@@ -219,10 +225,35 @@ Require Import Crypto.Specific.X25519.C64.Synthesis.
 Definition compiled_add := compiled_preadd wt sz.
 Goal True.
   pose compiled_add as e.
-  cbv [compiled_add compiled_preadd P.sz CPSUtil.map_cps List.seq Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple'] in e;
+  cbv [compiled_add compiled_preadd P.sz CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' under_cps_post_compile linearizef] in e;
     cbn [flat_interp_tuple' SmartMap.smart_interp_flat_map fst snd] in e.
   cbv [CPSUtil.fold_right_cps2_specialized] in e.
+  cbv [inline_const_and_opf Compilers.InlineConstAndOpByRewrite.Rewrite.inline_const_and_opf InlineConstAndOpByRewrite.Rewrite.Const InlineConstAndOpByRewrite.Rewrite.invert_ConstUnit] in e.
+  Set Printing Depth 100000.
+  Notation rewf := (Rewriter.rewrite_opf _).
+  Notation rewf' := (InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op _ _ _ _ _ ).
   unfold CPSUtil.fold_right_cps2_specialized_step at 1 in (value of e); cbn [fst snd] in e.
+  cbn [SmartMap.smart_interp_flat_map fst snd inline_const_and_opf] in e.
+  cbn [InlineConstAndOpByRewrite.Rewrite.inline_const_and_op_genf] in e.
+  cbv [InlineConstAndOpByRewrite.Rewrite.inline_const_and_op_genf] in e.
+  cbv [InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op] in e.
+  cbv [InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op] in e.
+  cbn [Rewriter.rewrite_opf] in e.
+  About InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op.
+  Arguments InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op _ _ _ _ _ _ _ _ _ !_ _ / .
+  cbv [inline_const_and_opf Compilers.InlineConstAndOpByRewrite.Rewrite.inline_const_and_op_genf Compilers.InlineConstAndOpByRewrite.Rewrite.inline_const_and_opf InlineConstAndOpByRewrite.Rewrite.Const] in e;
+    cbn [Rewriter.rewrite_opf InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op] in e.
+  cbv [linearizef] in e; cbn [linearizef_gen under_letsf] in e.
+  do 2 (cbv [InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op SmartMap.SmartPairf SmartMap.SmartVarfMap curry2 InlineConstAndOpByRewrite.Rewrite.invert_ConstUnit] in e;
+        cbn [id
+               InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op SmartMap.SmartPairf SmartMap.SmartVarfMap curry2 InlineConstAndOpByRewrite.Rewrite.invert_ConstUnit
+               ExprInversion.invert_PairsConst SmartMap.smart_interp_flat_map interp_op InlineConstAndOpByRewrite.Rewrite.invert_ConstUnit'] in e).
+
+  cbv [] in e.
+  cbn [] in e.
+  cbn [interp_op] in e.
+  cbv [curry2] in e.
+  cbn [InlineConstAndOpByRewrite.Rewrite.rewrite_for_const_and_op] in e.
   unfold CPSUtil.fold_right_cps2_specialized_step at 1 in (value of e); cbn [fst snd] in e.
   unfold CPSUtil.fold_right_cps2_specialized_step at 1 in (value of e); cbn [fst snd] in e.
   unfold CPSUtil.fold_right_cps2_specialized_step at 1 in (value of e); cbn [fst snd] in e.
