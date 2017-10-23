@@ -79,6 +79,7 @@ Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.Eta.
 
 Definition under_cps_post_compile {var T} (v : @exprZ (fun ty => @exprZ var (Tbase ty)) T)
+  : @exprZ (fun ty => @exprZ var (Tbase ty)) T
   := let t := linearizef (inline_const_and_opf v) in
      let t := exprf_eta t in
      t.
@@ -177,7 +178,8 @@ Ltac compile varf extraVar SmartVarVarf t :=
                             (lift2 Zmul) (lift2 Zadd) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zshiftl) (lift2 Zland) (lift2 Zlor)
                             (lift2 Zmodulo) (lift2 Zdiv) (lift1 Zlog2) (lift2 Zpow) (lift1 Zones)
                             (Op (ConstZ 2%Z) TT) (Op (ConstZ 1%Z) TT) (Op (ConstZ 0%Z) TT)
-                            (fun ts => under_cps_post_compile (of_tuple_var (Tuple.map extraVar ts))) in
+                            (fun ts => LetIn (under_cps_post_compile (of_tuple_var (Tuple.map extraVar ts)))
+                                             (fun v => SmartMap.SmartPairf (SmartMap.SmartVarfMap (fun _ v => extraVar v) v))) in
                ltac:(let v := fix_args t' in exact v)
            )) in
   t.
