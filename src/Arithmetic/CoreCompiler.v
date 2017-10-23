@@ -74,12 +74,12 @@ Definition of_tuple_var {var : base_type -> Type} {n : nat} (ts : Tuple.tuple (@
   := SmartMap.SmartPairf (flat_interp_untuple (n:=n) (interp_base_type:=fun ty' => @Compilers.Syntax.exprf _ op var (Tbase ty')) (T:=tZ) ts).
 Check of_tuple_var.
 Require Crypto.Compilers.ExprInversion.
-Require Import Crypto.Compilers.ZExtended.InlineConstAndOp.
+Require Import Crypto.Compilers.ZExtended.InlineConstAndOpByRewrite.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.Eta.
 
-Definition under_cps_post_compile {var T} (v : @exprZ (fun ty => @exprZ var (Tbase ty)) T)
-  : @exprZ (fun ty => @exprZ var (Tbase ty)) T
+Definition under_cps_post_compile {var T} (v : @exprZ var T)
+  : @exprZ var T
   := let t := linearizef (inline_const_and_opf v) in
      let t := exprf_eta t in
      t.
