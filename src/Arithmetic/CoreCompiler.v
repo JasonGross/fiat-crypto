@@ -1,4 +1,5 @@
 Require Import Crypto.Arithmetic.CoreUnfolder.
+Require Import Crypto.Arithmetic.Saturated.FreezeUnfolder.
 Import BinNums BinInt ZArith LetIn.
 
 
@@ -267,7 +268,7 @@ Definition compiled_preadd wt n
   := Eval cbv [projT2 projT1 compiled_preadd_sig] in
       projT2 (compiled_preadd_sig wt n).
 
-
+(*
 Definition compiled_premul_sig (weight : nat -> Z) (n : nat)
   : { t : _ & t }.
 Proof.
@@ -283,6 +284,25 @@ Defined.
 Definition compiled_premul wt n
   := Eval cbv [projT2 projT1 compiled_premul_sig] in
       projT2 (compiled_premul_sig wt n).
+ *)
+Locate freeze_cps.
+Print Freeze.freeze_cps.
+Definition compiled_prefreeze_sig (weight : nat -> Z) (n : nat) (bitwidth : Z)
+  : { t : _ & t }.
+Proof.
+  eexists. (* (fun t => @exprZ var (Tbase t)) *)
+  let SmartVarVarf := uconstr:(fun v => SmartMap.SmartVarfMap (fun t => inExpr) (SmartMap.SmartVarVarf v)) in
+  let extraVar := uconstr:(fun v => v) in
+  let varf := uconstr:(fun var => var) in
+  let t := compile varf extraVar SmartVarVarf (fun var n f weight mask xy => @Freeze.freeze_cps weight n mask (fst xy) (snd xy) (@ZOrExpr (varf var) (tuple tZ n)) f) in
+  let t := post_compile (fun var xy => t var n weight (Z.ones bitwidth) xy) in
+  exact t.
+Defined.
+
+Definition compiled_prefreeze wt n bitwidth
+  := Eval cbv [projT2 projT1 compiled_prefreeze_sig] in
+      projT2 (compiled_prefreeze_sig wt n bitwidth).
+
 
 
 Require Import Crypto.Specific.Framework.SynthesisFramework.
@@ -295,9 +315,9 @@ Time Definition compiled_add
            let v := (eval compiler_red0 in v) in
            let v := (eval compiler_red1 in v) in
            exact v).
-Time Definition compiled_add
-  := ltac:(let v := constr:(compiled_preadd wt sz) in
-           let v := (eval cbv [compiled_preadd P.sz] in v) in
+Time Definition compiled_freeze
+  := ltac:(let v := constr:(compiled_prefreeze wt sz bitwidth) in
+           let v := (eval cbv [compiled_prefreeze P.sz] in v) in
            let v := (eval compiler_red0 in v) in
            let v := (eval compiler_red1 in v) in
            exact v).
