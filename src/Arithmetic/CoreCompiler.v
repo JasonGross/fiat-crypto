@@ -17,6 +17,7 @@ Require Crypto.Compilers.StripExpr.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.ZExtended.Syntax.
+Require Import Crypto.Compilers.ZExtended.MapBaseType.
 (*Require Import Crypto.Compilers.InSet.Syntax.
 Require Import Crypto.Compilers.InSet.Typeify.*)
 Import ZUtil.Definitions.
@@ -171,6 +172,24 @@ Definition BoolCaseZOrExpr {var T} (b : @ZOrExpr var tBool) (t f : @ZOrExpr var 
        => OpZOrExpr BoolCase (PairZOrExpr (PairZOrExpr b t) f)
      end.
 
+Definition MulSplitZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y : @ZOrExpr var tZ)
+  : @ZOrExpr var (tZ * tZ)
+  := match bitwidth with
+     | inI bitwidth
+       => OpZOrExpr (MulSplitAtBitwidthZ bitwidth) (PairZOrExpr x y)
+     | inExpr _ as bitwidth
+       => OpZOrExpr MulSplitAtBitwidth (PairZOrExpr (PairZOrExpr bitwidth x) y)
+     end.
+Definition AddWithGetCarryZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y z : @ZOrExpr var tZ)
+  : @ZOrExpr var (tZ * tZ)
+  := match bitwidth with
+     | inI bitwidth
+       => OpZOrExpr (AddWithGetCarryZ bitwidth) (PairZOrExpr (PairZOrExpr x y) z)
+     | inExpr _ as bitwidth
+       => OpZOrExpr AddWithGetCarry (PairZOrExpr (PairZOrExpr (PairZOrExpr bitwidth x) y) z)
+     end.
+
+
 Ltac under_nat_binders tac term :=
   let T := type of term in
   lazymatch eval hnf in T with
@@ -194,6 +213,8 @@ Ltac find_expr_type term found not_found :=
            | context[@LetIn.Let_In (Z * Z) (fun _ => ?T)]
              => check_expr T
            | context [@Z.add_get_carry_cps ?T]
+             => check_expr T
+           | context [@Z.add_with_get_carry_cps ?T]
              => check_expr T
            | context [@Z.mul_split_at_bitwidth_cps ?T]
              => check_expr T
@@ -255,22 +276,22 @@ Ltac compile varf extraVar SmartVarVarf t :=
                         pattern
                         (@LetIn.Let_In Z (fun _ => T)),
                       (@LetIn.Let_In (Z * Z) (fun _ => T)),
-                      (@Z.add_get_carry_cps T),
+                      (@Z.add_get_carry_cps T), (@Z.add_with_get_carry_cps T),
                       (@Z.mul_split_at_bitwidth_cps T),
                       (@Z.eqb_cps T)
                        in t) in
             let t := match t with ?t
                                    _
                                    _
-                                   _
+                                   _ _
                                    _
                                    _
                                   => t end in
             t) in
   let mid_tac var t :=
-      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
-            let t := match t with ?t _ _ _ _ _ _ => t end in
-            let t := match t with fun P _ _ _ _ _ => @?t P => t end in
+      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
+            let t := match t with ?t _ _ _ _ _ _ _ => t end in
+            let t := match t with fun P _ _ _ _ _ _ => @?t P => t end in
             let t := match t with (fun P : Set => ?t) => constr:(fun P : Type => t) end in
             let work_around_issue_5996 := type of t in
             let t := constr:(t (@ZOrExpr var tZ)) in
@@ -283,8 +304,12 @@ Ltac compile varf extraVar SmartVarVarf t :=
                            := t
                                 (fun v' f => inExpr (LetIn (extraVar v') (fun args => f (SmartVarVarf args))))
                                 (fun v' f => inExpr (LetIn (extraVar (fst v')) (fun v'0 => LetIn (extraVar (snd v')) (fun v'1 => f (SmartVarVarf v'0, SmartVarVarf v'1)))))
-                                (fun x y z (f : f_type) => inExpr (LetIn (var:=varf var) (inExpr (Op AddGetCarry (Pair (Pair (extraVar x) (extraVar y)) (extraVar z)))) (fun args => f (SmartVarVarf args))))
-                                (fun x y z (f : f_type) => inExpr (LetIn (var:=varf var) (Op MulSplitAtBitwidth (Pair (Pair (extraVar x) (extraVar y)) (extraVar z))) (fun args => f (SmartVarVarf args))))
+                                (fun x y z (f : f_type) => inExpr (LetIn (AddWithGetCarryZOrExpr x (@inI _ tZ 0%Z) y z)
+                                                                         (fun args => f (SmartVarVarf args))))
+                                (fun x y z w (f : f_type) => inExpr (LetIn (AddWithGetCarryZOrExpr x y z w)
+                                                                         (fun args => f (SmartVarVarf args))))
+                                (fun x y z (f : f_type) => inExpr (LetIn (MulSplitZOrExpr x y z)
+                                                                         (fun args => f (SmartVarVarf args))))
                                 (fun x y f => BoolCaseZOrExpr (OpZOrExpr Zeqb (PairZOrExpr (extraVar x) (extraVar y))) (f true) (f false)) in
                        t')) in
   let post_apply_tac var :=
@@ -324,8 +349,13 @@ Ltac compile varf extraVar SmartVarVarf t :=
 Definition post_compile {n} {src} (t : forall var : base_type -> Type, interp_flat_type (fun t => @ZOrExpr var (Tbase t)) src -> @ZOrExpr var (tZ ^ n))
   := let t := fun var => Syntax.Abs (fun args => t var (SmartMap.SmartVarfMap (fun t v => inExpr (Var v)) args)) in
      let t := Linearize (InlineConstAndOp.InlineConstAndOp t) in
-     let t := ExprEta t in
-     t.
+     let t := MapBaseType t in
+     option_map
+       (fun t
+        => let t := Linearize t in
+           let t := ExprEta t in
+           t)
+       t.
 
 Ltac post_compile t :=
   let t := (eval cbv [post_compile] in (post_compile t)) in
@@ -381,12 +411,11 @@ Definition compiled_prefreeze' wt n bitwidth
 Declare Reduction compiler_prered
   := cbv [id
             compiled_preadd' compiled_prefreeze' compiled_premul'
-            CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' under_cps_post_compile linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf].
+            CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' under_cps_post_compile linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf].
 
 Time Definition compiled_preadd := Eval compiler_prered in compiled_preadd'.
 Time Definition compiled_premul := Eval compiler_prered in compiled_premul'.
 Time Definition compiled_prefreeze := Eval compiler_prered in compiled_prefreeze'.
-
 
 
 Require Import Crypto.Specific.Framework.SynthesisFramework.
@@ -400,10 +429,12 @@ Require Import Crypto.Specific.solinas32_2e511m481.CurveParameters.
 Definition sz := Eval vm_compute in curve.(RawCurveParameters.sz).
 Definition sz2 := Eval vm_compute in (sz*2-1)%nat.
 Definition wt := Base.wt_gen curve.(RawCurveParameters.base).
+Definition bitwidth := Eval vm_compute in curve.(RawCurveParameters.bitwidth).
+Require Import Crypto.Util.Option.
 Time Definition compiled_add := Eval vm_compute in compiled_preadd wt sz.
 Time Definition compiled_mul := Eval vm_compute in compiled_premul wt sz sz2.
 Time Definition compiled_freeze := Eval vm_compute in compiled_prefreeze wt sz bitwidth.
-
+Require Import CNotations.
 Print compiled_freeze.
 Print compiled_add.
   := ltac:(let v := constr:(compiled_preadd wt sz) in
