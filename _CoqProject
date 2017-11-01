@@ -24,6 +24,9 @@ src/Arithmetic/BarrettReduction/Generalized.v
 src/Arithmetic/BarrettReduction/HAC.v
 src/Arithmetic/BarrettReduction/Wikipedia.v
 src/Arithmetic/Compiled/Compiler.v
+src/Arithmetic/Compiled/Core.v
+src/Arithmetic/Compiled/Karatsuba.v
+src/Arithmetic/Compiled/Saturated/Freeze.v
 src/Arithmetic/MontgomeryReduction/Definition.v
 src/Arithmetic/MontgomeryReduction/Proofs.v
 src/Arithmetic/MontgomeryReduction/WordByWord/Definition.v

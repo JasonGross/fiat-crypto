@@ -24,6 +24,7 @@ Require Import Crypto.Compilers.ZExtended.InlineConstAndOpByRewrite.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.Eta.
 Import Crypto.Util.ZUtil.Definitions Crypto.Util.ZUtil.CPS Crypto.Util.IdfunWithAlt.
+Require Import Crypto.Util.Tactics.Head.
 
 Local Notation exprZ
   := (@Syntax.exprf
@@ -77,10 +78,10 @@ Ltac fix_arg ty arg :=
             => let arg' := arg a in
                ltac:(let v := fix_arg B arg' in exact v)))
   | @exprZ ?var' tZ
-    => constr:(Op (var:=var') (ConstZ arg) TT
+    => constr:(Op (var:=var') (ConstZ (arg : interp_flat_type interp_base_type tZ)) TT
                : interp_flat_type (fun t => @exprZ var' (Tbase t)) tZ)
   | @ZOrExpr ?var' tZ
-    => constr:(inZ arg
+    => constr:(inZ (arg : interp_flat_type interp_base_type tZ)
                : interp_flat_type (fun t => @ZOrExpr var' (Tbase t)) tZ)
   | (?A * ?B)%type
     => let arg' := open_constr:(_) in
@@ -93,11 +94,15 @@ Ltac fix_arg ty arg :=
        | (interp_flat_type ?var ?A * interp_flat_type ?var ?B)%type
          => let unif := constr:(eq_refl : arg' = arg :> interp_flat_type var (Prod A B)) in
             ret
-       | ?T => let dummy := match goal with _ => idtac "Warning: fix_arg: Unhandled type" T end in
+       | ?T => let dummy := match goal with _ => idtac "Warning: fix_arg: Unhandled type" T "(A :=" A ", B :=" B ", ret :=" ret ")" end in
                ret
        end
   | Tuple.tuple (?f (Tbase TZ)) ?n'
     => constr:(flat_interp_tuple (interp_base_type:=fun ty' => f (Tbase ty')) (T:=tZ) (n:=n') arg)
+  | list ?A
+    => constr:(List.map
+                 (fun arg' => ltac:(let v := fix_arg A arg' in exact v))
+                 arg)
   | _ => constr:(arg : ty)
   end.
 Ltac fix_args t :=
@@ -274,9 +279,13 @@ Ltac compile varf SmartVarVarf t :=
             t) in
   let mid_tac var t :=
       ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
+            let dummy := match goal with _ => idtac t end in
             let t := match t with ?t _ _ _ _ _ _ _ => t end in
+            let dummy := match goal with _ => idtac t end in
             let t := match t with fun P _ _ _ _ _ _ => @?t P => t end in
+            let dummy := match goal with _ => idtac t end in
             let t := match t with (fun P : Set => ?t) => constr:(fun P : Type => t) end in
+            let dummy := match goal with _ => idtac t end in
             let work_around_issue_5996 := type of t in
             let t := constr:(t (@ZOrExpr var tZ)) in
             t) in
@@ -357,3 +366,11 @@ Ltac do_compile_sig op_cps appf :=
 Declare Reduction compiler_preprered
   := cbv [id
             CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf MapBaseType Compilers.MapBaseType.MapBaseType MapBaseType.check_map_base_type Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type MapBaseType.check_map_base_type_gen].
+
+Ltac do_prered t :=
+  let t' := head t in
+  let t := (eval cbv delta [t'] in t) in
+  let t := (eval compiler_preprered in t) in
+  exact t.
+
+Notation compiler_prered t := ltac:(do_prered t) (only parsing).
