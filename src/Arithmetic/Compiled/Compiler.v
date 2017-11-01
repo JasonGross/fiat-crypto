@@ -359,7 +359,16 @@ Ltac do_compile_sig op_cps appf :=
   eexists;
   let SmartVarVarf := uconstr:(fun v => SmartMap.SmartVarfMap (fun t => inExpr) (SmartMap.SmartVarVarf v)) in
   let varf := uconstr:(fun var => var) in
-  let t := compile varf SmartVarVarf (fun var n => op_cps n (@ZOrExpr (varf var) (tuple tZ n))) in
+  let t_ty := type of op_cps in
+  let t := lazymatch (eval cbv beta zeta in t_ty) with
+           | forall (n : nat) (R : Type) (f : Tuple.tuple Z (@?n_expr n) -> R), _
+             => compile varf SmartVarVarf (fun var n => op_cps n (@ZOrExpr (varf var) (tuple tZ (n_expr n))))
+           | forall (n1 n2 : nat) (R : Type) (f : Tuple.tuple Z (@?n_expr n1 n2) -> R), _
+             => compile varf SmartVarVarf (fun var n1 n2 => op_cps n1 n2 (@ZOrExpr (varf var) (tuple tZ (n_expr n1 n2))))
+           | ?T
+             => let dummy := match goal with _ => idtac "Warning: do_compile_sig: Unsupported type" T end in
+                compile varf SmartVarVarf (fun var n => op_cps n (@ZOrExpr (varf var) (tuple tZ n)))
+           end in
   let t := post_compile (fun var => appf (t var)) in
   exact t.
 
