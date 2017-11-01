@@ -57,6 +57,9 @@ Definition base_type_leb (v1 v2 : base_type) : bool
      | _, TZ => true
      | TZ, _ => false
      | TWord logsz1, TWord logsz2 => Compare_dec.leb logsz1 logsz2
+     | _, TWord _ => true
+     | TWord _, _ => false
+     | TSignedWord logsz1, TSignedWord logsz2 => Compare_dec.leb logsz1 logsz2
      end.
 
 Definition base_type_min := base_type_min base_type_leb.
@@ -91,7 +94,8 @@ Lemma cast_const_id {t} v
   : @cast_const t t v = v.
 Proof.
   destruct t; simpl; trivial.
-  rewrite ZToWord_wordToZ; reflexivity.
+  { rewrite ZToWord_wordToZ; reflexivity. }
+  { rewrite ZToSignedWord_signedWordToZ; reflexivity. }
 Qed.
 
 Lemma cast_const_idempotent_small {a b c} v

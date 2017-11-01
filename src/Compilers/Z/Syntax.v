@@ -13,10 +13,11 @@ Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
-Inductive base_type := TZ | TWord (logsz : nat).
+Inductive base_type := TZ | TWord (logsz : nat) | TSignedWord (logsz : nat).
 
 Local Notation tZ := (Tbase TZ).
 Local Notation tWord logsz := (Tbase (TWord logsz)).
+Local Notation tSignedWord logsz := (Tbase (TSignedWord logsz)).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | OpConst {T} (z : Z) : op Unit (Tbase T)
@@ -41,17 +42,20 @@ Definition interp_base_type (v : base_type) : Type :=
   match v with
   | TZ => Z
   | TWord logsz => wordT logsz
+  | TSignedWord logsz => wordT logsz
   end.
 
 Definition interpToZ {t} : interp_base_type t -> Z
   := match t with
      | TZ => fun x => x
      | TWord _ => wordToZ
+     | TSignedWord sz => fun x => signedWordToZ x
      end.
 Definition ZToInterp {t} : Z -> interp_base_type t
   := match t return Z -> interp_base_type t with
      | TZ => fun x => x
      | TWord _ => ZToWord
+     | TSignedWord _ => ZToSignedWord
      end.
 Definition cast_const {t1 t2} (v : interp_base_type t1) : interp_base_type t2
   := ZToInterp (interpToZ v).

@@ -182,20 +182,35 @@ Module Import Bounds.
     := match ty with
        | TZ => None
        | TWord logsz => Some logsz
+       | TSignedWord logsz => Some logsz
+       end.
+
+  Definition signed_of_base_type ty : bool
+    := match ty with
+       | TZ => true
+       | TWord _ => false
+       | TSignedWord _ => true
        end.
 
   Definition bit_width_of_base_type ty : option Z
     := option_map (fun logsz => 2^Z.of_nat logsz)%Z (log_bit_width_of_base_type ty).
 
-  Definition truncation_bounds' bit_width (b : t)
+  Definition bounds_of_bit_width (signed : bool) (bit_width : Z) : t
+    := if signed
+       then {| lower := -2^(bit_width-1) ; upper := 2^(bit_width-1) - 1 |}
+       else {| lower := 0 ; upper := 2^bit_width - 1 |}.
+
+  Definition truncation_bounds' (signed : bool) (bit_width : option Z) (b : t)
     := match bit_width with
-       | Some bit_width => if ((0 <=? lower b) && (upper b <? 2^bit_width))%bool
-                           then b
-                           else {| lower := 0 ; upper := 2^bit_width - 1 |}
+       | Some bit_width
+         => let max_bounds := bounds_of_bit_width signed bit_width in
+            if is_tighter_than_bool b max_bounds
+            then b
+            else max_bounds
        | None => b
        end.
   Definition truncation_bounds ty : interp_base_type ty -> interp_base_type ty
-    := truncation_bounds' (bit_width_of_base_type ty).
+    := truncation_bounds' (signed_of_base_type ty) (bit_width_of_base_type ty).
 
   Definition interp_op {src dst} (f : op src dst)
              (x : interp_flat_type interp_base_type src)
@@ -232,42 +247,38 @@ Module Import Bounds.
     := ZToZRange (interpToZ z).
 
   Definition smallest_logsz
-             (round_up : nat -> option nat)
              (b : t)
-    : option nat
-    := if (0 <=? lower b)%Z
-       then Some (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b))))
-       else None.
+    : bool * nat
+    := let unsigned := (0 <=? lower b)%Z in
+       (negb unsigned,
+        if unsigned
+        then Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b)))
+        else let smallest_lgsz_upper := (Z.to_nat (1 + Z.log2_up (Z.log2_up (1 + upper b)))) in
+             let smallest_lgsz_lower := (Z.to_nat (1 + Z.log2_up (Z.log2_up (-lower b)))) in
+             let smallest_lgsz := Nat.max smallest_lgsz_upper smallest_lgsz_lower in
+             smallest_lgsz).
   Definition actual_logsz
              (round_up : nat -> option nat)
              (b : t)
-    : option nat
-    := if (0 <=? lower b)%Z
-       then let smallest_lgsz := (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b)))) in
-            let lgsz := round_up smallest_lgsz in
-            match lgsz with
-            | Some lgsz
-              => if Nat.leb smallest_lgsz lgsz
-                 then Some lgsz
-                 else None
-            | None => None
-            end
-       else None.
+    : option (bool * nat)
+    := let '(signed, smallest_lgsz) := smallest_logsz b in
+       let lgsz := round_up smallest_lgsz in
+       match lgsz with
+       | Some lgsz
+         => if Nat.leb smallest_lgsz lgsz
+            then Some (signed, lgsz)
+            else None
+       | None => None
+       end.
   Definition bounds_to_base_type
              {round_up : nat -> option nat}
              (T : base_type)
              (b : interp_base_type T)
     : base_type
-    := match T with
-       | TZ => match actual_logsz round_up b with
-               | Some lgsz => TWord lgsz
-               | None => TZ
-               end
-       | TWord _
-         => match smallest_logsz round_up b with
-            | Some lgsz => TWord lgsz
-            | None => TZ
-            end
+    := match actual_logsz round_up b with
+       | Some (false, lgsz) => TWord lgsz
+       | Some (true, lgsz) => TSignedWord lgsz
+       | None => TZ
        end.
 
   Definition option_min (a : nat) (b : option nat)
