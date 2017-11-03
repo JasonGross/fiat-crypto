@@ -48,7 +48,7 @@ Section WordByWordMontgomery.
     := divmod_cps A (fun '(A, a) =>
        @scmul_cps r _ a B _ (fun aB => @add_cps r _ S' aB _ (fun S1 =>
        divmod_cps S1 (fun '(_, s) =>
-       Z.mul_split_cps' r s k (fun mul_split_r_s_k =>
+       Z.mul_split_cps r s k (fun mul_split_r_s_k =>
        dlet q := fst mul_split_r_s_k in
        @scmul_cps r _ q N _ (fun qN => @add_S1_cps r _ S1 qN _ (fun S2 =>
        divmod_cps S2 (fun '(S3, _) =>
