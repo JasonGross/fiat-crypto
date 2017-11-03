@@ -230,13 +230,14 @@ Ltac find_expr_type term found not_found :=
   end.
 
 Ltac with_pattern_consts middle_tac t :=
+  let update_t z_val t
+      := let t := (eval pattern z_val in t) in
+         let t := lazymatch t with ?t _ => t end in
+         let t := with_pattern_consts middle_tac t in
+         let t := constr:(inZ z_val) in
+         t in
   lazymatch t with
-  | context[Z.pos ?p]
-    => let t := (eval pattern (Z.pos p) in t) in
-       let t := lazymatch t with ?t _ => t end in
-       let t := with_pattern_consts middle_tac t in
-       let t := constr:(inZ (Z.pos p)) in
-       t
+  | context[Z.pos ?p] => update_t (Z.pos p) t
   | _ => middle_tac t
   end.
 
@@ -268,6 +269,8 @@ Ltac compile varf SmartVarVarf t :=
                           Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
                           Z.sub_with_get_borrow_full_cps
                           Z.sub_get_borrow_full_cps
+                          Z.add_with_get_carry_full
+                          Z.add_with_get_carry_full_cps
                  ] in t) in
   let pre_pattern_tac t
       := ltac:(let t := (eval
@@ -275,14 +278,14 @@ Ltac compile varf SmartVarVarf t :=
                            (@Z.zselect),
                          @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
                          Z.mul, Z.add, Z.sub, Z.opp, Z.shiftr, Z.shiftl, Z.land, Z.lor,
-                         Z.modulo, Z.div, Z.log2, Z.pow, Z.ones,
+                         Z.modulo, Z.div, Z.log2, Z.pow, Z.ones, Z.of_nat,
                          2%Z, 1%Z, 0%Z
                           in t) in
                let t := match t with ?t
                                       _
                                       _ _ _ _ _ _
                                       _ _ _ _ _ _ _ _
-                                      _ _ _ _ _
+                                      _ _ _ _ _ _
                                       _ _ _
                                      => t end in
                t) in
@@ -340,6 +343,7 @@ Ltac compile varf SmartVarVarf t :=
                          (lift2e Zmul) (lift2e Zadd) (lift1e Zopp) (lift2e Zshiftr) (lift2e Zland) (lift2e Zlor)
                          (lift2 Zmul) (lift2 Zadd) (lift2 Zsub) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zshiftl) (lift2 Zland) (lift2 Zlor)
                          (lift2 Zmodulo) (lift2 Zdiv) (lift1 Zlog2) (lift2 Zpow) (lift1 Zones)
+                         (fun n => inZ (Z.of_nat n))
                          (inZ 2%Z) (inZ 1%Z) (inZ 0%Z)
                          (fun ts => (*under_cps_post_compile*) (of_tuple_var ts)))) in
   let t

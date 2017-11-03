@@ -10,11 +10,19 @@ Hint Unfold
      pre_redc_cps
      redc_loop_cps
      redc_body_cps
-     MontgomeryAPI.conditional_sub_cps
      MontgomeryAPI.T
-     MontgomeryAPI.drop_high_cps
-     MontgomeryAPI.join0_cps
      MontgomeryAPI.zero
+     MontgomeryAPI.nonzero_cps
+     MontgomeryAPI.join0_cps
+     MontgomeryAPI.divmod_cps
+     MontgomeryAPI.drop_high_cps
+     MontgomeryAPI.scmul_cps
+     MontgomeryAPI.add_cps
+     MontgomeryAPI.add_S1_cps
+     MontgomeryAPI.add_S2_cps
+     MontgomeryAPI.sub_then_maybe_add_cps
+     MontgomeryAPI.conditional_sub_cps
+     UniformWeight.uweight
   : basesystem_partial_evaluation_unfolder.
 
 Definition compiled_preredc_sig (r : positive) (R_numlimbs : nat)
