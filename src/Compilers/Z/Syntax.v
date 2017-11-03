@@ -15,14 +15,10 @@ Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
-Inductive base_type := TZ | TWord (logsz : nat) | TZRange (r : zrange).
+Inductive base_type := TZ | TWord (logsz : nat) | TSignedWord (logsz : nat).
 
 Local Notation tZ := (Tbase TZ).
 Local Notation tWord logsz := (Tbase (TWord logsz)).
-Local Notation tZRange l u := (Tbase (TZRange {| lower := l ; upper := u |})).
-Definition TSignedWord (logsz : nat) : base_type
-  := (let bitwidth := 2^Z.of_nat logsz in
-      TZRange {| lower := (-2^(bitwidth-1)) ; upper := (2^(bitwidth-1) - 1) |})%Z.
 Local Notation tSignedWord logsz := (Tbase (TSignedWord logsz)).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
@@ -48,20 +44,22 @@ Definition interp_base_type (v : base_type) : Type :=
   match v with
   | TZ => Z
   | TWord logsz => wordT logsz
-  | TZRange r => zbounded r
+  | TSignedWord logsz
+    => (let bitwidth := 2^Z.of_nat logsz in
+        zbounded {| lower := (-2^(bitwidth-1)) ; upper := (2^(bitwidth-1) - 1) |})%Z
   end.
 
 Definition interpToZ {t} : interp_base_type t -> Z
   := match t with
      | TZ => fun x => x
      | TWord _ => wordToZ
-     | TZRange r => fun x => value x
+     | TSignedWord _ => fun x => value x
      end.
 Definition ZToInterp {t} : Z -> interp_base_type t
   := match t return Z -> interp_base_type t with
      | TZ => fun x => x
      | TWord _ => ZToWord
-     | TZRange r => fun x => ZBounded.modulo x r
+     | TSignedWord _ => fun x => ZBounded.modulo x _
      end.
 Definition cast_const {t1 t2} (v : interp_base_type t1) : interp_base_type t2
   := ZToInterp (interpToZ v).
