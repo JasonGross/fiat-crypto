@@ -10,9 +10,7 @@ Require Import Coq.Bool.Bool.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Sigma.
@@ -631,46 +629,6 @@ Section WordToN.
     rewrite drop_sub; f_equal; nomega.
   Qed.
 End WordToN.
-
-Section WordToZ.
-  Lemma wordToZ_ZToWord_idempotent : forall sz n, (n < 0 -> -n < Z.pow 2 (Z.of_nat sz))%Z
-                                                  -> (0 <= n -> n < Z.pow 2 (Z.of_nat sz))%Z ->
-    wordToZ (ZToWord sz n) = n.
-  Proof.
-    intros.
-    cbv [ZToWord].
-    cbv [wordToZ].
-    repeat match goal with
-           | _ => progress break_innermost_match_step
-           | [ H : _ |- _ ] => progress rewrite ?wneg_involutive, ?NToWord_wordToN, ?wordToN_NToWord in H
-           | _ => progress Z.ltb_to_lt
-           | _ => progress specialize_by_assumption
-           end.
-    rewrite wordToN_NToWord_idempotent in Heqn0.
-    SearchAbout (
-    Focus 2.
-    SearchAbout Npow2.
-    Focus 2.
-    rewrite wordToN_nat, NToWord_nat.
-    rewrite wordToNat_natToWord_idempotent; rewrite Nnat.N2Nat.id; auto.
-  Qed.
-
-  Lemma NToWord_wordToN : forall sz w, NToWord sz (wordToN w) = w.
-  Proof.
-    intros.
-    rewrite wordToN_nat, NToWord_nat, Nnat.Nat2N.id.
-    apply natToWord_wordToNat.
-  Qed.
-
-  Lemma wordToN_zero: forall w, wordToN (wzero w) = 0%N.
-  Proof.
-    intros.
-    unfold wzero; rewrite wordToN_nat.
-    rewrite wordToNat_natToWord_idempotent; simpl; intuition.
-    apply Npow2_gt0.
-  Qed.
-
-
 
 Section WordBounds.
   Lemma word_size_bound : forall {n} (w: word n), (wordToN w < Npow2 n)%N.
