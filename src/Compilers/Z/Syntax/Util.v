@@ -95,7 +95,7 @@ Lemma cast_const_id {t} v
 Proof.
   destruct t; simpl; trivial.
   { rewrite ZToWord_wordToZ; reflexivity. }
-  { rewrite ZToSignedWord_signedWordToZ; reflexivity. }
+  { rewrite ZBounded.modulo_value_id; reflexivity. }
 Qed.
 
 Lemma cast_const_idempotent_small {a b c} v
