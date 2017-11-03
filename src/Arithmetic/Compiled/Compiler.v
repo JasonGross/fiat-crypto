@@ -229,6 +229,17 @@ Ltac find_expr_type term found not_found :=
   | None => not_found ()
   end.
 
+Ltac with_pattern_consts middle_tac t :=
+  lazymatch t with
+  | context[Z.pos ?p]
+    => let t := (eval pattern (Z.pos p) in t) in
+       let t := lazymatch t with ?t _ => t end in
+       let t := with_pattern_consts middle_tac t in
+       let t := constr:(inZ (Z.pos p)) in
+       t
+  | _ => middle_tac t
+  end.
+
 Ltac with_pattern_tuples_then do_pattern_strip middle_tac do_apply t :=
   find_expr_type
     t
@@ -238,7 +249,7 @@ Ltac with_pattern_tuples_then do_pattern_strip middle_tac do_apply t :=
              let t := with_pattern_tuples_then do_pattern_strip middle_tac do_apply t in
              let t := do_apply T t in
              t)
-           ltac:(fun _ => middle_tac t).
+           ltac:(fun _ => with_pattern_consts middle_tac t).
 
 Ltac compile varf SmartVarVarf t :=
   let exprZf := constr:(fun var n => (@ZOrExpr (varf var) (tuple tZ n))) in
@@ -262,14 +273,14 @@ Ltac compile varf SmartVarVarf t :=
                            pattern
                            (@Z.zselect),
                          @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
-                         Z.mul, Z.add, Z.opp, Z.shiftr, Z.shiftl, Z.land, Z.lor,
+                         Z.mul, Z.add, Z.sub, Z.opp, Z.shiftr, Z.shiftl, Z.land, Z.lor,
                          Z.modulo, Z.div, Z.log2, Z.pow, Z.ones,
                          2%Z, 1%Z, 0%Z
                           in t) in
                let t := match t with ?t
                                       _
                                       _ _ _ _ _ _
-                                      _ _ _ _ _ _ _
+                                      _ _ _ _ _ _ _ _
                                       _ _ _ _ _
                                       _ _ _
                                      => t end in
@@ -326,7 +337,7 @@ Ltac compile varf SmartVarVarf t :=
             => constr:(t
                          (lift3e Zselect)
                          (lift2e Zmul) (lift2e Zadd) (lift1e Zopp) (lift2e Zshiftr) (lift2e Zland) (lift2e Zlor)
-                         (lift2 Zmul) (lift2 Zadd) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zshiftl) (lift2 Zland) (lift2 Zlor)
+                         (lift2 Zmul) (lift2 Zadd) (lift2 Zsub) (lift1 Zopp) (lift2 Zshiftr) (lift2 Zshiftl) (lift2 Zland) (lift2 Zlor)
                          (lift2 Zmodulo) (lift2 Zdiv) (lift1 Zlog2) (lift2 Zpow) (lift1 Zones)
                          (inZ 2%Z) (inZ 1%Z) (inZ 0%Z)
                          (fun ts => (*under_cps_post_compile*) (of_tuple_var ts)))) in

@@ -16,8 +16,6 @@ Definition compiled_preredc_sig (r : positive) (R_numlimbs : nat)
            (A_numlimbs : nat) (k : Z)
   : { t : _ & t }.
 Proof.
-  Print Ltac do_compile_sig.
-  Locate CPS.Z.sub_with_get_borrow_full_cps.
   do_compile_sig
     (fun n m T (f : Tuple.tuple _ _ -> _) (NAB : Tuple.tuple _ _ * (Tuple.tuple _ _ * Tuple.tuple _ _)) k => @redc_cps r n (fst NAB) m (fst (snd NAB)) (snd (snd NAB)) k T f)
     uconstr:(fun t xy => t R_numlimbs A_numlimbs xy k).

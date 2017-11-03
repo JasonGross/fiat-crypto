@@ -13,7 +13,6 @@ src/Algebra/Nsatz.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Arithmetic/Core.v
-src/Arithmetic/CoreCompiler.v
 src/Arithmetic/CoreUnfolder.v
 src/Arithmetic/CoreUnfolder_bak.v
 src/Arithmetic/Karatsuba.v
