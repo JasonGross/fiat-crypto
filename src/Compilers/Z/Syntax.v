@@ -7,16 +7,22 @@ Require Import Crypto.Compilers.TypeUtil.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZBounded.
 Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Util.NatUtil. (* for nat_beq for equality schemes *)
 Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
-Inductive base_type := TZ | TWord (logsz : nat) | TSignedWord (logsz : nat).
+Inductive base_type := TZ | TWord (logsz : nat) | TZRange (r : zrange).
 
 Local Notation tZ := (Tbase TZ).
 Local Notation tWord logsz := (Tbase (TWord logsz)).
+Local Notation tZRange l u := (Tbase (TZRange {| lower := l ; upper := u |})).
+Definition TSignedWord (logsz : nat) : base_type
+  := (let bitwidth := 2^Z.of_nat logsz in
+      TZRange {| lower := (-2^(bitwidth-1)) ; upper := (2^(bitwidth-1) - 1) |})%Z.
 Local Notation tSignedWord logsz := (Tbase (TSignedWord logsz)).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
@@ -42,20 +48,20 @@ Definition interp_base_type (v : base_type) : Type :=
   match v with
   | TZ => Z
   | TWord logsz => wordT logsz
-  | TSignedWord logsz => wordT logsz
+  | TZRange r => zbounded r
   end.
 
 Definition interpToZ {t} : interp_base_type t -> Z
   := match t with
      | TZ => fun x => x
      | TWord _ => wordToZ
-     | TSignedWord sz => fun x => signedWordToZ x
+     | TZRange r => fun x => value x
      end.
 Definition ZToInterp {t} : Z -> interp_base_type t
   := match t return Z -> interp_base_type t with
      | TZ => fun x => x
      | TWord _ => ZToWord
-     | TSignedWord _ => ZToSignedWord
+     | TZRange r => fun x => ZBounded.modulo x r
      end.
 Definition cast_const {t1 t2} (v : interp_base_type t1) : interp_base_type t2
   := ZToInterp (interpToZ v).
