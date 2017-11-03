@@ -179,6 +179,15 @@ Definition AddWithGetCarryZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y z : @Z
        => OpZOrExpr AddWithGetCarry (PairZOrExpr (PairZOrExpr (PairZOrExpr bitwidth x) y) z)
      end.
 
+Definition SubWithGetBorrowZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y z : @ZOrExpr var tZ)
+  : @ZOrExpr var (tZ * tZ)
+  := match bitwidth with
+     | inI bitwidth
+       => OpZOrExpr (SubWithGetBorrowZ bitwidth) (PairZOrExpr (PairZOrExpr x y) z)
+     | inExpr _ as bitwidth
+       => OpZOrExpr SubWithGetBorrow (PairZOrExpr (PairZOrExpr (PairZOrExpr bitwidth x) y) z)
+     end.
+
 Ltac under_nat_binders tac term :=
   let T := type of term in
   lazymatch eval hnf in T with
@@ -204,6 +213,10 @@ Ltac find_expr_type term found not_found :=
            | context [@Z.add_get_carry_cps ?T]
              => check_expr T
            | context [@Z.add_with_get_carry_cps ?T]
+             => check_expr T
+           | context [@Z.sub_get_borrow_cps ?T]
+             => check_expr T
+           | context [@Z.sub_with_get_borrow_cps ?T]
              => check_expr T
            | context [@Z.mul_split_at_bitwidth_cps ?T]
              => check_expr T
@@ -242,6 +255,7 @@ Ltac compile varf SmartVarVarf t :=
                           id_tuple_with_alt id_tuple'_with_alt
                           Z.add_get_carry_full Z.mul_split
                           Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
+                          Z.sub_with_get_borrow_full_cps
                  ] in t) in
   let pre_pattern_tac t
       := ltac:(let t := (eval
@@ -266,6 +280,7 @@ Ltac compile varf SmartVarVarf t :=
                         (@LetIn.Let_In Z (fun _ => T)),
                       (@LetIn.Let_In (Z * Z) (fun _ => T)),
                       (@Z.add_get_carry_cps T), (@Z.add_with_get_carry_cps T),
+                      (@Z.sub_get_borrow_cps T), (@Z.sub_with_get_borrow_cps T),
                       (@Z.mul_split_at_bitwidth_cps T),
                       (@Z.eqb_cps T)
                        in t) in
@@ -273,19 +288,16 @@ Ltac compile varf SmartVarVarf t :=
                                    _
                                    _
                                    _ _
+                                   _ _
                                    _
                                    _
                                   => t end in
             t) in
   let mid_tac var t :=
-      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
-            let dummy := match goal with _ => idtac t end in
-            let t := match t with ?t _ _ _ _ _ _ _ => t end in
-            let dummy := match goal with _ => idtac t end in
-            let t := match t with fun P _ _ _ _ _ _ => @?t P => t end in
-            let dummy := match goal with _ => idtac t end in
+      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.sub_get_borrow_cps), (@Z.sub_with_get_borrow_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
+            let t := match t with ?t _ _ _ _ _ _ _ _ _ => t end in
+            let t := match t with fun P _ _ _ _ _ _ _ _ => @?t P => t end in
             let t := match t with (fun P : Set => ?t) => constr:(fun P : Type => t) end in
-            let dummy := match goal with _ => idtac t end in
             let work_around_issue_5996 := type of t in
             let t := constr:(t (@ZOrExpr var tZ)) in
             t) in
@@ -300,6 +312,10 @@ Ltac compile varf SmartVarVarf t :=
                                 (fun x y z (f : f_type) => inExpr (LetIn (exprOfZOrExpr (AddWithGetCarryZOrExpr x (@inI _ tZ 0%Z) y z))
                                                                          (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
                                 (fun x y z w (f : f_type) => inExpr (LetIn (exprOfZOrExpr (AddWithGetCarryZOrExpr x y z w))
+                                                                           (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
+                                (fun x y z (f : f_type) => inExpr (LetIn (exprOfZOrExpr (SubWithGetBorrowZOrExpr x (@inI _ tZ 0%Z) y z))
+                                                                         (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
+                                (fun x y z w (f : f_type) => inExpr (LetIn (exprOfZOrExpr (SubWithGetBorrowZOrExpr x y z w))
                                                                            (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
                                 (fun x y z (f : f_type) => inExpr (LetIn (exprOfZOrExpr (MulSplitZOrExpr x y z))
                                                                          (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
@@ -374,7 +390,7 @@ Ltac do_compile_sig op_cps appf :=
 
 Declare Reduction compiler_preprered
   := cbv [id
-            CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf MapBaseType Compilers.MapBaseType.MapBaseType MapBaseType.check_map_base_type Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type MapBaseType.check_map_base_type_gen].
+            CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr SubWithGetBorrowZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf MapBaseType Compilers.MapBaseType.MapBaseType MapBaseType.check_map_base_type Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type MapBaseType.check_map_base_type_gen].
 
 Ltac do_prered t :=
   let t' := head t in
