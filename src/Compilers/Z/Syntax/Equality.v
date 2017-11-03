@@ -119,6 +119,7 @@ Proof.
            | _ => reflexivity
            | [ H : False |- _ ] => exfalso; assumption
            | _ => intro
+           | _ => progress subst
            | [ |- context[op_beq_hetero_type_eqd ?f ?g ?pf] ]
              => generalize (op_beq_hetero_type_eqd f g pf), (op_beq_hetero_type_eqs f g pf)
            | _ => intro
@@ -130,12 +131,11 @@ Proof.
              => destruct x eqn:?, y eqn:?; simpl in H
            | [ H : Z.eqb _ _ = true |- _ ] => apply Z.eqb_eq in H
            | [ H : to_prop (reified_Prop_of_bool ?b) |- _ ] => destruct b eqn:?; compute in H
-           | _ => progress subst
            | _ => progress break_match_hyps
            | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_bl in H; subst
            | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_hetero_bl in H; destruct H; subst
            | _ => congruence
-           end.
+       end.
 Qed.
 
 Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.
@@ -152,8 +152,10 @@ Section encode_decode.
     := match t1, t2 with
        | TZ, TZ => True
        | TWord s1, TWord s2 => s1 = s2
+       | TSignedWord s1, TSignedWord s2 => s1 = s2
        | TZ, _
        | TWord _, _
+       | TSignedWord _, _
          => False
        end.
 
