@@ -7,9 +7,14 @@ Require Import Crypto.Arithmetic.Compiled.Compiler.
 
 Hint Unfold
      redc_cps
+     pre_redc_cps
+     redc_loop_cps
+     redc_body_cps
      MontgomeryAPI.conditional_sub_cps
      MontgomeryAPI.T
      MontgomeryAPI.drop_high_cps
+     MontgomeryAPI.join0_cps
+     MontgomeryAPI.zero
   : basesystem_partial_evaluation_unfolder.
 
 Definition compiled_preredc_sig (r : positive) (R_numlimbs : nat)

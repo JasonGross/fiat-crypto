@@ -267,6 +267,7 @@ Ltac compile varf SmartVarVarf t :=
                           Z.add_get_carry_full Z.mul_split
                           Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
                           Z.sub_with_get_borrow_full_cps
+                          Z.sub_get_borrow_full_cps
                  ] in t) in
   let pre_pattern_tac t
       := ltac:(let t := (eval
@@ -392,6 +393,8 @@ Ltac do_compile_sig op_cps appf :=
              => compile varf SmartVarVarf (fun var n => op_cps n (@ZOrExpr (varf var) (tuple tZ (n_expr n))))
            | forall (n1 n2 : nat) (R : Type) (f : Tuple.tuple Z (@?n_expr n1 n2) -> R), _
              => compile varf SmartVarVarf (fun var n1 n2 => op_cps n1 n2 (@ZOrExpr (varf var) (tuple tZ (n_expr n1 n2))))
+           | forall (n : nat) (R : Type) (m : nat) (f : Tuple.tuple Z (@?n_expr n) -> R), _
+             => compile varf SmartVarVarf (fun var n => op_cps n (@ZOrExpr (varf var) (tuple tZ (n_expr n))))
            | ?T
              => let dummy := match goal with _ => idtac "Warning: do_compile_sig: Unsupported type" T end in
                 compile varf SmartVarVarf (fun var n => op_cps n (@ZOrExpr (varf var) (tuple tZ n)))
