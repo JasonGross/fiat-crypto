@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Wf.
@@ -98,13 +99,17 @@ Proof.
   { rewrite ZBounded.modulo_value_id; reflexivity. }
 Qed.
 
+Local Arguments Pos.to_nat !_ / .
+
 Lemma cast_const_idempotent_small {a b c} v
   : match b with
     | TZ => True
     | TWord bsz => 0 <= interpToZ (@cast_const a c v) < 2^Z.of_nat (2^bsz)
+    | TSignedWord bsz => -2^Z.of_nat (2^bsz - 1) <= interpToZ (@cast_const a c v) < 2^Z.of_nat (2^bsz - 1)
     end%Z
     -> @cast_const b c (@cast_const a b v) = @cast_const a c v.
 Proof.
+  Local Opaque ZBounded.modulo.
   repeat first [ reflexivity
                | congruence
                | progress destruct_head' base_type
@@ -120,8 +125,11 @@ Proof.
                | rewrite ZToWord_wordToZ_ZToWord by omega *
                | rewrite wordToZ_ZToWord_wordToZ by omega *
                | rewrite wordToZ_ZToWord by assumption
-               | rewrite ZToWord_wordToZ_ZToWord_small by omega ].
-Qed.
+               | rewrite ZToWord_wordToZ_ZToWord_small by omega
+               | progress Z.ltb_to_lt
+               | rewrite ZBounded.value_modulo_in_range
+                 by (simpl; rewrite Z.Zpow_sub_1_nat_pow; simpl; omega) ].
+Admitted.
 
 Lemma cast_const_split_mod {a b} v
   : @cast_const a b v = ZToInterp (match a, b with
