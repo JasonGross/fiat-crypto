@@ -22,43 +22,53 @@ Notation "T x = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=T) A (fun x =
 Notation "T x = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=T) A (fun x => Pair .. (Pair (Var b0) (Var b1)) .. (Var b2))) : expr_scope.
 Notation "T0 x , T1 y = A ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => b)) : expr_scope.
 Notation "T0 x , T1 y = A ; 'return' b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => Var b)) : expr_scope.
-(*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair b0%expr b1%expr) .. b2%expr))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
-(*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair (Var b0) (Var b1)) .. (Var b2)))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
+Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair b0%expr b1%expr) .. b2%expr))) : expr_scope.
+Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair (Var b0) (Var b1)) .. (Var b2)))) : expr_scope.
 
-(* for now, handle with
-<<
-sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(addcarryx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'
-sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(subborrow.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'
-sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(mulx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'
->>
-
-   Once we get https://coq.inria.fr/bugs/show_bug.cgi?id=5526, we can print actual C notations:
-<<
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c_in , a , b , & out ) ; REST"
- (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u32' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out ) ; REST"
- (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
->> *)
-Reserved Notation "'addcarryx_u32' ( c , a , b )" (format "'addcarryx_u32' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u64' ( c , a , b )" (format "'addcarryx_u64' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u128' ( c , a , b )" (format "'addcarryx_u128' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u51' ( c , a , b )" (format "'addcarryx_u51' ( c ,  a ,  b )"). (* temporary for testing *)
-Reserved Notation "'subborrow_u32' ( c , a , b )" (format "'subborrow_u32' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u64' ( c , a , b )" (format "'subborrow_u64' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u128' ( c , a , b )" (format "'subborrow_u128' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,  a ,  b )"). (* temporary for testing *)
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u128' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u128' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u51' ( c_in ,  a ,  b ,  & out ) ; '//' REST"). (* temporary for testing *)
+
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u32' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u32' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u64' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u128' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u128' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u51' ( c_in ,  a ,  b ,  & out ) ; '//' REST"). (* temporary for testing *)
+
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
 
-Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u128ℤ' ( c , a , b )" (format "'addcarryx_u128ℤ' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )"). (* temporary for testing *)
-Reserved Notation "'subborrow_u32ℤ' ( c , a , b )" (format "'subborrow_u32ℤ' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u64ℤ' ( c , a , b )" (format "'subborrow_u64ℤ' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u128ℤ' ( c , a , b )" (format "'subborrow_u128ℤ' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u51ℤ' ( c , a , b )" (format "'subborrow_u51ℤ' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u32ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u128ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_addcarryx_u51ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST"). (* temporary for testing *)
+
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u32ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u64ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u128ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c_in , a , b , & out ) ; REST"
+         (at level 200, REST at level 200, only printing, format "T0  out ; '//' T1  c_out  =  '_subborrow_u51ℤ' ( c_in ,  a ,  b ,  & out ) ; '//' REST"). (* temporary for testing *)
+
+Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
+Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
+Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
+
 Reserved Notation "'mulx_u32ℤ' ( a , b )" (format "'mulx_u32ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u64ℤ' ( a , b )" (format "'mulx_u64ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u128ℤ' ( a , b )" (format "'mulx_u128ℤ' ( a ,  b )").
@@ -275,6 +285,22 @@ for opn, op in (('addcarryx', 'AddWithGetCarry'), ('subborrow', 'SubWithGetBorro
                             print(notation_string % (opn, wordsz, op, wordsz, lgwordsz_small, lgwordsz_small, lgwordsz, lgwordsz, lgwordsz_small, c, a, b))
                             print(notation_string % (opn, wordsz, op, wordsz, lgwordsz_small, lgwordsz, lgwordsz_small, lgwordsz, lgwordsz_small, c, a, b))
                             print(notation_string % (opn, wordsz, op, wordsz, lgwordsz_small, lgwordsz_small, lgwordsz_small, lgwordsz, lgwordsz_small, c, a, b))
+for opn, op in (('mulx', 'MulSplit'),):
+    for wordsz in (32, 64, 128, 51):
+        lgwordsz = log2_up(wordsz)
+        for v0 in (False, True):
+            for v1 in (False, True):
+                a = ('a' if not v0 else '(Var a)')
+                b = ('b' if not v1 else '(Var b)')
+                for lgwordsz_small in (0, 3):
+                    for notation_string in ('Notation "%s\'%s_u%d\' ( a , b )" := (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)).',
+                                            ('(' + '*Notation "T0 out ; T1 c_out = %s\'_%s_u%d\' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')')):
+                        for arg1 in (lgwordsz_small, lgwordsz):
+                            for arg2 in (lgwordsz_small, lgwordsz):
+                                for arg3 in (lgwordsz, ): # N.B. the third argument, which is the high bits, must be of a compatible pointer type, and cannot be a pointer to a short word
+                                    for arg4 in (lgwordsz_small, lgwordsz):
+                                        cast_val = ('' if arg4 == lgwordsz and arg3 == lgwordsz else (cast_pat % (types[lgwordsz_small], '')))
+                                        print(notation_string % (cast_val, opn, wordsz, op, wordsz, arg1, arg2, arg3, arg4, a, b))
 for opn, op in (('mulx', 'MulSplit'),):
     for wordsz in (32, 64, 128, 51):
         lgwordsz = log2_up(wordsz)
@@ -2859,6 +2885,518 @@ Notation "'subborrow_u51' ( c , a , b )" := (Op (SubWithGetBorrow 51 (TWord 3) (
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 (TWord 3) (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 (TWord 3) (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair a b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 3) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 3) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair a b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 3) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 3) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+Notation "'(uint8_t)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))).
+Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 3) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 3) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)).
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))).
