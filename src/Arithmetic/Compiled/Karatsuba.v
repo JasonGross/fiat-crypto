@@ -14,7 +14,7 @@ Defined.
 Definition compiled_prekaratsuba_mul' wt n m s
   := Eval cbv [projT2 projT1 compiled_prekaratsuba_mul_sig] in
       projT2 (compiled_prekaratsuba_mul_sig wt n m s).
-
+(*
 Definition compiled_pregoldilocks_mul_sig (weight : nat -> Z) (n m : nat) (s : Z)
   : { t : _ & t }.
 Proof.
@@ -29,6 +29,6 @@ Defined.
 Definition compiled_pregoldilocks_mul' wt n m s
   := Eval cbv [projT2 projT1 compiled_pregoldilocks_mul_sig] in
       projT2 (compiled_pregoldilocks_mul_sig wt n m s).Print goldilocks_mul_cps.
-
+*)
 Time Definition compiled_prekaratsuba_mul := compiler_prered compiled_prekaratsuba_mul'.
-Time Definition compiled_pregoldilocks_mul := compiler_prered compiled_pregoldilocks_mul'.
+(*Time Definition compiled_pregoldilocks_mul := compiler_prered compiled_pregoldilocks_mul'.*)
