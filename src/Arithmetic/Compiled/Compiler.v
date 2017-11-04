@@ -162,6 +162,15 @@ Definition BoolCaseZOrExpr {var T} (b : @ZOrExpr var tBool) (t f : @ZOrExpr var 
        => OpZOrExpr BoolCase (PairZOrExpr (PairZOrExpr b t) f)
      end.
 
+Definition BoolCaseZOrExpr {var T} (b : @ZOrExpr var tBool) (t f : @ZOrExpr var T)
+  : @ZOrExpr var T
+  := match b with
+     | inI b
+       => if b then t else f
+     | inExpr x as b
+       => OpZOrExpr BoolCase (PairZOrExpr (PairZOrExpr b t) f)
+     end.
+
 Definition MulSplitZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y : @ZOrExpr var tZ)
   : @ZOrExpr var (tZ * tZ)
   := match bitwidth with
@@ -251,10 +260,15 @@ Ltac with_pattern_tuples_then do_pattern_strip middle_tac do_apply t :=
   find_expr_type
     t
     ltac:(fun T
-          => let t := do_pattern_strip T t in
+          => let dummy := match goal with _ => idtac t end in
+             let t := do_pattern_strip T t in
+             let dummy := match goal with _ => idtac t end in
              let t := (eval cbv beta in t) in
+             let dummy := match goal with _ => idtac t end in
              let t := with_pattern_tuples_then do_pattern_strip middle_tac do_apply t in
+             let dummy := match goal with _ => idtac t end in
              let t := do_apply T t in
+             let dummy := match goal with _ => idtac t end in
              t)
            ltac:(fun _ => with_pattern_consts middle_tac t).
 
@@ -321,13 +335,15 @@ Ltac compile varf SmartVarVarf t :=
                       (@Z.add_get_carry_cps T), (@Z.add_with_get_carry_cps T),
                       (@Z.sub_get_borrow_cps T), (@Z.sub_with_get_borrow_cps T),
                       (@Z.mul_split_at_bitwidth_cps T),
-                      (@Z.eqb_cps T)
+                      (@Z.eqb_cps T),
+                      (@id_with_alt T)
                        in t) in
             let t := match t with ?t
                                    _
                                    _
                                    _ _
                                    _ _
+                                   _
                                    _
                                    _
                                   => t end in
@@ -351,15 +367,31 @@ Ltac compile varf SmartVarVarf t :=
                                 (fun x y z (f : f_type) => inExpr (LetIn (exprOfZOrExpr (MulSplitZOrExpr x y z))
                                                                          (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
                                 (fun x y f => BoolCaseZOrExpr (OpZOrExpr Zeqb (PairZOrExpr x y)) (f true) (f false)) in
+                                (fun x y => BoolCaseZOrExpr (OpZOrExpr Zeqb (PairZOrExpr x y)) (f true) (f false)) in
                        t')) in
+  let mid_mid_tac var t :=
+      ltac:(let t := (eval pattern (@LetIn.Let_In), (@id_with_alt) in t) in
+            let dummy := match goal with _ => idtac t end in
+            let t := match t with ?t _ _ => t end in
+            let dummy := match goal with _ => idtac t end in
+            let t := match t with fun _ _ => ?t => t end in
+            t) in
   let mid_tac var t :=
-      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.sub_get_borrow_cps), (@Z.sub_with_get_borrow_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
-            let t := match t with ?t _ _ _ _ _ _ _ _ _ => t end in
+      ltac:(let t := (eval pattern Z, (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.sub_get_borrow_cps), (@Z.sub_with_get_borrow_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
+            let t := match t with ?t _ _ _ _ _ _ _ => t end in
             let t := match t with (fun P : Set => ?t) => constr:(fun P : Type => t) end in
             let work_around_issue_5996 := type of t in
             let t := (eval cbv beta in (t (@ZOrExpr var tZ))) in
             let dummy := match goal with _ => idtac t end in
-            let t := match t with fun _ _ _ _ _ _ _ _ => ?t => t end in
+            let t
+                := with_pattern_tuples_then
+                     do_pattern_strip_tac
+                     ltac:(mid_mid_tac var)
+                     ltac:(apply_tac var)
+                     t in
+            let dummy := match goal with _ => idtac t end in
+            let t := match t with fun _ _ _ _ _ _ => ?t => t end in
+
             let dummy := match goal with _ => idtac t end in
             t) in
   let post_apply_tac var :=
