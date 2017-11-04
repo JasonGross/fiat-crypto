@@ -234,7 +234,7 @@ Ltac with_pattern_consts middle_tac t :=
       := let t := (eval pattern z_val in t) in
          let t := lazymatch t with ?t _ => t end in
          let t := with_pattern_consts middle_tac t in
-         let t := constr:(inZ z_val) in
+         let t := constr:(t (inZ z_val)) in
          t in
   lazymatch t with
   | context[Z.pos ?p] => update_t (Z.pos p) t
