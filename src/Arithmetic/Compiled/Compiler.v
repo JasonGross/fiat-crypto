@@ -203,11 +203,7 @@ Ltac find_expr_type term found not_found :=
       ltac:(fun t
             =>
               lazymatch t with
-              | @ZOrExpr ?var ?tz => constr:(Some t)
-              | Tuple.tuple (@ZOrExpr ?var ?tz) 0 => constr:(Some t)
-              | Tuple.tuple' (@ZOrExpr ?var ?tz) 1 => constr:(Some t)
-              | _ => let dummy := match goal with _ => idtac "bad" t end in
-                     constr:(I : I)
+              | @ZOrExpr ?var (tuple ?tz ?n) => constr:(Some t)
               end) in
   let T := match (eval cbv beta in term) with
            | context[@LetIn.Let_In Z (fun _ => ?T)]
@@ -225,8 +221,6 @@ Ltac find_expr_type term found not_found :=
            | context [@Z.mul_split_at_bitwidth_cps ?T]
              => check_expr T
            | context [@Z.eqb_cps ?T]
-             => check_expr T
-           | context [@id_with_alt ?T]
              => check_expr T
            | _ => constr:(@None unit)
            end in
@@ -258,23 +252,6 @@ Ltac with_pattern_tuples_then do_pattern_strip middle_tac do_apply t :=
              t)
            ltac:(fun _ => with_pattern_consts middle_tac t).
 
-Ltac unfold_id_with_alt_unit t :=
-  lazymatch t with
-  | context T[@id_with_alt unit]
-    => let c := constr:(@id_with_alt unit) in
-       let c' := (eval compute in c) in
-       let t := context T[c'] in
-       let t := (eval cbv beta in t) in
-       unfold_id_with_alt_unit t
-  | context T[@id_with_alt (Tuple.tuple' ?t 0)]
-    => let c := constr:(@id_with_alt (Tuple.tuple' t 0)) in
-       let c' := (eval compute in c) in
-       let t := context T[c'] in
-       let t := (eval cbv beta in t) in
-       unfold_id_with_alt_unit t
-  | _ => t
-  end.
-
 Ltac compile varf SmartVarVarf t :=
   let exprZf := constr:(fun var n => (@ZOrExpr (varf var) (tuple tZ n))) in
   let t := (eval cbv beta zeta in
@@ -295,7 +272,6 @@ Ltac compile varf SmartVarVarf t :=
                           Z.add_with_get_carry_full
                           Z.add_with_get_carry_full_cps
                  ] in t) in
-  let t := unfold_id_with_alt_unit t in
   let pre_pattern_tac t
       := ltac:(let t := (eval
                            pattern
@@ -332,6 +308,14 @@ Ltac compile varf SmartVarVarf t :=
                                    _
                                   => t end in
             t) in
+  let mid_tac var t :=
+      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.sub_get_borrow_cps), (@Z.sub_with_get_borrow_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
+            let t := match t with ?t _ _ _ _ _ _ _ _ _ => t end in
+            let t := match t with fun P _ _ _ _ _ _ _ _ => @?t P => t end in
+            let t := match t with (fun P : Set => ?t) => constr:(fun P : Type => t) end in
+            let work_around_issue_5996 := type of t in
+            let t := constr:(t (@ZOrExpr var tZ)) in
+            t) in
   let apply_tac var :=
       ltac:(fun T t
             => constr:(let var' := (fun ty => @ZOrExpr var (Tbase ty)) in
@@ -352,16 +336,6 @@ Ltac compile varf SmartVarVarf t :=
                                                                          (fun args => exprOfZOrExpr (f (SmartVarVarf args)))))
                                 (fun x y f => BoolCaseZOrExpr (OpZOrExpr Zeqb (PairZOrExpr x y)) (f true) (f false)) in
                        t')) in
-  let mid_tac var t :=
-      ltac:(let t := (eval pattern Z, (@LetIn.Let_In), (@id_with_alt), (@Z.add_get_carry_cps), (@Z.add_with_get_carry_cps), (@Z.sub_get_borrow_cps), (@Z.sub_with_get_borrow_cps), (@Z.mul_split_at_bitwidth_cps), (@Z.eqb_cps) in t) in
-            let t := match t with ?t _ _ _ _ _ _ _ _ _ => t end in
-            let t := match t with (fun P : Set => ?t) => constr:(fun P : Type => t) end in
-            let work_around_issue_5996 := type of t in
-            let t := (eval cbv beta in (t (@ZOrExpr var tZ))) in
-            let dummy := match goal with _ => idtac t end in
-            let t := match t with fun _ _ _ _ _ _ _ _ => ?t => t end in
-            let dummy := match goal with _ => idtac t end in
-            t) in
   let post_apply_tac var :=
       ltac:(fun t
             => constr:(t
