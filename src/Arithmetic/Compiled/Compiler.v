@@ -9,7 +9,7 @@ Require Crypto.Compilers.Named.InterpretToPHOAS.
 Require Crypto.Compilers.Named.Compile.
 Require Crypto.Compilers.Named.PositiveContext.
 Require Crypto.Compilers.Named.PositiveContext.Defaults.
-Require Crypto.Compilers.SmartMap.
+Require Import Crypto.Compilers.SmartMap.
 Require Crypto.Compilers.StripExpr.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Syntax.
@@ -18,7 +18,7 @@ Require Import Crypto.Compilers.ZExtended.MapBaseType.
 Import ZUtil.Definitions.
 Require Import Crypto.Util.Curry.
 Require Import Crypto.Arithmetic.Core.
-Require Crypto.Compilers.ExprInversion.
+Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.ZExtended.InlineConstAndOp.
 Require Import Crypto.Compilers.ZExtended.InlineConstAndOpByRewrite.
 Require Import Crypto.Compilers.Linearize.
@@ -175,10 +175,26 @@ Definition IdTupleWithAltZOrExpr {var n T} (x y : Tuple.tuple (@ZOrExpr var (Tba
   : Tuple.tuple (@ZOrExpr var (Tbase T)) n
   := Tuple.map2 IdWithAltZOrExpr x y.
 
-(*Definition IdTupleWithAltZOrExpr_cps {var n T} (x y : forall RTuple.tuple (@ZOrExpr var (Tbase T)) n)
-  : Tuple.tuple (@ZOrExpr var (Tbase T)) n
-  := Tuple.map2 IdWithAltZOrExpr x y.
-*)
+Definition IdTupleWithAltZOrExpr_cps {var n R} (T:=TZ)
+           (x y : forall R, (Tuple.tuple (@ZOrExpr var (Tbase T)) n -> R) -> R)
+           (f : Tuple.tuple (@ZOrExpr var (Tbase T)) n -> @ZOrExpr var R)
+  : @ZOrExpr var R.
+  refine match invert_Pairs (x _ of_tuple_var), invert_Pairs (y _ of_tuple_var) with
+         | Some x, Some y
+           => f (Tuple.map2 (fun x y => inExpr (Op IdWithAlt (Pair x y)))
+                            (flat_interp_tuple x)
+                            (flat_interp_tuple y))
+         | Some _, None
+         | None, Some _
+         | None, None
+           => _
+         end.
+  refine (let g := _ in
+          let k := (LetIn (OpZOrExpr IdWithAlt (PairZOrExpr (x _ of_tuple_var) (y _ of_tuple_var)))
+                          (fun v => f (g v))) in _).
+  cbn in *.
+  pose
+
 Definition MulSplitZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y : @ZOrExpr var tZ)
   : @ZOrExpr var (tZ * tZ)
   := match bitwidth with
@@ -484,18 +500,16 @@ Ltac do_pattern_strip_replace SmartVarVarf var t
            ltac:(fun _ => t).
 
 Ltac do_sanity_check t :=
-  let t := (eval pattern (@LetIn.Let_In), (@id_with_alt), (@CPSUtil.id_tuple_with_alt_cps) in t) in
-  let t := match t with ?t _ _ _ => t end in
+  let t := (eval pattern (@LetIn.Let_In), (@id_with_alt), (@CPSUtil.id_tuple_with_alt_cps), (@id_tuple_with_alt) in t) in
+  let t := match t with ?t _ _ _ _ => t end in
   let dummy := match goal with _ => idtac "presanity" t end in
-  let t := match t with fun _ _ _ => ?t => t end in
+  let t := match t with fun _ _ _ _ => ?t => t end in
   let dummy := match goal with _ => idtac "sane" end in
   t.
-Check (@CPSUtil.id_tuple_with_alt_cps (ZOrExpr ?[var] ?[R]) (ZOrExpr ?var (Syntax.Tbase ?[tz])) ?[n]).
-Definition IdTupleWithAltZOrExpr_cps {var n R} (T:=TZ)
-           (x y : forall R, (Tuple.tuple (@ZOrExpr var (Tbase T)) n -> R) -> R)
-           (f : Tuple.tuple (@ZOrExpr var (Tbase T)) n -> @ZOrExpr var R)
-  : @ZOrExpr var R.
-  pose (x _ of_tuple_var).
+Check @CPSUtil.id_tuple_with_alt_cps _ _ _.
+Check @IdTupleWithAltZOrExpr_cps _ _ _.
+    cbn.
+  pose (option_map flat_interp_tuple ()).
   pose (of_tuple_var (Tuple.map2 IdWithAltZOrExpr (x _ id) (y _ id)))
   pose (@of_tuple_var).
   :=
@@ -504,10 +518,12 @@ Ltac do_pattern_strip_replace_id_with_alt SmartVarVarf var t :=
   lazymatch t with
   | context[@CPSUtil.id_tuple_with_alt_cps (ZOrExpr ?var ?T) (ZOrExpr ?var (Tbase ?tz)) ?n]
     => let dummy := match goal with _ => idtac "prepatterna" R A n end in
-       t
+       let t := (eval pattern (@CPSUtil.id_tuple_with_alt_cps (ZOrExpr var T) (ZOrExpr var (Tbase tz)) n) in t) in
+       let t := match t with ?t _ => t end in
+       let t := (eval cbv [IdTupleWithAltZOrExpr_cps]
+                      constr:(t
   | _ => t
   end.
-(* CPSUtil.id_tuple_with_alt_cps *)
 
 Ltac do_pattern_Z SmartVarVarf var t :=
   with_patterned_Z
