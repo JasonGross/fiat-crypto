@@ -14,14 +14,15 @@ Defined.
 Definition compiled_prekaratsuba_mul' wt n m s
   := Eval cbv [projT2 projT1 compiled_prekaratsuba_mul_sig] in
       projT2 (compiled_prekaratsuba_mul_sig wt n m s).
-(*
+
 Definition compiled_pregoldilocks_mul_sig (weight : nat -> Z) (n m : nat) (s : Z)
   : { t : _ & t }.
 Proof.
   (** XXX TODO: cps version of id_tuple_with_alt, use it in goldilocks_mul_cps *)
   Set Printing Depth 100000.
+  Arguments IdfunWithAlt.id_with_alt : clear implicits.
   let goldilocks_mul_cps := (eval cbv delta [goldilocks_mul_cps] in goldilocks_mul_cps) in
-  try do_compile_sig
+  do_compile_sig
     (fun n m T f weight s xy => @goldilocks_mul_cps weight m n s (fst xy) (snd xy) T f)
     uconstr:(fun t xy => t n m weight s xy).
 Defined.
