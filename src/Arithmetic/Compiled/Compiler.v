@@ -178,22 +178,22 @@ Definition IdTupleWithAltZOrExpr {var n T} (x y : Tuple.tuple (@ZOrExpr var (Tba
 Definition IdTupleWithAltZOrExpr_cps {var n R} (T:=TZ)
            (x y : forall R, (Tuple.tuple (@ZOrExpr var (Tbase T)) n -> R) -> R)
            (f : Tuple.tuple (@ZOrExpr var (Tbase T)) n -> @ZOrExpr var R)
-  : @ZOrExpr var R.
-  refine match invert_Pairs (x _ of_tuple_var), invert_Pairs (y _ of_tuple_var) with
-         | Some x, Some y
-           => f (Tuple.map2 (fun x y => inExpr (Op IdWithAlt (Pair x y)))
-                            (flat_interp_tuple x)
-                            (flat_interp_tuple y))
-         | Some _, None
-         | None, Some _
-         | None, None
-           => _
-         end.
-  refine (let g := _ in
-          let k := (LetIn (OpZOrExpr IdWithAlt (PairZOrExpr (x _ of_tuple_var) (y _ of_tuple_var)))
-                          (fun v => f (g v))) in _).
-  cbn in *.
-  pose
+  : @ZOrExpr var R
+  := match invert_Pairs (x _ of_tuple_var), invert_Pairs (y _ of_tuple_var) with
+     | Some x, Some y
+       => f (Tuple.map2 (fun x y => inExpr (Op IdWithAlt (Pair x y)))
+                        (flat_interp_tuple x)
+                        (flat_interp_tuple y))
+     | Some _, None
+     | None, Some _
+     | None, None
+       => inExpr
+            (LetIn
+               (OpZOrExpr IdWithAlt (PairZOrExpr (x _ of_tuple_var)
+                                                 (y _ of_tuple_var)))
+               (fun v => f (Tuple.map (fun v => inExpr (Var v))
+                                      (flat_interp_tuple (n:=n) v))))
+     end.
 
 Definition MulSplitZOrExpr {var} (bitwidth : @ZOrExpr var tZ) (x y : @ZOrExpr var tZ)
   : @ZOrExpr var (tZ * tZ)
@@ -355,9 +355,7 @@ Ltac with_patterned_Z var t tac :=
                        exact t)
             ) in
         let t := (eval cbv beta zeta in t) in
-        let dummy := match goal with _ => idtac "AAA" t end in
         let t := match t with fun _ _ _ _ _ _ => ?t => t end in
-        let dummy := match goal with _ => idtac "BBB" t end in
         t
       ) in
   let t := with_pattern_consts mid_tac t in
@@ -502,26 +500,18 @@ Ltac do_pattern_strip_replace SmartVarVarf var t
 Ltac do_sanity_check t :=
   let t := (eval pattern (@LetIn.Let_In), (@id_with_alt), (@CPSUtil.id_tuple_with_alt_cps), (@id_tuple_with_alt) in t) in
   let t := match t with ?t _ _ _ _ => t end in
-  let dummy := match goal with _ => idtac "presanity" t end in
   let t := match t with fun _ _ _ _ => ?t => t end in
-  let dummy := match goal with _ => idtac "sane" end in
   t.
-Check @CPSUtil.id_tuple_with_alt_cps _ _ _.
-Check @IdTupleWithAltZOrExpr_cps _ _ _.
-    cbn.
-  pose (option_map flat_interp_tuple ()).
-  pose (of_tuple_var (Tuple.map2 IdWithAltZOrExpr (x _ id) (y _ id)))
-  pose (@of_tuple_var).
-  :=
+
 Ltac do_pattern_strip_replace_id_with_alt SmartVarVarf var t :=
   let rec_call := ltac:(do_pattern_strip_replace_id_with_alt SmartVarVarf var) in
   lazymatch t with
   | context[@CPSUtil.id_tuple_with_alt_cps (ZOrExpr ?var ?T) (ZOrExpr ?var (Tbase ?tz)) ?n]
-    => let dummy := match goal with _ => idtac "prepatterna" R A n end in
-       let t := (eval pattern (@CPSUtil.id_tuple_with_alt_cps (ZOrExpr var T) (ZOrExpr var (Tbase tz)) n) in t) in
+    => let t := (eval pattern (@CPSUtil.id_tuple_with_alt_cps (ZOrExpr var T) (ZOrExpr var (Tbase tz)) n) in t) in
        let t := match t with ?t _ => t end in
-       let t := (eval cbv [IdTupleWithAltZOrExpr_cps]
-                      constr:(t
+       let t := (eval cbv [IdTupleWithAltZOrExpr_cps] in
+                    (t (@IdTupleWithAltZOrExpr_cps var n T))) in
+       rec_call t
   | _ => t
   end.
 
@@ -624,7 +614,42 @@ Ltac do_compile_sig op_cps appf :=
 
 Declare Reduction compiler_preprered
   := cbv [id
-            CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr SubWithGetBorrowZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf MapBaseType Compilers.MapBaseType.MapBaseType MapBaseType.check_map_base_type Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type MapBaseType.check_map_base_type_gen].
+          (*CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr SubWithGetBorrowZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf MapBaseType Compilers.MapBaseType.MapBaseType MapBaseType.check_map_base_type Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type MapBaseType.check_map_base_type_gen*)].
+
+(*
+
+Goal True.
+  pose compiled_prekaratsuba_mul' as e.
+  cbv beta in e.
+  cbv [compiled_prekaratsuba_mul'] in e.
+  Set Printing Depth 1000000.
+  Require Import LetIn.
+  Import Compilers.Syntax.
+  Import ZExtended.Syntax.
+  Import Z.Syntax.
+  Notation E := (Syntax.Expr _).
+  cbv [id
+         ZExtended.InlineConstAndOp.InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Inline.InlineConstGen Inline.inline_const_gen
+         InlineConstAndOp.Const
+         Linearize.Linearize Linearize.Linearize_gen Linearize.linearize_gen
+         Eta.ExprEta Eta.expr_eta
+         ZExtended.MapBaseType.MapBaseType Compilers.MapBaseType.MapBaseType Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type
+         fst snd
+         SmartMap.SmartVarfMap SmartMap.SmartVarVarf
+         ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr SubWithGetBorrowZOrExpr
+         Util.make_const cast_const
+      ] in e.
+
+  cbv [interpToZ] in e.
+  cbv [ZToInterp] in e.
+
+
+  Locate place_cps.
+  Print Core.B.Positional.place_cps.
+
+            CPSUtil.map_cps List.seq InlineConstAndOp.InlineConstAndOp Compilers.Syntax.tuple Tuple.repeat Tuple.append domain codomain ExprEta expr_eta expr_eta_gen interp_flat_type_eta_gen Syntax.tuple' Linearize InlineConstAndOp Compilers.InlineConstAndOp.InlineConstAndOp Linearize_gen Inline.InlineConstGen linearize_gen Inline.inline_const_gen ExprInversion.invert_Abs SmartMap.SmartVarfMap SmartMap.SmartVarVarf flat_interp_tuple CPSUtil.to_list_cps CPSUtil.to_list_cps' CPSUtil.to_list'_cps CPSUtil.combine_cps Nat.pred List.app CPSUtil.from_list_default_cps CPSUtil.update_nth_cps CPSUtil.from_list_default'_cps Tuple.map SmartMap.SmartPairf Tuple.map' flat_interp_untuple flat_interp_untuple' of_tuple_var flat_interp_untuple flat_interp_untuple' SmartMap.SmartPairf tuple tuple' linearizef ZOrExprSmartPairf inZ BoolCaseZOrExpr MulSplitZOrExpr AddWithGetCarryZOrExpr SubWithGetBorrowZOrExpr CPSUtil.fold_right_cps2_specialized SmartMap.SmartVarfMap SmartMap.SmartPairf MapBaseType Compilers.MapBaseType.MapBaseType MapBaseType.check_map_base_type Compilers.MapBaseType.MapBaseType' MapBaseType.map_base_type MapBaseType.check_map_base_type_gen]
+
+*)
 
 Ltac do_prered t :=
   let t' := head t in

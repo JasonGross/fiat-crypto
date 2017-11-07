@@ -62,8 +62,35 @@ Definition compiled_prereduce' wt n m s c
   := Eval cbv [projT2 projT1 compiled_prereduce_sig] in
       projT2 (compiled_prereduce_sig wt n m s c).
 
+Print Core.B.Positional.chained_carries_cps.
+Definition compiled_prechained_carries_sig (weight : nat -> Z) (n : nat) (idxs : list nat)
+  : { t : _ & t }.
+Proof.
+  do_compile_sig
+    (fun n T f weight x => @Core.B.Positional.chained_carries_cps weight Core.modulo Core.div n x idxs T f)
+    uconstr:(fun t x => t n weight x).
+Defined.
+
+Definition compiled_prechained_carries' wt n m s c
+  := Eval cbv [projT2 projT1 compiled_prechained_carries_sig] in
+      projT2 (compiled_prechained_carries_sig wt n m s c).
+
+Definition compiled_precarry_reduce_sig (weight : nat -> Z) (n m : nat) (s : Z) (c : list (Z * Z))
+  : { t : _ & t }.
+Proof.
+  do_compile_sig
+    (fun m T n f weight s c x => @Core.B.Positional.carry_reduce_cps weight n m s c x T f)
+    uconstr:(fun t x => t m n weight s c x).
+Defined.
+
+Definition compiled_precarry_reduce' wt n m s c
+  := Eval cbv [projT2 projT1 compiled_precarry_reduce_sig] in
+      projT2 (compiled_precarry_reduce_sig wt n m s c).
+
 Time Definition compiled_preadd := compiler_prered compiled_preadd'.
 Time Definition compiled_presub := compiler_prered compiled_presub'.
 Time Definition compiled_preopp := compiler_prered compiled_preopp'.
 Time Definition compiled_premul := compiler_prered compiled_premul'.
 Time Definition compiled_prereduce := compiler_prered compiled_prereduce'.
+Time Definition compiled_prechained_carries := compiler_prered compiled_prechained_carries'.
+Time Definition compiled_precarry_reduce := compiler_prered compiled_precarry_reduce'.
