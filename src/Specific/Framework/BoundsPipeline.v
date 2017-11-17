@@ -404,7 +404,8 @@ Section gen.
         cbv [decode_sig encode_sig carry_opp_sig carry_add_sig carry_sub_sig carry_mul_sig decode_sig carry_opp carry_add carry_sub];
         cbn [P_tight P_loose proj1_sig];
         try reflexivity;
-        repeat intros [? [? ?] ]; cbn [proj1_sig].
+        repeat intros [? [? ?] ]; cbn [proj1_sig];
+          rewrite ?EtaInterp.InterpExprEta_arrow, ?LinearizeInterp.InterpLinearize.
       { apply HopsZ_valid. }
       { apply HopsZ_valid. }
       { apply HopsZ_valid. }

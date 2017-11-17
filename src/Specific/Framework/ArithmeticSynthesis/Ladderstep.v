@@ -22,14 +22,15 @@ Local Infix "^" := tuple : type_scope.
 Definition FMxzladderstep {m} := @M.donnaladderstep (F m) F.add F.sub F.mul.
 
 Section with_notations.
-  Context (T_tight T_loose : Type).
-  Local Notation retT := (tuple (tuple T_tight 2) 2).
+  Context (T_tight T_loose retT : Type).
+  Local Notation preretT := (tuple (tuple T_tight 2) 2).
   Context (relax : T_tight -> T_loose)
           (let_inT : T_tight -> (T_tight -> retT) -> retT)
           (let_inL : T_loose -> (T_loose -> retT) -> retT)
           (add sub : T_tight -> T_tight -> T_loose)
           (carry_mul : T_loose -> T_loose -> T_tight)
-          (carry_square : T_loose -> T_tight).
+          (carry_square : T_loose -> T_tight)
+          (cont : preretT -> retT).
   Local Infix "+" := add.
   Local Notation "a * b" := (carry_mul a b).
   Local Notation "x ^ 2" := (carry_square x).
@@ -37,7 +38,7 @@ Section with_notations.
   Local Notation "'dlet' x .. y := v 'in' f" := (let_inT v (fun x => .. (fun y => f) .. )).
   Local Notation "'llet' x := v 'in' f" := (let_inL v (fun x => f)).
   Local Coercion relax : T_tight >-> T_loose.
-  Definition Mxzladderstep a24 x1 Q Q'
+  Definition Mxzladderstep_cps a24 x1 Q Q'
     := match Q, Q' with
        | (x, z), (x', z') =>
          dlet origx := x in
@@ -61,14 +62,15 @@ Section with_notations.
          dlet zzz := zz * a24 in
          llet zzz := zzz + xx in
          dlet z2 := zz * zzz in
-         ((x2, z2), (x3, z3))%core
+         cont ((x2, z2), (x3, z3))%core
        end.
 
 
-  Lemma Mxzladderstep_Proper1
+  Lemma Mxzladderstep_cps_Proper1
         (P_tight : T_tight -> Prop)
         (P_loose : T_loose -> Prop)
-        (P_ret : tuple (tuple T_tight 2) 2 -> Prop
+        (P_ret : retT -> Prop)
+        (P_preret : tuple (tuple T_tight 2) 2 -> Prop
          := fun x => (P_tight (fst (fst x)) /\ P_tight (snd (fst x)))
                      /\ (P_tight (fst (snd x)) /\ P_tight (snd (snd x))))
         (P_relax : forall x, P_tight x -> P_loose (relax x))
@@ -78,14 +80,15 @@ Section with_notations.
         (P_sub : forall x (_ : P_tight x) y (_ : P_tight y), P_loose (sub x y))
         (P_carry_mul : forall x (_ : P_loose x) y (_ : P_loose y), P_tight (carry_mul x y))
         (P_carry_square : forall x (_ : P_loose x), P_tight (carry_square x))
+        (P_cont : forall x (_ : P_preret x), P_ret (cont x))
         a24 x1 Q Q'
         (P_a24 : P_loose a24)
         (P_x1 : P_loose x1)
         (P_Q : P_tight (fst Q) /\ P_tight (snd Q))
         (P_Q' : P_tight (fst Q') /\ P_tight (snd Q'))
-    : P_ret (Mxzladderstep a24 x1 Q Q').
+    : P_ret (Mxzladderstep_cps a24 x1 Q Q').
   Proof.
-    destruct Q, Q', P_Q, P_Q'; cbv [Mxzladderstep]; cbn [fst snd] in *.
+    destruct Q, Q', P_Q, P_Q'; cbv [Mxzladderstep_cps]; cbn [fst snd] in *.
     repeat match goal with
            | [ H : _ |- _ ] => apply H; repeat intro; try assumption
            | _ => progress repeat apply conj; try assumption
@@ -99,29 +102,31 @@ Section hetero.
   Local Notation "R ^ n" := (Tuple.fieldwise (n:=n%nat) R%signature) : signature_scope.
   Local Notation "R ^ 2" := (Tuple.fieldwise (n:=2) R%signature) : signature_scope.
 
-  Lemma Mxzladderstep_Proper_hetero
-        {T1_tight T1_loose T2_tight T2_loose}
+  Lemma Mxzladderstep_cps_Proper_hetero
+        {T1_tight T1_loose T2_tight T2_loose retT1 retT2}
         (R_tight : T1_tight -> T2_tight -> Prop)
         (R_loose : T1_loose -> T2_loose -> Prop)
+        (R_retT : retT1 -> retT2 -> Prop)
     : (((R_tight ==> R_loose)
-          ==> (R_tight ==> (R_tight ==> (R_tight^2)^2) ==> (R_tight^2)^2)
-          ==> (R_loose ==> (R_loose ==> (R_tight^2)^2) ==> (R_tight^2)^2)
+          ==> (R_tight ==> (R_tight ==> R_retT) ==> R_retT)
+          ==> (R_loose ==> (R_loose ==> R_retT) ==> R_retT)
           ==> (R_tight ==> R_tight ==> R_loose)
           ==> (R_tight ==> R_tight ==> R_loose)
           ==> (R_loose ==> R_loose ==> R_tight)
           ==> (R_loose ==> R_tight)
+          ==> ((R_tight^2)^2 ==> R_retT)
           ==> R_loose
           ==> R_loose
           ==> (R_tight^2)
           ==> (R_tight^2)
-          ==> (R_tight^2)^2)%signature)
-        (@Mxzladderstep T1_tight T1_loose)
-        (@Mxzladderstep T2_tight T2_loose).
+          ==> R_retT)%signature)
+        (@Mxzladderstep_cps T1_tight T1_loose retT1)
+        (@Mxzladderstep_cps T2_tight T2_loose retT2).
   Proof.
     cbv [tuple tuple']; repeat intro; destruct_head'_prod;
       destruct_head_hnf' and;
       cbn [fst snd] in *; cbv [fieldwise'] in *.
-    cbv [Mxzladderstep].
+    cbv [Mxzladderstep_cps].
     repeat match goal with
            | _ => progress repeat intro
            | [ H : _ |- _ ] => apply H; try assumption
@@ -130,9 +135,33 @@ Section hetero.
   Qed.
 End hetero.
 
-Definition FMxzladderstep_Mxzladderstep {m}
+Lemma Mxzladderstep_id_gen
+      (T_tight T_loose retT : Type)
+      (preretT := (tuple (tuple T_tight 2) 2))
+      (relax : T_tight -> T_loose)
+      (let_inT : T_tight -> (T_tight -> retT) -> retT)
+      (let_inL : T_loose -> (T_loose -> retT) -> retT)
+      (add sub : T_tight -> T_tight -> T_loose)
+      (carry_mul : T_loose -> T_loose -> T_tight)
+      (carry_square : T_loose -> T_tight)
+      (cont : preretT -> retT)
+      (let_inT' : T_tight -> (T_tight -> preretT) -> preretT)
+      (let_inL' : T_loose -> (T_loose -> preretT) -> preretT)
+      (eval_let_inT : forall x f, let_inT x f = f x)
+      (eval_let_inL : forall x f, let_inL x f = f x)
+      (eval_let_inT' : forall x f, let_inT' x f = f x)
+      (eval_let_inL' : forall x f, let_inL' x f = f x)
+      a24 x1 Q Q'
+  : @Mxzladderstep_cps T_tight T_loose retT relax let_inT let_inL add sub carry_mul carry_square cont a24 x1 Q Q'
+    = cont (@Mxzladderstep_cps T_tight T_loose _ relax let_inT' let_inL' add sub carry_mul carry_square id a24 x1 Q Q').
+Proof.
+  destruct Q, Q'; cbv [Mxzladderstep_cps];
+    repeat rewrite ?eval_let_inT, ?eval_let_inT', ?eval_let_inL, ?eval_let_inL'; reflexivity.
+Qed.
+
+Definition FMxzladderstep_Mxzladderstep_cps_id {m}
   : @FMxzladderstep m
-    = @Mxzladderstep (F m) (F m) id (@Let_In _ _) (@Let_In _ _) F.add F.sub F.mul (fun x => F.mul x x)
+    = @Mxzladderstep_cps (F m) (F m) _ id (@Let_In _ (fun _ => _)) (@Let_In _ (fun _ => _)) F.add F.sub F.mul (fun x => F.mul x x) id
   := eq_refl.
 
 

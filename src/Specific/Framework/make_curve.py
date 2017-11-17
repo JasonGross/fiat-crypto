@@ -297,60 +297,40 @@ Ltac extra_prove_square_eq _ := %(extra_prove_square_eq)s.
     return ret
 
 def make_synthesis(prefix):
-    return r"""Require Import Crypto.Specific.Framework.SynthesisFramework.
+    ret = r"""Require Import Crypto.Specific.Framework.Synthesis.
 Require Import %s.CurveParameters.
 
-Module P <: PrePackage.
-  Definition package : Tag.Context.
-  Proof. make_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq. Defined.
-End P.
+Definition curve := fill_defaults curve.
 
-Module Export S := PackageSynthesis P.
-""" % prefix
-
-def make_synthesized_arg(fearg, prefix, montgomery=False):
-    def make_from_arg(arg, nargs, phi_arg_postfix='', phi_output_postfix='', prefix=prefix):
-        LETTERS = 'abcdefghijklmnopqrstuvwxyz'
-        assert(nargs <= len(LETTERS))
-        arg_names = ' '.join(LETTERS[:nargs])
-        if not montgomery:
-            arg_types = ' -> '.join(['feBW%s' % phi_arg_postfix] * nargs)
-            mapped_args = ' '.join('(phiBW%s %s)' % (phi_arg_postfix, l)
-                                   for l in LETTERS[:nargs])
-            feBW_output = 'feBW' + phi_output_postfix
-            phi_output = 'phiBW' + phi_output_postfix
-        else:
-            arg_types = ' -> '.join(['feBW_small'] * nargs)
-            mapped_args = ' '.join('(phiM_small %s)' % l
-                                   for l in LETTERS[:nargs])
-            feBW_output = 'feBW_small'
-            phi_output = 'phiM_small'
-        return locals()
-    GEN_PREARG = r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition %(arg)s :
-  { %(arg)s : %(arg_types)s -> %(feBW_output)s
-  | forall %(arg_names)s, %(phi_output)s (%(arg)s %(arg_names)s) = """
-    GEN_MIDARG = "F.%(arg)s %(mapped_args)s"
-    SQUARE_MIDARG = "F.mul %(mapped_args)s %(mapped_args)s"
-    CARRY_MIDARG = "%(mapped_args)s"
-    GEN_POSTARG = r""" }.
+Definition package : SynthesisOutput curve.
 Proof.
   Set Ltac Profiling.
-  Time synthesize_%(arg)s ().
+  Time synthesize ().
   Show Ltac Profile.
 Time Defined.
 
-Print Assumptions %(arg)s.
-"""
-    GEN_ARG = GEN_PREARG + GEN_MIDARG + GEN_POSTARG
-    SQUARE_ARG = GEN_PREARG + SQUARE_MIDARG + GEN_POSTARG
-    CARRY_ARG = GEN_PREARG + CARRY_MIDARG + GEN_POSTARG
-    nargs_map = {'mul':2, 'sub':2, 'add':2, 'square':1, 'opp':1, 'carry':1}
-    special_args = {'fecarry':CARRY_ARG, 'fecarry_square':SQUARE_ARG, 'fesquare':SQUARE_ARG}
-    if fearg in ('fecarry_mul', 'fecarry_sub', 'fecarry_add', 'fecarry_square', 'fecarry_opp'):
+Time Print Assumptions package.
+""" % prefix
+    return ret
+    for op in ('zero', 'one', 'add', 'sub', 'carry_mul', 'carry_square', 'opp', 'carry', 'freeze', 'nonzero', 'carry_add', 'carry_sub', 'carry_opp')
+
+def make_synthesized_arg(fearg, prefix, montgomery=False):
+    def make_from_proj(def_name, proj_name, prefix=prefix):
+        return r"""Require Import Crypto.Specific.Framework.Synthesis.
+Require Import %(prefix)s.Synthesis.
+
+Time Definition %(def_name)s := Eval lazy in package.(opsW).(%(proj_name)s).
+""" % locals()
+    if fearg in ('fezero', 'feone', 'feadd', 'fesub', 'fecarry_mul', 'fecarry_square', 'feopp', 'fecarry', 'fecarry_add', 'fecarry_sub', 'fecarry_opp'):
+        return make_from_proj(fearg[2:], fearg[2:])
+    elif fearg in ('femul', 'fesquare'):
+        return make_from_proj(fearg[2:], 'carry_' + fearg[2:])
+    elif fearg in ('freeze', 'nonzero'):
+        return make_from_proj(fearg, fearg)
+    elif fearg in ('fenz',):
+        return make_from_proj('nonzero', 'nonzero')
+
+    'fecarry_mul', 'fecarry_sub', 'fecarry_add', 'fecarry_square', 'fecarry_opp'):
         nargs = nargs_map[fearg.split('_')[-1]]
         ARG = special_args.get(fearg, GEN_ARG)
         return ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_tight', phi_output_postfix='_tight')
