@@ -11,6 +11,10 @@ Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Tuple.
+Require Import Crypto.Compilers.Eta.
+Require Import Crypto.Compilers.Linearize.
+Require Import Crypto.Compilers.EtaInterp.
+Require Import Crypto.Compilers.LinearizeInterp.
 Require Import Crypto.Util.SideConditions.CorePackages.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
 Require Import Crypto.Specific.Framework.CurveParameters.
@@ -62,19 +66,21 @@ Section gen.
   Local Notation pick_typeb := (@Interpretation.Bounds.bounds_to_base_type (Interpretation.Bounds.round_up_to_in_list allowable_lgsz)) (only parsing).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
 
+  Local Notation η e := (ExprEta (Linearize (ExprEta e%expr))).
+
   Definition ropsZ : SynthesisOutputOps curve TZ
     := {|
         encodeZ := curve.(FencodeTuple);
         decodeZ := curve.(FdecodeTuple);
-        zero := val curve_scs.(zeroZ);
-        one := val curve_scs.(oneZ);
-        add := val curve_scs.(addZ);
-        sub := val curve_scs.(subZ);
-        opp := val curve_scs.(oppZ);
-        carry := val curve_scs.(carryZ);
-        carry_mul := curve_scs.(carry_mulZ);
-        carry_square := curve_scs.(carry_squareZ);
-        freeze := val curve_scs.(freezeZ);
+        zero := η (val curve_scs.(zeroZ));
+        one := η (val curve_scs.(oneZ));
+        add := η (val curve_scs.(addZ));
+        sub := η (val curve_scs.(subZ));
+        opp := η (val curve_scs.(oppZ));
+        carry := η (val curve_scs.(carryZ));
+        carry_mul := η (curve_scs.(carry_mulZ));
+        carry_square := η (curve_scs.(carry_squareZ));
+        freeze := option_map (fun e => η e) (val curve_scs.(freezeZ));
         nonzero := None;
       |}.
 
@@ -101,11 +107,15 @@ Section gen.
              | _ => progress destruct_head'_sig
              | [ |- context[val ?e] ]
                => progress (destruct e; subst; cbn [val])
+             | _ => progress intros
+             | _ => progress cbv [OutputType.RT] in *
+             | _ => rewrite Option.option_map_map
+             | _ => rewrite !InterpExprEta_arrow
+             | _ => rewrite !InterpLinearize
              | [ |- Compiler.compile_tupleZ _ = _ ]
                => cbv [OutputType.RT OutputType.rT encode Compiler.compile_tupleZ Compiler.compile_const Positional.Fencode F.to_Z]
-             | _ => progress cbn [proj1_sig Interp interp interpf interpf_step encodeTuple]
-             | _ => progress cbv [tuple_map zeroE_sig' oneE_sig' Compiler.compile_tupleZ Compiler.compile_const decodeZ option_map constant_sig' encode]
-             | _ => progress intros
+             | _ => progress cbn [proj1_sig Interp interp interpf interpf_step encodeTuple] in *
+             | _ => progress cbv [tuple_map zeroE_sig' oneE_sig' Compiler.compile_tupleZ Compiler.compile_const decodeZ option_map constant_sig' encode] in *
              | _ => rewrite interpf_SmartPairf
              | _ => rewrite SmartVarfMap_compose
              | _ => rewrite Tuple.map_id
@@ -130,6 +140,7 @@ Section gen.
     { repeat first [ progress cbn [option_map interpToZ] in *
                    | rewrite Tuple.map_id
                    | progress cbv [eval evalZ evalE] in * ].
+      repeat rewrite ?InterpExprEta_arrow, ?InterpLinearize.
       apply Hf, curve_sc.(eval_bounded_tight); assumption. }
   Qed.
 
@@ -138,7 +149,9 @@ Section gen.
     constructor; intros;
       rewrite ?InterpCompose;
       cbv [decode decodeToTuple interpToZ]; rewrite !Tuple.map_id;
-        try (setoid_rewrite curve_scs.(eval_carryZ); cbn).
+        cbv [carry opp add carry_mul sub]; cbn [ropsZ];
+          repeat rewrite ?InterpExprEta_arrow, ?InterpLinearize;
+          try (setoid_rewrite curve_scs.(eval_carryZ); cbn).
     { setoid_rewrite curve_scs.(eval_oppZ). reflexivity. }
     { setoid_rewrite curve_scs.(eval_addZ); reflexivity. }
     { setoid_rewrite curve_scs.(eval_subZ); reflexivity. }

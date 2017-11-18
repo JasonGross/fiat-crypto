@@ -165,6 +165,20 @@ Section gen.
     | cbv [decode tuple_map SmartVarfMap smart_interp_flat_map];
       rewrite !flat_interp_tuple_untuple, !Tuple.map_map; reflexivity ].
 
+  (*Lemma generalize_bounds bounds1 bounds2
+    : forall f : interp_type interp_base_type (rTZ -> rTZ),
+      (forall v' : interp_flat_type (pick_type (flat_interp_untuple bounds1)),
+          Interpretation.Bounds.is_bounded_by (flat_interp_untuple bounds1) (cast_back_flat_const v') ->
+          Interpretation.Bounds.is_bounded_by (flat_interp_untuple bounds2) (f (cast_back_flat_const v'))) ->
+      forall x : T' TZ,
+        ZRange.is_bounded_by None bounds1 (flat_interp_tuple x) ->
+        ZRange.is_bounded_by None bounds2 (flat_interp_tuple (f x)).
+  Proof.
+    cbv [Interpretation.Bounds.is_bounded_by Interpretation.Bounds.is_bounded_by' ZRange.is_bounded_by].
+    intros f H x H0.
+
+    cbv [ZRange.is_bounded_by'] in *.*)
+
   Lemma generalize_bounds_loose_tight
     : forall f : interp_type interp_base_type (rTZ -> rTZ),
       (forall v' : interp_flat_type (pick_type bounds_looseZ),
@@ -174,6 +188,7 @@ Section gen.
         ZRange.is_bounded_by None bounds_loose (flat_interp_tuple x) ->
         ZRange.is_bounded_by None bounds_tight (flat_interp_tuple (f x)).
   Proof.
+    cbv [bounds_looseZ bounds_tightZ].
     cbv [Interpretation.Bounds.is_bounded_by Interpretation.Bounds.is_bounded_by' ZRange.is_bounded_by].
   Admitted.
 
@@ -225,6 +240,41 @@ Section gen.
   Proof.
     cbv [Interpretation.Bounds.is_bounded_by Interpretation.Bounds.is_bounded_by' ZRange.is_bounded_by].
   Admitted.
+
+  Lemma bounded_eq_map_interp v
+        (H : ZRange.is_bounded_by None curve.(bounds_bitwidths) v)
+    : Tuple.map (fun x => @interpToZ (TWord (Z.to_nat (Z.log2_up bitwidth))) (ZToInterp x))
+                v
+      = v.
+  Proof.
+    setoid_rewrite interpToZ_ZToInterp_mod.
+    rewrite <- (Tuple.map_id v).
+    cbv [ZRange.is_bounded_by bounds_bitwidths bounds' ZRange.is_bounded_by' ZRange.lower ZRange.upper] in H.
+    match goal with |- ?G => cut (G /\ Tuple.fieldwise (fun x y => x = y) v v); [ tauto | ] end.
+    rewrite <- Tuple.fieldwise_eq_iff, Tuple.fieldwise_map_iff, Tuple.map_id.
+    rewrite Tuple.fieldwise_lift_and.
+    lazymatch goal with
+    | [ |- Tuple.fieldwise (fun a b => @?H a b /\ a = b) ?v ?v ]
+      => cut (Tuple.fieldwise (fun a b => H b b /\ a = b) v v); cbv beta
+    end.
+    { apply Tuple.fieldwise_Proper; [ intros ?? [? ?]; subst; auto | reflexivity | reflexivity ]. }
+    rewrite <- Tuple.fieldwise_lift_and, Tuple.fieldwise_eq_iff; split; [ | reflexivity ].
+    revert H.
+    rewrite <- (Tuple.map_id v), !Tuple.fieldwise_map_iff.
+    apply (@Tuple.fieldwise_Proper_gen_dep _ _ _ _ (fun _ _ => True) eq Basics.impl);
+      [ compute; tauto
+      | compute; tauto
+      | intros; subst
+      | rewrite Tuple.fieldwise_to_list_iff, Forall2_forall_iff; rewrite ?Tuple.length_to_list; constructor
+      | rewrite Tuple.fieldwise_eq_iff; reflexivity ].
+    intros [H' _].
+    pose proof (Z.log2_up_nonneg bitwidth).
+    rewrite Z.max_r, Z.pow_Zpow, Z2Nat.id by omega; cbn.
+    rewrite Z.mod_small; [ omega | split; [ omega | ] ].
+    eapply (Z.lt_le_trans _ (2^bitwidth)); [ omega | ].
+    Z.peel_le.
+    apply Z.log2_up_le_full.
+  Qed.
 
   Lemma generalize_bounds_tight2_loose
     : forall f : interp_type interp_base_type (rTZ * rTZ -> rTZ),
@@ -347,37 +397,33 @@ Section gen.
         destruct HopsZ_valid'; unshelve constructor;
         cbn [P_tight P_loose P_1] in *;
         cbv [encode decode] in *;
-        cbn [encodeZ decodeZ zero one add sub carry_mul carry_square opp carry freeze nonzero].
-      { intro v.
-        cbv [encodeTuple Interp interp RT rT].
-        cbn; rewrite interpf_SmartPairf, SmartVarfMap_tuple.
-        cbv [tuple_map].
-        rewrite !flat_interp_tuple_untuple, !Tuple.map_map.
-        cbn -[interpToZ ZToInterp].
-        cbv [cast_const].
-        change (@ZToInterp TZ) with (@id Z).
-        change (@interpToZ TZ) with (@id Z).
-        cbv [id].
-        admit. }
-      { intro v.
-        cbv [decodeToTuple encodeTuple Interp interp RT rT].
-        cbn -[interpToZ ZToInterp]; rewrite interpf_SmartPairf, SmartVarfMap_tuple.
-        cbv [tuple_map].
-        rewrite !flat_interp_tuple_untuple, !Tuple.map_map.
-        cbn -[interpToZ ZToInterp].
-        cbv [cast_const].
-        change (@ZToInterp TZ) with (@id Z).
-        change (@interpToZ TZ) with (@id Z).
-        cbv [id].
-        setoid_rewrite interpToZ_ZToInterp_mod.
-        admit. }
+        cbn [encodeZ decodeZ zero one add sub carry_mul carry_square opp carry freeze nonzero];
+        intros.
       all:try match goal with
               | [ |- context[val ?e] ]
                 => cbv [val]; destruct e; subst
               end.
       all:try reflexivity.
+      1-2:lazymatch goal with
+          | [ |- context[encodeZ _ ?v] ]
+            => generalize (encode_valid v);
+                 cbv [decodeToTuple encodeTuple Interp interp RT rT];
+                 cbn; rewrite !interpf_SmartPairf, !SmartVarfMap_tuple;
+                   cbv [tuple_map];
+                   rewrite !flat_interp_tuple_untuple, !Tuple.map_map;
+                   cbn -[interpToZ ZToInterp];
+                   cbv [cast_const];
+                   change (@ZToInterp TZ) with (@id Z);
+                   change (@interpToZ TZ) with (@id Z);
+                   cbv [id];
+                   rewrite !Tuple.map_id;
+                   intros [H0 H1];
+                   rewrite ?bounded_eq_map_interp
+                     by (auto using curve_sc.(relax_to_bitwidth_bounds), curve_sc.(relax_bounds));
+                   auto using HP_extra.(decode_encode_correct)
+          | _ => idtac
+          end.
       all:admit. }
-
     { simple refine
              (let Hring :=
                   Ring.ring_by_isomorphism
@@ -405,7 +451,7 @@ Section gen.
         cbn [P_tight P_loose proj1_sig];
         try reflexivity;
         repeat intros [? [? ?] ]; cbn [proj1_sig];
-          rewrite ?EtaInterp.InterpExprEta_arrow, ?LinearizeInterp.InterpLinearize.
+          repeat rewrite ?EtaInterp.InterpExprEta_arrow, ?LinearizeInterp.InterpLinearize.
       { apply HopsZ_valid. }
       { apply HopsZ_valid. }
       { apply HopsZ_valid. }

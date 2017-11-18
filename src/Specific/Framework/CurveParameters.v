@@ -75,6 +75,46 @@ Module Export CurveParameters.
               allowable_bit_widths
               freeze_allowable_bit_widths
               modinv_fuel].
+  Ltac cbv_CurveParameters
+    := cbv [sz
+              base
+              bitwidth
+              s
+              c
+              carry_chains
+              a24
+              coef_div_modulus
+              goldilocks
+              karatsuba
+              montgomery
+              freeze
+              mul_code
+              square_code
+              upper_bound_of_exponent_tight
+              upper_bound_of_exponent_loose
+              allowable_bit_widths
+              freeze_allowable_bit_widths
+              modinv_fuel].
+  Ltac cbv_CurveParameters_in_all
+    := cbv [sz
+              base
+              bitwidth
+              s
+              c
+              carry_chains
+              a24
+              coef_div_modulus
+              goldilocks
+              karatsuba
+              montgomery
+              freeze
+              mul_code
+              square_code
+              upper_bound_of_exponent_tight
+              upper_bound_of_exponent_loose
+              allowable_bit_widths
+              freeze_allowable_bit_widths
+              modinv_fuel] in *.
 
   Ltac default_mul CP :=
     lazymatch (eval hnf in (mul_code CP)) with

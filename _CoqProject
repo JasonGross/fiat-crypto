@@ -352,8 +352,6 @@ src/Specific/X25519/C64/fesub.v
 src/Specific/X25519/C64/fesubDisplay.v
 src/Specific/X25519/C64/freeze.v
 src/Specific/X25519/C64/freezeDisplay.v
-src/Specific/X25519/C64/ladderstep.v
-src/Specific/X25519/C64/ladderstepDisplay.v
 src/Specific/montgomery32_2e127m1_4limbs/CurveParameters.v
 src/Specific/montgomery32_2e127m1_4limbs/Synthesis.v
 src/Specific/montgomery32_2e127m1_4limbs/feadd.v

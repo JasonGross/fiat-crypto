@@ -12,6 +12,8 @@ Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Eta.
 Require Import Crypto.Compilers.EtaInterp.
+Require Import Crypto.Compilers.Linearize.
+Require Import Crypto.Compilers.LinearizeInterp.
 Require Import Crypto.Compilers.Tuple.
 Require Import Crypto.Util.SideConditions.CorePackages.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
@@ -71,20 +73,22 @@ Section gen.
     := (ZRange.is_bounded_by None bounds_limb_widths (flat_interp_tuple (T:=Tbase TZ) a))
          (only parsing).
 
+  Local Notation η e := (ExprEta (Linearize (ExprEta e%expr))).
+
   Definition ropsZ : SynthesisOutputOps curve TZ
     := {|
         decodeZ v := curve_scbm.(montgomery_to_F) (MontgomeryAPI.eval (Z.pos r) v);
         encodeZ v := MontgomeryAPI.encode (Z.pos r) _ (curve_scbm.(montgomery_of_F) v);
-        zero := val curve_scm.(zeroZ);
-        one := val curve_scm.(oneZ);
-        add := val curve_scm.(addZ);
-        sub := val curve_scm.(subZ);
-        opp := val curve_scm.(oppZ);
-        carry := ExprEta (fun var => Abs (fun x => SmartVarf x));
-        carry_mul := val curve_scm.(mulZ);
-        carry_square := curve_scm.(val_squareZ);
+        zero := η (val curve_scm.(zeroZ));
+        one := η (val curve_scm.(oneZ));
+        add := η (val curve_scm.(addZ));
+        sub := η (val curve_scm.(subZ));
+        opp := η (val curve_scm.(oppZ));
+        carry := η (fun var => Abs (fun x => SmartVarf x));
+        carry_mul := η (val curve_scm.(mulZ));
+        carry_square := η (curve_scm.(val_squareZ));
         freeze := None;
-        nonzero := Some (val curve_scm.(nonzeroZ));
+        nonzero := Some (η (val curve_scm.(nonzeroZ)));
       |}.
 
   Definition P_extra : SynthesisOutputProps curve TZ
@@ -203,29 +207,31 @@ Section gen.
     pose proof curve_scm.(tight_is_limb_width).
     pose proof curve_scm.(loose_is_limb_width).
     constructor; intros; rewrite ?InterpCompose;
-      try (progress simpl @carry; rewrite InterpExprEta_arrow; unfold Interp at 1);
-      cbv [interp];
-      try rewrite InterpProofs.interpf_SmartVarf;
-      cbv [decode decodeToTuple interpToZ]; rewrite !Tuple.map_id;
-        cbv [add opp sub carry_mul ropsZ decodeZ];
-        cbn [P_tight P_extra] in *;
-        repeat match goal with
-               | [ H : ?b = bounds_limb_widths, H' : context[?b] |- _ ]
-                 => rewrite H in H'
-               | [ H : ?A -> ?B, H' : ?A |- _ ] => specialize (H H')
-               | _ => progress destruct_head'_and
-               end;
-        lazymatch goal with
-        | [ |- context[curve_scm.(addZ)] ]
-          => interpose (fun x y => eval_addZ curve_sc curve_scm (x, y))
-        | [ |- context[curve_scm.(oppZ)] ]
-          => interpose (eval_oppZ curve_sc curve_scm)
-        | [ |- context[curve_scm.(subZ)] ]
-          => interpose (fun x y => eval_subZ curve_sc curve_scm (x, y))
-        | [ |- context[curve_scm.(mulZ)] ]
-          => interpose (fun x y => eval_mulZ curve_sc curve_scm (x, y))
-        end;
-        try reflexivity;
-        try assumption.
+      cbv [carry opp add sub carry_mul]; cbn [ropsZ];
+        repeat rewrite ?InterpExprEta_arrow, ?InterpLinearize;
+        change (Interp (fun var => @?f var)) with (interp interp_op (f _));
+        cbv [interp];
+        try rewrite InterpProofs.interpf_SmartVarf;
+        cbv [decode decodeToTuple interpToZ]; rewrite !Tuple.map_id;
+          cbv [ropsZ decodeZ];
+          cbn [P_tight P_extra] in *;
+          repeat match goal with
+                 | [ H : ?b = bounds_limb_widths, H' : context[?b] |- _ ]
+                   => rewrite H in H'
+                 | [ H : ?A -> ?B, H' : ?A |- _ ] => specialize (H H')
+                 | _ => progress destruct_head'_and
+                 end;
+          lazymatch goal with
+          | [ |- context[curve_scm.(addZ)] ]
+            => interpose (fun x y => eval_addZ curve_sc curve_scm (x, y))
+          | [ |- context[curve_scm.(oppZ)] ]
+            => interpose (eval_oppZ curve_sc curve_scm)
+          | [ |- context[curve_scm.(subZ)] ]
+            => interpose (fun x y => eval_subZ curve_sc curve_scm (x, y))
+          | [ |- context[curve_scm.(mulZ)] ]
+            => interpose (fun x y => eval_mulZ curve_sc curve_scm (x, y))
+          end;
+          try reflexivity;
+          try assumption.
   Qed.
 End gen.

@@ -67,8 +67,8 @@ Section gen.
   Local Notation RTW := (RT TW).
   Local Notation rTW := (rT TW).
 
-  Local Notation η e := (ExprEta (Linearize e%expr)).
-  Local Notation ηP P H := (InterpExprEta_ind P (InterpLinearize_ind (e:=(_ ∘ _)%expr) P H)).
+  Local Notation η e := (ExprEta (Linearize (ExprEta e%expr))).
+  Local Notation ηP P H := (InterpExprEta_ind P (InterpLinearize_ind P (InterpExprEta_ind (e:=(_ ∘ _)%expr) P H))).
 
   Record SynthesisOutputOps (b : base_type) :=
     {

@@ -8,6 +8,7 @@ Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Solinas.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Montgomery.
 Require Import Crypto.Util.SideConditions.Autosolve.
 Require Import Crypto.Compilers.Z.Reify.
+Require Import Crypto.Compilers.Intros.
 Require Import Crypto.Util.Tactics.Not.
 
 Module Internal.
@@ -39,7 +40,7 @@ Module Internal.
 End Internal.
 
 Ltac autosolve_gen autosolve_tac else_tac :=
-  Autosolve.autosolve_gen autosolve_tac ltac:(fun _ =>
+  Autosolve.autosolve_gen autosolve_tac ltac:(fun _ => intro_interp_flat_type) ltac:(fun _ =>
   Internal.autosolve_gen autosolve_tac ltac:(fun _ =>
   BoundsPipeline.autosolve ltac:(fun _ =>
   Z.Reify.autosolve ltac:(fun _ =>
