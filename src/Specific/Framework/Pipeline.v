@@ -38,10 +38,7 @@ Local Notation interp_flat_type := (interp_flat_type interp_base_type).
 
 Section gen.
   Context (curve : CurveParameters.CurveParameters)
-          (curve_sc' : vm_decide_package (CurveParameterBaseSideConditions_bool curve = true)).
-
-  Definition curve_sc
-    := CurveParameterBaseSideConditions_bool_correct curve curve_sc'.
+          (curve_sc : CurveParameterBaseSideConditions curve).
 
   Record SolinasPipelineSC :=
     {
@@ -80,6 +77,8 @@ Section gen.
       unshelve eapply @BoundsPipeline; assumption.
   Defined.
 End gen.
+
+Time Print Assumptions Pipeline.
 
 (** Overwrite the [RBPipelineSideConditions_unfold] stub with the
     things we should actually unfold, now that we have access to

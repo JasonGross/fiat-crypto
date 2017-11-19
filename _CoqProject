@@ -281,6 +281,7 @@ src/Specific/Framework/IntegrationTestDisplayCommonTactics.v
 src/Specific/Framework/IntegrationTestTemporaryMiscCommon.v
 src/Specific/Framework/MontgomeryBoundsPipelineInputSideConditions.v
 src/Specific/Framework/MontgomeryReificationTypes.v
+src/Specific/Framework/OptimizedPipeline.v
 src/Specific/Framework/OutputType.v
 src/Specific/Framework/OutputTypeLemmas.v
 src/Specific/Framework/Packages.v

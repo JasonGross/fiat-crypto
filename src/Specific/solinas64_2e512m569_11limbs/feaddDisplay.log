@@ -1,7 +1,6 @@
-λ x x0 : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x22, x23, x21, x19, x17, x15, x13, x11, x9, x7, x5, (x42, x43, x41, x39, x37, x35, x33, x31, x29, x27, x25))%core,
- ((x22 + x42), (x23 + x43), (x21 + x41), (x19 + x39), (x17 + x37), (x15 + x35), (x13 + x33), (x11 + x31), (x9 + x29), (x7 + x27), (x5 + x25)))
-(x, x0)%core
-     : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+add = λ var : Z.Syntax.base_type → Type,
+λ '(x20, x21, x19, x17, x15, x13, x11, x9, x7, x5, x3, (x40, x41, x39, x37, x35, x33, x31, x29, x27, x25, x23))%core,
+((x20 + x40), (x21 + x41), (x19 + x39), (x17 + x37), (x15 + x35), (x13 + x33), (x11 + x31), (x9 + x29), (x7 + x27), (x5 + x25), (x3 + x23))
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t) -> uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+
+Argument scope is [function_scope]

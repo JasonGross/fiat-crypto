@@ -20,7 +20,7 @@ Module Internal.
     | [ |- CurveParameterBaseSideConditions ?e ]
       => not has_evar e; unshelve econstructor;
          autosolve_tac else_tac
-    | [ |- PipelineSideConditions ?e _ ]
+    | [ |- @PipelineSideConditions ?e _ ]
       => not has_evar e; unshelve econstructor;
          autosolve_tac else_tac
     | [ |- Solinas.solinas_side_conditions ?e ]
@@ -42,10 +42,11 @@ End Internal.
 Ltac autosolve_gen autosolve_tac else_tac :=
   Autosolve.autosolve_gen autosolve_tac ltac:(fun _ => intro_interp_flat_type) ltac:(fun _ =>
   Internal.autosolve_gen autosolve_tac ltac:(fun _ =>
+  Base.autosolve autosolve_tac ltac:(fun _ =>
   BoundsPipeline.autosolve ltac:(fun _ =>
   Z.Reify.autosolve ltac:(fun _ =>
   else_tac ()
-                                             )))).
+                                                                                    ))))).
 
 Ltac autosolve else_tac := autosolve_gen autosolve else_tac.
 

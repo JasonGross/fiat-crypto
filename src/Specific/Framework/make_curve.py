@@ -307,7 +307,7 @@ Proof.
   Show Ltac Profile.
 Time Defined.
 
-Time Print Assumptions package.
+(* Time Print Assumptions package. *)
 """ % prefix
     return ret
 

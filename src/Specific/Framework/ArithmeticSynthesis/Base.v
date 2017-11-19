@@ -472,7 +472,7 @@ Section with_curve_parameters.
       := limb_width_bounds_tightest';
       tight_bounds_lt_2m' : vm_decide_package _;
       tight_bounds_lt_2m
-      : B.Positional.eval wt (Tuple.map upper bounds_tight) < 2 * Z.pos m
+      : if curve.(freeze) then B.Positional.eval wt (Tuple.map upper bounds_tight) < 2 * Z.pos m else True
       := dec_bool tight_bounds_lt_2m';
     }.
 
@@ -533,9 +533,20 @@ Section with_curve_parameters.
 
   Lemma eval_bounded_tight
     : forall a,
-      is_bounded_by None bounds_tight a
+      curve.(freeze) = true
+      -> is_bounded_by None bounds_tight a
       -> 0 <= B.Positional.eval wt a < 2 * Z.pos m.
   Proof.
-    apply feBW_bounded_helper, curve_sc.(tight_bounds_lt_2m).
+    intros a H; apply feBW_bounded_helper; generalize curve_sc.(tight_bounds_lt_2m).
+    rewrite H; exact id.
   Qed.
 End with_curve_parameters.
+
+Ltac autosolve autosolve_tac else_tac :=
+  lazymatch goal with
+  | [ |- CurveParameterBaseSideConditions ?curve ]
+    => first [ refine (CurveParameterBaseSideConditions_bool_correct curve _);
+               abstract vm_cast_no_check (eq_refl true)
+             | unshelve econstructor; autosolve_tac else_tac ]
+  | _ => else_tac ()
+  end.

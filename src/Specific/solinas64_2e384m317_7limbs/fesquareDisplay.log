@@ -1,40 +1,51 @@
-λ x : word64 * word64 * word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x11, x12, x10, x8, x6, x4, x2)%core,
- uint128_t x13 = (((uint128_t)x2 * x11) + (((uint128_t)x4 * x12) + (((uint128_t)x6 * x10) + (((uint128_t)x8 * x8) + (((uint128_t)x10 * x6) + (((uint128_t)x12 * x4) + ((uint128_t)x11 * x2)))))));
- uint128_t x14 = ((((uint128_t)x2 * x12) + (((uint128_t)x4 * x10) + (((uint128_t)x6 * x8) + (((uint128_t)x8 * x6) + (((uint128_t)x10 * x4) + ((uint128_t)x12 * x2)))))) + (0x13d * (0x2 * ((uint128_t)x11 * x11))));
- uint128_t x15 = ((((uint128_t)x2 * x10) + (((uint128_t)x4 * x8) + (((uint128_t)x6 * x6) + (((uint128_t)x8 * x4) + ((uint128_t)x10 * x2))))) + (0x13d * ((0x2 * ((uint128_t)x12 * x11)) + (0x2 * ((uint128_t)x11 * x12)))));
- uint128_t x16 = ((((uint128_t)x2 * x8) + (((uint128_t)x4 * x6) + (((uint128_t)x6 * x4) + ((uint128_t)x8 * x2)))) + (0x13d * ((0x2 * ((uint128_t)x10 * x11)) + ((0x2 * ((uint128_t)x12 * x12)) + (0x2 * ((uint128_t)x11 * x10))))));
- uint128_t x17 = ((((uint128_t)x2 * x6) + (((uint128_t)x4 * x4) + ((uint128_t)x6 * x2))) + (0x13d * ((0x2 * ((uint128_t)x8 * x11)) + ((0x2 * ((uint128_t)x10 * x12)) + ((0x2 * ((uint128_t)x12 * x10)) + (0x2 * ((uint128_t)x11 * x8)))))));
- uint128_t x18 = ((((uint128_t)x2 * x4) + ((uint128_t)x4 * x2)) + (0x13d * ((0x2 * ((uint128_t)x6 * x11)) + ((0x2 * ((uint128_t)x8 * x12)) + ((0x2 * ((uint128_t)x10 * x10)) + ((0x2 * ((uint128_t)x12 * x8)) + (0x2 * ((uint128_t)x11 * x6))))))));
- uint128_t x19 = (((uint128_t)x2 * x2) + (0x13d * ((0x2 * ((uint128_t)x4 * x11)) + ((0x2 * ((uint128_t)x6 * x12)) + ((0x2 * ((uint128_t)x8 * x10)) + ((0x2 * ((uint128_t)x10 * x8)) + ((0x2 * ((uint128_t)x12 * x6)) + (0x2 * ((uint128_t)x11 * x4)))))))));
- uint128_t x20 = (x19 >> 0x37);
- uint64_t x21 = ((uint64_t)x19 & 0x7fffffffffffff);
- uint128_t x22 = (x20 + x18);
- uint128_t x23 = (x22 >> 0x37);
- uint64_t x24 = ((uint64_t)x22 & 0x7fffffffffffff);
- uint128_t x25 = (x23 + x17);
- uint128_t x26 = (x25 >> 0x37);
- uint64_t x27 = ((uint64_t)x25 & 0x7fffffffffffff);
- uint128_t x28 = (x26 + x16);
- uint128_t x29 = (x28 >> 0x37);
- uint64_t x30 = ((uint64_t)x28 & 0x7fffffffffffff);
- uint128_t x31 = (x29 + x15);
- uint128_t x32 = (x31 >> 0x37);
- uint64_t x33 = ((uint64_t)x31 & 0x7fffffffffffff);
- uint128_t x34 = (x32 + x14);
- uint128_t x35 = (x34 >> 0x37);
- uint64_t x36 = ((uint64_t)x34 & 0x7fffffffffffff);
- uint128_t x37 = (x35 + x13);
- uint64_t x38 = (uint64_t) (x37 >> 0x36);
- uint64_t x39 = ((uint64_t)x37 & 0x3fffffffffffff);
- uint128_t x40 = (x21 + ((uint128_t)0x13d * x38));
- uint64_t x41 = (uint64_t) (x40 >> 0x37);
- uint64_t x42 = ((uint64_t)x40 & 0x7fffffffffffff);
- uint64_t x43 = (x41 + x24);
- uint64_t x44 = (x43 >> 0x37);
- uint64_t x45 = (x43 & 0x7fffffffffffff);
- return (Return x39, Return x36, Return x33, Return x30, (x44 + x27), Return x45, Return x42))
-x
-     : word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+square = λ var : Z.Syntax.base_type → Type,
+λ '(x10, x11, x9, x7, x5, x3, x1)%core,
+uint128_t x12 = (0x2 * ((uint128_t)x10 * x10));
+uint128_t x13 = ((0x2 * ((uint128_t)x11 * x10)) + (0x2 * ((uint128_t)x10 * x11)));
+uint128_t x14 = ((0x2 * ((uint128_t)x9 * x10)) + ((0x2 * ((uint128_t)x11 * x11)) + (0x2 * ((uint128_t)x10 * x9))));
+uint128_t x15 = ((0x2 * ((uint128_t)x7 * x10)) + ((0x2 * ((uint128_t)x9 * x11)) + ((0x2 * ((uint128_t)x11 * x9)) + (0x2 * ((uint128_t)x10 * x7)))));
+uint128_t x16 = ((0x2 * ((uint128_t)x5 * x10)) + ((0x2 * ((uint128_t)x7 * x11)) + ((0x2 * ((uint128_t)x9 * x9)) + ((0x2 * ((uint128_t)x11 * x7)) + (0x2 * ((uint128_t)x10 * x5))))));
+uint128_t x17 = ((0x2 * ((uint128_t)x3 * x10)) + ((0x2 * ((uint128_t)x5 * x11)) + ((0x2 * ((uint128_t)x7 * x9)) + ((0x2 * ((uint128_t)x9 * x7)) + ((0x2 * ((uint128_t)x11 * x5)) + (0x2 * ((uint128_t)x10 * x3)))))));
+uint128_t x18 = (((uint128_t)x1 * x10) + (((uint128_t)x3 * x11) + (((uint128_t)x5 * x9) + (((uint128_t)x7 * x7) + (((uint128_t)x9 * x5) + (((uint128_t)x11 * x3) + ((uint128_t)x10 * x1)))))));
+uint128_t x19 = (((uint128_t)x1 * x11) + (((uint128_t)x3 * x9) + (((uint128_t)x5 * x7) + (((uint128_t)x7 * x5) + (((uint128_t)x9 * x3) + ((uint128_t)x11 * x1))))));
+uint128_t x20 = (((uint128_t)x1 * x9) + (((uint128_t)x3 * x7) + (((uint128_t)x5 * x5) + (((uint128_t)x7 * x3) + ((uint128_t)x9 * x1)))));
+uint128_t x21 = (((uint128_t)x1 * x7) + (((uint128_t)x3 * x5) + (((uint128_t)x5 * x3) + ((uint128_t)x7 * x1))));
+uint128_t x22 = (((uint128_t)x1 * x5) + (((uint128_t)x3 * x3) + ((uint128_t)x5 * x1)));
+uint128_t x23 = (((uint128_t)x1 * x3) + ((uint128_t)x3 * x1));
+uint128_t x24 = ((uint128_t)x1 * x1);
+uint128_t x25 = (x19 + (0x13d * x12));
+uint128_t x26 = (x20 + (0x13d * x13));
+uint128_t x27 = (x21 + (0x13d * x14));
+uint128_t x28 = (x22 + (0x13d * x15));
+uint128_t x29 = (x23 + (0x13d * x16));
+uint128_t x30 = (x24 + (0x13d * x17));
+uint128_t x31 = (x30 >> 0x37);
+uint64_t x32 = ((uint64_t)x30 & 0x7fffffffffffff);
+uint128_t x33 = (x31 + x29);
+uint128_t x34 = (x33 >> 0x37);
+uint64_t x35 = ((uint64_t)x33 & 0x7fffffffffffff);
+uint128_t x36 = (x34 + x28);
+uint128_t x37 = (x36 >> 0x37);
+uint64_t x38 = ((uint64_t)x36 & 0x7fffffffffffff);
+uint128_t x39 = (x37 + x27);
+uint128_t x40 = (x39 >> 0x37);
+uint64_t x41 = ((uint64_t)x39 & 0x7fffffffffffff);
+uint128_t x42 = (x40 + x26);
+uint128_t x43 = (x42 >> 0x37);
+uint64_t x44 = ((uint64_t)x42 & 0x7fffffffffffff);
+uint128_t x45 = (x43 + x25);
+uint128_t x46 = (x45 >> 0x37);
+uint64_t x47 = ((uint64_t)x45 & 0x7fffffffffffff);
+uint128_t x48 = (x46 + x18);
+uint64_t x49 = (uint64_t) (x48 >> 0x36);
+uint64_t x50 = ((uint64_t)x48 & 0x3fffffffffffff);
+uint128_t x51 = (x32 + ((uint128_t)0x13d * x49));
+uint64_t x52 = (uint64_t) (x51 >> 0x37);
+uint64_t x53 = ((uint64_t)x51 & 0x7fffffffffffff);
+uint64_t x54 = (x52 + x35);
+uint64_t x55 = (x54 >> 0x37);
+uint64_t x56 = (x54 & 0x7fffffffffffff);
+return (Return x50, Return x47, Return x44, Return x41, (x55 + x38), Return x56, Return x53)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t -> uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+
+Argument scope is [function_scope]
