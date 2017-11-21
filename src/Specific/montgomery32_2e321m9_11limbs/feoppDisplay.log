@@ -1,0 +1,29 @@
+opp = λ var : Z.Syntax.base_type → Type,
+λ '(x18, x19, x17, x15, x13, x11, x9, x7, x5, x3, x1)%core,
+uint32_t x21, uint8_t x22 = subborrow_u32(0x0, 0x0, x1);
+uint32_t x24, uint8_t x25 = subborrow_u32(x22, 0x0, x3);
+uint32_t x27, uint8_t x28 = subborrow_u32(x25, 0x0, x5);
+uint32_t x30, uint8_t x31 = subborrow_u32(x28, 0x0, x7);
+uint32_t x33, uint8_t x34 = subborrow_u32(x31, 0x0, x9);
+uint32_t x36, uint8_t x37 = subborrow_u32(x34, 0x0, x11);
+uint32_t x39, uint8_t x40 = subborrow_u32(x37, 0x0, x13);
+uint32_t x42, uint8_t x43 = subborrow_u32(x40, 0x0, x15);
+uint32_t x45, uint8_t x46 = subborrow_u32(x43, 0x0, x17);
+uint32_t x48, uint8_t x49 = subborrow_u32(x46, 0x0, x19);
+uint32_t x51, uint8_t x52 = subborrow_u32(x49, 0x0, x18);
+uint32_t x53 = cmovznz32(x52, 0x0, 0xffffffff);
+uint32_t x55, uint8_t x56 = addcarryx_u32(0x0, x21, (x53 & 0xfffffff7));
+uint32_t x58, uint8_t x59 = addcarryx_u32(x56, x24, (x53 & 0xffffffff));
+uint32_t x61, uint8_t x62 = addcarryx_u32(x59, x27, (x53 & 0xffffffff));
+uint32_t x64, uint8_t x65 = addcarryx_u32(x62, x30, (x53 & 0xffffffff));
+uint32_t x67, uint8_t x68 = addcarryx_u32(x65, x33, (x53 & 0xffffffff));
+uint32_t x70, uint8_t x71 = addcarryx_u32(x68, x36, (x53 & 0xffffffff));
+uint32_t x73, uint8_t x74 = addcarryx_u32(x71, x39, (x53 & 0xffffffff));
+uint32_t x76, uint8_t x77 = addcarryx_u32(x74, x42, (x53 & 0xffffffff));
+uint32_t x79, uint8_t x80 = addcarryx_u32(x77, x45, (x53 & 0xffffffff));
+uint32_t x82, uint8_t x83 = addcarryx_u32(x80, x48, (x53 & 0xffffffff));
+uint32_t x85, uint8_t _ = addcarryx_u32(x83, x51, ((uint8_t)x53 & 0x1));
+(Return x85, Return x82, Return x79, Return x76, Return x73, Return x70, Return x67, Return x64, Return x61, Return x58, Return x55)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t -> uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
+
+Argument scope is [function_scope]

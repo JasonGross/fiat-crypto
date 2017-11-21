@@ -1,0 +1,29 @@
+sub = λ var : Z.Syntax.base_type → Type,
+λ '(x20, x21, x19, x17, x15, x13, x11, x9, x7, x5, x3, (x40, x41, x39, x37, x35, x33, x31, x29, x27, x25, x23))%core,
+uint32_t x43, uint8_t x44 = subborrow_u32(0x0, x3, x23);
+uint32_t x46, uint8_t x47 = subborrow_u32(x44, x5, x25);
+uint32_t x49, uint8_t x50 = subborrow_u32(x47, x7, x27);
+uint32_t x52, uint8_t x53 = subborrow_u32(x50, x9, x29);
+uint32_t x55, uint8_t x56 = subborrow_u32(x53, x11, x31);
+uint32_t x58, uint8_t x59 = subborrow_u32(x56, x13, x33);
+uint32_t x61, uint8_t x62 = subborrow_u32(x59, x15, x35);
+uint32_t x64, uint8_t x65 = subborrow_u32(x62, x17, x37);
+uint32_t x67, uint8_t x68 = subborrow_u32(x65, x19, x39);
+uint32_t x70, uint8_t x71 = subborrow_u32(x68, x21, x41);
+uint32_t x73, uint8_t x74 = subborrow_u32(x71, x20, x40);
+uint32_t x75 = cmovznz32(x74, 0x0, 0xffffffff);
+uint32_t x77, uint8_t x78 = addcarryx_u32(0x0, x43, (x75 & 0xffffffff));
+uint32_t x80, uint8_t x81 = addcarryx_u32(x78, x46, (x75 & 0xffffffff));
+uint32_t x83, uint8_t x84 = addcarryx_u32(x81, x49, (x75 & 0xffffffff));
+uint32_t x86, uint8_t x87 = addcarryx_u32(x84, x52, (x75 & 0xffffffff));
+uint32_t x89, uint8_t x90 = addcarryx_u32(x87, x55, (x75 & 0xffffffff));
+uint32_t x92, uint8_t x93 = addcarryx_u32(x90, x58, (x75 & 0xfffffffd));
+uint32_t x95, uint8_t x96 = addcarryx_u32(x93, x61, (x75 & 0xffffffff));
+uint32_t x98, uint8_t x99 = addcarryx_u32(x96, x64, (x75 & 0xffffffff));
+uint32_t x101, uint8_t x102 = addcarryx_u32(x99, x67, (x75 & 0xffffffff));
+uint32_t x104, uint8_t x105 = addcarryx_u32(x102, x70, (x75 & 0xffffffff));
+uint32_t x107, uint8_t _ = addcarryx_u32(x105, x73, ((uint8_t)x75 & 0x3));
+(Return x107, Return x104, Return x101, Return x98, Return x95, Return x92, Return x89, Return x86, Return x83, Return x80, Return x77)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t) -> uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
+
+Argument scope is [function_scope]

@@ -1,26 +1,19 @@
-λ x : word64 * word64 * word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x9, x10, x8, x6, x4, x2)%core,
- uint64_t x12, uint8_t x13 = subborrow_u64(0x0, 0x0, x2);
- uint64_t x15, uint8_t x16 = subborrow_u64(x13, 0x0, x4);
- uint64_t x18, uint8_t x19 = subborrow_u64(x16, 0x0, x6);
- uint64_t x21, uint8_t x22 = subborrow_u64(x19, 0x0, x8);
- uint64_t x24, uint8_t x25 = subborrow_u64(x22, 0x0, x10);
- uint64_t x27, uint8_t x28 = subborrow_u64(x25, 0x0, x9);
- uint64_t x29 = cmovznz64(x28, 0x0, 0xffffffffffffffffL);
- uint64_t x30 = (x29 & 0xffffffffffffffe1L);
- uint64_t x32, uint8_t x33 = addcarryx_u64(0x0, x12, x30);
- uint64_t x34 = (x29 & 0xffffffffffffffffL);
- uint64_t x36, uint8_t x37 = addcarryx_u64(x33, x15, x34);
- uint64_t x38 = (x29 & 0xffffffffffffffffL);
- uint64_t x40, uint8_t x41 = addcarryx_u64(x37, x18, x38);
- uint64_t x42 = (x29 & 0xffffffffffffffffL);
- uint64_t x44, uint8_t x45 = addcarryx_u64(x41, x21, x42);
- uint64_t x46 = (x29 & 0xffffffffffffffffL);
- uint64_t x48, uint8_t x49 = addcarryx_u64(x45, x24, x46);
- uint64_t x50 = (x29 & 0x7fffffffffffffffL);
- uint64_t x52, uint8_t _ = addcarryx_u64(x49, x27, x50);
- (Return x52, Return x48, Return x44, Return x40, Return x36, Return x32))
-x
-     : word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+opp = λ var : Z.Syntax.base_type → Type,
+λ '(x8, x9, x7, x5, x3, x1)%core,
+uint64_t x11, uint8_t x12 = subborrow_u64(0x0, 0x0, x1);
+uint64_t x14, uint8_t x15 = subborrow_u64(x12, 0x0, x3);
+uint64_t x17, uint8_t x18 = subborrow_u64(x15, 0x0, x5);
+uint64_t x20, uint8_t x21 = subborrow_u64(x18, 0x0, x7);
+uint64_t x23, uint8_t x24 = subborrow_u64(x21, 0x0, x9);
+uint64_t x26, uint8_t x27 = subborrow_u64(x24, 0x0, x8);
+uint64_t x28 = cmovznz64(x27, 0x0, 0xffffffffffffffffL);
+uint64_t x30, uint8_t x31 = addcarryx_u64(0x0, x11, (x28 & 0xffffffffffffffe1L));
+uint64_t x33, uint8_t x34 = addcarryx_u64(x31, x14, (x28 & 0xffffffffffffffffL));
+uint64_t x36, uint8_t x37 = addcarryx_u64(x34, x17, (x28 & 0xffffffffffffffffL));
+uint64_t x39, uint8_t x40 = addcarryx_u64(x37, x20, (x28 & 0xffffffffffffffffL));
+uint64_t x42, uint8_t x43 = addcarryx_u64(x40, x23, (x28 & 0xffffffffffffffffL));
+uint64_t x45, uint8_t _ = addcarryx_u64(x43, x26, (x28 & 0x7fffffffffffffffL));
+(Return x45, Return x42, Return x39, Return x36, Return x33, Return x30)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t -> uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+
+Argument scope is [function_scope]

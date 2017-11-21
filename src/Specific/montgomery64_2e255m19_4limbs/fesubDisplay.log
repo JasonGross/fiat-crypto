@@ -1,20 +1,15 @@
-λ x x0 : word64 * word64 * word64 * word64,
-Interp-η
-(λ var : Syntax.base_type → Type,
- λ '(x8, x9, x7, x5, (x14, x15, x13, x11))%core,
- uint64_t x17, uint8_t x18 = subborrow_u64(0x0, x5, x11);
- uint64_t x20, uint8_t x21 = subborrow_u64(x18, x7, x13);
- uint64_t x23, uint8_t x24 = subborrow_u64(x21, x9, x15);
- uint64_t x26, uint8_t x27 = subborrow_u64(x24, x8, x14);
- uint64_t x28 = cmovznz64(x27, 0x0, 0xffffffffffffffffL);
- uint64_t x29 = (x28 & 0xffffffffffffffedL);
- uint64_t x31, uint8_t x32 = addcarryx_u64(0x0, x17, x29);
- uint64_t x33 = (x28 & 0xffffffffffffffffL);
- uint64_t x35, uint8_t x36 = addcarryx_u64(x32, x20, x33);
- uint64_t x37 = (x28 & 0xffffffffffffffffL);
- uint64_t x39, uint8_t x40 = addcarryx_u64(x36, x23, x37);
- uint64_t x41 = (x28 & 0x7fffffffffffffffL);
- uint64_t x43, uint8_t _ = addcarryx_u64(x40, x26, x41);
- (Return x43, Return x39, Return x35, Return x31))
-(x, x0)%core
-     : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t)
+sub = λ var : Z.Syntax.base_type → Type,
+λ '(x6, x7, x5, x3, (x12, x13, x11, x9))%core,
+uint64_t x15, uint8_t x16 = subborrow_u64(0x0, x3, x9);
+uint64_t x18, uint8_t x19 = subborrow_u64(x16, x5, x11);
+uint64_t x21, uint8_t x22 = subborrow_u64(x19, x7, x13);
+uint64_t x24, uint8_t x25 = subborrow_u64(x22, x6, x12);
+uint64_t x26 = cmovznz64(x25, 0x0, 0xffffffffffffffffL);
+uint64_t x28, uint8_t x29 = addcarryx_u64(0x0, x15, (x26 & 0xffffffffffffffedL));
+uint64_t x31, uint8_t x32 = addcarryx_u64(x29, x18, (x26 & 0xffffffffffffffffL));
+uint64_t x34, uint8_t x35 = addcarryx_u64(x32, x21, (x26 & 0xffffffffffffffffL));
+uint64_t x37, uint8_t _ = addcarryx_u64(x35, x24, (x26 & 0x7fffffffffffffffL));
+(Return x37, Return x34, Return x31, Return x28)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint64_t * uint64_t * uint64_t * uint64_t * (uint64_t * uint64_t * uint64_t * uint64_t) -> uint64_t * uint64_t * uint64_t * uint64_t)
+
+Argument scope is [function_scope]

@@ -1,0 +1,21 @@
+opp = λ var : Z.Syntax.base_type → Type,
+λ '(x10, x11, x9, x7, x5, x3, x1)%core,
+uint32_t x13, uint8_t x14 = subborrow_u32(0x0, 0x0, x1);
+uint32_t x16, uint8_t x17 = subborrow_u32(x14, 0x0, x3);
+uint32_t x19, uint8_t x20 = subborrow_u32(x17, 0x0, x5);
+uint32_t x22, uint8_t x23 = subborrow_u32(x20, 0x0, x7);
+uint32_t x25, uint8_t x26 = subborrow_u32(x23, 0x0, x9);
+uint32_t x28, uint8_t x29 = subborrow_u32(x26, 0x0, x11);
+uint32_t x31, uint8_t x32 = subborrow_u32(x29, 0x0, x10);
+uint32_t x33 = cmovznz32(x32, 0x0, 0xffffffff);
+uint32_t x35, uint8_t x36 = addcarryx_u32(0x0, x13, (x33 & 0xfffffffd));
+uint32_t x38, uint8_t x39 = addcarryx_u32(x36, x16, (x33 & 0xffffffff));
+uint32_t x41, uint8_t x42 = addcarryx_u32(x39, x19, (x33 & 0xffffffff));
+uint32_t x44, uint8_t x45 = addcarryx_u32(x42, x22, (x33 & 0xffffffff));
+uint32_t x47, uint8_t x48 = addcarryx_u32(x45, x25, (x33 & 0xffffffff));
+uint32_t x50, uint8_t x51 = addcarryx_u32(x48, x28, (x33 & 0xffffffff));
+uint32_t x53, uint8_t _ = addcarryx_u32(x51, x31, (x33 & 0x1fffffff));
+(Return x53, Return x50, Return x47, Return x44, Return x41, Return x38, Return x35)
+     : ∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t -> uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
+
+Argument scope is [function_scope]
