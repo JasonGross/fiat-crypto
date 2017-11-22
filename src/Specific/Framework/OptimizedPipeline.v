@@ -1,4 +1,4 @@
-(*Require Import Crypto.Specific.Framework.Pipeline.
+Require Import Crypto.Specific.Framework.Pipeline.
 Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Util.SideConditions.CorePackages.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
@@ -664,4 +664,3 @@ Section gen.
     Time Optimize Proof.
     Time Optimize Heap.
     Time Defined.
-*)
