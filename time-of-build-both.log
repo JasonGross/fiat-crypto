@@ -1,0 +1,33 @@
+After     | File Name                                     | Before    || Change   
+----------------------------------------------------------------------------------
+13m15.86s | Total                                         | 13m45.32s || -0m29.46s
+----------------------------------------------------------------------------------
+0m04.73s  | Compilers/Z/Bounds/Pipeline/Definition        | 0m42.68s  || -0m37.95s
+1m41.28s  | Specific/NISTP256/AMD64/femul                 | 1m32.34s  || +0m08.93s
+2m11.04s  | Specific/X25519/C64/ladderstep                | 2m08.97s  || +0m02.06s
+1m10.25s  | Specific/X2448/Karatsuba/C64/femul            | 1m08.55s  || +0m01.70s
+1m08.54s  | Specific/X2555/C128/ladderstep                | 1m09.58s  || -0m01.04s
+0m59.77s  | Specific/X25519/C32/femul                     | 0m57.90s  || +0m01.87s
+0m34.80s  | Specific/X25519/C32/fesquare                  | 0m36.30s  || -0m01.50s
+0m44.72s  | Specific/X2448/Karatsuba/C64/Synthesis        | 0m44.81s  || -0m00.09s
+0m32.01s  | Specific/X25519/C32/Synthesis                 | 0m32.03s  || -0m00.02s
+0m27.04s  | Specific/X25519/C32/freeze                    | 0m27.80s  || -0m00.76s
+0m23.19s  | Specific/NISTP256/AMD128/femul                | 0m23.39s  || -0m00.19s
+0m19.64s  | Specific/NISTP256/AMD64/fesub                 | 0m20.10s  || -0m00.46s
+0m17.41s  | Specific/X25519/C64/femul                     | 0m17.44s  || -0m00.03s
+0m17.40s  | Specific/NISTP256/AMD64/feadd                 | 0m17.63s  || -0m00.23s
+0m14.96s  | Specific/NISTP256/AMD64/feopp                 | 0m15.15s  || -0m00.18s
+0m14.86s  | Specific/NISTP256/AMD64/fenz                  | 0m15.04s  || -0m00.17s
+0m14.37s  | Specific/X25519/C64/freeze                    | 0m14.75s  || -0m00.38s
+0m14.32s  | Specific/NISTP256/AMD128/fesub                | 0m14.68s  || -0m00.35s
+0m14.30s  | Specific/NISTP256/AMD128/feadd                | 0m14.36s  || -0m00.05s
+0m14.02s  | Specific/NISTP256/AMD128/fenz                 | 0m13.98s  || +0m00.03s
+0m13.95s  | Specific/X25519/C64/fesquare                  | 0m14.56s  || -0m00.61s
+0m11.54s  | Specific/NISTP256/AMD128/feopp                | 0m11.81s  || -0m00.27s
+0m10.40s  | Specific/X25519/C64/Synthesis                 | 0m10.42s  || -0m00.01s
+0m08.74s  | Specific/NISTP256/AMD64/Synthesis             | 0m08.54s  || +0m00.20s
+0m06.52s  | Specific/X2555/C128/Synthesis                 | 0m06.29s  || +0m00.22s
+0m03.67s  | Specific/NISTP256/AMD128/Synthesis            | 0m03.72s  || -0m00.05s
+0m00.94s  | Specific/Framework/SynthesisFramework         | 0m00.98s  || -0m00.04s
+0m00.78s  | Compilers/Z/Bounds/Pipeline/ReflectiveTactics | 0m00.84s  || -0m00.05s
+0m00.67s  | Compilers/Z/Bounds/Pipeline                   | 0m00.68s  || -0m00.01s

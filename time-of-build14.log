@@ -1,0 +1,46 @@
+/home/jgross/.local64/coq/coq-8.7+beta2/bin/coq_makefile -f _CoqProject INSTALLDEFAULTROOT = Crypto -o Makefile-old
+COQ_MAKEFILE -f _CoqProject > Makefile.coq
+make --no-print-directory -C coqprime
+ECHO > _CoqProject
+make[1]: Nothing to be done for 'all'.
+COQC src/Specific/solinas64_2e256m88x2e240m1/femul.v
+Finished failing transaction in 6.716 secs (6.704u,0.012s) (failure)
+File "./src/Specific/solinas64_2e256m88x2e240m1/femul.v", line 10, characters 7-21:
+Error:
+In nested Ltac calls to "synthesize_mul", "synthesize_carry_mul",
+"synthesize_2arg_choice_with_carry", "synthesize_narg_choice_gen",
+"synthesize" (bound to
+fun get_op_sig =>
+  synthesize_with_carry
+   ltac:(IntegrationTestTemporaryMiscCommon.do_rewrite_with_2sig_add_carry)
+   get_op_sig), "synthesize_with_carry", "synthesize", 
+"synthesize" (bound to
+fun get_op_sig =>
+  synthesize_with_carry
+   ltac:(IntegrationTestTemporaryMiscCommon.do_rewrite_with_2sig_add_carry)
+   get_op_sig), "synthesize_with_carry", "synthesize",
+"Pipeline.refine_reflectively_gen",
+"ReflectiveTactics.do_reflective_pipeline" and
+"ReflectiveTactics.solve_side_conditions", last call failed.
+The term "eq_refl" has type "true = true" while it is expected to have type
+ "Interpretation.Bounds.is_tighter_thanb
+    ({| ZRange.lower := 0; ZRange.upper := 2251799813685247 |},
+    {| ZRange.lower := 0; ZRange.upper := 2251799813685247 |},
+    {| ZRange.lower := 0; ZRange.upper := 2251799813685247 |},
+    {|
+    ZRange.lower := 0;
+    ZRange.upper := 82102009019089112870945419893831293643906215093385055483121668559967472820682981318146098242955079773239404448401145497984075563008 |},
+    {| ZRange.lower := 0; ZRange.upper := 4503599627370495 |})
+    ({| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 5066549580791808 |}) = true".
+
+Command exited with non-zero status 1
+src/Specific/solinas64_2e256m88x2e240m1/femul (real: 7.82, user: 7.68, sys: 0.14, mem: 758912 ko)
+FINISHED CPU 7.77 MEM 1520268 MAXMEM 1520268 STALE 0 MAXMEM_RSS 759520
+<time name="ALL">7640</time>
+Makefile.coq:636: recipe for target 'src/Specific/solinas64_2e256m88x2e240m1/femul.vo' failed
+make: *** [src/Specific/solinas64_2e256m88x2e240m1/femul.vo] Error 1
+make: Target 'src/Specific/solinas64_2e256m88x2e240m1/femulDisplay.log' not remade because of errors.

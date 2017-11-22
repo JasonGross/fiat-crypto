@@ -1,0 +1,83 @@
+COQDEP src/Compilers/Z/CNotations.v
+/home/jgross/.local64/coq/coq-8.7+beta2/bin/coq_makefile -f _CoqProject INSTALLDEFAULTROOT = Crypto -o Makefile-old
+COQ_MAKEFILE -f _CoqProject > Makefile.coq
+make --no-print-directory -C coqprime
+ECHO > _CoqProject
+make[1]: Nothing to be done for 'all'.
+COQC src/Compilers/Z/CNotations.v
+COQC src/Specific/solinas64_2e256m88x2e240m1/femul.v
+src/Compilers/Z/CNotations (real: 7.09, user: 6.81, sys: 0.11, mem: 626224 ko)
+FINISHED CPU 6.82 MEM 1146788 MAXMEM 1146788 STALE 0 MAXMEM_RSS 624312
+<time name="ALL">6870</time>
+COQC src/Specific/Framework/IntegrationTestDisplayCommon.v
+src/Specific/Framework/IntegrationTestDisplayCommon (real: 0.73, user: 0.62, sys: 0.10, mem: 527836 ko)
+FINISHED CPU 0.70 MEM 1056256 MAXMEM 1056256 STALE 0 MAXMEM_RSS 527824
+<time name="ALL">580</time>
+COQC src/Specific/NISTP256/AMD128/feaddDisplay > src/Specific/NISTP256/AMD128/feaddDisplay.log
+COQC src/Specific/NISTP256/AMD128/femulDisplay > src/Specific/NISTP256/AMD128/femulDisplay.log
+COQC src/Specific/NISTP256/AMD128/fenzDisplay > src/Specific/NISTP256/AMD128/fenzDisplay.log
+COQC src/Specific/NISTP256/AMD128/feoppDisplay > src/Specific/NISTP256/AMD128/feoppDisplay.log
+COQC src/Specific/NISTP256/AMD128/fesubDisplay > src/Specific/NISTP256/AMD128/fesubDisplay.log
+Finished failing transaction in 6.818 secs (6.811u,0.007s) (failure)
+File "./src/Specific/solinas64_2e256m88x2e240m1/femul.v", line 10, characters 7-21:
+Error:
+In nested Ltac calls to "synthesize_mul", "synthesize_carry_mul",
+"synthesize_2arg_choice_with_carry", "synthesize_narg_choice_gen",
+"synthesize" (bound to
+fun get_op_sig =>
+  synthesize_with_carry
+   ltac:(IntegrationTestTemporaryMiscCommon.do_rewrite_with_2sig_add_carry)
+   get_op_sig), "synthesize_with_carry", "synthesize", 
+"synthesize" (bound to
+fun get_op_sig =>
+  synthesize_with_carry
+   ltac:(IntegrationTestTemporaryMiscCommon.do_rewrite_with_2sig_add_carry)
+   get_op_sig), "synthesize_with_carry", "synthesize",
+"Pipeline.refine_reflectively_gen",
+"ReflectiveTactics.do_reflective_pipeline" and
+"ReflectiveTactics.solve_side_conditions", last call failed.
+The term "eq_refl" has type "true = true" while it is expected to have type
+ "Interpretation.Bounds.is_tighter_thanb
+    ({| ZRange.lower := 0; ZRange.upper := 2251799813685247 |},
+    {| ZRange.lower := 0; ZRange.upper := 2251799813685247 |},
+    {| ZRange.lower := 0; ZRange.upper := 2251799813685247 |},
+    {|
+    ZRange.lower := 0;
+    ZRange.upper := 82102009019089112870945419893831293643906215093385055483121668559967472820682981318146098242955079773239404448401145497984075563008 |},
+    {| ZRange.lower := 0; ZRange.upper := 4503599627370495 |})
+    ({| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 2533274790395904 |},
+    {| ZRange.lower := 0; ZRange.upper := 5066549580791808 |}) = true".
+
+Command exited with non-zero status 1
+src/Specific/solinas64_2e256m88x2e240m1/femul (real: 8.22, user: 7.84, sys: 0.15, mem: 757840 ko)
+FINISHED CPU 7.85 MEM 1520276 MAXMEM 1520276 STALE 0 MAXMEM_RSS 758492
+<time name="ALL">7900</time>
+Makefile.coq:636: recipe for target 'src/Specific/solinas64_2e256m88x2e240m1/femul.vo' failed
+make: *** [src/Specific/solinas64_2e256m88x2e240m1/femul.vo] Error 1
+COQC src/Specific/NISTP256/AMD64/feaddDisplay > src/Specific/NISTP256/AMD64/feaddDisplay.log
+COQC src/Specific/NISTP256/AMD64/femulDisplay > src/Specific/NISTP256/AMD64/femulDisplay.log
+COQC src/Specific/NISTP256/AMD64/fenzDisplay > src/Specific/NISTP256/AMD64/fenzDisplay.log
+COQC src/Specific/NISTP256/AMD64/feoppDisplay > src/Specific/NISTP256/AMD64/feoppDisplay.log
+COQC src/Specific/NISTP256/AMD64/fesubDisplay > src/Specific/NISTP256/AMD64/fesubDisplay.log
+COQC src/Specific/X2448/Karatsuba/C64/femulDisplay > src/Specific/X2448/Karatsuba/C64/femulDisplay.log
+COQC src/Specific/X25519/C32/feaddDisplay > src/Specific/X25519/C32/feaddDisplay.log
+COQC src/Specific/X25519/C32/fecarryDisplay > src/Specific/X25519/C32/fecarryDisplay.log
+COQC src/Specific/X25519/C32/femulDisplay > src/Specific/X25519/C32/femulDisplay.log
+COQC src/Specific/X25519/C32/fesquareDisplay > src/Specific/X25519/C32/fesquareDisplay.log
+COQC src/Specific/X25519/C32/fesubDisplay > src/Specific/X25519/C32/fesubDisplay.log
+COQC src/Specific/X25519/C32/freezeDisplay > src/Specific/X25519/C32/freezeDisplay.log
+COQC src/Specific/X25519/C64/feaddDisplay > src/Specific/X25519/C64/feaddDisplay.log
+COQC src/Specific/X25519/C64/fecarryDisplay > src/Specific/X25519/C64/fecarryDisplay.log
+COQC src/Specific/X25519/C64/femulDisplay > src/Specific/X25519/C64/femulDisplay.log
+COQC src/Specific/X25519/C64/fesquareDisplay > src/Specific/X25519/C64/fesquareDisplay.log
+/home/jgross/.local64/coq/coq-8.7+beta2/bin/coq_makefile -f _CoqProject INSTALLDEFAULTROOT = Crypto -o Makefile-old
+COQ_MAKEFILE -f _CoqProject > Makefile.coq
+make --no-print-directory -C coqprime
+ECHO > _CoqProject
+make[1]: Nothing to be done for 'all'.
+COQC src/Specific/X25519/C64/fesubDisplay > src/Specific/X25519/C64/fesubDisplay.log
+COQC src/Specific/montgomery64_2e389m21/femul.v
+COQC src/Specific/X25519/C64/fecarryDisplay > src/Specific/X25519/C64/fecarryDisplay.log
