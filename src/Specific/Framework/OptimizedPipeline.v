@@ -10,7 +10,7 @@ Arguments prim_prod A B : clear implicits.
 
 Section gen.
   Context (curve : CurveParameters.CurveParameters)
-          (curve_sc' : vm_decide_package (Base.CurveParameterBaseSideConditions_bool curve = true)).
+          (curve_sc : Base.CurveParameterBaseSideConditions curve).
 
   Ltac evar_destruct ev H v :=
     revert ev H;
@@ -22,7 +22,7 @@ Section gen.
   Definition Pipeline' : { evarT : _ & { HT : evarT -> Prop & forall evars, HT evars -> SynthesisOutput curve } }.
   Proof.
     do 2 eexists; intros ev H.
-    unshelve eapply @Pipeline; [ exact curve_sc' | ].
+    unshelve eapply @Pipeline; [ exact curve_sc | ].
     hnf.
     case_eq curve.(montgomery); intro Hmontgomery.
     Focus 2.
