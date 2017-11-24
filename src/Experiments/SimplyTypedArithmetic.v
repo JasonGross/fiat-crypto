@@ -360,6 +360,241 @@ Module Compilers.
 
   Definition Interp {t} (e : Expr t) := interp (e _).
 
+  Section partial_reduce.
+    Section partial_interp.
+      Context (var : type -> Type).
+      Fixpoint interp_arrow (t : type) :=
+        match t with
+        | Arrow A B => interp_arrow A -> interp_arrow B
+        | _ => var t
+        end.
+      Fixpoint interp_prod (t : type) :=
+        match t with
+        | Prod A B => interp_prod A * interp_prod B
+        | _ => var t
+        end%type.
+      Definition interp_type1 (t : type) :=
+        match t return Type with
+        | Unit => unit
+        | Prod A B => var A * var B
+        | Arrow s d => var s -> var d
+        | List A => list (var A)
+        | TNat => nat
+        | TZ => Z
+        | TBool => bool
+        end%type.
+    End partial_interp.
+
+    Section invert.
+      Context {var : type -> Type}.
+
+      Fixpoint invert_Pairs {t} (e : @expr var t) : option (interp_prod (@expr var) t)
+        := match e in expr t return option (interp_prod (@expr var) t) with
+           | Pair A B a b
+             => match @invert_Pairs A a, @invert_Pairs B b with
+                | Some a', Some b' => Some (a', b')
+                | Some _, None | None, Some _ | None, None => None
+                end
+           | Var t _ as e
+           | Op _ t _ _ as e
+             => match t return @expr var t -> option (interp_prod (@expr var) t) with
+                | Prod _ _ => fun _ => None
+                | _ => fun e => Some e
+                end e
+           | TT as e
+           | Abs _ _ _ as e
+             => Some e
+           end.
+
+      Definition invert_Abs {s d} (e : @expr var (Arrow s d)) : option (var s -> @expr var d)
+        := match e in expr t return option match t with
+                                           | Arrow _ _ => _
+                                           | _ => True
+                                           end with
+           | Abs s d f => Some f
+           | _ => None
+           end.
+
+      Definition invert_Pair {A B} (e : @expr var (Prod A B)) : option (@expr var A * @expr var B)
+        := match e in expr t return option match t with
+                                           | Prod _ _ => _
+                                           | _ => True
+                                           end with
+           | Pair _ _ a b => Some (a, b)
+           | _ => None
+           end.
+
+      Definition invert_Op {t} (e : @expr var t) : option { s : _ & op s t * @expr var s }%type
+        := match e with
+           | Op s d opc args => Some (existT _ s (opc, args))
+           | _ => None
+           end.
+
+      Definition invert_OpConst {t} (e : @expr var t) : option (interp_type t)
+        := match invert_Op e with
+           | Some (existT s (opc, args))
+             => match opc with
+                | OpConst t v => Some v
+                | _ => None
+                end
+           | None => None
+           end.
+      Definition invert_interp1 {t} : @expr var t -> option (interp_type1 (@expr var) t).
+        refine match t return expr t -> option (interp_type1 expr t) with
+             | Unit => fun _ => Some tt
+             | Prod A B => invert_Pair
+             | Arrow s d => invert_Abs
+             | List A => _
+             | TNat => _
+             | TZ => _
+             | TBool => _
+             end; simpl.
+      Definition reify_list {t} (ls : list (@expr var t)) : @expr var (List t)
+        := fold_right
+             (fun x xs => Op Cons (x, xs))
+             (Op Nil TT)
+             ls.
+      Definition reify_nat (v : nat) : @expr var TNat
+        := Op (OpConst (t:=TNat) v) TT.
+    End invert.
+
+    Section partial_reduce.
+      Context {var : type -> Type}.
+
+      Definition SmartConstInterpOp {s d} (opc : op s d) (args : @expr var s)
+        : @expr var d
+        := match invert_OpConst args with
+           | Some v => Op (OpConst (interp_op opc v)) TT
+           | None => Op opc args
+           end.
+      Definition SmartConstInterp1Op {s d} (opc : op s d) (args : @expr var s)
+        : @expr var d
+        := match invert_OpConst args with
+           | Some v => Op (OpConst (interp_op opc v)) TT
+           | None => Op opc args
+           end.
+      Definition SmartNatS (args : @expr var TNat) : @expr var TNat
+        := SmartConstInterpOp NatS args.
+      Definition SmartPred (args : @expr var TNat) : @expr var TNat
+        := SmartConstInterpOp Pred args.
+      Definition SmartFst {A B} (args : @expr var (Prod A B)) : @expr var A
+        := match invert_Pair args with
+           | Some v => fst v
+           | None => Op Fst args
+           end.
+      Definition SmartSnd {A B} (args : @expr var (Prod A B)) : @expr var B
+        := match invert_Pair args with
+           | Some v => snd v
+           | None => Op Snd args
+           end.
+      Definition SmartBoolRect {A} (args : @expr var (A * A * TBool))
+        : @expr var A
+        := match invert_Pair args with
+           | Some (tf, b)
+             => match invert_OpConst b with
+                | Some b => if b then SmartFst tf else SmartSnd tf
+                | None => Op BoolRect args
+                end
+           | None => Op BoolRect args
+           end.
+
+      (** TODO: Handle [S var] partial reduction *)
+      Definition SmartSeq (args : @expr var (TNat * TNat)) : @expr var (List TNat)
+        := match invert_Pair args with
+           | Some (start, len)
+             => match invert_OpConst start, invert_OpConst len with
+                | Some start, Some len => reify_list (List.map reify_nat (seq start len))
+                | _, _ => Op Seq args
+                end
+           | None => Op Seq args
+           end.
+      (*(** TODO: Handle [S var] partial reduction *)
+      Definition SmartNatRect {A} (args : @expr var (A * (TNat -> A -> A) * TNat)
+        : @expr var A
+        := match invert_Pair args with
+           | Some (tf, b)
+             => match invert_OpConst b with
+                | Some b => if b then SmartFst tf else SmartSnd tf
+                | None => Op BoolRect args
+                end
+           | None => Op BoolRect args
+           end.*)
+
+      Definition partial_reduce_op_cps {T s d} (opc : op s d)
+        : @expr var s -> (@expr var d -> @expr var T) -> @expr var T.
+        refine match opc in op s d return expr s -> (expr d -> expr T) -> expr T with
+               | OpConst _ _ as opc
+               | Nil _ as opc
+               | Cons _ as opc
+                 => fun args k => k (Op opc args)
+               | NatS as opc
+                 => fun args k => k (SmartNatS args)
+               | Fst _ _ as opc
+                 => fun args k => k (SmartFst args)
+               | Snd _ _ as opc
+                 => fun args k => k (SmartSnd args)
+               | BoolRect T as opc
+                 => fun args k => k (SmartBoolRect args)
+               | Seq as opc
+                 => fun args k => k (SmartSeq args)
+             | NatRect P => _
+             | Repeat A => _
+             | LetIn tx tC => _
+             | Combine A B => _
+             | Map A B => _
+             | FlatMap A B => _
+             | Partition A => _
+             | ListApp A => _
+             | FoldRight A B => _
+             | Pred => _
+             | UpdateNth T => _
+             | RuntimeMul => _
+             | RuntimeAdd => _
+             | Zadd => _
+             | Zmul => _
+             | Zpow => _
+             | Zopp => _
+             | Zdiv => _
+             | Zmodulo => _
+             | Zeqb => _
+             | ZofNat => _
+             | App s d => _
+             end.
+
+      Fixpoint partial_reduce_cps {T} {t} (e : @expr (@expr var) t)
+        : (@expr var t -> @expr var T) -> @expr var T.
+        refine match e in expr t return (expr t -> expr T) -> expr T with
+               | TT => fun k => k TT
+               | Pair A B a b
+                 => fun k
+                    => @partial_reduce_cps
+                         T A a
+                         (fun a'
+                          => @partial_reduce_cps
+                               T B b
+                               (fun b' => k (Pair a' b')))
+               | Var t v => fun k => k v
+               | Abs s d f
+                 => fun k
+                    => k (Abs (fun x => @partial_reduce_cps _ d (f (Var x)) id))
+               | Op s d opc args
+                 => fun k
+                    => @partial_reduce_cps
+                         T s args
+                         (fun args'
+                          => _)
+               end.
+    Fixpoint partial_interp_type (t : type)
+      := match t with
+         | Unit => unit
+         | Prod A B => partial_interp_type A * partial_interp_type B
+         | Arrow A B => interp_type A -> interp_type B
+         | List A => list (interp_type A)
+         | TNat => nat
+         | TZ => Z
+         | TBool => bool
+         end%type.
+
   Ltac is_known_const_cps2 term on_success on_failure :=
     let recurse term := is_known_const_cps2 term on_success on_failure in
     lazymatch term with
