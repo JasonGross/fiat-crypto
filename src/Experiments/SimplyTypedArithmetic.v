@@ -181,14 +181,13 @@ Module Positional. Section Positional.
 End Positional. End Positional.
 
 Module Compilers.
-  Module type.
-    Inductive type := unit | prod (A B : type) | arrow (s d : type) | list (A : type) | nat | Z | bool.
+  Module flat_type.
+    Inductive type := unit | prod (A B : type) | list (A : type) | nat | Z | bool.
 
     Fixpoint interp (t : type)
       := match t with
          | unit => Datatypes.unit
          | prod A B => interp A * interp B
-         | arrow A B => interp A -> interp B
          | list A => Datatypes.list (interp A)
          | nat => Datatypes.nat
          | Z => BinInt.Z
@@ -202,10 +201,6 @@ Module Compilers.
         => let rA := reify A in
            let rB := reify B in
            constr:(prod rA rB)
-      | ?A -> ?B
-        => let rA := reify A in
-           let rB := reify B in
-           constr:(arrow rA rB)
       | Datatypes.list ?T
         => let rT := reify T in
            constr:(list rT)
@@ -219,86 +214,191 @@ Module Compilers.
       Bind Scope ctype_scope with type.
       Notation "()" := unit : ctype_scope.
       Notation "A * B" := (prod A B) : ctype_scope.
+      Notation flat_type := type.
+    End Notations.
+  End flat_type.
+  Module type.
+    Import flat_type.Notations.
+    Notation unit := flat_type.unit.
+    Notation prod := flat_type.prod.
+    Notation list := flat_type.list.
+    Notation nat := flat_type.nat.
+    Notation Z := flat_type.Z.
+    Notation bool := flat_type.bool.
+    Inductive type := flat (T : flat_type) | arrow (s d : type).
+
+    Fixpoint interp (t : type)
+      := match t with
+         | flat t => flat_type.interp t
+         | arrow A B => interp A -> interp B
+         end%type.
+
+    Ltac reify ty :=
+      lazymatch eval cbv beta in ty with
+      | ?A -> ?B
+        => let rA := reify A in
+           let rB := reify B in
+           constr:(arrow rA rB)
+      | ?T
+        => let rT := flat_type.reify ty in
+           constr:(flat rT)
+      end.
+
+    Module Export Notations.
+      Export flat_type.Notations.
+      Global Coercion flat : flat_type >-> type.
+      Bind Scope ctype_scope with type.
       Notation "A -> B" := (arrow A B) : ctype_scope.
       Notation type := type.
     End Notations.
   End type.
   Export type.Notations.
 
-  Module op.
+  Module ident.
     Import type.
-    Inductive op : type -> type -> Set :=
-    | Const {t} (v : interp t) : op unit t
-    | Let_In {tx tC} : op (tx * (tx -> tC)) tC
-    | App {s d} : op ((s -> d) * s) d
-    | S : op nat nat
-    | nil {t} : op unit (list t)
-    | cons {t} : op (t * list t) (list t)
-    | fst {A B} : op (A * B) A
-    | snd {A B} : op (A * B) B
-    | bool_rect {T} : op (T * T * bool) T
-    | nat_rect {P} : op (P * (nat -> P -> P) * nat) P
-    | pred : op nat nat
-    | List_seq : op (nat * nat) (list nat)
-    | List_repeat {A} : op (A * nat) (list A)
-    | List_combine {A B} : op (list A * list B) (list (A * B))
-    | List_map {A B} : op ((A -> B) * list A) (list B)
-    | List_flat_map {A B} : op ((A -> list B) * list A) (list B)
-    | List_partition {A} : op ((A -> bool) * list A) (list A * list A)
-    | List_app {A} : op (list A * list A) (list A)
-    | List_fold_right {A B} : op ((B -> A -> A) * A * list B) A
-    | List_update_nth {T} : op (nat * (T -> T) * list T) (list T)
-    | Z_runtime_mul : op (Z * Z) Z
-    | Z_runtime_add : op (Z * Z) Z
-    | Z_add : op (Z * Z) Z
-    | Z_mul : op (Z * Z) Z
-    | Z_pow : op (Z * Z) Z
-    | Z_opp : op Z Z
-    | Z_div : op (Z * Z) Z
-    | Z_modulo : op (Z * Z) Z
-    | Z_eqb : op (Z * Z) bool
-    | Z_of_nat : op nat Z.
+    Inductive ident : type -> Set :=
+    | Const {t} (v : interp t) : ident t
+    | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
+    | pair {A B : flat_type} : ident (A -> B -> A * B)
+    | S : ident (nat -> nat)
+    | nil {t} : ident (list t)
+    | cons {t : flat_type} : ident (t -> list t -> list t)
+    | fst {A B} : ident (A * B -> A)
+    | snd {A B} : ident (A * B -> B)
+    | bool_rect {T} : ident (T -> T -> bool -> T)
+    | nat_rect {P} : ident (P -> (nat -> P -> P) -> nat -> P)
+    | pred : ident (nat -> nat)
+    | List_seq : ident (nat -> nat -> list nat)
+    | List_repeat {A : flat_type} : ident (A -> nat -> list A)
+    | List_combine {A B} : ident (list A -> list B -> list (A * B))
+    | List_map {A B : flat_type} : ident ((A -> B) -> list A -> list B)
+    | List_flat_map {A B : flat_type} : ident ((A -> list B) -> list A -> list B)
+    | List_partition {A : flat_type} : ident ((A -> bool) -> list A -> list A * list A)
+    | List_app {A} : ident (list A -> list A -> list A)
+    | List_fold_right {A B : flat_type} : ident ((B -> A -> A) -> A -> list B -> A)
+    | List_update_nth {T : flat_type} : ident (nat -> (T -> T) -> list T -> list T)
+    | Z_runtime_mul : ident (Z -> Z -> Z)
+    | Z_runtime_add : ident (Z -> Z -> Z)
+    | Z_add : ident (Z -> Z -> Z)
+    | Z_mul : ident (Z -> Z -> Z)
+    | Z_pow : ident (Z -> Z -> Z)
+    | Z_opp : ident (Z -> Z)
+    | Z_div : ident (Z -> Z -> Z)
+    | Z_modulo : ident (Z -> Z -> Z)
+    | Z_eqb : ident (Z -> Z -> bool)
+    | Z_of_nat : ident (nat -> Z).
+    Notation tt := (@Const type.unit tt).
 
-    Notation curry2 f
-      := (fun '(a, b) => f a b).
-    Notation curry3 f
-      := (fun '(a, b, c) => f a b c).
-
-    Definition interp {s d} (opc : op s d) : type.interp s -> type.interp d
-      := match opc in op s d return type.interp s -> type.interp d with
-         | Const t v => fun _ => v
-         | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
-         | App s d
-           => fun '((f, x) : (type.interp s -> type.interp d) * type.interp s)
-              => f x
+    Definition interp {t} (idc : ident t) : type.interp t
+      := match idc in ident t return type.interp t with
+         | Const t v => v
+         | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
+         | pair A B => @Datatypes.pair (flat_type.interp A) (flat_type.interp B)
          | S => Datatypes.S
-         | nil t => fun _ => @Datatypes.nil (type.interp t)
-         | cons t => curry2 (@Datatypes.cons (type.interp t))
-         | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
-         | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-         | bool_rect T => curry3 (@Datatypes.bool_rect (fun _ => type.interp T))
-         | nat_rect P => curry3 (@Datatypes.nat_rect (fun _ => type.interp P))
+         | nil t => @Datatypes.nil (flat_type.interp t)
+         | cons t => @Datatypes.cons (flat_type.interp t)
+         | fst A B => @Datatypes.fst (flat_type.interp A) (flat_type.interp B)
+         | snd A B => @Datatypes.snd (flat_type.interp A) (flat_type.interp B)
+         | bool_rect T => @Datatypes.bool_rect (fun _ => type.interp T)
+         | nat_rect P => @Datatypes.nat_rect (fun _ => type.interp P)
          | pred => Nat.pred
-         | List_seq => curry2 List.seq
-         | List_combine A B => curry2 (@List.combine (type.interp A) (type.interp B))
-         | List_map A B => curry2 (@List.map (type.interp A) (type.interp B))
-         | List_repeat A => curry2 (@List.repeat (type.interp A))
-         | List_flat_map A B => curry2 (@List.flat_map (type.interp A) (type.interp B))
-         | List_partition A => curry2 (@List.partition (type.interp A))
-         | List_app A => curry2 (@List.app (type.interp A))
-         | List_fold_right A B => curry3 (@List.fold_right (type.interp A) (type.interp B))
-         | List_update_nth T => curry3 (@update_nth (type.interp T))
-         | Z_runtime_mul => curry2 runtime_mul
-         | Z_runtime_add => curry2 runtime_add
-         | Z_add => curry2 Z.add
-         | Z_mul => curry2 Z.mul
-         | Z_pow => curry2 Z.pow
-         | Z_modulo => curry2 Z.modulo
+         | List_seq => List.seq
+         | List_combine A B => @List.combine (flat_type.interp A) (flat_type.interp B)
+         | List_map A B => @List.map (flat_type.interp A) (flat_type.interp B)
+         | List_repeat A => @List.repeat (flat_type.interp A)
+         | List_flat_map A B => @List.flat_map (flat_type.interp A) (flat_type.interp B)
+         | List_partition A => @List.partition (flat_type.interp A)
+         | List_app A => @List.app (flat_type.interp A)
+         | List_fold_right A B => @List.fold_right (flat_type.interp A) (flat_type.interp B)
+         | List_update_nth T => @update_nth (flat_type.interp T)
+         | Z_runtime_mul => runtime_mul
+         | Z_runtime_add => runtime_add
+         | Z_add => Z.add
+         | Z_mul => Z.mul
+         | Z_pow => Z.pow
+         | Z_modulo => Z.modulo
          | Z_opp => Z.opp
-         | Z_div => curry2 Z.div
-         | Z_eqb => curry2 Z.eqb
+         | Z_div => Z.div
+         | Z_eqb => Z.eqb
          | Z_of_nat => Z.of_nat
          end.
+
+    Ltac reify term :=
+      lazymatch term with
+      | @LetIn.Let_In ?A (fun _ => ?B)
+        => let rA := type.reify A in
+           let rB := type.reify B in
+           constr:(@Let_In rA rB)
+      | @Datatypes.pair ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@pair rA rB)
+      | Datatypes.S => S
+      | @Datatypes.nil ?T
+        => let rT := flat_type.reify T in
+           constr:(@nil rT)
+      | @Datatypes.cons ?T
+        => let rT := flat_type.reify T in
+           constr:(@cons rT)
+      | @Datatypes.fst ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@fst rA rB)
+      | @Datatypes.snd ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@snd rA rB)
+      | @Datatypes.bool_rect (fun _ => ?T)
+        => let rT := flat_type.reify T in
+           constr:(@bool_rect rT)
+      | @Datatypes.nat_rect (fun _ => ?T)
+        => let rT := flat_type.reify T in
+           constr:(@nat_rect rT)
+      | Nat.pred => pred
+      | List.seq => List_seq
+      | @List.combine ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@List_combine rA rB)
+      | @List.map ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@List_map rA rB)
+      | @List.repeat ?A
+        => let rA := flat_type.reify A in
+           constr:(@List_repeat rA)
+      | @List.flat_map ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@List_flat_map rA rB)
+      | @List.partition ?A
+        => let rA := flat_type.reify A in
+           constr:(@List_partition rA)
+      | @List.app ?A
+        => let rA := flat_type.reify A in
+           constr:(@List_app rA)
+      | @List.fold_right ?A ?B
+        => let rA := flat_type.reify A in
+           let rB := flat_type.reify B in
+           constr:(@List_fold_right rA rB)
+      | @update_nth ?T
+        => let rT := flat_type.reify T in
+           constr:(@List_update_nth rT)
+      | runtime_mul => Z_runtime_mul
+      | runtime_add => Z_runtime_add
+      | Z.add => Z_add
+      | Z.mul => Z_mul
+      | Z.pow => Z_pow
+      | Z.modulo => Z_modulo
+      | Z.opp => Z_opp
+      | Z.div => Z_div
+      | Z.eqb => Z_eqb
+      | Z.of_nat => Z_of_nat
+      | ?v
+        => let T := type of v in
+           let rT := type.reify T in
+           constr:(@Const rT v)
+      end.
 
     Module List.
       Notation seq := List_seq.
@@ -326,35 +426,34 @@ Module Compilers.
     End Z.
 
     Module Export Notations.
-      Notation op := op.
+      Notation ident := ident.
     End Notations.
-  End op.
-  Export op.Notations.
+  End ident.
+  Export ident.Notations.
 
-  Inductive expr {var : type -> Type} : type -> Type :=
-  | TT : expr ()
-  | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
+  Inductive expr {var : flat_type -> Type} : type -> Type :=
   | Var {t} (v : var t) : expr t
-  | Op {s d} (opc : op s d) (args : expr s) : expr d
+  | Ident {t} (idc : ident t) : expr t
+  | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
   | Abs {s d} (f : var s -> expr d) : expr (s -> d).
 
   Bind Scope expr_scope with expr.
   Delimit Scope expr_scope with expr.
+  Notation app_pair x y := (App (App (Ident ident.pair) x) y) (only parsing).
   Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
-  Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
-  Notation "( )" := TT : expr_scope.
-  Notation "()" := TT : expr_scope.
-  Notation "'expr_let' x := A 'in' b" := (Op op.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
-  Notation "f x" := (Op op.App (f, x)%expr) (only printing) : expr_scope.
+  Notation "( x , y , .. , z )" := (app_pair .. (app_pair x%expr y%expr) .. z%expr) : expr_scope.
+  Notation "( )" := (Ident ident.tt) : expr_scope.
+  Notation "()" := (Ident ident.tt) : expr_scope.
+  Notation "'expr_let' x := A 'in' b" := (App (App ident.Let_In A%expr) (Abs (fun x => b%expr))) : expr_scope.
+  Notation "f x" := (App f x) (only printing) : expr_scope.
 
   Definition Expr t := forall var, @expr var t.
 
   Fixpoint interp {t} (e : @expr type.interp t) : type.interp t
     := match e with
-       | TT => tt
-       | Pair A B a b => (interp a, interp b)
        | Var t v => v
-       | Op s d opc args => op.interp opc (interp args)
+       | Ident t idc => ident.interp idc
+       | App s d f x => interp f (interp x)
        | Abs s d f => fun v => interp (f v)
        end.
 
@@ -362,18 +461,13 @@ Module Compilers.
 
   Section partial_reduce.
     Section partial_interp.
-      Context (var : type -> Type).
+      Context (var : flat_type -> Type).
       Fixpoint interp_arrow (t : type) :=
         match t with
-        | Arrow A B => interp_arrow A -> interp_arrow B
-        | _ => var t
+        | type.arrow A B => interp_arrow A -> interp_arrow B
+        | type.flat t => var t
         end.
-      Fixpoint interp_prod (t : type) :=
-        match t with
-        | Prod A B => interp_prod A * interp_prod B
-        | _ => var t
-        end%type.
-      Definition interp_type1 (t : type) :=
+      (*Definition interp_type1 (t : type) :=
         match t return Type with
         | Unit => unit
         | Prod A B => var A * var B
@@ -382,42 +476,24 @@ Module Compilers.
         | TNat => nat
         | TZ => Z
         | TBool => bool
-        end%type.
+        end%type.*)
     End partial_interp.
 
     Section invert.
       Context {var : type -> Type}.
 
-      Fixpoint invert_Pairs {t} (e : @expr var t) : option (interp_prod (@expr var) t)
-        := match e in expr t return option (interp_prod (@expr var) t) with
-           | Pair A B a b
-             => match @invert_Pairs A a, @invert_Pairs B b with
-                | Some a', Some b' => Some (a', b')
-                | Some _, None | None, Some _ | None, None => None
-                end
-           | Var t _ as e
-           | Op _ t _ _ as e
-             => match t return @expr var t -> option (interp_prod (@expr var) t) with
-                | Prod _ _ => fun _ => None
-                | _ => fun e => Some e
-                end e
-           | TT as e
-           | Abs _ _ _ as e
-             => Some e
-           end.
-
-      Definition invert_Abs {s d} (e : @expr var (Arrow s d)) : option (var s -> @expr var d)
+      Definition invert_Abs {s d} (e : @expr var (type.arrow s d)) : option (var s -> @expr var d)
         := match e in expr t return option match t with
-                                           | Arrow _ _ => _
+                                           | type.arrow _ _ => _
                                            | _ => True
                                            end with
            | Abs s d f => Some f
            | _ => None
            end.
-
-      Definition invert_Pair {A B} (e : @expr var (Prod A B)) : option (@expr var A * @expr var B)
+(*
+      Definition invert_Pair {A B} (e : @expr var (type.prod A B)) : option (@expr var A * @expr var B)
         := match e in expr t return option match t with
-                                           | Prod _ _ => _
+                                           | type.prod _ _ => _
                                            | _ => True
                                            end with
            | Pair _ _ a b => Some (a, b)
@@ -426,15 +502,15 @@ Module Compilers.
 
       Definition invert_Op {t} (e : @expr var t) : option { s : _ & op s t * @expr var s }%type
         := match e with
-           | Op s d opc args => Some (existT _ s (opc, args))
+           | Op s d idc args => Some (existT _ s (idc, args))
            | _ => None
            end.
 
-      Definition invert_OpConst {t} (e : @expr var t) : option (interp_type t)
+      Definition invert_Idconst {t} (e : @expr var t) : option (interp_type t)
         := match invert_Op e with
-           | Some (existT s (opc, args))
-             => match opc with
-                | OpConst t v => Some v
+           | Some (existT s (idc, args))
+             => match idc with
+                | Idconst t v => Some v
                 | _ => None
                 end
            | None => None
@@ -442,8 +518,8 @@ Module Compilers.
       Definition invert_interp1 {t} : @expr var t -> option (interp_type1 (@expr var) t).
         refine match t return expr t -> option (interp_type1 expr t) with
              | Unit => fun _ => Some tt
-             | Prod A B => invert_Pair
-             | Arrow s d => invert_Abs
+             | type.prod A B => invert_Pair
+             | type.arrow s d => invert_Abs
              | List A => _
              | TNat => _
              | TZ => _
@@ -455,34 +531,34 @@ Module Compilers.
              (Op Nil TT)
              ls.
       Definition reify_nat (v : nat) : @expr var TNat
-        := Op (OpConst (t:=TNat) v) TT.
+        := Op (Idconst (t:=TNat) v) TT.*)
     End invert.
 
     Section partial_reduce.
       Context {var : type -> Type}.
 
-      Definition SmartConstInterpOp {s d} (opc : op s d) (args : @expr var s)
+      (*Definition SmartConstInterpOp {s d} (idc : op s d) (args : @expr var s)
         : @expr var d
-        := match invert_OpConst args with
-           | Some v => Op (OpConst (interp_op opc v)) TT
-           | None => Op opc args
+        := match invert_Idconst args with
+           | Some v => Op (Idconst (interp_op idc v)) TT
+           | None => Op idc args
            end.
-      Definition SmartConstInterp1Op {s d} (opc : op s d) (args : @expr var s)
+      Definition SmartConstInterp1Op {s d} (idc : op s d) (args : @expr var s)
         : @expr var d
-        := match invert_OpConst args with
-           | Some v => Op (OpConst (interp_op opc v)) TT
-           | None => Op opc args
+        := match invert_Idconst args with
+           | Some v => Op (Idconst (interp_op idc v)) TT
+           | None => Op idc args
            end.
       Definition SmartNatS (args : @expr var TNat) : @expr var TNat
         := SmartConstInterpOp NatS args.
       Definition SmartPred (args : @expr var TNat) : @expr var TNat
         := SmartConstInterpOp Pred args.
-      Definition SmartFst {A B} (args : @expr var (Prod A B)) : @expr var A
+      Definition SmartFst {A B} (args : @expr var (type.prod A B)) : @expr var A
         := match invert_Pair args with
            | Some v => fst v
            | None => Op Fst args
            end.
-      Definition SmartSnd {A B} (args : @expr var (Prod A B)) : @expr var B
+      Definition SmartSnd {A B} (args : @expr var (type.prod A B)) : @expr var B
         := match invert_Pair args with
            | Some v => snd v
            | None => Op Snd args
@@ -491,7 +567,7 @@ Module Compilers.
         : @expr var A
         := match invert_Pair args with
            | Some (tf, b)
-             => match invert_OpConst b with
+             => match invert_Idconst b with
                 | Some b => if b then SmartFst tf else SmartSnd tf
                 | None => Op BoolRect args
                 end
@@ -502,7 +578,7 @@ Module Compilers.
       Definition SmartSeq (args : @expr var (TNat * TNat)) : @expr var (List TNat)
         := match invert_Pair args with
            | Some (start, len)
-             => match invert_OpConst start, invert_OpConst len with
+             => match invert_Idconst start, invert_Idconst len with
                 | Some start, Some len => reify_list (List.map reify_nat (seq start len))
                 | _, _ => Op Seq args
                 end
@@ -513,29 +589,29 @@ Module Compilers.
         : @expr var A
         := match invert_Pair args with
            | Some (tf, b)
-             => match invert_OpConst b with
+             => match invert_Idconst b with
                 | Some b => if b then SmartFst tf else SmartSnd tf
                 | None => Op BoolRect args
                 end
            | None => Op BoolRect args
-           end.*)
+           end.*)*)
 
-      Definition partial_reduce_op_cps {T s d} (opc : op s d)
+(*      Definition partial_reduce_op_cps {T s d} (idc : op s d)
         : @expr var s -> (@expr var d -> @expr var T) -> @expr var T.
-        refine match opc in op s d return expr s -> (expr d -> expr T) -> expr T with
-               | OpConst _ _ as opc
-               | Nil _ as opc
-               | Cons _ as opc
-                 => fun args k => k (Op opc args)
-               | NatS as opc
+        refine match idc in op s d return expr s -> (expr d -> expr T) -> expr T with
+               | Idconst _ _ as idc
+               | Nil _ as idc
+               | Cons _ as idc
+                 => fun args k => k (Op idc args)
+               | NatS as idc
                  => fun args k => k (SmartNatS args)
-               | Fst _ _ as opc
+               | Fst _ _ as idc
                  => fun args k => k (SmartFst args)
-               | Snd _ _ as opc
+               | Snd _ _ as idc
                  => fun args k => k (SmartSnd args)
-               | BoolRect T as opc
+               | BoolRect T as idc
                  => fun args k => k (SmartBoolRect args)
-               | Seq as opc
+               | Seq as idc
                  => fun args k => k (SmartSeq args)
              | NatRect P => _
              | Repeat A => _
@@ -560,10 +636,44 @@ Module Compilers.
              | ZofNat => _
              | App s d => _
              end.
+ *)
+
+      Section interp_under_arrows.
+        Context (domain_var : type -> Type)
+                (codomain_var : flat_type -> Type).
+
+        Fixpoint interp_type_under_arrows (t : type)
+          := match t with
+             | type.flat T => codomain_var T
+             | type.arrow s d => domain_var s -> interp_type_under_arrows d
+             end%type.
+      End interp_under_arrows.
 
       Fixpoint partial_reduce_cps {T} {t} (e : @expr (@expr var) t)
-        : (@expr var t -> @expr var T) -> @expr var T.
-        refine match e in expr t return (expr t -> expr T) -> expr T with
+        : interp_type_under_arrows
+            (@expr var)
+            (fun t => (@expr var t -> @expr var T) -> @expr var T)
+            t.
+        refine match e in expr t
+                     return interp_type_under_arrows
+                              (@expr var)
+                              (fun t => (@expr var t -> @expr var T) -> @expr var T)
+                              t
+               with
+               | Var t v => fun k => k v
+               | Ident t idc => _
+               | App s d f x
+                 => let k := @partial_reduce_cps
+                      _ s x in _
+               | Abs s d f
+                 => fun x : expr s
+                    => @partial_reduce_cps T d (f x)
+               end;
+          cbn in *.
+        Focus 2.
+
+   with
+               |
                | TT => fun k => k TT
                | Pair A B a b
                  => fun k
@@ -577,7 +687,7 @@ Module Compilers.
                | Abs s d f
                  => fun k
                     => k (Abs (fun x => @partial_reduce_cps _ d (f (Var x)) id))
-               | Op s d opc args
+               | Op s d idc args
                  => fun k
                     => @partial_reduce_cps
                          T s args
@@ -587,8 +697,8 @@ Module Compilers.
     Fixpoint partial_interp_type (t : type)
       := match t with
          | Unit => unit
-         | Prod A B => partial_interp_type A * partial_interp_type B
-         | Arrow A B => interp_type A -> interp_type B
+         | type.prod A B => partial_interp_type A * partial_interp_type B
+         | type.arrow A B => interp_type A -> interp_type B
          | List A => list (interp_type A)
          | TNat => nat
          | TZ => Z
