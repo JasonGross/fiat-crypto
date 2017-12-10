@@ -770,8 +770,8 @@ Module Compilers.
                  (f_cod : forall A, interp_cod1 A -> interp A)
                  {t : type}
         : interp_prestep_gen interp_dom1 interp_cod1 t
-          -> interp t.
-          refine match t return interp_prestep_gen interp_dom1 interp_cod1 t
+          -> interp t
+        := match t return interp_prestep_gen interp_dom1 interp_cod1 t
                           -> interp t with
            | type.arrow s d
              => fun f (x : interp s)
@@ -784,10 +784,9 @@ Module Compilers.
            | type.Z as t
            | type.bool as t
              => fun x R (k : _ + interp_prestep interp _ -> _)
-                => _ (*@inr (expr t) (interp_prestep interp t)
-                              (lift_interp_prestep_gen f_dom f_cod x)*)
-                 end.
-          cbn in *.
+                => k (@inr (expr t) (interp_prestep interp t)
+                           (lift_interp_prestep_gen f_dom f_cod x))
+           end.
 
         Fixpoint unprestepn {n : nat} : forall {t : type}, interp_prestepn n t -> interp t
           := match n return forall t, interp_prestepn n t -> interp t with
@@ -800,11 +799,11 @@ Module Compilers.
              end.
 
         Definition unprestep {t : type} : interp_prestep interp t -> interp t
-          := @unprestepn 1 t.*)
+          := @unprestepn 1 t.
     End interp.
-    (*Arguments unprestep {var t} _.
+    Arguments unprestep {var t} _.
     Arguments uninterp_prestep_gen {var _ _} _ _ {t} _.
-    Arguments unprestepn {var n t} _.*)
+    Arguments unprestepn {var n t} _.
 
     Notation expr_const := const.
 
@@ -960,40 +959,40 @@ Module Compilers.
              | evaluated T O
                => interp var T
              | evaluated T n
-               => @expr var T + interp_prestep (interp var) T
+               => forall R, (@expr var T + interp_prestep (interp var) T -> @expr var R) -> @expr var R
              | optionally T a
                => @preinterp_out T a
              | arrow s d O da
                => interp var s
                   -> @preinterp_out d da
              | arrow s d n da
-               => (@expr var s + interp_prestepn var n s)
+               => (forall R, (@expr var s + interp_prestepn var n s -> @expr var R) -> @expr var R)
                   -> @preinterp_out d da
              end.
 
-        Fixpoint out_expr {t} {a : arguments t} : @expr var t -> preinterp_out a
-          := match a in arguments t return expr t -> preinterp_out a with
+      (*Fixpoint out_expr {t} {a : arguments t} : @expr var t -> preinterp_out a.
+            refine match a in arguments t return expr t -> preinterp_out a with
              | evaluated T O
                => expr.reflect
              | evaluated T n
-               => inl
+               => _(*inl*)
              | optionally T a
                => @out_expr T a
              | arrow s d O da
                => fun e x
-                  => @out_expr d da (App e (expr.reify x))
+                  => expr.reify_cps x (fun x => _ (@out_expr d da (App e x)))
              | arrow s d sa da
                => fun e x
                   => @out_expr
                        d da (App e match x with
                                    | inl xe => xe
-                                   | inr xi => expr.reify (unprestepn xi)
+                                   | inr xi => expr.reify_cps (unprestepn xi)
                                    end)
              end.
-
+*)
         Fixpoint defaulted_App {t} (default : @expr var t) (a : arguments t)
-          : preinterp_in a -> preinterp_out a
-          := match a in arguments t return expr t -> preinterp_in a -> preinterp_out a with
+          : preinterp_in a -> preinterp_out a.
+          refine ( match a in arguments t return expr t -> preinterp_in a -> preinterp_out a with
              | evaluated T O => fun _ => id
              | evaluated T n
                => fun _ x => inr (@lift_interp_prestep_gen
@@ -1017,11 +1016,11 @@ Module Compilers.
                      | inl xe => out_expr (App e xe)
                      | inr xi => @defaulted_App d (App e (expr.reify (unprestepn xi))) da (F xi)
                      end
-             end default.
+             end default).
       End with_var.
-      Arguments defaulted_App {var t} _ _ _.
+      (*Arguments defaulted_App {var t} _ _ _.*)
     End Controlled.
-    Export Controlled.Notations.*)
+    Export Controlled.Notations.
 
     Module ident.
       Section interp.
@@ -1031,7 +1030,7 @@ Module Compilers.
           := (Controlled.defaulted_App (Ident idc) args F).*)
 
         Definition interp {t} (idc : ident t) : interp var t.
-            (*:= match idc in ident t return interp var t with
+        (*:= match idc in ident t return interp var t with
              | ident.Const t v as idc
                => expr.reflect (Ident idc)
              | ident.Let_In tx tC
