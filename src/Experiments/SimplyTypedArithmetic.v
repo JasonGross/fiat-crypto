@@ -970,7 +970,8 @@ Module Compilers.
                   -> @preinterp_out d da
              end.
 
-      (*Fixpoint out_expr {t} {a : arguments t} : @expr var t -> preinterp_out a.
+        Fixpoint out_expr_cps {R} {t} {a : arguments t}
+          : @expr var t -> (@expr var t -> @expr var R) -> preinterp_out a.
             refine match a in arguments t return expr t -> preinterp_out a with
              | evaluated T O
                => expr.reflect
@@ -992,33 +993,38 @@ Module Compilers.
 *)
         Fixpoint defaulted_App {t} (default : @expr var t) (a : arguments t)
           : preinterp_in a -> preinterp_out a.
-          refine ( match a in arguments t return expr t -> preinterp_in a -> preinterp_out a with
+          (*refine ( match a in arguments t return expr t -> preinterp_in a -> preinterp_out a with
              | evaluated T O => fun _ => id
              | evaluated T n
-               => fun _ x => inr (@lift_interp_prestep_gen
+               => fun _ x => _ (*inr (@lift_interp_prestep_gen
                                     (interp var) (interp var) (interp_prestepn var _) (interp var)
                                     (fun _ => id)
                                     (@unprestepn _ _)
                                     _
-                                    x)
+                                    x)*)
              | optionally T a
                => fun default (v : option (preinterp_in a))
                   => match v with
                      | Some v => @defaulted_App T default a v
-                     | None => out_expr default
+                     | None => _ (*out_expr default*)
                      end
              | arrow s d O da
                => fun e F x
-                  => @defaulted_App d (App e (expr.reify x)) da (F x)
+                  => expr.reify_cps
+                       x (fun xe => @defaulted_App d (App e xe) da (F x))
              | arrow s d sa da
                => fun e F x
                   => match x return preinterp_out da with
-                     | inl xe => out_expr (App e xe)
-                     | inr xi => @defaulted_App d (App e (expr.reify (unprestepn xi))) da (F xi)
+                     | inl xe => _ (*out_expr (App e xe)*)
+                     | inr xi => expr.reify_cps
+                                   (unprestepn xi)
+                                   (fun xi
+                                    => @defaulted_App d (App e xi) da (F xi))
                      end
-             end default).
+             end default).*)
+          Admitted.
       End with_var.
-      (*Arguments defaulted_App {var t} _ _ _.*)
+      Arguments defaulted_App {var t} _ _ _.
     End Controlled.
     Export Controlled.Notations.
 
@@ -1030,7 +1036,44 @@ Module Compilers.
           := (Controlled.defaulted_App (Ident idc) args F).*)
 
         Definition interp {t} (idc : ident t) : interp var t.
-        (*:= match idc in ident t return interp var t with
+          refine match idc in ident t return interp var t with
+                 | ident.Const _ _ as idc
+                   => expr.reflect (Ident idc)
+                 | ident.Let_In tx tC => _
+                 | ident.S => _
+                 | ident.nil t => _
+                 | ident.cons t => _
+                 | ident.pair A B => _
+                 | ident.fst A B => _
+                 | ident.snd A B => _
+                 | ident.bool_rect T => _
+                 | ident.nat_rect P => _
+                 | ident.pred => _
+                 | ident.List_seq => _
+                 | ident.List_repeat A => _
+                 | ident.List_combine A B => _
+                 | ident.List_map A B => _
+                 | ident.List_flat_map A B => _
+                 | ident.List_partition A => _
+                 | ident.List_app A => _
+                 | ident.List_rev A => _
+                 | ident.List_fold_right A B => _
+                 | ident.List_update_nth T => _
+                 | ident.List_nth_default T => _
+                 | ident.Z_runtime_mul => _
+                 | ident.Z_runtime_add => _
+                 | ident.Z_add => _
+                 | ident.Z_mul => _
+                 | ident.Z_pow => _
+                 | ident.Z_opp => _
+                 | ident.Z_div => _
+                 | ident.Z_modulo => _
+                 | ident.Z_eqb => _
+                 | ident.Z_of_nat => _
+                 | ident.Nat_sub => _
+                 end;
+            cbn.
+        refine match idc in ident t return interp var t with
              | ident.Const t v as idc
                => expr.reflect (Ident idc)
              | ident.Let_In tx tC
@@ -1151,7 +1194,7 @@ Module Compilers.
              | ident.Z_eqb as idc
              | ident.Nat_sub as idc
                => defaulted_App idc (1->1->!1) (ident.interp idc)
-             end.*)
+             end.
           Admitted.
       End interp.
     End ident.
