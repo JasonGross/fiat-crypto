@@ -1,3 +1,4 @@
+Set Ltac Profiling.
 Require Import Coq.Classes.Morphisms.
 
 Require Import Crypto.Spec.WeierstrassCurve.
@@ -33,23 +34,27 @@ Module Jacobian.
              /\ Y1*Z2^3 = Y2*Z1^3
       end.
 
-    Ltac prept :=
-      repeat match goal with
-             | _ => progress intros
-             | _ => progress specialize_by trivial
-             | _ => progress cbv [proj1_sig fst snd]
-             | _ => progress autounfold with points_as_coordinates in *
-             | _ => progress destruct_head' @unit
-             | _ => progress destruct_head' @bool
-             | _ => progress destruct_head' @prod
-             | _ => progress destruct_head' @sig
-             | _ => progress destruct_head' @sum
-             | _ => progress destruct_head' @and
-             | _ => progress destruct_head' @or
-             | H: context[dec ?P] |- _ => destruct (dec P)
-             | |- context[dec ?P]      => destruct (dec P)
-             | |- ?P => lazymatch type of P with Prop => split end
-             end.
+    Ltac prept_step :=
+      match goal with
+      | _ => progress intros
+      | _ => progress specialize_by_assumption
+      (*| _ => progress specialize_by trivial*)
+      | _ => progress cbv [proj1_sig fst snd] in *
+      | _ => progress autounfold with points_as_coordinates in *
+      | _ => progress destruct_head'_prod
+      | _ => progress destruct_head'_and
+      | _ => progress destruct_head'_sig
+      | _ => progress destruct_head'_unit
+      | _ => progress destruct_head'_bool
+      | _ => progress destruct_head'_sum
+      | _ => progress destruct_head'_or
+      | [ H : ?T |- ?T ] => exact H
+      | [ |- ?x = ?x ] => reflexivity
+      | H: context[dec ?P] |- _ => destruct (dec P)
+      | |- context[dec ?P]      => destruct (dec P)
+      | |- ?P => lazymatch type of P with Prop => split end
+      end.
+    Ltac prept := repeat prept_step.
     Ltac t := prept; trivial; try contradiction; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
@@ -166,7 +171,7 @@ Module Jacobian.
           let yneq := if dec (r = 0) then false else true in
           if (negb xneq && negb yneq && z1nz && z2nz)%bool
           then proj1_sig (double P)
-          else 
+          else
             let i := h + h in
             let i := i^2 in
             let j := h * i in
@@ -189,6 +194,7 @@ Module Jacobian.
             (x3, y3, z3)
         end.
       Next Obligation. Proof. t. Qed.
+
       Definition add (P Q : point) : point :=
         add_impl false P Q I.
       Definition add_mixed (P : point) (Q : point) (H : z_is_zero_or_one Q) :=
@@ -211,7 +217,273 @@ Module Jacobian.
             {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12} (* TODO: why do we need 12 instead of 3? *)
             P Q
         : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
-      Proof. prept; trivial; try contradiction. Time par: abstract t. Time Qed.
+      Proof. Time prept; trivial; try contradiction.
+             { Reset Ltac Profile.
+               Local Ltac clear_eq_and_neq :=
+                 repeat match goal with
+                        | [ H : _ = _ |- _ ] => clear H
+                        | [ H : _ <> _ |- _ ] => clear H
+                        end.
+               Ltac clean_up_speed_up_fsatz :=
+                 repeat match goal with
+                        | [ H : forall a : F, _ = 0 -> _ = 0 |- _ ] => clear H
+                        | [ H : forall a b : F, _ = 0 -> _ = 0 |- _ ] => clear H
+                        | [ H : forall a b : F, _ <> 0 -> _ <> 0 |- _ ] => clear H
+                        | [ H : forall a b : F, _ = 0 -> _ <> 0 -> _ = 0 |- _ ] => clear H
+                        | [ H : forall a b c : F, _ = 0 -> _ = 0 -> _ = 0 |- _ ] => clear H
+                        | [ H : forall a b c : F, _ <> 0 -> _ = 0 -> _ = 0 |- _ ] => clear H
+                        | [ H : forall a b c d : F, _ <> 0 -> _ <> 0 -> _ = _ -> _ = 0 |- _ ] => clear H
+                        | [ H : forall a b c d : F, _ = _ -> _ = _ -> _ = 0 |- _ ] => clear H
+                        end.
+               Ltac find_and_apply_or_prove_by_fsatz H ty :=
+                 lazymatch goal with
+                 | [ H' : ty |- _ ]
+                   => apply H' in H
+                 | _
+                   => assert ty by (clear_eq_and_neq; intros; fsatz)
+                 end.
+               Ltac find_and_apply_or_prove_by_fsatz2 H0 H1 ty :=
+                 lazymatch goal with
+                 | [ H' : ty |- _ ]
+                   => apply H' in H0; [ | exact H1 ]
+                 | _
+                   => assert ty by (clear_eq_and_neq; intros; fsatz)
+                 end.
+               Ltac find_and_apply_or_prove_by_fsatz' H ty preapp :=
+                 lazymatch goal with
+                 | [ H' : ty |- _ ]
+                   => let H' := preapp H' in apply H' in H
+                 | _
+                   => assert ty by (clear_eq_and_neq; intros; fsatz)
+                 end.
+               Ltac speed_up_fsatz :=
+                 repeat match goal with
+                        | [ H : ?x - ?x = 0 |- _ ] => clear H
+                        | [ H : ?x = ?y, H' : ?x <> ?y |- _ ] => solve [ exfalso; apply H', H ]
+                        | [ H : ?x + ?x = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall y, y + y = 0 -> y = 0)
+                        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
+                        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) <> 0 -> a * b <> 0)
+                        | [ H : ?x * ?y = 0, H' : ?x <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b = 0 -> a <> 0 -> b = 0)
+                        | [ H : ?x * ?y = 0, H' : ?y <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b = 0 -> b <> 0 -> a = 0)
+                        | [ H : ?x * ?y <> 0, H' : ?x <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> b <> 0)
+                        | [ H : ?x * ?y <> 0, H' : ?y <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> a <> 0)
+                        | [ H : ?x - ?y * ?z = 0, H' : ?z = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c, a - b * c = 0 -> c = 0 -> a = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+                        | [ H : ?x * (?y * ?y^2) = 0, H' : ?y <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * (b * b^2) = 0 -> b <> 0 -> a = 0)
+                        | [ H : ?x * (?y * ?z) = 0, H' : ?z <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c, c <> 0 -> a * (b * c) = 0 -> a * b = 0) ltac:(fun lem => constr:(lem x y z H'))
+                        | [ H : ?x * ?y + ?z = 0, H' : ?x = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c, a = 0 -> a * b + c = 0 -> c = 0) ltac:(fun lem => constr:(lem x y z H'))
+                        | [ H : ?x / ?y^3 = Fopp (?z / ?w^3), H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^3 = Fopp (b / d^3) -> a * d^3 + b * c^3 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+                        | [ H : ?x * (?y * ?y^2) - ?z * ?z^2 * ?w = 0, H' : ?x * ?y^3 + ?w * ?z^3 = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * b^3 + d * c^3 = 0 -> a * (b * b^2) - c * c^2 * d = 0 -> a * b^3 = 0) ltac:(fun lem => constr:(lem x y z w H'))
+                        | [ H0 : ?n0 = 0, H1 : ?n1 = 0, H2 : ?d0 <> 0, H3 : ?d1 <> 0, H : ?n0 / ?d0^3 <> Fopp (?n1 / ?d1^3) |- _ ]
+                          => revert H0 H1 H2 H3 H; progress clear_eq_and_neq; generalize n0 n1 d0 d1; intros
+                        end.
+               Time speed_up_fsatz; clean_up_speed_up_fsatz.
+               Time fsatz. }
+             {
+               Time speed_up_fsatz; clean_up_speed_up_fsatz.
+               Time fsatz. }
+             {
+               Time speed_up_fsatz; clean_up_speed_up_fsatz. }
+             { Time fsatz. }
+             Focus 4.
+             {
+               Ltac speed_up_fsatz ::=
+                 repeat match goal with
+                        | [ H : ?x - ?x = 0 |- _ ] => clear H
+                        | [ H : ?x = ?y, H' : ?x <> ?y |- _ ] => solve [ exfalso; apply H', H ]
+                        | [ H : ?x * ?y = 0, H' : ?x = 0 |- _ ] => clear H
+                        | [ H : ?x * ?y = 0, H' : ?y = 0 |- _ ] => clear H
+                        | [ H : ?x + ?x = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall y, y + y = 0 -> y = 0)
+                        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
+                        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) <> 0 -> a * b <> 0)
+                        | [ H : ?x * ?y = 0, H' : ?x <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b = 0 -> a <> 0 -> b = 0)
+                        | [ H : ?x * ?y = 0, H' : ?y <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b = 0 -> b <> 0 -> a = 0)
+                        | [ H : ?x * ?y <> 0, H' : ?x <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> b <> 0)
+                        | [ H : ?x * ?y <> 0, H' : ?y <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> a <> 0)
+                        | [ H : ?x - ?y * ?z = 0, H' : ?z = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c, a - b * c = 0 -> c = 0 -> a = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+                        | [ H : ?x * (?y * ?y^2) = 0, H' : ?y <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * (b * b^2) = 0 -> b <> 0 -> a = 0)
+                        | [ H : ?x * (?y * ?z) = 0, H' : ?z <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c, c <> 0 -> a * (b * c) = 0 -> a * b = 0) ltac:(fun lem => constr:(lem x y z H'))
+                        | [ H : ?x * ?y + ?z = 0, H' : ?x = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c, a = 0 -> a * b + c = 0 -> c = 0) ltac:(fun lem => constr:(lem x y z H'))
+                        | [ H : ?x / ?y^3 = Fopp (?z / ?w^3), H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^3 = Fopp (b / d^3) -> a * d^3 + b * c^3 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+                        | [ H : ?x / ?y^3 <> Fopp (?z / ?w^3), H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^3 <> Fopp (b / d^3) -> a * d^3 + b * c^3 <> 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+                        | [ H : ?x / ?y^2 = ?z / ?w^2, H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^2 = b / d^2 -> a * d^2 - b * c^2 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+                        | [ H : ?x / ?y^2 <> ?z / ?w^2, H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^2 <> b / d^2 -> a * d^2 - b * c^2 <> 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+                        | [ H : ?x * (?y * ?y^2) - ?z * ?z^2 * ?w = 0, H' : ?x * ?y^3 + ?w * ?z^3 = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * b^3 + d * c^3 = 0 -> a * (b * b^2) - c * c^2 * d = 0 -> a * b^3 = 0) ltac:(fun lem => constr:(lem x y z w H'))
+                        | [ H0 : ?n0 = 0, H1 : ?n1 = 0, H2 : ?d0 <> 0, H3 : ?d1 <> 0, H : ?n0 / ?d0^3 <> Fopp (?n1 / ?d1^3) |- _ ]
+                          => revert H0 H1 H2 H3 H; progress clear_eq_and_neq; generalize n0 n1 d0 d1; intros
+                        end.
+                 Time speed_up_fsatz; clean_up_speed_up_fsatz.
+                 Time fsatz. }
+             Unfocus.
+             Focus 4.
+             { Time speed_up_fsatz; clean_up_speed_up_fsatz.
+               Time fsatz. } Unfocus.
+             Focus 4.
+             { Time speed_up_fsatz; clean_up_speed_up_fsatz.
+               Time fsatz. } Unfocus.
+             Time all:try match goal with |- False => speed_up_fsatz; clean_up_speed_up_fsatz end.
+             Focus 8. Time fsatz.
+             Focus 8. Time fsatz.
+             Focus 8. Time fsatz.
+             Print Ltac fsatz.
+             Time let fld := guess_field in
+                  divisions_to_inverses fld.
+             { Time speed_up_fsatz; clean_up_speed_up_fsatz.
+               rewrite f7.
+               assert (H : forall x, x - x = 0) by (clear_eq_and_neq; intros; fsatz).
+               clear f7.
+               clear H.
+               Time fsatz. }
+             Time all:let fld := guess_field in
+                      divisions_to_inverses fld.
+             Time all:speed_up_fsatz; clean_up_speed_up_fsatz.
+             { Time fsatz. }
+             { Time fsatz. }
+             { Time fsatz. }
+             { rewrite f6.
+               clear f6.
+               Time fsatz.
+               clear n1 n2 n n0.
+               Import Algebra.Ring.
+               ring_simplify_subterms_in_all.
+               assert (forall x y z, x * (y + z) = x * y + x * z) by (clear_eq_and_neq; intros; fsatz).
+               rewrite !H.
+               ring_simplify_subterms_in_all.
+               assert (forall x y z, (x - y) * z = x * z - y * z) by (clear_eq_and_neq; intros; fsatz).
+               rewrite !H0.
+               ring_simplify_subterms_in_all.
+               assert (H' : forall x y, x^2 - y * x + (x * y - y^2) = x^2 - y^2) by (clear_eq_and_neq; intros; fsatz).
+               rewrite !H'.
+               assert (H'' : forall x, x + (x + x) = (1 + 1 + 1) * x) by (clear_eq_and_neq; intros; fsatz).
+               rewrite !H''.
+               set (three := 1 + 1 + 1).
+               assert (H''' : forall x y, x + x + x - y = three * x - y) by (subst three; clear_eq_and_neq; intros; fsatz).
+               Time fsatz.
+
+
+               Notation "'3'" := (1 + 1 + 1).
+
+               rewrite H'
+               Time fsatz.
+               Time rewrite f7.
+               Time fsatz.
+             Print Ltac fsatz_prepare_hyps_on.
+             Time let fld := guess_field in
+              fsatz_prepare_hyps_on fld.
+                 lazymatch goal with
+                 | [ H : ?x / ?y^2 = ?z / ?w^2, H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
+                   => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^2 = b / d^2 -> a * d^2 - b * c^2 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+                 end.
+
+               Time fsatz.
+               Time contradiction.
+               Time fsatz.
+               lazymatch goal with
+               end.
+               lazymatch goal with
+               end.
+                                                                                                                                             * -> d <> 0 -> a / c^3 = Fopp (b / d^3) -> a * d^3 + b * c^3 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
+               Time fsatz.
+               clear y0 y.
+               clear f7.
+               clear f5.
+               do 2 lazymatch goal with
+               end.
+               | [ H : ?x * (?y * ?y^2) - ?z * ?z^2 * ?w = 0, H' : ?x
+               Time fsatz.
+               clear f6.
+               Time
+                 fsatz.
+
+               Time fsatz.
+               lazymatch goal with
+               end.
+               revert n1 f6 f7 n0 n.
+               clear_eq_and_neq.
+               intros.
+               Time fsatz.
+               Time fsatz.
+               lazymatch goal with
+
+               end.
+               match goal with
+                 | [ H : ?x - ?y * ?z = 0, H' : ?z = 0 |- _ ]
+                   => find_and_apply_or_prove_by_fsatz2' H H' (forall a b c, a - b * c = 0 -> c = 0 -> a = 0) ltac:(fun H'' => constr:(H'' x y z))
+               end.
+               apply H in f6.
+               assert (f1 = 0) by fsatz.
+
+               Time fsatz.
+               match goal with
+               end.
+               | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
+                          => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
+               match goal with
+               | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
+                 => => lazymatch goal with
+                       | [ H' : forall y, y + y = 0 -> y = 0 |- _ ]
+                         => apply H' in H
+                       | _
+                         => assert (forall y, y + y = 0 -> y = 0)
+                           by (clear_eq_and_neq; intros; fsatz)
+                       end
+               clear y0.
+               clear y.
+               clear f8.
+
+               Time fsatz.
+
+                        | [ H : ?x + ?x = 0
+                        end.
+               repeat match goal with
+                      | [ H : _ = _ |- _ ] => clear H
+                      | [ H : _ <> _ |- _ ] => clear H
+                      end.
+               intros; fsatz.
+               SearchAbout (_ + _ = 0).
+               repeat match goal with
+                      | [ H : ?x + ?x = 0 |- _ ]
+                        => assert (x = 0)
+                          by (revert H; repeat match goal with
+                                               | [ H : _ = _ |- _ ] => clear H
+                                               | [ H : ?y <> 0 |- _ ]
+                                                 => lazymatch
+               clear f6.
+
+               Time fsatz.
+               Time fsatz.
+               Show Ltac Profile.
+             Time t.
+             Time abstract t.
+             Time par: abstract t. Time Qed.
       (* 514.584 secs (69.907u,1.052s) ;; 30.65 secs (30.516u,0.024s*)
     End AEqMinus3.
   End Jacobian.
