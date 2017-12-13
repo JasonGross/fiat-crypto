@@ -590,20 +590,6 @@ Module Compilers.
     Section under_lets.
       Context {R : type}.
 
-      Local Notation if_arrow_s f
-        := (fun t
-            => match t return Type with
-               | (s -> d)%ctype => f s
-               | _ => True
-               end) (only parsing).
-
-      Local Notation if_arrow_d f
-        := (fun t
-            => match t return Type with
-               | (s -> d)%ctype => f d
-               | _ => True
-               end) (only parsing).
-
       Fixpoint under_LetIns {A} (e : @expr var A)
         : (@expr var A -> @expr var R) -> @expr var R
         := match e in expr A return (expr A -> expr R) -> expr R with
@@ -717,29 +703,229 @@ Module Compilers.
            | type.bool as t
              => type.interp t
            end%type.
+      Definition interp_step_gen (interp_dom interp_cod : type -> Type) (t : type)
+        := forall R,
+          (@expr var t + interp_prestep_gen interp_dom interp_cod t -> @expr var R) -> @expr var R.
       Definition interp_prestep (interp : type -> Type) (t : type)
         := interp_prestep_gen interp interp t.
       Definition interp_step (interp : type -> Type) (t : type)
-        := match t return Type with
-           | type.unit as t
-           | type.arrow _ _ as t
-             => interp_prestep interp t
-           | type.prod _ _ as t
-           | type.list _ as t
-           | type.Z as t
-           | type.nat as t
-           | type.bool as t
-             => forall R, (@expr var t + interp_prestep interp t -> @expr var R) -> @expr var R
-           end%type.
+        := interp_step_gen interp interp t.
       Fixpoint interp (t : type)
         := interp_step interp t.
+
+      Definition etaP (P : Type -> Type) {t}
+        : P (interp t) -> P (interp_step interp t)
+        := match t with
+           | type.unit
+           | _
+             => id
+           end.
+      Definition unetaP (P : Type -> Type) {t}
+        : P (interp_step interp t) -> P (interp t)
+        := match t with
+           | type.unit
+           | _
+             => id
+           end.
+
+      Definition eta {t} : interp t -> interp_step interp t := etaP id.
+      Definition uneta {t} : interp_step interp t -> interp t := unetaP id.
+    End interp.
+    Arguments eta {var t} _.
+    Arguments uneta {var t} _.
+    Arguments etaP {var} P {t} _.
+    Arguments unetaP {var} P {t} _.
+
+    Coercion eta : interp >-> interp_step.
+
+    Module Controlled.
+      Inductive arguments : type -> Set :=
+      | generic {t} : arguments t
+      | split {t} : arguments t -> arguments t -> arguments t
+      | optionally {t} : arguments t -> arguments t
+      | raw {t} : arguments t
+      | prod {A B} : arguments A -> arguments B -> arguments (A * B)
+      | list {A} : arguments A -> arguments (type.list A)
+      | arrow {A B} : arguments A -> arguments B -> arguments (A -> B)
+      | evaluated {A} : arguments A.
+
+      Local Notation generic_interp := interp.
+      Section interp.
+        Context (var : type -> Type).
+        Definition interp_step_gen
+                   (interp_dom interp_cod : forall t, arguments t -> Type)
+                   {t : type}
+                   (a : arguments t)
+          := match a in arguments t return Type with
+             | generic t => generic_interp var t
+             | split t a a' => interp_cod t a + interp_cod t a'
+             | optionally t a => option (interp_cod t a)
+             | raw t => @expr var t
+             | prod A B aA aB => interp_cod A aA * interp_cod B aB
+             | list A aA => Datatypes.list (interp_cod A aA)
+             | arrow A B aA aB => interp_dom A aA -> interp_cod B aB
+             | evaluated A => type.interp A
+             end%type.
+        Definition interp_step interp {t} a
+          := @interp_step_gen interp interp t a.
+
+        Fixpoint interp {t} (a : arguments t)
+          := interp_step (@interp) a.
+
+        Fixpoint shroud {t} (a : arguments t)
+          : @expr var t (* default *)
+            -> interp a
+            -> generic_interp var t.
+          refine match a in arguments t
+                       return expr t -> interp a -> generic_interp var t
+                 with
+                 | generic t => fun _ => id
+                 | split t a a'
+                   => fun default v
+                      => match v with
+                         | inl v => @shroud t a default v
+                         | inr v => @shroud t a' default v
+                         end
+                 | optionally t a
+                   => fun default (v : option (interp a))
+                      => match v with
+                         | Some v => @shroud t a default v
+                         | None => uneta (fun R k => k (inl default))
+                         end
+                 | prod A B aA aB as a
+                   => fun default '((a, b) : interp aA * interp aB)
+                      => _
+                 | list A a
+                   => fun default (ls : Datatypes.list (interp a))
+                      => _
+                 | arrow A B aA aB => _
+                 | raw t
+                   => fun default (v : expr t)
+                      => uneta (fun R k => k (inl v))
+                 | evaluated A
+                   => fun default (v : type.interp A)
+                      => uneta (fun R k => k (inl (Ident (ident.Const v))))
+                 end;
+            cbn; cbv [partial.interp_step partial.interp_step_gen]; cbn.
+
+        Fixpoint reveal {t} (a : arguments t)
+          : generic_interp var t
+            -> ((forall R, (@expr var t -> @expr var R) -> @expr var R)
+                +
+
+
+      Definition interp_step_gen (interp_dom interp_cod : type -> Type) (t : type)
+        := forall R,
+          (@expr var t + interp_prestep_gen interp_dom interp_cod t -> @expr var R) -> @expr var R.
+      Definition interp_prestep (interp : type -> Type) (t : type)
+        := interp_prestep_gen interp interp t.
+      Definition interp_step (interp : type -> Type) (t : type)
+        := interp_step_gen interp interp t.
+      Fixpoint interp (t : type)
+        := interp_step interp t.
+
 
       Fixpoint interp_prestepn (n : nat) : type -> Type
         := match n with
            | O => interp
-           | S n' => interp_prestep_gen
-                       interp
-                       (interp_prestepn n')
+           | S n' => interp_prestep (interp_prestepn n')
+           end.
+
+      Definition inspect {n} {t}
+        : interp_step (interp_prestepn n) t
+          -> interp_step (interp_prestepn (S n)) t.
+        cbv [interp_step interp_step_gen]; cbn.
+        refine match t return interp_step (interp_prestepn n) t -> interp_step (interp_prestepn (S n)) t with
+               | type.unit => _
+               | type.prod A B => _
+               | type.arrow s d => _
+               | type.list A => _
+               | type.nat => _
+               | type.Z => _
+               | type.bool => _
+               end;
+        cbn; cbv [interp_step interp_step_gen]; cbn.
+    End interp.
+
+    Module Controlled.
+      Inductive arguments : type -> Set :=
+      | generic
+      | evaluated {T} (n : nat) : arguments T
+      | optionally {T} (a : arguments T) : arguments T
+      | arrow {s d} (sn : nat) (da : arguments d) : arguments (type.arrow s d).
+
+      Module Export Notations.
+        Bind Scope arguments_scope with arguments.
+        Delimit Scope arguments_scope with arguments.
+        Notation "!" := (@evaluated _) : arguments_scope.
+        Notation "a -> b" := (@arrow _ _ a%nat b%arguments) : arguments_scope.
+      End Notations.
+
+      Section with_var.
+        Context (var : type -> Type).
+
+        Fixpoint preinterp_in {t : type} (a : arguments t) : Type
+          := match a return Type with
+             | evaluated T n
+               => interp_prestepn var n T
+             | optionally T a
+               => option (@preinterp_in T a)
+             | arrow s d n da
+               => interp_prestepn var n s -> @preinterp_in d da
+             end.
+
+        Fixpoint preinterp_out {t : type} (a : arguments t) : Type
+          := match a return Type with
+             | evaluated T O
+               => interp var T
+             | evaluated T n
+               => forall R, (@expr var T + interp_prestep (interp var) T -> @expr var R) -> @expr var R
+             | optionally T a
+               => @preinterp_out T a
+             | arrow s d O da
+               => interp var s
+                  -> @preinterp_out d da
+             | arrow s d n da
+               => (forall R, (@expr var s + interp_prestepn var n s -> @expr var R) -> @expr var R)
+                  -> @preinterp_out d da
+             end.
+
+        Fixpoint out_expr_cps {R} {t} {a : arguments t}
+          : @expr var t -> (@expr var t -> @expr var R) -> preinterp_out a.
+            refine match a in arguments t return expr t -> preinterp_out a with
+             | evaluated T O
+               => expr.reflect
+             | evaluated T n
+               => _(*inl*)
+             | optionally T a
+               => @out_expr T a
+             | arrow s d O da
+               => fun e x
+                  => expr.reify_cps x (fun x => _ (@out_expr d da (App e x)))
+             | arrow s d sa da
+               => fun e x
+                  => @out_expr
+                       d da (App e match x with
+                                   | inl xe => xe
+                                   | inr xi => expr.reify_cps (unprestepn xi)
+                                   end)
+             end.
+*)
+
+
+      Fixpoint interp_
+
+            Definition push_cps
+                 (k : forall R, @expr var R -> @expr var R)
+                 {t}
+        : interp t -> interp t
+        := match t return interp t -> interp t with
+           | type.unit as t
+           | t
+             => fun (xk : forall R, (expr t + interp_prestep interp t -> expr R) -> expr R)
+                    R
+                    (k' : expr t + interp_prestep interp t -> expr R)
+                => xk R (fun v => k _ (k' v))
            end.
 
       Definition lift_interp_prestep_gen
