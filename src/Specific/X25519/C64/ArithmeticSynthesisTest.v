@@ -36,7 +36,7 @@ Section Ops.
   Section wt.
     Import QArith Qround.
     Local Coercion QArith_base.inject_Z : Z >-> Q.
-    Definition wt (i:nat) : Z := 2^(ListUtil.sum_firstn Curve.limb_widths i).
+    Definition wt (i:nat) : Z := 2^(ListUtil.sum_firstn (Curve.limb_widths ++ Curve.limb_widths) i).
   End wt.
   Definition sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
   Definition m_enc :=

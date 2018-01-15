@@ -11,10 +11,10 @@ Module Curve <: CurveParameters.
   Definition bitwidth : Z := 64.
   Definition s : Z := 2^256.
   Definition c : list limb := [(1, 2^32+977)].
-  Definition carry_chain1 := Eval vm_compute in Some (seq 0 (pred sz)).
-  Definition carry_chain2 := Some [0;1]%nat.
-  (*Definition carry_chain1 := Some [0;1;2;3;4;0]%nat.
-  Definition carry_chain2 := Some [0;1;2;3;4;0]%nat.*)
+  (*Definition carry_chain1 := Eval vm_compute in Some (seq 0 (pred sz)).
+  Definition carry_chain2 := Some [0;1]%nat.*)
+  Definition carry_chain1 := Some [0;1;2;3;4]%nat.
+  Definition carry_chain2 := Some [0;1;2;3;4;0;1]%nat.
   Definition limb_widths := [52; 52; 52; 52; 48]%Z.
 
   Definition a24 := 121665%Z.
