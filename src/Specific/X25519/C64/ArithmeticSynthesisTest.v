@@ -22,12 +22,12 @@ Section Ops.
 
   (* These definitions will need to be passed as Ltac arguments (or
   cleverly inferred) when things are eventually automated *)
-  Definition sz : nat := 5.
+  Definition sz : nat := P.compute P.sz.
   Definition bitwidth : Z := P.compute P.bitwidth.
-  Definition s : Z := 2^256. (* don't want to compute, e.g., [2^255] *)
-  Definition c : list B.limb := [(1,2^32 + 977)].
-  Definition carry_chain1 := [0;1;2;3;4;0]%nat.
-  Definition carry_chain2 := [0;1;2;3;4;0]%nat.
+  Definition s : Z := P.unfold P.s. (* don't want to compute, e.g., [2^255] *)
+  Definition c : list B.limb := P.compute P.c.
+  Definition carry_chain1 := P.compute P.carry_chain1.
+  Definition carry_chain2 := P.compute P.carry_chain2.
 
   Definition a24 := P.compute P.a24.
   Definition coef_div_modulus : nat := P.compute P.coef_div_modulus.
@@ -36,14 +36,7 @@ Section Ops.
   Section wt.
     Import QArith Qround.
     Local Coercion QArith_base.inject_Z : Z >-> Q.
-    Definition wt (i:nat) : Z := match i with
-                                 | 0 => 52
-                                 | 1 => 52
-                                 | 2 => 52
-                                 | 3 => 52
-                                 | 4 => 48
-                                 | _ => 0
-                                 end%nat.
+    Definition wt (i:nat) : Z := 2^(ListUtil.sum_firstn Curve.limb_widths i).
   End wt.
   Definition sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
   Definition m_enc :=

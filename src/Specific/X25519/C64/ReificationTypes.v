@@ -14,7 +14,7 @@ Require Import Crypto.Specific.X25519.C64.ArithmeticSynthesisTest.
 Section BoundedField.
   Local Coercion Z.of_nat : nat >-> Z.
 
-  Let limb_widths := Eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz)).
+  Let limb_widths := Eval vm_compute in CurveParameters.Curve.limb_widths.
 
   Local Notation b_of exp := {| lower := 0 ; upper := P.upper_bound_of_exponent exp |}%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
   (* The definition [bounds_exp] is a tuple-version of the

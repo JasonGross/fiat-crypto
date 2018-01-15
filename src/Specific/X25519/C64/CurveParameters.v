@@ -13,6 +13,7 @@ Module Curve <: CurveParameters.
   Definition c : list limb := [(1, 2^32+977)].
   Definition carry_chain1 := Some [0;1;2;3;4;0]%nat.
   Definition carry_chain2 := Some [0;1;2;3;4;0]%nat.
+  Definition limb_widths := [52; 52; 52; 52; 48]%Z.
 
   Definition a24 := 121665%Z.
   Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
