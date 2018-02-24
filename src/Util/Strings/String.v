@@ -133,11 +133,11 @@ Definition contains (n : nat) (s1 s2 : string) : bool :=
 
 Section strip_prefix_cps.
   Context {R} (found : string -> R)
-          (remaining : string -> string -> R).
+          (remaining : R).
 
   Fixpoint strip_prefix_cps (sepch : ascii) (sep : string) (s2 : string) {struct s2} : R
     := match s2 with
-       | EmptyString => remaining (String sepch sep) s2
+       | EmptyString => remaining
        | String x xs
          => if ascii_beq sepch x
             then match sep with
@@ -145,9 +145,48 @@ Section strip_prefix_cps.
                  | String sepch sep
                    => strip_prefix_cps sepch sep xs
                  end
-            else remaining (String sepch sep) s2
+            else remaining
        end.
 End strip_prefix_cps.
+
+SearchAbout substring.
+
+Lemma substring_ge_length n s
+  : length s <= n -> substring 0 n s = s.
+Proof.
+  revert n; induction s as [|ch s IHs], n; cbn; intros;
+    try reflexivity; try omega.
+  rewrite IHs by omega; reflexivity.
+Qed.
+
+Lemma substring_ge_length_all_eq n1 n2 n2' s
+  : length s <= n1 + n2 -> length s <= n1 + n2'
+    -> substring n1 n2 s = substring n1 n2' s.
+Proof.
+  revert n1 n2 n2'; induction s as [|ch s IHs], n1; cbn; intros;
+    try reflexivity; try omega;
+      [ destruct n2, n2'; try reflexivity; try omega.. | ];
+      (erewrite IHs; [ reflexivity | .. ]; omega).
+Qed.
+
+Lemma strip_prefix_cps_correct {R} found remaining sepch sep s2
+  : @strip_prefix_cps R found remaining sepch sep s2
+    = if prefix (String sepch sep) s2
+      then
+        found (substring (S (length sep)) (length s2) s2)
+      else remaining.
+Proof.
+  revert sepch sep; induction s2 as [|ch s2 IHs2], sep as [|sepch' sep];
+    cbn; intros; trivial;
+      destruct (sepch =? ch)%char eqn:H;
+      try apply internal_ascii_dec_bl in H;
+      edestruct ascii_dec; subst;
+        try rewrite (internal_ascii_dec_lb _ _ eq_refl) in H;
+        try congruence.
+  { destruct s2; cbn; rewrite ?substring_ge_length by omega; reflexivity. }
+  { rewrite IHs2.
+    erewrite substring_ge_length_all_eq; [ reflexivity | omega.. ]. }
+Qed.
 
 (** *** splitting a string *)
 (** [split sep s] returns the list of all (possibly empty) substrings
@@ -171,12 +210,11 @@ Fixpoint split_helper (sepch : ascii) (sep : string) (s : string) (rev_acc : str
   : list string
   := strip_prefix_cps
        (fun s => rev rev_acc :: split_helper sepch sep s "")
-       (fun _ _
-        => match s with
-           | EmptyString => rev rev_acc :: nil
-           | String x xs
-             => split_helper sepch sep xs (String x rev_acc)
-           end)
+       (match s with
+        | EmptyString => rev rev_acc :: nil
+        | String x xs
+          => split_helper sepch sep xs (String x rev_acc)
+        end)
        sepch sep s.
 
 Definition split (sep : string) (s : string) : list string
@@ -222,6 +260,31 @@ Proof.
   intro H; destruct s; cbn; congruence.
 Qed.
 
+Fixpoint split_helper_no_substring_helper sepch sep s rev_acc
+         (Hrev_acc : forall s2 n1 n2,
+             substring n1 n2 (rev rev_acc ++ s2) = String sepch sep
+             -> exists n1' n2', substring n1' n2' s2 = String sepch sep)
+         {struct s}
+  : List.Forall (fun s' => forall s2 n1 n2,
+                     substring n1 n2 (s' ++ s2) = String sepch sep
+                     -> exists n1' n2', substring n1' n2' s2 = String sepch sep)
+                (split_helper sepch sep s rev_acc).
+Proof.
+  destruct s as [|x xs]; cbn [split_helper];
+    [ cbn; clear split_helper_no_substring_helper;
+      repeat constructor; exact Hrev_acc
+    | ].
+  generalize (fun s => split_helper_no_substring_helper sepch sep s "" (fun s2 n1 n2 pf0 => ex_intro _ n1 (ex_intro _ n2 pf0))).
+  generalize (split_helper_no_substring_helper sepch sep xs (String x rev_acc)).
+  generalize (split_helper sepch sep xs (String x rev_acc)).
+  intros ls Hls H'.
+  rewrite strip_prefix_cps_correct.
+  cbn.
+  edestruct ascii_dec as [Heq|Heq].
+  { destruct (prefix sep xs) eqn:Hsep.
+    { constructor; try solve [ clear split_helper_no_substring_helper H'; auto ].
+      clear -H'.
+Abort.
 Fixpoint split_helper_no_substring sepch sep s rev_acc
   : List.Forall (fun s' => contains 0 (rev rev_acc ++ String sepch sep) s' = false)
                 (split_helper sepch sep s rev_acc).
