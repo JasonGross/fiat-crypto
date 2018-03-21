@@ -2746,6 +2746,50 @@ Module Compilers.
       := (Reify_as (type.reify_type_of v) (fun _ => v)) (only parsing).
   End GallinaReify.
 
+  Module Uncurry.
+    Import Uncurried.
+    Module type.
+      Fixpoint curried_domain (t : type) : type
+        := match t with
+           | type.arrow s d
+             => s * curried_domain d
+           | _ => type.type_primitive type.unit
+           end%ctype.
+
+      Definition uncurry (t : type) : type
+        := type.arrow (curried_domain t) (type.final_codomain t).
+    End type.
+
+    Module expr.
+      Section with_var.
+        Context {var : type -> Type}.
+
+        Fixpoint uncurry {t}
+          : @expr var t -> @expr var (type.uncurry t)
+          := match t return expr t -> expr (type.uncurry t) with
+             | type.arrow s d
+               => fun e
+                  => let f := fun v
+                              => @uncurry
+                                   d
+                                   match invert_Abs e with
+                                   | Some f => f v
+                                   | None => e @ Var v
+                                   end%expr in
+                     Abs (fun sd
+                          => Abs f @ (ident.fst @@ Var sd) @ (ident.snd @@ Var sd))%expr
+             | type.type_primitive _
+             | type.prod _ _
+             | type.list _
+               => fun e => Abs (fun _ => e)
+             end.
+      End with_var.
+
+      Definition Uncurry {t} (e : Expr t) : Expr (type.uncurry t)
+        := fun var => uncurry (e _).
+    End expr.
+  End Uncurry.
+
   Module CPS.
     Import Uncurried.
     Module Import Output.
