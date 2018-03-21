@@ -5993,6 +5993,14 @@ Proof.
   reflexivity.
 Qed.
 
+Section temp.
+  Context (w : nat -> Z) (n : nat).
+  Definition to_associationalmod (f : list Z)
+    := to_associational w n (expand_list (-1)%Z f n).
+  Definition from_associationalmod (f : list Z)
+    := from_associational w n (List.map (fun x => (1, x)) (expand_list (-1)%Z f n)).
+End temp.
+
 (** XXX TODO: Translate Jade's python script *)
 Section rcarry_mul.
   Context (n : nat)
@@ -6171,7 +6179,24 @@ Section rcarry_mul.
          tight_bounds
          (onemod (Interp rw) s c n (Interp rlen_c)).
 
+  Definition rto_associational_correct
+    := BoundsPipeline_correct
+         tight_bounds
+         (List.repeat (prime_bound, prime_bound) n)
+         (to_associationalmod (Interp rw) n).
+
+  Definition rfrom_associational_correct
+    := BoundsPipeline_correct
+         tight_bounds
+         (List.repeat (r[0 ~> Z.of_nat n * upper prime_bound]%zrange) n)
+         (from_associationalmod (Interp rw) n).
+
+
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
+  Definition rto_associational_correctT rv : Prop
+    := type_of_strip_5arrow (@rto_associational_correct rv).
+  Definition rfrom_associational_correctT rv : Prop
+    := type_of_strip_5arrow (@rfrom_associational_correct rv).
   Definition rcarry_mul_correctT rv : Prop
     := type_of_strip_5arrow (@rcarry_mul_correct rv).
   Definition rcarry_correctT rv : Prop
@@ -6580,6 +6605,34 @@ Module X25519_64.
   Definition c := [(1, 19)].
   Definition machine_wordsize := 64.
 
+  Derive base_51_to_associational
+         SuchThat (rto_associational_correctT n s c machine_wordsize base_51_to_associational)
+         As base_51_to_associational_correct.
+  Proof.
+    eapply rto_associational_correct with (machine_wordsize:=machine_wordsize).
+    { Time do_inline_cache_reify ltac:(fun _ => idtac). }
+    { (* this subgoal is the one with the bounds pipeline *)
+      let LHS := lazymatch goal with |- ?LHS = _ => LHS end in
+      time let v := eval vm_compute in LHS in (* or lazy, or cbv *)
+               idtac.
+      lazy; reflexivity. }
+    { (* this is checking the output bounds *)
+      Time lazy; reflexivity. }
+  Time Qed.
+  Derive base_51_from_associational
+         SuchThat (rfrom_associational_correctT n s c machine_wordsize base_51_from_associational)
+         As base_51_from_associational_correct.
+  Proof.
+    eapply rfrom_associational_correct with (machine_wordsize:=machine_wordsize).
+    { Time do_inline_cache_reify ltac:(fun _ => idtac). }
+    { (* this subgoal is the one with the bounds pipeline *)
+      let LHS := lazymatch goal with |- ?LHS = _ => LHS end in
+      time let v := eval lazy in LHS in (* or vm_compute, or lazy, or cbv *)
+               idtac.
+      lazy; reflexivity. }
+    { (* this is checking the output bounds *)
+      Time lazy; reflexivity. }
+  Time Qed.
   Derive base_51_relax
          SuchThat (rrelax_correctT n s c machine_wordsize base_51_relax)
          As base_51_relax_correct.
