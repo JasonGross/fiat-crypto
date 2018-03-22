@@ -204,7 +204,7 @@ Module Positional. Section Positional.
       (fun i' place_i'
        => let i := S i' in
           if (fst t mod weight i =? 0)
-          then (i, let c := fst t / weight i in c * snd t)
+          then (i, (fst t / weight i) * snd t)
           else place_i')
       i.
 
