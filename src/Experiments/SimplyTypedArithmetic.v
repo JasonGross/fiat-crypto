@@ -1568,7 +1568,7 @@ Module Compilers.
           | let x := ?a in @?b x
             => let A := type of a in
                let B := lazymatch type of b with forall x, @?B x => B end in
-               reify_rec (b a) (*(@Let_In A B a b)*)
+               reify_rec (@Let_In A B a b)
           | Datatypes.pair ?x ?y
             => let rx := reify_rec x in
                let ry := reify_rec y in
