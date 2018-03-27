@@ -7,6 +7,34 @@ Import Nat.
 
 Scheme Equality for nat.
 
+Definition nat_case
+           (P : nat -> Type) (O_case : P O) (S_case : forall n, P (S n)) (n : nat)
+  : P n
+  := match n with
+     | O => O_case
+     | S n' => S_case n'
+     end.
+
+(* r for recursive argument, v for value *)
+Definition nat_rect_rv {A} (P : nat -> A -> Type)
+           (O_case : forall v, P O v)
+           (S_case : forall n', (forall v, P n' v) -> forall v, P (S n') v)
+  : forall n v, P n v
+  := fix F (n : nat) (v : A) {struct n} : P n v
+       := match n return P n v with
+          | O => O_case v
+          | S n' => S_case n' (F n') v
+          end.
+Definition nat_rect_vr {A} (P : A -> nat -> Type)
+           (O_case : forall v, P v O)
+           (S_case : forall n', (forall v, P v n') -> forall v, P v (S n'))
+  : forall v n, P v n
+  := fix F (v : A) (n : nat) {struct n} : P v n
+       := match n return P v n with
+          | O => O_case v
+          | S n' => S_case n' (fun v => F v n') v
+          end.
+
 Create HintDb natsimplify discriminated.
 
 Hint Resolve mod_bound_pos plus_le_compat : arith.
