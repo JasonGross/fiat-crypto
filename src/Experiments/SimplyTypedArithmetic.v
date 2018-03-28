@@ -2847,38 +2847,126 @@ Module Compilers.
       Section with_var.
         Context {var : type -> Type}.
 
-        Fixpoint uncurry {t}
-          : @expr var t -> @expr var (type.uncurry t)
-          := match t return expr t -> expr (type.uncurry t) with
+        Fixpoint uncurry' {t}
+          : @expr var t -> @expr var (type.uncurried_domain t) -> @expr var (type.final_codomain t)
+          := match t return expr t -> expr (type.uncurried_domain t) -> expr (type.final_codomain t) with
              | type.arrow s d
                => fun e
-                  => let f := fun v
-                              => @uncurry
+                  => let f := fun v : var s
+                              => @uncurry'
                                    d
                                    match invert_Abs e with
                                    | Some f => f v
                                    | None => e @ Var v
                                    end%expr in
-                     match d return (var s -> expr (type.uncurry d)) -> expr (type.uncurry (s -> d)) with
+                     match d return (var s -> @expr var (type.uncurried_domain d) -> expr (type.final_codomain d)) -> expr (type.uncurried_domain (s -> d)) -> expr (type.final_codomain (s -> d)) with
                      | type.arrow _ _ as d
-                       => fun f
-                          => Abs (fun sdv
-                                  => Abs f @ (ident.fst @@ Var sdv) @ (ident.snd @@ Var sdv))
+                       => fun f sdv
+                          => match invert_Pair sdv with
+                             | Some (sv, dv)%core
+                               => Abs (fun sv => f sv dv) @ sv
+                             | None
+                               => (Abs (fun sv => f sv (ident.snd @@ sdv)))
+                                    @ (ident.fst @@ sdv)
+                             end
                      | _
-                       => fun f
-                          => Abs (fun sv => f sv @ TT)
+                       => fun f sv
+                          => Abs (fun sv => f sv TT) @ sv
                      end f
              | type.type_primitive _
              | type.prod _ _
              | type.list _
-               => fun e => Abs (fun _ => e)
+               => fun e _ => e
              end%expr.
+        Definition uncurry {t}
+          : @expr var t -> @expr var (type.uncurry t)
+          := fun e => Abs (fun v => @uncurry' t e (Var v)).
+        Fixpoint curry' {t}
+          : (@expr var (type.uncurried_domain t) -> @expr var (type.final_codomain t))
+            -> @expr var t
+          := match t return (expr (type.uncurried_domain t) -> expr (type.final_codomain t)) -> expr t with
+             | type.arrow s d
+               => fun e
+                  => Abs
+                       (fun v
+                        => match d return ((expr (type.uncurried_domain d) -> expr (type.final_codomain d)) -> expr d)
+                                          -> (expr (type.uncurried_domain (s -> d)) -> expr (type.final_codomain d))
+                                          -> expr d
+                           with
+                           | type.arrow _ _
+                             => fun curry_d e
+                                => curry_d (fun vs => e (Var v, vs))
+                           | _ => fun _ e => e (@Var _ var s v)
+                           end (@curry' d) e)
+             | type.type_primitive _
+             | type.prod _ _
+             | type.list _
+               => fun e => e TT
+             end%expr.
+        Definition curry {t}
+          : @expr var (type.uncurry t) -> @expr var t
+          := fun e => @curry' t (fun x => e @ x)%expr.
+      End with_var.
+
+      Definition Uncurry {t} (e : Expr t) : Expr (type.uncurry t)
+        := fun var => uncurry (e _).
+      Definition Curry {t} (e : Expr (type.uncurry t)) : Expr t
+        := fun var => curry (e _).
+    End expr.
+  End Uncurry.
+
+  Module UncurryDeep.
+    Import Uncurried.
+    Import Uncurry.
+    Module expr.
+      Section with_var.
+        Context {var : type -> Type}.
+
+        Fixpoint uncurry' {t} (e : @expr var t)
+          : @expr var (type.uncurried_domain t) -> @expr var (type.final_codomain t)
+          := match e in expr.expr t return expr (type.uncurried_domain t) -> expr (type.final_codomain t) with
+             | Var _ _ as e
+             | TT as e
+               => fun x => Uncurry.expr.uncurry' e x
+             | AppIdent s d idc args
+               => fun x
+                  => (Uncurry.expr.uncurry
+                        (idc
+                           @@ (Uncurry.expr.curry' (@uncurry' s args))))
+                       @ x
+             | App s (type.arrow s' d) f x
+               => fun args
+                  => @uncurry' _ f (Uncurry.expr.curry' (@uncurry' _ x),
+                                    args)
+             | App s d f x
+               => fun _ : expr type.unit
+                  => @uncurry'
+                       _ f
+                       (Uncurry.expr.curry' (@uncurry' _ x))
+             | Pair A B a b
+               => fun _
+                  => Pair
+                       (Uncurry.expr.curry' (@uncurry' A a))
+                       (Uncurry.expr.curry' (@uncurry' B b))
+             | Abs s d f
+               => match d return (var s -> expr (type.uncurried_domain d) -> expr (type.final_codomain d))
+                                 -> expr (type.uncurried_domain (s -> d))
+                                 -> expr (type.final_codomain d) with
+                  | type.arrow _ _
+                    => fun f xs
+                       => (Abs (fun v => f v (ident.snd @@ xs)))
+                            @ (ident.fst @@ xs)
+                  | _ => fun f x => Abs (fun v => f v TT) @ x
+                  end (fun v => @uncurry' _ (f v))
+             end%expr.
+        Definition uncurry {t} (e : @expr var t) : @expr var (type.uncurry t)
+          := Abs (fun v => @uncurry' t e (Var v)).
       End with_var.
 
       Definition Uncurry {t} (e : Expr t) : Expr (type.uncurry t)
         := fun var => uncurry (e _).
     End expr.
-  End Uncurry.
+  End UncurryDeep.
 
   Module CPS.
     Import Uncurried.
@@ -5847,6 +5935,42 @@ Module test9.
     exact I.
   Qed.
 End test9.
+Module test10.
+  Example test10 : True.
+  Proof.
+    let v := Reify (fun (f : Z -> Z -> Z) x y => f (x + y) (x * y))%Z in
+    pose v as E.
+    vm_compute in E.
+    pose (UncurryDeep.expr.Uncurry (PartialEvaluate true (canonicalize_list_recursion E))) as E'.
+    lazy in E'.
+    clear E.
+    (*   E' := fun var : type -> Type =>
+        (λ v : var
+                 ((type.type_primitive type.Z ->
+                   type.type_primitive type.Z -> type.type_primitive type.Z) *
+                  (type.type_primitive type.Z * type.type_primitive type.Z))%ctype,
+         (λ v0 : var
+                   (type.type_primitive type.Z ->
+                    type.type_primitive type.Z -> type.type_primitive type.Z)%ctype,
+          (λ v1 : var (type.type_primitive type.Z),
+           (λ v2 : var (type.type_primitive type.Z),
+            (λ sv : var (type.type_primitive type.Z),
+             (λ sv0 : var (type.type_primitive type.Z),
+              v0 @ sv @ sv0) @
+             ((λ _ : var (type.type_primitive ()%ctype),
+               v1 * v2) @ ())) @
+            ((λ _ : var (type.type_primitive ()%ctype),
+              v1 + v2) @ ())) @ (ident.snd @@ (ident.snd @@ v))) @
+          (ident.fst @@ (ident.snd @@ v))) @ (ident.fst @@ v))%expr
+   : forall var : type -> Type,
+     expr
+       ((type.type_primitive type.Z ->
+         type.type_primitive type.Z -> type.type_primitive type.Z) *
+        (type.type_primitive type.Z * type.type_primitive type.Z) ->
+        type.type_primitive type.Z)
+     *)
+  Abort.
+End test10.
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
 Ltac cache_reify _ :=
