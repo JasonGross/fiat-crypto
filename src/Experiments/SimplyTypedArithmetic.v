@@ -30,7 +30,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.Hex.
+Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
@@ -6083,81 +6083,142 @@ Module Compilers.
     Definition Reassociate (max_const_val : Z) {t} (e : Expr t) : Expr t
       := fun var => reassociate max_const_val (e _).
   End ReassociateSmallConstants.
-<<<<<<< d97e060a3f8de0b83db89aa6c25eb4157045c275
-||||||| merged common ancestors
-=======
-      Module ToString.
-        Import Coq.Strings.String.
-        Import Coq.Strings.Ascii.
-        Local Open Scope string_scope.
 
-        Module Z.
-          Definition to_hex_string (v : Z) : string
-            := match v with
-               | Zpos p => hex_string_of_pos p
-               | Z0 => "0x0"
-               | Zneg p => String "-" (hex_string_of_pos p)
-               end.
+  Module ToString.
+    Import Coq.Strings.String.
+    Import Coq.Strings.Ascii.
+    Local Open Scope string_scope.
 
-          Definition to_decimal_string (v : Z) : string
-            := match v with
-               | Zpos p => decimal_string_of_pos p
-               | Z0 => "0"
-               | Zneg p => String "-" (decimal_string_of_pos p)
-               end.
-        End Z.
+    Module C.
+      Module type.
+        Inductive type := Z | Zptr | prod (A B : type) | unit.
+        Module Export Notations.
+          Delimit Scope Ctype_scope with Ctype.
+          Bind Scope Ctype_scope with type.
+          Notation "()" := unit : Ctype_scope.
+          Notation "A * B" := (prod A B) : Ctype_scope.
+          Notation type := type.
+        End Notations.
+      End type.
+      Import type.Notations.
 
-        Module primitive.
-          Definition to_UL_postfix (t : type.primitive) : string
-            := match t with
-               | type.unit => ""
-               | type.Z => ""
-               | type.ZBounded lower upper
-                 => let u := (if lower >=? 0 then "U" else "") in
-                    let sz := Z.log2_up (Z.max (Z.abs upper + 1) (Z.abs lower)) in
-                    if sz <=? 32
-                    then ""
-                    else if sz <=? 64
-                         then u ++ "L"
-                         else if sz <=? 128
-                              then u ++ "LL"
-                              else " /* " ++ Z.to_hex_string lower ++ " <= val <= " ++ Z.to_hex_string upper ++ " */"
-               end.
+      Section ident.
+        Import type.
+        Inductive ident : type -> type -> Set :=
+        | literal (v : BinInt.Z) : ident unit Z
+        | List_nth (n : Datatypes.nat) : ident Zptr Z
+        | Addr : ident Z Zptr
+        | Dereference : ident Zptr Z
+        | Z_shiftr (offset : BinInt.Z) : ident Z Z
+        | Z_shiftl (offset : BinInt.Z) : ident Z Z
+        | Z_land (mask : BinInt.Z) : ident Z Z
+        | Z_add : ident (Z * Z) Z
+        | Z_mul : ident (Z * Z) Z
+        | Z_pow : ident (Z * Z) Z
+        | Z_sub : ident (Z * Z) Z
+        | Z_opp : ident Z Z
+        | Z_mul_split (s:BinInt.Z) : ident (Z * Z * Zptr) Z
+        | Z_add_get_carry (s:BinInt.Z) : ident (Z * Z * Zptr) Z
+        | Z_add_with_get_carry (s:BinInt.Z) : ident (Z * Z * Z * Zptr) Z
+        | Z_sub_get_borrow (s:BinInt.Z) : ident (Z * Z * Zptr) Z
+        | Z_zselect : ident (Z * Z * Z) Z
+        | Z_add_modulo : ident (Z * Z * Z) Z
+        | Z_static_cast (range : zrange) : ident Z Z
+        .
+      End ident.
 
-          Definition to_string {t} (v : type.primitive.interp t) : string
-            := match t return type.primitive.interp t -> string with
-               | type.unit => fun 'tt => "#error tt;"
-               | type.Z => fun v => Z.to_hex_string v ++ "ℤ"
-               | type.ZBounded lower upper
-                 => fun v
-                    => (Z.to_hex_string (type.value v))
-                         ++ to_UL_postfix t
-               end v.
-        End primitive.
+      Inductive arith_expr : type -> Set :=
+      | AppIdent {s d} (idc : ident s d) (arg : arith_expr s) : arith_expr d
+      | Var (v : string) : arith_expr type.Z
+      | VarRef (v : string) : arith_expr type.Zptr
+      | Pair {A B} (a : arith_expr A)( b : arith_expr B) : arith_expr (A * B)
+      | TT : arith_expr type.unit.
 
-        Module type.
-          Module primitive.
-            Definition to_string (t : type.primitive) : string
-              := match t with
-                 | type.unit => "unit"
-                 | type.Z => "ℤ"
-                 | type.ZBounded lower upper
-                   => let lg2u := Z.log2_up (upper + 1) in
-                      let default := "ℤ[" ++ Z.to_hex_string lower ++ "," ++ Z.to_hex_string upper ++ "]" in
-                      if (2^lg2u - 1 =? upper) && (lower =? 0)
-                      then "uint" ++ Z.to_decimal_string lg2u ++ "_t"
-                      else if (-2^lg2u =? lower) && (2^lg2u - 1 =? upper)
-                           then "int" ++ Z.to_decimal_string lg2u ++ "_t"
-                           else default
-                 end.
-          End primitive.
+      Inductive expr :=
+      | Seq (e1 : expr) (e2 : expr) : expr
+      | Assign (declare : bool) (t : type) (name : string) (val : arith_expr t)
+      | DeclareVar (t : type) (name : string)
+      | AssignNth (name : string) (n : nat) (val : arith_expr type.Z).
 
-          Fixpoint to_string (t : type) : string
-            := match t with
-               | type.type_primitive x => primitive.to_string x
-               | type.prod A B => to_string A ++ " * " ++ to_string B
-               | type.list A => primitive.to_string A ++ "*"
-               end.
+      Definition of_PHOAS
+
+
+
+
+    Module Z.
+      Definition to_hex_string (v : Z) : string
+        := HexString.of_Z v.
+
+      Definition to_decimal_string (v : Z) : string
+        := match v with
+           | Zpos p => decimal_string_of_pos p
+           | Z0 => "0"
+           | Zneg p => String "-" (decimal_string_of_pos p)
+           end.
+    End Z.
+
+    Module primitive.
+      Definition small_enough (v : Z) : bool
+        := Z.log2_up (Z.abs v + 1) <=? 128.
+      Definition to_UL_postfix (r : zrange) : string
+        := let lower := lower r in
+           let upper := upper r in
+           let u := (if lower >=? 0 then "U" else "") in
+           let sz := Z.log2_up (Z.max (Z.abs upper + 1) (Z.abs lower)) in
+           if sz <=? 32
+           then ""
+           else if sz <=? 64
+                then u ++ "L"
+                else if sz <=? 128
+                     then u ++ "LL"
+                     else " /* " ++ Z.to_hex_string lower ++ " <= val <= " ++ Z.to_hex_string upper ++ " */".
+
+      Definition to_string {t : type.primitive} (v : type.interp t) : string
+        := match t return type.interp t -> string with
+           | type.unit => fun 'tt => "#error tt;"
+           | type.nat => fun v => "#error """ ++ HexString.of_nat v ++ " : ℕ"";"
+           | type.bool => fun v => "#error """ ++ (if v then "true" else "false") ++ " : bool"";"
+           | type.Z => fun v => Z.to_hex_string v ++ (if small_enough v
+                                                      then to_UL_postfix r[v~>v]
+                                                      else "ℤ")
+           end v.
+    End primitive.
+
+    Module type.
+      Module primitive.
+        Definition to_string (t : type.primitive) : ZRange.type.primitive.option.interp t -> string
+          := match t with
+             | type.unit => fun _ => "unit"
+             | type.nat => fun _ => "ℕ"
+             | type.bool => fun _ => "bool"
+             | type.Z
+               => fun r
+                  => match r with
+                     | Some r[ lower ~> upper ]%zrange
+                       => let lg2u := Z.log2_up (upper + 1) in
+                          let default := "ℤ[" ++ Z.to_hex_string lower ++ "," ++ Z.to_hex_string upper ++ "]" in
+                          if (2^lg2u - 1 =? upper) && (lower =? 0)
+                          then "uint" ++ Z.to_decimal_string lg2u ++ "_t"
+                          else if (-2^lg2u =? lower) && (2^lg2u - 1 =? upper)
+                               then "int" ++ Z.to_decimal_string lg2u ++ "_t"
+                               else default
+                     | None
+                       => "ℤ"
+                     end
+             end.
+      End primitive.
+
+      Fixpoint to_string (t : type) : ZRange.type.option.interp t -> string
+        := match t with
+           | type.type_primitive x => primitive.to_string x
+           | type.prod A B => fun '(ra, rb) => to_string A ra ++ " * " ++ to_string B rb
+           | type.list A
+             => fun r
+                => match r with
+                   | None =>
+                  to_string A ++ "*"
+           | type.arrow A B => fun _ => to_string A ZRange.type.option.None ++ " → " ++ to_string B ZRange.type.option.None
+           end.
 
           Fixpoint string_interp (t : type) : Set
             := match t with
@@ -6391,252 +6452,6 @@ Module Compilers.
             := join NewLine (to_function_lines name argT e).
         End expr.
       End ToString.
-    End Indexed.
-    Module Export Notations.
-      Export BoundsAnalysis.type.Notations.
-      Export BoundsAnalysis.Indexed.expr.Notations.
-      Export BoundsAnalysis.ident.Notations.
-      Import BoundsAnalysis.type.
-      Import BoundsAnalysis.Indexed.expr.
-      Import BoundsAnalysis.ident.
-      Notation "[ ]" := (AppIdent ident.nil _) : nexpr_scope.
-      Notation "x :: xs" := (AppIdent ident.cons (Pair x%nexpr xs%nexpr)) : nexpr_scope.
-      Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : nexpr_scope.
-      Notation "ls [[ n ]]"
-        := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%nexpr)
-           : nexpr_scope.
-      Notation "'x_' n" := (Var _ n) (at level 10, format "'x_' n") : nexpr_scope.
-    End Notations.
-
-    Module AdjustBounds.
-      Local Notation "( a ; b )" := (existT _ a b) : core_scope.
-      Import Indexed.
-      Import type expr ident.
-      Module ident.
-        Section with_relax.
-          Context (relax_zrange : zrange -> option zrange).
-
-          Local Notation primitive_for_zrange := (primitive_for_zrange relax_zrange).
-
-          Fixpoint type_for_range {t} : range t -> type
-            := match t return range t -> type with
-               | type_primitive _ => primitive_for_zrange
-               | prod A B => fun (ab : range A * range B)
-                             => prod (@type_for_range A (Datatypes.fst ab))
-                                     (@type_for_range B (Datatypes.snd ab))
-               | list A
-                 => fun ls : Datatypes.list zrange
-                    => type.list
-                         (primitive_for_zrange (List.fold_right ZRange.union r[0 ~> 0]%zrange ls))
-               end.
-
-          Definition upper_lor_and_bounds (x y : BinInt.Z) : BinInt.Z
-            := 2^(1 + Z.log2_up (Z.max x y)).
-          Definition extreme_lor_land_bounds (x y : zrange) : zrange
-            := let mx := ZRange.upper (ZRange.abs x) in
-               let my := ZRange.upper (ZRange.abs y) in
-               {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
-          Definition extremization_bounds (f : zrange -> zrange -> zrange) (x y : zrange) : zrange
-            := let (lx, ux) := x in
-               let (ly, uy) := y in
-               if ((lx <? 0) || (ly <? 0))%Z%bool
-               then extreme_lor_land_bounds x y
-               else f x y.
-          Definition land_bounds : zrange -> zrange -> zrange
-            := extremization_bounds
-                 (fun x y
-                  => let (lx, ux) := x in
-                     let (ly, uy) := y in
-                     {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
-
-          (** TODO: Move me *)
-          Definition smart_fst {A B} (e : @expr ident (A * B)) : @expr ident A
-            := match e in @expr _ t
-                     return @expr ident match t with
-                                        | type.prod A B => A
-                                        | _ => A
-                                        end
-                            -> @expr ident match t with
-                                           | type.prod A B => A
-                                           | _ => A
-                                           end
-               with
-               | Pair A B a b => fun _ => a
-               | _ => fun x => x
-               end (AppIdent fst e).
-          Definition smart_snd {A B} (e : @expr ident (A * B)) : @expr ident B
-            := match e in @expr _ t
-                     return @expr ident match t with
-                                        | type.prod A B => B
-                                        | _ => B
-                                        end
-                            -> @expr ident match t with
-                                           | type.prod A B => B
-                                           | _ => B
-                                           end
-               with
-               | Pair A B a b => fun _ => b
-               | _ => fun x => x
-               end (AppIdent snd e).
-          Definition smart_cast {A B : type.primitive} (e : @expr ident A) : @expr ident B
-            := match transport (@expr ident) A B e with
-               | Some e' => e'
-               | None => AppIdent (cast A B) e
-               end.
-
-          (** We would like to just write the following.  Alas, we must await a solution to COQBUG(https://github.com/coq/coq/issues/6320) *)
-          (**
-<<
-          Fixpoint list_map {A B : type.primitive}
-                   (f : @expr ident A -> @expr ident B)
-                   (e : @expr ident (type.list A))
-            : option (@expr ident (type.list B))
-            := match e with
-               | AppIdent _ _ (ident.nil _) _
-                 => Some (AppIdent ident.nil TT)
-               | AppIdent _ _ (ident.cons _) (Pair _ _ x xs)
-                 => option_map
-                      (fun f_xs => AppIdent ident.cons (f x, f_xs))
-                      (@list_map _ _ f xs)
-               | _ => None
-               end.
->> *)
-          Fixpoint list_map {A B : type.primitive}
-                   (f : @expr ident A -> @expr ident B)
-                   (e : @expr ident (type.list A))
-            : option (@expr ident (type.list B))
-            := match e in @expr _ T
-                     return (@expr ident match T with
-                                         | type.list A => A
-                                         | _ => A
-                                         end
-                             -> @expr ident B)
-                            -> option (@expr ident (type.list B))
-               with
-               | AppIdent s (type.list d) idc args
-                 => match args in expr s
-                          return ident s (type.list d)
-                                 -> (@expr ident d -> @expr ident B)
-                                 -> option (expr (type.list B))
-                    with
-                    | Pair A' (type.list B') a' b'
-                      => fun idc f
-                         => match idc in ident s d
-                                  return (match s return Type with
-                                          | type.prod A _ => expr A
-                                          | _ => Datatypes.unit
-                                          end
-                                          -> match s return Type with
-                                             | type.prod _ (type.list A)
-                                               => (expr A -> expr B)
-                                                  -> option (expr (type.list B))
-                                             | _ => Datatypes.unit
-                                             end
-                                          -> match d return Type with
-                                             | type.list d
-                                               => expr d -> expr B
-                                             | _ => Datatypes.unit
-                                             end
-                                          -> option (expr (type.list B)))
-                            with
-                            | ident.nil t
-                              => fun _ _ _ => Some (AppIdent ident.nil TT)
-                            | ident.cons t
-                              => fun x rec_xs f
-                                 => option_map
-                                      (fun f_xs => AppIdent ident.cons (f x, f_xs))
-                                      (rec_xs f)
-                            | _ => fun _ _ _ => None
-                            end a' (fun f => @list_map _ _ f b') f
-                    | TT
-                      => match idc with
-                         | ident.nil _
-                           => fun _ _ => Some (AppIdent ident.nil TT)
-                         | _ => fun _ _ => None
-                         end
-                    | _ => fun _ _ => None
-                    end idc
-               | _ => fun _ => None
-               end f.
-
-          Definition adjust_bounds {s d} (idc : ident s d)
-            : option { r : range s & @expr ident (type_for_range r) }
-              -> option { r : range d & @expr ident (type_for_range r) }
-            := match idc in ident s d
-                     return option { r : range s & @expr ident (type_for_range r) }
-                            -> option { r : range d & @expr ident (type_for_range r) }
-               with
-               | primitive type.Z v
-               | primitive (type.ZBounded _ _) v
-                 => fun _ => Some (existT
-                                     (fun r : range type.Z => @expr ident (type_for_range r))
-                                     r[v~>v]%zrange
-                                     (AppIdent (primitive (t:=primitive_for_zrange r[v~>v])
-                                                          match relax_zrange r[v ~> v] as t
-                                                                return type.interp (primitive_for_option_zrange t)
-                                                          with
-                                                          | Some _ => {| value := v ; value_bounded := admit (* XXX needs proof about relax *) |}
-                                                          | None => v
-                                                          end)
-                                               TT))
-               | primitive type.unit _ as idc
-                 => fun _ => None
-               | nil _ as idc
-                 => fun _ => Some (existT _ Datatypes.nil (AppIdent nil TT))
-               | cons t
-                 => fun args
-                    => args' <- args;
-                         let '(r; args) := args' in
-                         snd_args <- (list_map
-                                        smart_cast
-                                        (smart_snd args));
-                           Some ((Datatypes.fst r :: Datatypes.snd r);
-                                   (AppIdent
-                                      cons
-                                      (smart_cast (smart_fst args),
-                                       snd_args)))
-               | fst A B
-                 => option_map
-                      (fun '(existT r args)
-                       => existT _ (Datatypes.fst r) (AppIdent fst args))
-               | snd A B
-                 => option_map
-                      (fun '(existT r args)
-                       => existT _ (Datatypes.snd r) (AppIdent snd args))
-               | List_nth T n
-                 => option_map
-                      (fun '(existT r args)
-		       => existT _ _ (AppIdent (List_nth n) args))
-               | mul _ _ _
-                 => option_map
-                      (fun '(existT r args)
-		       => existT _ (ZRange.four_corners BinInt.Z.mul (Datatypes.fst r) (Datatypes.snd r))
-                                 (AppIdent (mul _ _ _) args))
-               | add _ _ _
-                 => option_map
-                      (fun '(existT r args)
-		       => existT _ (ZRange.four_corners BinInt.Z.add (Datatypes.fst r) (Datatypes.snd r))
-                                 (AppIdent (add _ _ _) args))
-               | shiftr _ _ offset
-                 => option_map
-                      (fun '(existT r args)
-		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
-                                 (AppIdent (shiftr _ _ offset) args))
-               | land _ _ mask
-                 => option_map
-                      (fun '(existT r args)
-		       => existT _ (land_bounds r r[mask~>mask]%zrange)
-                                 (AppIdent (land _ _ mask) args))
-               | cast _ (type.ZBounded l u)
-                 => option_map
-                      (fun '(existT r[l'~>u'] args)
-		       => existT _ r[Z.max l l' ~> Z.min u u']
-                                 (AppIdent (cast _ _) args))
-               | cast _ _
-                 => fun _ => None
-               end%zrange%option.
-        End with_relax.
-      End ident.
 >>>>>>> Write a C string generator for synthesized code
 End Compilers.
 Import Associational Positional Compilers.
