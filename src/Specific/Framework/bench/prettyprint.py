@@ -48,8 +48,21 @@ if returnline.startswith('return'):
     returnline = returnline[len('return'):].strip()
 if returnline.startswith('(') and returnline.endswith(')'): # but only once... idk why
     returnline = returnline[1:-1].strip()
-returneds = returnline.replace('Return','').split(',')
+returnline = returnline.replace('Return','')
+
+returneds = []
+cur_return = ''
+for ch in returnline:
+    if ch == ',' and cur_return.count('(') == cur_return.count(')'):
+        returneds.append(cur_return)
+        cur_return = ''
+    else:
+        cur_return += ch
+if cur_return.count('(') > cur_return.count(')'):
+    cur_return += ')'
+if cur_return != '': returneds.append(cur_return)
 returneds = [r.strip() for r in returneds if r.strip()]
+print(returneds, file=sys.stderr)
 
 assert (len(binders) == sum(l for (_, l) in arguments))
 
