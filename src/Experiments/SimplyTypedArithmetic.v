@@ -7009,6 +7009,10 @@ Module Compilers.
         := (f <- ExprOfPHOAS e name_list inbounds;
               Some (to_function_lines name f)).
 
+      Definition LinesToString (lines : list string)
+        : string
+        := join NewLine lines.
+
       Definition ToFunctionString (name : string)
                  {s d}
                  (e : @Compilers.Uncurried.expr.default.Notations.Expr (s -> d))
@@ -7016,10 +7020,11 @@ Module Compilers.
                  (inbounds : ZRange.type.option.interp s)
         : option string
         := (ls <- ToFunctionLines name e name_list inbounds;
-              Some (join NewLine ls)).
+              Some (LinesToString ls)).
     End C.
     Notation ToFunctionLines := C.ToFunctionLines.
     Notation ToFunctionString := C.ToFunctionString.
+    Notation LinesToString := C.LinesToString.
   End ToString.
 End Compilers.
 Import Associational Positional Compilers.
@@ -7479,7 +7484,8 @@ Module Pipeline.
   | Value_not_le (descr : string) {T'} (lhs rhs : T')
   | Value_not_lt (descr : string) {T'} (lhs rhs : T')
   | Values_not_provably_distinct (descr : string) {T'} (lhs rhs : T')
-  | Values_not_provably_equal (descr : string) {T'} (lhs rhs : T').
+  | Values_not_provably_equal (descr : string) {T'} (lhs rhs : T')
+  | Stringification_failed.
 
   Inductive ErrorT {T} :=
   | Success (v : T)
@@ -7626,6 +7632,52 @@ Module Pipeline.
          with_subst01
          relax_zrange
          t E arg_bounds out_bounds.
+
+  Definition BoundsPipelineToStrings
+             (name : string)
+             (with_dead_code_elimination : bool := true)
+             (with_subst01 : bool)
+             relax_zrange
+             {t}
+             (E : for_reification.Expr t)
+             arg_bounds
+             out_bounds
+    : ErrorT (list string)
+    := let E := BoundsPipeline_full
+                  (*with_dead_code_elimination*)
+                  with_subst01
+                  relax_zrange
+                  E arg_bounds out_bounds in
+       match E with
+       | Success E => let E := ToString.C.ToFunctionLines
+                                 name E None arg_bounds in
+                      match E with
+                      | Some E => Success E
+                      | None => Error Stringification_failed
+                      end
+       | Error err => Error err
+       end.
+
+  Definition BoundsPipelineToString
+             (name : string)
+             (with_dead_code_elimination : bool := true)
+             (with_subst01 : bool)
+             relax_zrange
+             {t}
+             (E : for_reification.Expr t)
+             arg_bounds
+             out_bounds
+    : ErrorT string
+    := let E := BoundsPipelineToStrings
+                  name
+                  (*with_dead_code_elimination*)
+                  with_subst01
+                  relax_zrange
+                  E arg_bounds out_bounds in
+       match E with
+       | Success E => Success (ToString.C.LinesToString E)
+       | Error err => Error err
+       end.
 
   Lemma BoundsPipeline_full_correct
              (with_dead_code_elimination : bool := true)
