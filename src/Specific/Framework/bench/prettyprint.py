@@ -29,7 +29,12 @@ def translate_type(t):
 
 
 funcname = sys.argv[1]
-_, _, _, binderline, *bodylines, returnline, _, typeline = sys.stdin.read().strip('\n').split('\n')
+contents = sys.stdin.read()
+if 'Interp-' in contents:
+    _, _, _, binderline, *bodylines, returnline, _, typeline = contents.strip('\n').split('\n')
+else:
+    _, binderline, *bodylines, returnline, typeline, _, _ = contents.strip('\n').split('\n')
+    typeline = typeline.replace('∀ var : Z.Syntax.base_type → Type, expr Z.Syntax.base_type Z.Syntax.op', '').replace('->', '→').replace('(','').replace(')','')
 
 *arguments, (returntype, returnlength) = [translate_type(s) for s in typeline.lstrip(": ").split('→')]
 
