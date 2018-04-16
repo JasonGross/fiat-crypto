@@ -8579,6 +8579,189 @@ Extraction Language OCaml.
 Redirect "/tmp/slowbig.ml" Recursive Extraction main.
 *)
 
+Local Open Scope string_scope.
+Fixpoint stringify_type (t : type) : string
+  := match t with
+     | type.unit => "unit"
+     | type.Z => "Z"
+     | type.nat => "nat"
+     | type.bool => "bool"
+     | type.prod A B => "(" ++ stringify_type A ++ " * " ++ stringify_type B ++ ")"
+     | type.arrow s d => "(" ++ stringify_type s ++ " -> " ++ stringify_type d ++ ")"
+     | type.list A => "(list " ++ stringify_type A ++ ")"
+     end.
+Definition stringify_zrange (v : zrange) : string
+  := "[ " ++ of_Z (lower v) ++ " ~> " ++ of_Z (upper v) ++ "]".
+Definition stringify_ident {s d} (idc : ident s d) : string
+  := match idc with
+     | ident.primitive type.unit v => "()"
+     | ident.primitive type.bool v => if v then "true" else "false"
+     | ident.primitive type.nat v => of_N (N.of_nat v)
+     | ident.primitive type.Z v => of_Z v
+     | ident.Let_In tx tC => "Let_In"
+     | ident.Nat_succ => "Nat.succ"
+     | ident.Nat_add => "Nat.add"
+     | ident.Nat_sub => "Nat.sub"
+     | ident.Nat_mul => "Nat.mul"
+     | ident.Nat_max => "Nat.max"
+     | ident.nil t => "[]"
+     | ident.cons t => "(::)"
+     | ident.fst A B => "fst"
+     | ident.snd A B => "snd"
+     | ident.bool_rect T => "bool_rect"
+     | ident.nat_rect P => "nat_rect"
+     | ident.pred => "pred"
+     | ident.list_rect A P => "list_rect"
+     | ident.List_nth_default T => "nth_default"
+     | ident.List_nth_default_concrete T d n => "nth " ++ of_N (N.of_nat n)
+     | ident.Z_shiftr offset => "(>> " ++ of_Z offset ++ ")"
+     | ident.Z_shiftl offset => "(<< " ++ of_Z offset ++ ")"
+     | ident.Z_land mask => "(& " ++ of_Z mask ++ ")"
+     | ident.Z_add => "Z.add"
+     | ident.Z_mul => "Z.mul"
+     | ident.Z_pow => "Z.pow"
+     | ident.Z_sub => "Z.sub"
+     | ident.Z_opp => "Z.opp"
+     | ident.Z_div => "Z.div"
+     | ident.Z_modulo => "Z.modulo"
+     | ident.Z_eqb => "Z.eqb"
+     | ident.Z_leb => "Z.leb"
+     | ident.Z_of_nat => "Z.of_nat"
+     | ident.Z_mul_split => "Z.mul_split"
+     | ident.Z_mul_split_concrete s => "Z.mul_split " ++ of_Z s
+     | ident.Z_add_get_carry => "Z.add_get_carry"
+     | ident.Z_add_get_carry_concrete s => "Z.add_get_carry " ++ of_Z s
+     | ident.Z_add_with_get_carry => "Z.add_with_get_carry"
+     | ident.Z_add_with_get_carry_concrete s => "Z.add_with_get_carry " ++ of_Z s
+     | ident.Z_sub_get_borrow => "Z.sub_get_borrow"
+     | ident.Z_sub_get_borrow_concrete s => "Z.sub_get_borrow " ++ of_Z s
+     | ident.Z_zselect => "zselect"
+     | ident.Z_add_modulo => "Z.add_modulo"
+     | ident.Z_cast range => "Z.cast " ++ stringify_zrange range
+     | ident.Z_cast2 (r1, r2) => "Z.cast2 (" ++ stringify_zrange r1 ++ ", " ++ stringify_zrange r2 ++ ")"
+     end.
+Fixpoint stringify_flat {t} (e : @Flat.expr t) : string
+  := match e with
+     | Flat.Var t n => "(Var " ++ stringify_type t ++ " " ++ decimal_string_of_pos n ++ ")"
+     | Flat.TT => "()"
+     | Flat.AppIdent s d idc arg => "(" ++ stringify_ident idc ++ " @@ " ++ @stringify_flat _ arg ++ ")"
+     | Flat.App s d f x => "(" ++ @stringify_flat _ f ++ " " ++ @stringify_flat _ x ++ ")"
+     | Flat.Pair A B a b => "(" ++ @stringify_flat A a ++ ", " ++ @stringify_flat B b ++ ")"
+     | Flat.Abs s n d f => "(\" ++ of_pos n ++ " : " ++ stringify_type s ++ " -> " ++ @stringify_flat _ f ++ ")"
+     end.
+
+Local Notation NewLine := (String "010" "") (only parsing).
+Definition premain (slow : bool) : string :=
+  if slow
+  then "slow" ++ NewLine ++ stringify_flat Part1And2And3_SlowWhenComposed ++ NewLine
+  else "fast" ++ NewLine ++ stringify_flat Part3_Fast ++ NewLine.
+Definition premain_str (slow : string) : string :=
+  premain (if string_dec slow "slow" then true else false).
+
+(*
+Require Import Coq.extraction.Extraction.
+Require Import Coq.extraction.ExtrOcamlBasic.
+Require Import Coq.extraction.ExtrOcamlString.
+
+Module OCaml.
+  Axiom printf_char : Ascii.ascii -> unit.
+  Axiom flush : unit -> unit.
+  Axiom string : Set.
+  Axiom int : Set.
+  Axiom List_init : forall A, int -> (int -> A) -> list A.
+  Axiom string_length : string -> int.
+  Axiom string_get : string -> int -> Ascii.ascii.
+  Axiom sys_argv : list string.
+  Axiom list_iter : forall A, (A -> unit) -> list A -> unit.
+  Axiom list_length : forall A, list A -> int.
+  Axiom string_init : int -> (int -> Ascii.ascii) -> string.
+  Axiom list_nth : forall A, list A -> int -> A.
+  Axiom raise_failure : forall A, string -> A.
+  Extract Constant printf_char =>
+  "fun c -> Printf.printf ""%c%!"" c".
+  Extract Constant flush =>
+  "fun () -> Printf.printf ""%!""".
+  Extract Inlined Constant string => "string".
+  Extract Inlined Constant int => "int".
+  Extract Inlined Constant List_init => "List.init".
+  Extract Inlined Constant string_length => "String.length".
+  Extract Inlined Constant string_get => "String.get".
+  Extract Constant sys_argv => "Array.to_list Sys.argv".
+  Extract Inlined Constant list_iter => "List.iter".
+  Extract Inlined Constant list_length => "List.length".
+  Extract Inlined Constant string_init => "String.init".
+  Extract Inlined Constant list_nth => "List.nth".
+  Extract Constant raise_failure => "fun x -> Printf.printf ""%s\n\n%!"" x; raise (Failure x)".
+
+  Definition string_of_Coq_string (s : String.string) : string
+    := let s := String.to_list s in
+       string_init
+         (list_length _ s)
+         (list_nth _ s).
+
+  Definition main : unit
+    := let argv := List.map
+                     (fun s => String.of_list
+                                 (List_init _ (string_length s) (string_get s)))
+                     sys_argv in
+       match argv with
+       | _::s::nil
+         => list_iter _ printf_char (String.to_list (premain_str s))
+       | nil => raise_failure _ (string_of_Coq_string "empty argv")
+       | prog::args
+         => raise_failure _ (string_of_Coq_string ("Expected argument slow or fast, got " ++ Pipeline.show false (List.length args) ++ " arguments in " ++ prog))
+       end.
+End OCaml.
+
+Set Warnings Append "-extraction-opaque-accessed".
+Extraction Language OCaml.
+Redirect "/tmp/slowstring.ml" Recursive Extraction OCaml.main.
+ *)
+
+Require Import Coq.extraction.Extraction.
+Require Import Coq.extraction.ExtrHaskellBasic.
+Require Import Coq.extraction.ExtrHaskellString.
+
+Module Haskell.
+  Axiom IO_unit : Set.
+  Axiom _IO : Set -> Set.
+  Axiom printf_string : string -> _IO unit.
+  Axiom getArgs : _IO (list string).
+  Axiom getProgName : _IO string.
+  Axiom raise_failure : forall A, string -> A.
+  Axiom _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B.
+  Axiom _IO_return : forall A : Set, A -> _IO A.
+  Axiom cast_io : _IO unit -> IO_unit.
+  Extract Constant printf_string =>
+  "\s -> Text.Printf.printf ""%s"" s".
+  Extract Constant _IO "a" => "GHC.Base.IO a".
+  Extract Inlined Constant getArgs => "System.Environment.getArgs".
+  Extract Inlined Constant getProgName => "System.Environment.getProgName".
+  Extract Constant raise_failure => "\x -> Prelude.error x".
+  Extract Inlined Constant _IO_bind => "(Prelude.>>=)".
+  Extract Inlined Constant _IO_return => "return".
+  Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
+  Extract Inlined Constant cast_io => "".
+
+  Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
+
+  Definition main : IO_unit
+    := cast_io
+         (argv <- getArgs;
+            prog <- getProgName;
+            match argv with
+            | s::nil
+              => printf_string (premain_str s)
+            | args
+              => raise_failure _ ("Expected argument slow or fast, got " ++ Pipeline.show false (List.length args) ++ " arguments in " ++ prog)
+            end).
+End Haskell.
+
+Set Warnings Append "-extraction-opaque-accessed".
+Extraction Language Haskell.
+Redirect "/tmp/slowstring.hs" Recursive Extraction Haskell.main.
+(* cat /tmp/slowstring.hs.out | sed s'/import qualified Prelude/import qualified Prelude\nimport qualified Data.Bits\nimport qualified Data.Char\nimport qualified Text.Printf\nimport qualified System.Environment\n/g'  > ../../slowstring.hs *)
+
 
 Definition Part1 := GeneralizeVar.FromFlat radd1.
 Definition Part1_Computed := Eval vm_compute in Part1.
