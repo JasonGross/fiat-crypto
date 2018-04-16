@@ -8528,6 +8528,63 @@ Time Compute
               exact r)
                ZRange.type.option.None ZRange.type.option.None).
 
+Print addmod.
+Definition preradd
+  := CPS.CallFunWithIdContinuation
+       (CPS.Translate
+          (expr.Uncurry
+             (canonicalize_list_recursion
+                ltac:(let r := Reify (addmod 51 1 5) in
+                      exact r)))).
+Definition radd0 := Eval vm_compute in preradd.
+Definition radd1 := Eval cbv in invert_Some radd0.
+Import GeneralizeVar.
+Definition k'' := Eval cbv in GeneralizeVar.ToFlat radd1.
+
+Definition Part1 := FromFlat k''.
+Definition ComputedPart1 := Eval vm_compute in Part1.
+Definition Part2 := PartialEvaluate false Part1.
+Definition Part2_Fast := PartialEvaluate false ComputedPart1.
+Definition Part1And2_SlowWhenComposed := PartialEvaluate false (FromFlat k'').
+(* We need inlining for OCaml extraction to work here *)
+Definition Part3_Fast
+  := Eval cbv [Part2_Fast] in ToFlat Part2_Fast.
+Definition Part1And2And3_SlowWhenComposed
+  := Eval cbv [Part1And2_SlowWhenComposed] in ToFlat Part1And2_SlowWhenComposed.
+
+Axiom IO_unit : Set.
+Axiom Return : forall t, t -> IO_unit.
+Definition main := Return _ (Part3_Fast, Part1And2And3_SlowWhenComposed).
+Require Import Coq.extraction.Extraction.
+Set Warnings Append "-extraction-opaque-accessed".
+(*
+Require Import Coq.extraction.ExtrHaskellBasic.
+(* These brake things with missing Ord instances, so we don't import them
+Require Import Coq.extraction.ExtrHaskellNatInt.
+Require Import Coq.extraction.ExtrHaskellZInt.
+Require Import Coq.extraction.ExtrHaskellNatNum.
+Require Import Coq.extraction.ExtrHaskellZNum.*)
+Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
+Extract Constant Return => "\ v -> return v GHC.Base.>> return ()".
+Extraction Language Haskell.
+Redirect "/tmp/slowbig.hs" Recursive Extraction main.
+ *)
+(*
+Require Import Coq.extraction.ExtrOcamlBasic.
+Require Import Coq.extraction.ExtrOcamlNatInt.
+Require Import Coq.extraction.ExtrOcamlZInt.
+Extract Inlined Constant IO_unit => "()".
+Extract Constant Return => "fun v -> ()".
+Extraction Language OCaml.
+Redirect "/tmp/slowbig.ml" Recursive Extraction main.
+*)
+
+
+Definition Part1 := GeneralizeVar.FromFlat radd1.
+Definition Part1_Computed := Eval vm_compute in Part1.
+Definition Part2_Fast := PartialEvaluate false Part1_Computed.
+Definition Part2
+
 Module ForExtraction.
   Definition parse_neg (s : string) : string * Z
     := match s with
