@@ -6578,7 +6578,6 @@ Module Pipeline.
   Definition BoundsPipeline
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
-             (reassociate : bool)
              relax_zrange
              {t}
              (E : Expr t)
@@ -6600,7 +6599,7 @@ Module Pipeline.
              dlet_nd e := ToFlat E in
              let E := FromFlat e in
              let E := if with_subst01 then Subst01.Subst01 E else E in
-             let E := if reassociate then ReassociateSmallConstants.Reassociate (2^8) E else E in
+             let E := ReassociateSmallConstants.Reassociate (2^8) E in
              let E := CheckedPartialEvaluateWithBounds1 relax_zrange E arg_bounds out_bounds in
              match E with
              | inl E => Success E
@@ -6613,7 +6612,6 @@ Module Pipeline.
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
-             (reassociate : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6622,7 +6620,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
              rv
-             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 reassociate relax_zrange e arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
@@ -6665,7 +6663,6 @@ Module Pipeline.
   Lemma BoundsPipeline_correct_trans
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
-        (reassociate : bool)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -6679,7 +6676,7 @@ Module Pipeline.
                   (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
             app_curried (Interp e) arg = app_curried InterpE arg)
         rv
-        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 reassociate relax_zrange e arg_bounds out_bounds = Success rv)
+        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
@@ -6689,7 +6686,6 @@ Module Pipeline.
   Definition BoundsPipeline_full
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
-             (reassociate : bool)
              relax_zrange
              {t}
              (E : for_reification.Expr t)
@@ -6700,14 +6696,12 @@ Module Pipeline.
        @BoundsPipeline
          (*with_dead_code_elimination*)
          with_subst01
-         reassociate
          relax_zrange
          t E arg_bounds out_bounds.
 
   Lemma BoundsPipeline_full_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
-             (reassociate : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6716,7 +6710,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
              rv
-             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_subst01 reassociate relax_zrange E arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_subst01 relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
@@ -6825,19 +6819,16 @@ Section rcarry_mul.
 
   Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
-  (* N.B. Reassocation of small constants is desired for rcarry_mul,
-     but it messes up the associativity of balance in [sub] if we do
-     it in [sub] *)
-  Notation BoundsPipeline reassociate rop in_bounds out_bounds
+  Notation BoundsPipeline rop in_bounds out_bounds
     := (Pipeline.BoundsPipeline
-          (*false*) true reassociate
+          (*false*) true
           relax_zrange
           rop%Expr in_bounds out_bounds).
 
-  Notation BoundsPipeline_correct reassociate in_bounds out_bounds op
+  Notation BoundsPipeline_correct in_bounds out_bounds op
     := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
         => @Pipeline.BoundsPipeline_correct_trans
-             (*false*) true reassociate
+             (*false*) true
              relax_zrange
              (relax_zrange_gen_good _)
              _
@@ -6851,7 +6842,6 @@ Section rcarry_mul.
   (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
   Definition rcarry_mul
     := BoundsPipeline
-         true
          (carry_mul_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify (length c) @ GallinaReify.Reify idxs @ GallinaReify.Reify (length idxs))
          (Some loose_bounds, Some loose_bounds)
@@ -6859,63 +6849,54 @@ Section rcarry_mul.
 
   Definition rcarry_mul_correct
     := BoundsPipeline_correct
-         true
          (Some loose_bounds, Some loose_bounds)
          (Some tight_bounds)
          (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rcarry_correct
     := BoundsPipeline_correct
-         true
          (Some loose_bounds)
          (Some tight_bounds)
          (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
-         false
          (Some tight_bounds)
          (Some loose_bounds)
          (expanding_id n).
 
   Definition radd_correct
     := BoundsPipeline_correct
-         false
          (Some tight_bounds, Some tight_bounds)
          (Some loose_bounds)
          (addmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
   Definition rsub_correct
     := BoundsPipeline_correct
-         false
          (Some tight_bounds, Some tight_bounds)
          (Some loose_bounds)
          (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
 
   Definition ropp_correct
     := BoundsPipeline_correct
-         false
          (Some tight_bounds)
          (Some loose_bounds)
          (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
 
   Definition rencode_correct
     := BoundsPipeline_correct
-         false
          prime_bound
          (Some tight_bounds)
          (encodemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   Definition rzero_correct
     := BoundsPipeline_correct
-         false
          tt
          (Some tight_bounds)
          (zeromod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   Definition rone_correct
     := BoundsPipeline_correct
-         false
          tt
          (Some tight_bounds)
          (onemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
@@ -7320,7 +7301,7 @@ Abort.
 
 Time Compute
      (Pipeline.BoundsPipeline_full
-        true false (relax_zrange_gen [64; 128])
+        true (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (to_associational (weight 51 1) 5) in
               exact r)
                ZRange.type.option.None ZRange.type.option.None).
@@ -7329,7 +7310,7 @@ Time Compute
    manually uncurry this function example before reification *)
 Time Compute
      (Pipeline.BoundsPipeline_full
-        true false (relax_zrange_gen [64; 128])
+        true (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (fun '(x, y) => scmul (weight 51 1) 5 x y) in
               exact r)
                ZRange.type.option.None ZRange.type.option.None).
@@ -8236,7 +8217,6 @@ Module MontgomeryReduction.
       := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
                false (* subst01 *)
-               false (* small constant reassociation *)
                relax_zrange
                (relax_zrange_gen_good _)
                _
