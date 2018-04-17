@@ -1,8 +1,6 @@
 (* File reduced by coq-bug-finder from original input, then from 4431 lines to 3382 lines, then from 3059 lines to 2535 lines, then from 2589 lines to 2515 lines, then from 2606 lines to 2524 lines, then from 2682 lines to 2570 lines, then from 2715 lines to 2585 lines, then from 2720 lines to 2585 lines, then from 2644 lines to 2585 lines, then from 2675 lines to 2585 lines, then from 2687 lines to 2585 lines, then from 3027 lines to 2585 lines, then from 2715 lines to 2585 lines, then from 2685 lines to 2585 lines, then from 2763 lines to 2585 lines, then from 2647 lines to 2585 lines, then from 2692 lines to 2595 lines, then from 2781 lines to 2612 lines, then from 2700 lines to 2688 lines, then from 4973 lines to 2642 lines, then from 2758 lines to 2642 lines, then from 2728 lines to 2642 lines, then from 2806 lines to 2642 lines, then from 2690 lines to 2642 lines, then from 2717 lines to 2642 lines, then from 2701 lines to 2642 lines, then from 2667 lines to 2642 lines *)
 (* coqc version 8.8+alpha (March 2018) compiled on Mar 16 2018 14:18:30 with OCaml 4.02.3
    coqtop version jgross-Leopard-WS:/home/jgross/Downloads/coq/coq-master,master (f21deb6c861b359f0d3bf8b170d277cfa0d80171) *)
-Axiom proof_admitted : False.
-Tactic Notation "admit" := abstract case proof_admitted.
 Require Coq.FSets.FMapPositive.
 Require Crypto.Util.Option.
 Require Coq.micromega.Lia.
@@ -787,8 +785,8 @@ Module Export ZRange.
             End gen.
 
             Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
-              admit.
-            Defined.
+              exact v.
+            Qed.
 
             Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
               := @gen_interp cast_outside_of_range s d idc.
@@ -2014,8 +2012,8 @@ Module Export ZRange.
                 End Flat.
 
                 Definition ERROR {T} (v : T) : T.
-                  admit.
-                Defined.
+                  exact v.
+                Qed.
 
                 Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
                          (cur_idx : PositiveMap.key)
@@ -2658,20 +2656,29 @@ Definition k'' := Eval cbv in match prek'' as x return match x with Some _ => _ 
                               | None => I
                               end.
 
-Definition Part1 := FromFlat k''.
-Definition ComputedPart1 := Eval vm_compute in Part1.
-Definition Part2 := PartialEvaluate false Part1.
-Definition Part2_Fast := PartialEvaluate false ComputedPart1.
-Definition Part1And2_SlowWhenComposed := PartialEvaluate false (FromFlat k'').
+Definition Part1 (_ : unit) := FromFlat k''.
+Definition ComputedPart1 := Eval vm_compute in Part1 tt.
+Definition Part2 (_ : unit) := PartialEvaluate false (Part1 tt).
+Definition Part2_Fast (_ : unit) := PartialEvaluate false ComputedPart1.
+Definition Part1And2_SlowWhenComposed (_ : unit) := PartialEvaluate false (FromFlat k'').
 (* We need inlining for OCaml extraction to work here *)
-Definition Part3_Fast
-  := Eval cbv [Part2_Fast] in ToFlat Part2_Fast.
-Definition Part1And2And3_SlowWhenComposed
-  := Eval cbv [Part1And2_SlowWhenComposed] in ToFlat Part1And2_SlowWhenComposed.
-
+Definition Part3_Fast (_ : unit)
+  := Eval cbv [Part2_Fast] in ToFlat (Part2_Fast tt).
+Definition Part1And2And3_SlowWhenComposed (_ : unit)
+  := Eval cbv [Part1And2_SlowWhenComposed] in ToFlat (Part1And2_SlowWhenComposed tt).
+Time Eval vm_compute in Part3_Fast.
+Time Eval vm_compute in Part1And2And3_SlowWhenComposed.
 Axiom IO_unit : Set.
 Axiom Return : forall t, t -> IO_unit.
-Definition main := Return _ (Part3_Fast, Part1And2And3_SlowWhenComposed).
+Module All.
+  Definition main := Return _ (Part3_Fast tt, Part1And2And3_SlowWhenComposed tt).
+End All.
+Module Fast.
+  Definition main := Return _ (Part3_Fast tt).
+End Fast.
+Module Slow.
+  Definition main := Return _ (Part1And2And3_SlowWhenComposed tt).
+End Slow.
 Require Import Coq.extraction.Extraction.
 Set Warnings Append "-extraction-opaque-accessed".
 (*
@@ -2684,7 +2691,9 @@ Require Import Coq.extraction.ExtrHaskellZNum.*)
 Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
 Extract Constant Return => "\ v -> return v GHC.Base.>> return ()".
 Extraction Language Haskell.
-Redirect "/tmp/slowsmall.hs" Recursive Extraction main.
+Redirect "/tmp/slowsmall.hs" Recursive Extraction All.main.
+Redirect "/tmp/slowsmallslow.hs" Recursive Extraction Slow.main.
+Redirect "/tmp/slowsmallfast.hs" Recursive Extraction Fast.main.
  *)
 (*
 Require Import Coq.extraction.ExtrOcamlBasic.
@@ -2693,5 +2702,7 @@ Require Import Coq.extraction.ExtrOcamlZInt.
 Extract Inlined Constant IO_unit => "()".
 Extract Constant Return => "fun v -> ()".
 Extraction Language OCaml.
-Redirect "/tmp/slowsmall.ml" Recursive Extraction main.
+Redirect "/tmp/slowsmall.ml" Recursive Extraction All.main.
+Redirect "/tmp/slowsmallslow.ml" Recursive Extraction Slow.main.
+Redirect "/tmp/slowsmallfast.ml" Recursive Extraction Fast.main.
 *)

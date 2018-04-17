@@ -8534,27 +8534,45 @@ Definition preradd
        (CPS.Translate
           (expr.Uncurry
              (canonicalize_list_recursion
-                ltac:(let r := Reify (addmod 51 1 5) in
+                ltac:(let r := Reify (addmod 51 2 10) in
+                      exact r)))).
+Print submod.
+Definition prersub
+  := CPS.CallFunWithIdContinuation
+       (CPS.Translate
+          (expr.Uncurry
+             (canonicalize_list_recursion
+                ltac:(let r := Reify (submod 51 2 (2^255) [(1,19)] 10 1 2) in
                       exact r)))).
 Definition radd0 := Eval vm_compute in preradd.
 Definition radd1 := Eval cbv in invert_Some radd0.
+Definition rsub0 := Eval vm_compute in prersub.
+Definition rsub1 := Eval cbv in invert_Some rsub0.
 Import GeneralizeVar.
 Definition k'' := Eval cbv in GeneralizeVar.ToFlat radd1.
 
-Definition Part1 := FromFlat k''.
-Definition ComputedPart1 := Eval vm_compute in Part1.
-Definition Part2 := PartialEvaluate false Part1.
-Definition Part2_Fast := PartialEvaluate false ComputedPart1.
-Definition Part1And2_SlowWhenComposed := PartialEvaluate false (FromFlat k'').
+Definition Part1 (_ : unit) := FromFlat k''.
+Definition ComputedPart1 := Eval vm_compute in Part1 tt.
+Definition Part2 (_ : unit) := PartialEvaluate false (Part1 tt).
+Definition Part2_Fast (_ : unit) := PartialEvaluate false ComputedPart1.
+Definition Part1And2_SlowWhenComposed (_ : unit) := PartialEvaluate false (FromFlat k'').
 (* We need inlining for OCaml extraction to work here *)
-Definition Part3_Fast
-  := Eval cbv [Part2_Fast] in ToFlat Part2_Fast.
-Definition Part1And2And3_SlowWhenComposed
-  := Eval cbv [Part1And2_SlowWhenComposed] in ToFlat Part1And2_SlowWhenComposed.
+Definition Part3_Fast (_ : unit)
+  := Eval cbv [Part2_Fast] in ToFlat (Part2_Fast tt).
+Definition Part1And2And3_SlowWhenComposed (_ : unit)
+  := Eval cbv [Part1And2_SlowWhenComposed] in ToFlat (Part1And2_SlowWhenComposed tt).
 
 Axiom IO_unit : Set.
 Axiom Return : forall t, t -> IO_unit.
-Definition main := Return _ (Part3_Fast, Part1And2And3_SlowWhenComposed).
+Module All.
+  Definition main := Return _ (Part3_Fast tt, Part1And2And3_SlowWhenComposed tt).
+End All.
+Module Fast.
+  Definition main := Return _ (Part3_Fast tt).
+End Fast.
+Module Slow.
+  Definition main := Return _ (Part1And2And3_SlowWhenComposed tt).
+End Slow.
 Require Import Coq.extraction.Extraction.
 Set Warnings Append "-extraction-opaque-accessed".
 (*
@@ -8651,12 +8669,17 @@ Fixpoint stringify_flat {t} (e : @Flat.expr t) : string
      end.
 
 Local Notation NewLine := (String "010" "") (only parsing).
-Definition premain (slow : bool) : string :=
-  if slow
-  then "slow" ++ NewLine ++ stringify_flat Part1And2And3_SlowWhenComposed ++ NewLine
-  else "fast" ++ NewLine ++ stringify_flat Part3_Fast ++ NewLine.
+Definition premain (slow : option bool) : string :=
+  match slow with
+  | Some true
+    => "slow" ++ NewLine ++ stringify_flat (Part1And2And3_SlowWhenComposed tt) ++ NewLine
+  | Some false
+    => "fast" ++ NewLine ++ stringify_flat (Part3_Fast tt) ++ NewLine
+  | None
+    => "none" ++ NewLine
+  end.
 Definition premain_str (slow : string) : string :=
-  premain (if string_dec slow "slow" then true else false).
+  premain (if string_dec slow "slow" then Some true else if string_dec slow "fast" then Some false else None).
 
 (*
 Require Import Coq.extraction.Extraction.

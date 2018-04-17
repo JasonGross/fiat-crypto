@@ -981,13 +981,9 @@ gen_interp cast_outside_of_range0 _ _ idc =
         unsafeCoerce ((,) (cast cast_outside_of_range0 r1 x1)
           (cast cast_outside_of_range0 r2 x2))}})}
 
-cast_outside_of_range_subproof :: Z
-cast_outside_of_range_subproof =
-  Prelude.error "absurd case"
-
 cast_outside_of_range :: Zrange -> Z -> Z
-cast_outside_of_range _ _ =
-  cast_outside_of_range_subproof
+cast_outside_of_range _ v =
+  v
 
 interp :: Type -> Type -> Ident -> Interp -> Interp
 interp s d idc =
@@ -1298,13 +1294,9 @@ data Expr1 =
  | Pair0 Type Type Expr1 Expr1
  | Abs0 Type Positive Type Expr1
 
-eRROR_subproof :: a1
-eRROR_subproof =
-  Prelude.error "absurd case"
-
 eRROR :: a1 -> a1
-eRROR _ =
-  eRROR_subproof
+eRROR v =
+  v
 
 to_flat' :: Type -> (Expr Ident Key) -> Key -> Expr1
 to_flat' _ e cur_idx =
@@ -24498,15 +24490,15 @@ computedPart1 =
     (Prod (Type_primitive Z1) (Type_primitive Z1))) (\x0 -> Var (List (Prod
     (Type_primitive Z1) (Type_primitive Z1))) x0))))
 
-part3_Fast :: Expr1
-part3_Fast =
+part3_Fast :: () -> Expr1
+part3_Fast _ =
   toFlat (Arrow (List (Type_primitive Z1)) (List (Prod (Type_primitive Z1)
     (Type_primitive Z1)))) (\_ ->
     partialEvaluate Prelude.False (Arrow (List (Type_primitive Z1)) (List
       (Prod (Type_primitive Z1) (Type_primitive Z1)))) (\_ -> computedPart1))
 
-part1And2And3_SlowWhenComposed :: Expr1
-part1And2And3_SlowWhenComposed =
+part1And2And3_SlowWhenComposed :: () -> Expr1
+part1And2And3_SlowWhenComposed _ =
   toFlat (Arrow (List (Type_primitive Z1)) (List (Prod (Type_primitive Z1)
     (Type_primitive Z1)))) (\_ ->
     partialEvaluate Prelude.False (Arrow (List (Type_primitive Z1)) (List
@@ -24519,6 +24511,6 @@ return = \ v -> return v GHC.Base.>> return ()
 
 main :: GHC.Base.IO ()
 main =
-  return ((,) part3_Fast part1And2And3_SlowWhenComposed)
+  return ((,) (part3_Fast ()) (part1And2And3_SlowWhenComposed ()))
 
 
