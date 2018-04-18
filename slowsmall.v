@@ -2656,6 +2656,9 @@ Definition k'' := Eval cbv in match prek'' as x return match x with Some _ => _ 
                               | None => I
                               end.
 
+Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
+Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
+
 Definition Part1 (_ : unit) := FromFlat k''.
 Definition ComputedPart1 := Eval vm_compute in Part1 tt.
 Definition Part2 (_ : unit) := PartialEvaluate false (Part1 tt).
@@ -2679,6 +2682,15 @@ End Fast.
 Module Slow.
   Definition main := Return _ (Part1And2And3_SlowWhenComposed tt).
 End Slow.
+Module FlatAll.
+  Definition main := Return _ (ToFlatFromFlat_Fast tt, ToFlatFFromFlat_Slow tt).
+End FlatAll.
+Module FlatFast.
+  Definition main := Return _ (ToFlatFromFlat_Fast tt).
+End FlatFast.
+Module FlatSlow.
+  Definition main := Return _ (ToFlatFFromFlat_Slow tt).
+End FlatSlow.
 Require Import Coq.extraction.Extraction.
 Set Warnings Append "-extraction-opaque-accessed".
 (*
@@ -2694,6 +2706,9 @@ Extraction Language Haskell.
 Redirect "/tmp/slowsmall.hs" Recursive Extraction All.main.
 Redirect "/tmp/slowsmallslow.hs" Recursive Extraction Slow.main.
 Redirect "/tmp/slowsmallfast.hs" Recursive Extraction Fast.main.
+Redirect "/tmp/slowsmallflat.hs" Recursive Extraction FlatAll.main.
+Redirect "/tmp/slowsmallflatslow.hs" Recursive Extraction FlatSlow.main.
+Redirect "/tmp/slowsmallflatfast.hs" Recursive Extraction FlatFast.main.
  *)
 (*
 Require Import Coq.extraction.ExtrOcamlBasic.
@@ -2705,4 +2720,7 @@ Extraction Language OCaml.
 Redirect "/tmp/slowsmall.ml" Recursive Extraction All.main.
 Redirect "/tmp/slowsmallslow.ml" Recursive Extraction Slow.main.
 Redirect "/tmp/slowsmallfast.ml" Recursive Extraction Fast.main.
+Redirect "/tmp/slowsmallflat.ml" Recursive Extraction FlatAll.main.
+Redirect "/tmp/slowsmallflatslow.ml" Recursive Extraction FlatSlow.main.
+Redirect "/tmp/slowsmallflatfast.ml" Recursive Extraction FlatFast.main.
 *)
