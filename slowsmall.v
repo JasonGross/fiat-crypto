@@ -2806,26 +2806,150 @@ Fixpoint dobeta1 {var} {t} (e : @expr (@expr var) t) : @expr var t
 Definition Beta1 {t} (e : Expr t) : Expr t
   := fun var => dobeta1 (e _).
 
+Fixpoint value var (t : type)
+  := match t with
+     | type.prod A B as t => @expr var t + value var A * value var B
+     | type.arrow s d => value var s -> value var d
+     | type.list _ as t
+       => @expr var t
+     | type.type_primitive _ as t
+       => @expr var t + type.interp t
+     end%type.
+Fixpoint reify {var t} : value var t -> @expr var t
+  := match t with
+       | type.prod A B
+         => fun v
+            => match v with
+               | inl e => e
+               | inr (a, b) => Pair (@reify var A a) (@reify var B b)
+               end
+       | type.arrow s d
+         => fun f => Abs (fun v => @reify var _ (f (@reflect var _ (Var v))))
+       | type.type_primitive _ as t
+         => fun v
+            => match v with
+               | inl e => e
+               | inr v => ident.primitive v @@ TT
+               end%expr
+       | type.list _ as t
+         => id
+       end
+with reflect {var t} : @expr var t -> value var t
+     := match t with
+        | type.prod A B
+          => fun v
+             => match invert_Pair v with
+                | Some (a, b) => inr (@reflect var A a, @reflect var B b)
+                | None => inl v
+                end
+        | type.arrow s d
+          => fun f v
+             => @reflect var _ (App f (@reify var _ v))
+        | type.type_primitive _ as t
+          => fun v
+             => inl v
+        | type.list _ as t
+          => id
+        end.
+
+Definition red'_ident {var s d} (idc : ident s d) : value var s -> value var d
+  := match idc in ident s d return value var s -> value var d with
+     | ident.fst A B as idc
+       => fun v
+          => match v with
+             | inr (a, b) => a
+             | inl _ => reflect (AppIdent idc (reify v))
+             end
+     | ident.snd A B as idc
+       => fun v
+          => match v with
+             | inr (a, b) => b
+             | inl _ => reflect (AppIdent idc (reify v))
+             end
+     | ident.primitive t v => fun _ => inr v
+     | ident.Nat_succ as idc
+       => fun v => match v with
+                   | inr v => inr (S v)
+                   | inl _ => reflect (AppIdent idc (reify v))
+                   end
+     | idc
+       => fun v => reflect (AppIdent idc (reify v))
+     end.
+
+Fixpoint red' {var} {t} (e : @expr (value var) t) : value var t
+  := match e in expr.expr t return value var t with
+     | Var t v => v
+     | TT => inr tt
+     | App s d f x
+       => @red' var _ f (@red' var _ x)
+     | AppIdent _ _ idc args
+       => red'_ident idc (@red' var _ args)
+     | Pair A B a b => inr (@red' var A a, @red' var B b)
+     | Abs s d f => fun v => @red' var d (f v)
+     end.
+
+Definition Red {t} (e : Expr t) : Expr t
+  := fun var => reify (red' (e _)).
+
+Definition dobetan_step
+           (dobetan : forall (n : nat) {var} {t}, @expr (@expr var) t -> @expr var t)
+           (n : nat)
+           {var}
+           {t} (e : @expr (@expr var) t) : @expr var t
+  := Eval cbv zeta in
+      let recf t e
+          := match n with
+             | O => unexpr e
+             | S n' => @dobetan n' var t e
+             end in
+      match e in expr.expr t return expr t with
+      | Var t v => v
+      | TT => TT
+      | App s d (Abs s' d' f) x
+        => transport_expr
+             _ _
+             (recf d' (f (transport_expr _ _ (recf s x))))
+      | AppIdent _ _ (@ident.fst A B) (Pair A' B' a b)
+        => transport_expr
+             _ _
+             (recf A' a)
+      | AppIdent _ _ (@ident.snd A B) (Pair A' B' a b)
+        => transport_expr
+             _ _
+             (recf B' b)
+      | AppIdent s d idc args => transport_expr _ _ (AppIdent idc (transport_expr _ _ (@dobetan n var _ args)))
+      | App s d f x
+        => App (@dobetan n var _ f) (@dobetan n var s x)
+      | Pair A B a b => Pair (@dobetan n var A a) (@dobetan n var B b)
+      | Abs s d f => Abs (fun v => @dobetan n var d (f (Var v)))
+      end.
+
+Fixpoint dobetan (n : nat) {var} {t} (e : @expr (@expr var) t) : @expr var t
+  := @dobetan_step (@dobetan) n var t e.
+Definition Betan (n : nat) {t} (e : Expr t) : Expr t
+  := fun var => dobetan n (e _).
+
 Definition r := ltac:(let r := constr:((fun n
                                         => let ls :=
+                                               (*seq 0*) n (*
                                                ((fun start_len : nat * nat
                                                 => nat_rect
                                                      (fun _ => nat -> list nat)
                                                      (fun _ => nil)
                                                      (fun len seq_len start => cons start (seq_len (S start)))
-                                                     (snd start_len) (fst start_len)) (0%nat, n)) in
-                                           list_rect
-                                             (fun _ => list nat -> list (nat*nat))
-                                          (fun _ => [])
-                                          (fun x xs rec (v:list nat)
-                                           => list_rect
-                                                (fun _ => list (nat*nat))
-                                                nil
-                                                (fun y ys _ => (x,y) :: rec ys)
-                                                v)
-                                          ls
-                                          ls)) in
-                      let r := (eval cbv [List.map seq Z.of_nat Pos.of_succ_nat Pos.succ] in (r)) in
+                                                     (snd start_len) (fst start_len)) (0%nat, n))*) in
+                                           nat_rect
+                                             (fun _ => nat -> Z)
+                                             (fun _ => 0)
+                                             (fun xs rec (v:nat)
+                                              => nat_rect
+                                                   (fun _ => Z)
+                                                   0
+                                                   (fun ys _ => rec ys)
+                                                   v)
+                                             ls
+                                             ls)) in
+                      let r := (eval cbv [List.map seq Z.of_nat Pos.of_succ_nat Pos.succ] in (r 10%nat)) in
                       let r := Reify r in
                       exact r).
 Definition e := Eval vm_compute in canonicalize_list_recursion r.
@@ -2841,17 +2965,23 @@ Eval cbn [e2 interp_expr fst snd type.interp interp_ident] in interp_expr (e2 _)
 
 Definition k'
   := Eval vm_compute in
-      CPS.CallFunWithIdContinuation
-        (CPS.Translate
-           (Uncurry
-              (e @ Reify 10%nat)%Expr)).
+      option_map
+        Red
+        (CPS.CallFunWithIdContinuation
+           (CPS.Translate
+              (Uncurry
+                 (e (*@ Reify 10%nat*))%Expr))).
 Definition prek'' := Eval cbv in match k' as x return match x with Some _ => _ | _ => _ end with
                               | Some v => v
                               | None => I
                               end.
 Definition k'' := Eval cbv in ToFlat prek''.
+
 Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
 Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
+Time Definition foo := Eval vm_compute in ToFlatFromFlat_Fast tt.
+Time Definition bar := Eval vm_compute in ToFlatFFromFlat_Slow tt.
+(*
 Print prek''.
 Fixpoint powf {A} (f : A -> A) (n : nat) : A -> A
   := match n with
@@ -2860,6 +2990,27 @@ Fixpoint powf {A} (f : A -> A) (n : nat) : A -> A
      end.
 Definition BetaFast (_ : unit) := ToFlat (powf Beta1 500 (FromFlat k'')).
 Definition BetaSlow (_ : unit) := ToFlat (Beta (FromFlat k'')).
+
+Definition Beta7Fast (_ : unit) := ToFlat (Beta1 (Betan 6 (FromFlat k''))).
+Definition Beta7Slow (_ : unit) := ToFlat (Betan 7 (FromFlat k'')).
+Time Definition Beta7Fast' := Eval vm_compute in Beta7Fast.
+Time Definition Beta7Slow' := Eval vm_compute in Beta7Slow.
+Goal FromFlat (Beta7Fast' tt) = FromFlat (Beta7Slow' tt).
+  f_equal.
+  Time lazy.
+  apply f_equal.
+  apply f_equal2.
+  2:reflexivity.
+
+  lazymatch goal with
+  | [ |- ?x = ?x ] => reflexivity
+  | [ |- ?f ?x = ?f ?y ] => apply f_equal
+  | [ |- ?f ?x ?x' = ?f ?y ?y' ] => apply f_equal2
+  end.
+  f_equal; [].
+  vm_compute.
+Definition Beta7Slow (_ : unit) := ToFlat (Betan 7 (FromFlat k'')).
+
 
 
 Axiom IO_unit : Set.
@@ -3035,7 +3186,7 @@ Goal True.
 
   cbv [
 Eval cbv -[lazy_list_rect] in ToFlatFFromFlat_Slow.
-
+ *)
 Time Compute ToFlatFromFlat_Fast tt.
 Time Compute ToFlatFFromFlat_Slow tt.
 
