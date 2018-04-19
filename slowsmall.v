@@ -2876,20 +2876,59 @@ Definition red'_ident {var s d} (idc : ident s d) : value var s -> value var d
        => fun v => reflect (AppIdent idc (reify v))
      end.
 
-Fixpoint red' {var} {t} (e : @expr (value var) t) : value var t
+Definition red'_ident2 {var s d} (idc : ident s d) : value var s -> value var d
+  := match idc in ident s d return value var s -> value var d with
+     | ident.fst A B as idc
+       => fun v
+          => match v with
+             | inr (a, b) => a
+             | inl _ => reflect (AppIdent idc (reify v))
+             end
+     | ident.snd A B as idc
+       => fun v
+          => match v with
+             | inr (a, b) => b
+             | inl _ => reflect (AppIdent idc (reify v))
+             end
+     | ident.primitive t v => fun _ => inr v
+     | ident.Nat_succ as idc
+       => fun v => match v with
+                   | inr v => inr (S v)
+                   | inl _ => reflect (AppIdent idc (reify v))
+                   end
+     | ident.nat_rect P as idc
+       => fun v
+          => match v with
+             | inr (inr (N, C), inr n)
+               => nat_rect
+                    (fun _ => value var P)
+                    (N (inr tt))
+                    (fun n' v => C (inr (inr n', v)))
+                    n
+             | _ => reflect (AppIdent idc (reify v))
+             end
+     | idc
+       => fun v => reflect (AppIdent idc (reify v))
+     end.
+
+Fixpoint red' {var}
+         (red'_ident : forall {s d}, ident s d -> value var s -> value var d)
+         {t} (e : @expr (value var) t) : value var t
   := match e in expr.expr t return value var t with
      | Var t v => v
      | TT => inr tt
      | App s d f x
-       => @red' var _ f (@red' var _ x)
+       => @red' var (@red'_ident) _ f (@red' var (@red'_ident) _ x)
      | AppIdent _ _ idc args
-       => red'_ident idc (@red' var _ args)
-     | Pair A B a b => inr (@red' var A a, @red' var B b)
-     | Abs s d f => fun v => @red' var d (f v)
+       => red'_ident idc (@red' var (@red'_ident) _ args)
+     | Pair A B a b => inr (@red' var (@red'_ident) A a, @red' var (@red'_ident) B b)
+     | Abs s d f => fun v => @red' var (@red'_ident) d (f v)
      end.
 
 Definition Red {t} (e : Expr t) : Expr t
-  := fun var => reify (red' (e _)).
+  := fun var => reify (red' (@red'_ident _) (e _)).
+Definition Red2 {t} (e : Expr t) : Expr t
+  := fun var => reify (red' (@red'_ident2 _) (e _)).
 
 Definition dobetan_step
            (dobetan : forall (n : nat) {var} {t}, @expr (@expr var) t -> @expr var t)
@@ -2979,8 +3018,12 @@ Definition k'' := Eval cbv in ToFlat prek''.
 
 Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
 Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
-Time Definition foo := Eval vm_compute in ToFlatFromFlat_Fast tt.
-Time Definition bar := Eval vm_compute in ToFlatFFromFlat_Slow tt.
+Definition ToFlatFFromFlat_Slow2 (_ : unit) := ToFlat (Red2 (FromFlat k'')).
+Definition ToFlatFFromFlat_Fast2 (_ : unit) := ToFlat (Red (FromFlat k'')).
+Set NativeCompute Profiling.
+Time Definition foo := Eval native_compute in ToFlatFromFlat_Fast tt. (* ./native_compute_profile_3737eb.data *)
+Time Definition bar := Eval native_compute in ToFlatFFromFlat_Slow2 tt. (* ./native_compute_profile_ec7229.data *)
+Time Definition baz := Eval native_compute in ToFlatFFromFlat_Fast2 tt. (* ./native_compute_profile_d18694.data *)
 (*
 Print prek''.
 Fixpoint powf {A} (f : A -> A) (n : nat) : A -> A
@@ -3222,6 +3265,12 @@ End FlatFast.
 Module FlatSlow.
   Definition main := Return _ (ToFlatFFromFlat_Slow tt).
 End FlatSlow.
+Module FlatSlow2.
+  Definition main := Return _ (ToFlatFFromFlat_Slow2 tt).
+End FlatSlow2.
+Module FlatFast2.
+  Definition main := Return _ (ToFlatFFromFlat_Fast2 tt).
+End FlatFast2.
 Require Import Coq.extraction.Extraction.
 Set Warnings Append "-extraction-opaque-accessed".
 (*
@@ -3239,7 +3288,9 @@ Redirect "/tmp/slowsmallslow.hs" Recursive Extraction Slow.main.
 Redirect "/tmp/slowsmallfast.hs" Recursive Extraction Fast.main.
 Redirect "/tmp/slowsmallflat.hs" Recursive Extraction FlatAll.main.
 Redirect "/tmp/slowsmallflatslow.hs" Recursive Extraction FlatSlow.main.
+Redirect "/tmp/slowsmallflatslow2.hs" Recursive Extraction FlatSlow2.main.
 Redirect "/tmp/slowsmallflatfast.hs" Recursive Extraction FlatFast.main.
+Redirect "/tmp/slowsmallflatfast2.hs" Recursive Extraction FlatFast2.main.
  *)
 (*
 Require Import Coq.extraction.ExtrOcamlBasic.
@@ -3253,5 +3304,7 @@ Redirect "/tmp/slowsmallslow.ml" Recursive Extraction Slow.main.
 Redirect "/tmp/slowsmallfast.ml" Recursive Extraction Fast.main.
 Redirect "/tmp/slowsmallflat.ml" Recursive Extraction FlatAll.main.
 Redirect "/tmp/slowsmallflatslow.ml" Recursive Extraction FlatSlow.main.
+Redirect "/tmp/slowsmallflatslow2.ml" Recursive Extraction FlatSlow2.main.
 Redirect "/tmp/slowsmallflatfast.ml" Recursive Extraction FlatFast.main.
+Redirect "/tmp/slowsmallflatfast2.ml" Recursive Extraction FlatFast2.main.
 *)
