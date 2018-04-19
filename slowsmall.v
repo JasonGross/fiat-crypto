@@ -3020,6 +3020,114 @@ Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
 Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
 Definition ToFlatFFromFlat_Slow2 (_ : unit) := ToFlat (Red2 (FromFlat k'')).
 Definition ToFlatFFromFlat_Fast2 (_ : unit) := ToFlat (Red (FromFlat k'')).
+Definition k''' := Eval vm_compute in FromFlat k''.
+Definition ToFlatFFromFlat_Slow2' (_ : unit) := ToFlat (Red2 k''').
+Definition ToFlatFFromFlat_Fast2' (_ : unit) := ToFlat (Red k''').
+Goal True.
+  pose (interp_expr (k''' _) tt) as v.
+  cbv [interp_expr type.interp k''' interp_ident] in v.
+  cbn [fst snd] in v.
+nat_rect
+  (fun _ => ((nat * (Z -> Z) -> Z) -> Z) -> Z)
+  (fun K => K (fun '(_, k) => k 0))
+  (fun xs recK K =>
+        recK
+          (fun rec : nat * (Z -> Z) -> Z =>
+             K
+               (fun '((v, K') : nat * (Z -> Z)) =>
+                  nat_rect
+                    (fun _ => (Z -> Z) -> Z)
+                    (fun k' => k' 0)
+                    (fun ys rec' k' => rec' (fun _ => rec (ys, fun v' => k' v')))
+                    v (fun v' => K' v'))))
+  10
+  (fun k => k (10%nat, id))).
+
+  cbv beta delta [nat_rect] in v.
+  Ltac step v :=
+    lazymatch (eval cbv delta [v] in v) with
+    | nat_rect ?P ?O_case ?S_case O ?x
+      => clear v;
+         pose (O_case x) as v
+    | nat_rect ?P ?O_case ?S_case (S ?n) ?x
+      => clear v;
+         pose (S_case n (nat_rect P O_case S_case n) x) as v
+    | nat_rect ?P ?O_case ?S_case O
+      => clear v;
+         pose O_case as v
+    | nat_rect ?P ?O_case ?S_case (S ?n)
+      => clear v;
+         pose (S_case n (nat_rect P O_case S_case n)) as v
+    | context G[nat_rect ?P ?O_case ?S_case O]
+      => let G' := context G[O_case] in
+         clear v;
+         pose G' as v
+    | context G[nat_rect ?P ?O_case ?S_case (S ?n)]
+      => let G' := context G[S_case n (nat_rect P O_case S_case n)] in
+         clear v;
+         pose G' as v
+    end.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  do 10 (step v; cbn [fst snd] in v).
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  step v; cbn [fst snd] in v.
+  do 1000 (step v; cbn [fst snd] in v).
+
+  step v; cbv beta in v.
+  step v; cbv beta in v.
+  s
+Time Eval lazy in interp_expr (k''' _) tt.
+Time Definition x1 := Eval vm_compute in ToFlatFFromFlat_Fast2. (* 0.008 *)
+Time Definition x0' := Eval vm_compute in ToFlatFFromFlat_Slow2'.  (* 0.004 *)
+Time Definition x1' := Eval vm_compute in ToFlatFFromFlat_Fast2'. (* 0.008 *)
+Time Definition x0 := Eval vm_compute in ToFlatFFromFlat_Slow2.  (* 0.041 *)
+Time Definition x1 := Eval vm_compute in ToFlatFFromFlat_Fast2. (* 0.008 *)
+Time Definition x0' := Eval vm_compute in ToFlatFFromFlat_Slow2'.  (* 0.004 *)
+Time Definition x1' := Eval vm_compute in ToFlatFFromFlat_Fast2'. (* 0.008 *)
+Goal True.
+  pose (
+
 Set NativeCompute Profiling.
 Time Definition foo := Eval native_compute in ToFlatFromFlat_Fast tt. (* ./native_compute_profile_3737eb.data *)
 Time Definition bar := Eval native_compute in ToFlatFFromFlat_Slow2 tt. (* ./native_compute_profile_ec7229.data *)
