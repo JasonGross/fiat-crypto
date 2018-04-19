@@ -2706,6 +2706,7 @@ Fixpoint interp_expr {t} (e : @expr type.interp t) : type.interp t
 Definition r := ltac:(let r := constr:(fun (n : nat) =>
                                          combine (seq 0 n)
                                                  (seq 0 n)) in
+                      let r := (eval cbv [seq] in (r 10%nat)) in
                       let r := Reify r in
                       exact r).
 Definition e := Eval vm_compute in canonicalize_list_recursion r.
@@ -2724,7 +2725,7 @@ Definition k'
       CPS.CallFunWithIdContinuation
         (CPS.Translate
            (Uncurry
-              (e @ Reify 10%nat)%Expr)).
+              (e (*@ Reify 10%nat*))%Expr)).
 
 Definition prek'' := Eval vm_compute in option_map ToFlat k'.
 Definition k'' := Eval cbv in match prek'' as x return match x with Some _ => _ | _ => _ end with
