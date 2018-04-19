@@ -2658,15 +2658,66 @@ Import ListNotations.
 Open Scope list_scope.
 Open Scope Z_scope.
 
+Definition interp_ident {s d} (idc : ident s d) : type.interp s -> type.interp d
+  := match idc in ident s d return type.interp s -> type.interp d with
+     | ident.primitive t v => fun _ => v
+     | ident.Let_In tx tC => fun '(x, f) => Let_In x f
+     | ident.Nat_succ => Nat.succ
+     | ident.Nat_add => fun '(x, y) => Nat.add x y
+     | ident.Nat_sub => fun '(x, y) => Nat.sub x y
+     | ident.Nat_mul => fun '(x, y) => Nat.mul x y
+     | ident.Nat_max => fun '(x, y) => Nat.max x y
+     | ident.nil t => fun _ => nil
+     | ident.cons t => fun '(x, xs) => cons x xs
+     | ident.fst A B => @fst _ _
+     | ident.snd A B => @snd _ _
+     | ident.bool_rect T => fun '(t, f, b) => if b then t tt else f tt
+     | ident.nat_rect P => fun '(Z, S', n) => nat_rect _ (Z tt) (fun n rec => S' (n, rec)) n
+     | ident.pred => pred
+     | ident.list_rect A P => fun '(N, C, ls) => list_rect _ (N tt) (fun x xs rec => C (x, xs, rec)) ls
+     | ident.List_nth_default T => fun '(x, y, z) => nth_default x y z
+     | ident.List_nth_default_concrete T d n => fun ls => nth_default d ls n
+     | ident.Z_shiftr offset => fun v => Z.shiftr v offset
+     | ident.Z_shiftl offset => fun v => Z.shiftl v offset
+     | ident.Z_land mask => fun v => Z.land v mask
+     | ident.Z_add => fun '(x, y) => Z.add x y
+     | ident.Z_mul => fun '(x, y) => Z.mul x y
+     | ident.Z_pow => fun '(x, y) => Z.pow x y
+     | ident.Z_sub => fun '(x, y) => Z.sub x y
+     | ident.Z_opp => Z.opp
+     | ident.Z_div => fun '(x, y) => Z.div x y
+     | ident.Z_modulo => fun '(x, y) => Z.modulo x y
+     | ident.Z_eqb => fun '(x, y) => Z.eqb x y
+     | ident.Z_leb => fun '(x, y) => Z.leb x y
+     | ident.Z_of_nat => Z.of_nat
+     | ident.Z_cast range => id
+     | ident.Z_cast2 range => id
+     end.
+Fixpoint interp_expr {t} (e : @expr type.interp t) : type.interp t
+  := match e in expr.expr t return type.interp t with
+     | Var t v => v
+     | TT => tt
+     | AppIdent s d idc args => interp_ident idc (@interp_expr s args)
+     | App s d f x => @interp_expr _ f (@interp_expr s x)
+     | Pair A B a b => (@interp_expr A a, @interp_expr B b)
+     | Abs s d f => fun v => @interp_expr d (f v)
+     end.
 
-Definition r := ltac:(let r := constr:(fun (n : nat) (ls : list Z) =>
-                                         combine (map (fun i : nat => 2 ^ (- (- (51 * Z.of_nat i) / 2))) (seq 0 n))
-                                                 (nat_rect (fun _ : nat => nat -> list Z) (fun _ : nat => [])
-                                                           (fun (_ : nat) (rec_call : nat -> list Z) (idx : nat) =>
-                                                              nth_default (-1) ls idx :: rec_call (S idx)) n 0%nat)) in
+Definition r := ltac:(let r := constr:(fun (n : nat) =>
+                                         combine (seq 0 n)
+                                                 (seq 0 n)) in
                       let r := Reify r in
                       exact r).
 Definition e := Eval vm_compute in canonicalize_list_recursion r.
+
+(*
+Definition e2 := Eval vm_compute in PartialEvaluate false e.
+Arguments interp_expr / .
+Arguments e2 / .
+Arguments type.interp / .
+Arguments interp_ident / .
+Eval cbn [e2 interp_expr fst snd type.interp interp_ident] in interp_expr (e2 _).
+*)
 
 Definition k'
   := Eval vm_compute in
@@ -2683,6 +2734,9 @@ Definition k'' := Eval cbv in match prek'' as x return match x with Some _ => _ 
 
 Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
 Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
+
+Time Compute ToFlatFromFlat_Fast tt.
+Time Compute ToFlatFFromFlat_Slow tt.
 
 Definition Part1 (_ : unit) := FromFlat k''.
 Definition ComputedPart1 := Eval vm_compute in Part1 tt.
