@@ -2727,51 +2727,6 @@ Fixpoint interp_expr {t} (e : @expr type.interp t) : type.interp t
      | Abs s d f => fun v => @interp_expr d (f v)
      end.
 
-Definition r := ltac:(let r := constr:((fun n
-                                        => let ls :=
-                                               ((fun start_len : nat * nat
-                                                => nat_rect
-                                                     (fun _ => nat -> list nat)
-                                                     (fun _ => nil)
-                                                     (fun len seq_len start => cons start (seq_len (S start)))
-                                                     (snd start_len) (fst start_len)) (0%nat, n)) in
-                                           list_rect
-                                             (fun _ => list nat -> list (nat*nat))
-                                          (fun _ => [])
-                                          (fun x xs rec (v:list nat)
-                                           => list_rect
-                                                (fun _ => list (nat*nat))
-                                                nil
-                                                (fun y ys _ => (x,y) :: rec ys)
-                                                v)
-                                          ls
-                                          ls)) in
-                      let r := (eval cbv [List.map seq Z.of_nat Pos.of_succ_nat Pos.succ] in (r)) in
-                      let r := Reify r in
-                      exact r).
-Definition e := Eval vm_compute in canonicalize_list_recursion r.
-
-(*
-Definition e2 := Eval vm_compute in PartialEvaluate false e.
-Arguments interp_expr / .
-Arguments e2 / .
-Arguments type.interp / .
-Arguments interp_ident / .
-Eval cbn [e2 interp_expr fst snd type.interp interp_ident] in interp_expr (e2 _).
-*)
-
-Definition k'
-  := Eval vm_compute in
-      CPS.CallFunWithIdContinuation
-        (CPS.Translate
-           (Uncurry
-              (e @ Reify 10%nat)%Expr)).
-Definition prek'' := Eval cbv in match k' as x return match x with Some _ => _ | _ => _ end with
-                              | Some v => v
-                              | None => I
-                              end.
-Definition k'' := Eval cbv in ToFlat prek''.
-
 Fixpoint default_value {var} (t : type) : @expr var t
   := match t return expr t with
      | type.unit => TT
@@ -2851,6 +2806,50 @@ Fixpoint dobeta1 {var} {t} (e : @expr (@expr var) t) : @expr var t
 Definition Beta1 {t} (e : Expr t) : Expr t
   := fun var => dobeta1 (e _).
 
+Definition r := ltac:(let r := constr:((fun n
+                                        => let ls :=
+                                               ((fun start_len : nat * nat
+                                                => nat_rect
+                                                     (fun _ => nat -> list nat)
+                                                     (fun _ => nil)
+                                                     (fun len seq_len start => cons start (seq_len (S start)))
+                                                     (snd start_len) (fst start_len)) (0%nat, n)) in
+                                           list_rect
+                                             (fun _ => list nat -> list (nat*nat))
+                                          (fun _ => [])
+                                          (fun x xs rec (v:list nat)
+                                           => list_rect
+                                                (fun _ => list (nat*nat))
+                                                nil
+                                                (fun y ys _ => (x,y) :: rec ys)
+                                                v)
+                                          ls
+                                          ls)) in
+                      let r := (eval cbv [List.map seq Z.of_nat Pos.of_succ_nat Pos.succ] in (r)) in
+                      let r := Reify r in
+                      exact r).
+Definition e := Eval vm_compute in canonicalize_list_recursion r.
+
+(*
+Definition e2 := Eval vm_compute in PartialEvaluate false e.
+Arguments interp_expr / .
+Arguments e2 / .
+Arguments type.interp / .
+Arguments interp_ident / .
+Eval cbn [e2 interp_expr fst snd type.interp interp_ident] in interp_expr (e2 _).
+*)
+
+Definition k'
+  := Eval vm_compute in
+      CPS.CallFunWithIdContinuation
+        (CPS.Translate
+           (Uncurry
+              (e @ Reify 10%nat)%Expr)).
+Definition prek'' := Eval cbv in match k' as x return match x with Some _ => _ | _ => _ end with
+                              | Some v => v
+                              | None => I
+                              end.
+Definition k'' := Eval cbv in ToFlat prek''.
 Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
 Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
 Print prek''.
@@ -2861,6 +2860,7 @@ Fixpoint powf {A} (f : A -> A) (n : nat) : A -> A
      end.
 Definition BetaFast (_ : unit) := ToFlat (powf Beta1 500 (FromFlat k'')).
 Definition BetaSlow (_ : unit) := ToFlat (Beta (FromFlat k'')).
+
 
 Axiom IO_unit : Set.
 Axiom Return : forall t, t -> IO_unit.

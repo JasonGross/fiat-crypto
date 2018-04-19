@@ -296,6 +296,178 @@ fromFlat :: Type -> Expr1 -> Expr Ident a1
 fromFlat t e =
   from_flat t e empty
 
+default_value :: Type -> Expr Ident a1
+default_value t =
+  case t of {
+   Type_primitive t0 ->
+    case t0 of {
+     Unit -> TT;
+     Z1 ->
+      let {t1 = Z1} in
+      AppIdent (Type_primitive Unit) (Type_primitive t1) (Primitive0 t1
+      (unsafeCoerce (Zneg XH))) TT;
+     Nat0 ->
+      let {t1 = Nat0} in
+      AppIdent (Type_primitive Unit) (Type_primitive t1) (Primitive0 t1
+      (unsafeCoerce O)) TT;
+     Bool ->
+      let {t1 = Bool} in
+      AppIdent (Type_primitive Unit) (Type_primitive t1) (Primitive0 t1
+      (unsafeCoerce Prelude.True)) TT};
+   Prod a b -> Pair a b (default_value a) (default_value b);
+   Arrow s d -> Abs s d (\_ -> default_value d);
+   List a -> AppIdent (Type_primitive Unit) (List a) (Nil a) TT}
+
+transport_expr :: Type -> Type -> (Expr Ident a1) -> Expr Ident a1
+transport_expr t1 t2 e =
+  case try_transport t1 t2 e of {
+   Prelude.Just e' -> e';
+   Prelude.Nothing -> default_value t2}
+
+dobeta1_step :: (() -> Type -> (Expr Ident (Expr Ident Any)) -> Expr 
+                Ident Any) -> Type -> (Expr Ident (Expr Ident a1)) -> Expr
+                Ident a1
+dobeta1_step dobeta2 _ e =
+  case e of {
+   Var _ v -> v;
+   TT -> TT;
+   AppIdent s d idc args ->
+    case idc of {
+     Primitive0 _ _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Unit) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Unit) args)));
+     Let_In tx tC ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod tx (Arrow tx tC)) s
+          (unsafeCoerce dobeta2 __ (Prod tx (Arrow tx tC)) args)));
+     Nat_succ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Nat0) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Nat0) args)));
+     Nat_add ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
+          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
+            (Type_primitive Nat0)) args)));
+     Nat_sub ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
+          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
+            (Type_primitive Nat0)) args)));
+     Nat_mul ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
+          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
+            (Type_primitive Nat0)) args)));
+     Nat_max ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
+          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
+            (Type_primitive Nat0)) args)));
+     Nil _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Unit) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Unit) args)));
+     Cons t ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod t (List t)) s
+          (unsafeCoerce dobeta2 __ (Prod t (List t)) args)));
+     Fst a b ->
+      case args of {
+       Pair a' _ a0 _ -> transport_expr a' d (unexpr a' a0);
+       _ ->
+        transport_expr d d (AppIdent s d idc
+          (transport_expr (Prod a b) s
+            (unsafeCoerce dobeta2 __ (Prod a b) args)))};
+     Snd a b ->
+      case args of {
+       Pair _ b' _ b0 -> transport_expr b' d (unexpr b' b0);
+       _ ->
+        transport_expr d d (AppIdent s d idc
+          (transport_expr (Prod a b) s
+            (unsafeCoerce dobeta2 __ (Prod a b) args)))};
+     Bool_rect t ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Prod (Arrow (Type_primitive Unit) t) (Arrow
+          (Type_primitive Unit) t)) (Type_primitive Bool)) s
+          (unsafeCoerce dobeta2 __ (Prod (Prod (Arrow (Type_primitive Unit)
+            t) (Arrow (Type_primitive Unit) t)) (Type_primitive Bool)) args)));
+     Nat_rect p ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Prod (Arrow (Type_primitive Unit) p) (Arrow
+          (Prod (Type_primitive Nat0) p) p)) (Type_primitive Nat0)) s
+          (unsafeCoerce dobeta2 __ (Prod (Prod (Arrow (Type_primitive Unit)
+            p) (Arrow (Prod (Type_primitive Nat0) p) p)) (Type_primitive
+            Nat0)) args)));
+     Pred ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Nat0) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Nat0) args)));
+     List_rect a p ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Prod (Arrow (Type_primitive Unit) p) (Arrow
+          (Prod (Prod a (List a)) (Arrow (Type_primitive Unit) p)) p)) (List
+          a)) s
+          (unsafeCoerce dobeta2 __ (Prod (Prod (Arrow (Type_primitive Unit)
+            p) (Arrow (Prod (Prod a (List a)) (Arrow (Type_primitive Unit)
+            p)) p)) (List a)) args)));
+     List_nth_default t ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Prod t (List t)) (Type_primitive Nat0)) s
+          (unsafeCoerce dobeta2 __ (Prod (Prod t (List t)) (Type_primitive
+            Nat0)) args)));
+     List_nth_default_concrete t _ _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (List (Type_primitive t)) s
+          (unsafeCoerce dobeta2 __ (List (Type_primitive t)) args)));
+     Z_shiftr _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Z1) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
+     Z_shiftl _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Z1) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
+     Z_land _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Z1) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
+     Z_opp ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Z1) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
+     Z_of_nat ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Nat0) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Nat0) args)));
+     Z_cast _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Type_primitive Z1) s
+          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
+     _ ->
+      transport_expr d d (AppIdent s d idc
+        (transport_expr (Prod (Type_primitive Z1) (Type_primitive Z1)) s
+          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Z1) (Type_primitive
+            Z1)) args)))};
+   App s d f x ->
+    case f of {
+     Abs s' d' f0 ->
+      transport_expr d' d (unexpr d' (f0 (transport_expr s s' (unexpr s x))));
+     _ -> App s d (unsafeCoerce dobeta2 __ (Arrow s d) f)
+      (unsafeCoerce dobeta2 __ s x)};
+   Pair a b a0 b0 -> Pair a b (unsafeCoerce dobeta2 __ a a0)
+    (unsafeCoerce dobeta2 __ b b0);
+   Abs s d f -> Abs s d (\v -> unsafeCoerce dobeta2 __ d (f (Var s v)))}
+
+dobeta1 :: Type -> (Expr Ident (Expr Ident a1)) -> Expr Ident a1
+dobeta1 t e =
+  dobeta1_step (\_ -> dobeta1) t e
+
+beta1 :: Type -> (Expr0 Ident) -> Expr Ident a1
+beta1 t e =
+  dobeta1 t (unsafeCoerce e __)
+
 k'' :: Expr1
 k'' =
   Abs0 (Type_primitive Unit) XH (List (Prod (Type_primitive Nat0)
@@ -5136,178 +5308,6 @@ k'' =
     (Type_primitive Nat0))) (XO XH) (List (Prod (Type_primitive Nat0)
     (Type_primitive Nat0))) (Var0 (List (Prod (Type_primitive Nat0)
     (Type_primitive Nat0))) (XO XH)))))
-
-default_value :: Type -> Expr Ident a1
-default_value t =
-  case t of {
-   Type_primitive t0 ->
-    case t0 of {
-     Unit -> TT;
-     Z1 ->
-      let {t1 = Z1} in
-      AppIdent (Type_primitive Unit) (Type_primitive t1) (Primitive0 t1
-      (unsafeCoerce (Zneg XH))) TT;
-     Nat0 ->
-      let {t1 = Nat0} in
-      AppIdent (Type_primitive Unit) (Type_primitive t1) (Primitive0 t1
-      (unsafeCoerce O)) TT;
-     Bool ->
-      let {t1 = Bool} in
-      AppIdent (Type_primitive Unit) (Type_primitive t1) (Primitive0 t1
-      (unsafeCoerce Prelude.True)) TT};
-   Prod a b -> Pair a b (default_value a) (default_value b);
-   Arrow s d -> Abs s d (\_ -> default_value d);
-   List a -> AppIdent (Type_primitive Unit) (List a) (Nil a) TT}
-
-transport_expr :: Type -> Type -> (Expr Ident a1) -> Expr Ident a1
-transport_expr t1 t2 e =
-  case try_transport t1 t2 e of {
-   Prelude.Just e' -> e';
-   Prelude.Nothing -> default_value t2}
-
-dobeta1_step :: (() -> Type -> (Expr Ident (Expr Ident Any)) -> Expr 
-                Ident Any) -> Type -> (Expr Ident (Expr Ident a1)) -> Expr
-                Ident a1
-dobeta1_step dobeta2 _ e =
-  case e of {
-   Var _ v -> v;
-   TT -> TT;
-   AppIdent s d idc args ->
-    case idc of {
-     Primitive0 _ _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Unit) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Unit) args)));
-     Let_In tx tC ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod tx (Arrow tx tC)) s
-          (unsafeCoerce dobeta2 __ (Prod tx (Arrow tx tC)) args)));
-     Nat_succ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Nat0) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Nat0) args)));
-     Nat_add ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
-          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
-            (Type_primitive Nat0)) args)));
-     Nat_sub ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
-          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
-            (Type_primitive Nat0)) args)));
-     Nat_mul ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
-          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
-            (Type_primitive Nat0)) args)));
-     Nat_max ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Type_primitive Nat0) (Type_primitive Nat0)) s
-          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Nat0)
-            (Type_primitive Nat0)) args)));
-     Nil _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Unit) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Unit) args)));
-     Cons t ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod t (List t)) s
-          (unsafeCoerce dobeta2 __ (Prod t (List t)) args)));
-     Fst a b ->
-      case args of {
-       Pair a' _ a0 _ -> transport_expr a' d (unexpr a' a0);
-       _ ->
-        transport_expr d d (AppIdent s d idc
-          (transport_expr (Prod a b) s
-            (unsafeCoerce dobeta2 __ (Prod a b) args)))};
-     Snd a b ->
-      case args of {
-       Pair _ b' _ b0 -> transport_expr b' d (unexpr b' b0);
-       _ ->
-        transport_expr d d (AppIdent s d idc
-          (transport_expr (Prod a b) s
-            (unsafeCoerce dobeta2 __ (Prod a b) args)))};
-     Bool_rect t ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Prod (Arrow (Type_primitive Unit) t) (Arrow
-          (Type_primitive Unit) t)) (Type_primitive Bool)) s
-          (unsafeCoerce dobeta2 __ (Prod (Prod (Arrow (Type_primitive Unit)
-            t) (Arrow (Type_primitive Unit) t)) (Type_primitive Bool)) args)));
-     Nat_rect p ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Prod (Arrow (Type_primitive Unit) p) (Arrow
-          (Prod (Type_primitive Nat0) p) p)) (Type_primitive Nat0)) s
-          (unsafeCoerce dobeta2 __ (Prod (Prod (Arrow (Type_primitive Unit)
-            p) (Arrow (Prod (Type_primitive Nat0) p) p)) (Type_primitive
-            Nat0)) args)));
-     Pred ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Nat0) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Nat0) args)));
-     List_rect a p ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Prod (Arrow (Type_primitive Unit) p) (Arrow
-          (Prod (Prod a (List a)) (Arrow (Type_primitive Unit) p)) p)) (List
-          a)) s
-          (unsafeCoerce dobeta2 __ (Prod (Prod (Arrow (Type_primitive Unit)
-            p) (Arrow (Prod (Prod a (List a)) (Arrow (Type_primitive Unit)
-            p)) p)) (List a)) args)));
-     List_nth_default t ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Prod t (List t)) (Type_primitive Nat0)) s
-          (unsafeCoerce dobeta2 __ (Prod (Prod t (List t)) (Type_primitive
-            Nat0)) args)));
-     List_nth_default_concrete t _ _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (List (Type_primitive t)) s
-          (unsafeCoerce dobeta2 __ (List (Type_primitive t)) args)));
-     Z_shiftr _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Z1) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
-     Z_shiftl _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Z1) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
-     Z_land _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Z1) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
-     Z_opp ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Z1) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
-     Z_of_nat ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Nat0) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Nat0) args)));
-     Z_cast _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Type_primitive Z1) s
-          (unsafeCoerce dobeta2 __ (Type_primitive Z1) args)));
-     _ ->
-      transport_expr d d (AppIdent s d idc
-        (transport_expr (Prod (Type_primitive Z1) (Type_primitive Z1)) s
-          (unsafeCoerce dobeta2 __ (Prod (Type_primitive Z1) (Type_primitive
-            Z1)) args)))};
-   App s d f x ->
-    case f of {
-     Abs s' d' f0 ->
-      transport_expr d' d (unexpr d' (f0 (transport_expr s s' (unexpr s x))));
-     _ -> App s d (unsafeCoerce dobeta2 __ (Arrow s d) f)
-      (unsafeCoerce dobeta2 __ s x)};
-   Pair a b a0 b0 -> Pair a b (unsafeCoerce dobeta2 __ a a0)
-    (unsafeCoerce dobeta2 __ b b0);
-   Abs s d f -> Abs s d (\v -> unsafeCoerce dobeta2 __ d (f (Var s v)))}
-
-dobeta1 :: Type -> (Expr Ident (Expr Ident a1)) -> Expr Ident a1
-dobeta1 t e =
-  dobeta1_step (\_ -> dobeta1) t e
-
-beta1 :: Type -> (Expr0 Ident) -> Expr Ident a1
-beta1 t e =
-  dobeta1 t (unsafeCoerce e __)
 
 powf :: (a1 -> a1) -> Nat -> a1 -> a1
 powf f n =

@@ -372,6 +372,398 @@ module ZRange =
    end
  end
 
+(** val default_value :
+    ZRange.Compilers.Coq_type.coq_type ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr **)
+
+let rec default_value = function
+| ZRange.Compilers.Coq_type.Coq_type_primitive t1 ->
+  (match t1 with
+   | ZRange.Compilers.Coq_type.Coq_unit ->
+     ZRange.Compilers.Uncurried.Coq_expr.TT
+   | ZRange.Compilers.Coq_type.Z ->
+     let t2 = ZRange.Compilers.Coq_type.Z in
+     ZRange.Compilers.Uncurried.Coq_expr.AppIdent
+     ((ZRange.Compilers.Coq_type.Coq_type_primitive
+     ZRange.Compilers.Coq_type.Coq_unit),
+     (ZRange.Compilers.Coq_type.Coq_type_primitive t2),
+     (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive
+     (t2, (Obj.magic ((~-) 1)))), ZRange.Compilers.Uncurried.Coq_expr.TT)
+   | ZRange.Compilers.Coq_type.Coq_nat ->
+     let t2 = ZRange.Compilers.Coq_type.Coq_nat in
+     ZRange.Compilers.Uncurried.Coq_expr.AppIdent
+     ((ZRange.Compilers.Coq_type.Coq_type_primitive
+     ZRange.Compilers.Coq_type.Coq_unit),
+     (ZRange.Compilers.Coq_type.Coq_type_primitive t2),
+     (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive
+     (t2, (Obj.magic 0))), ZRange.Compilers.Uncurried.Coq_expr.TT)
+   | ZRange.Compilers.Coq_type.Coq_bool ->
+     let t2 = ZRange.Compilers.Coq_type.Coq_bool in
+     ZRange.Compilers.Uncurried.Coq_expr.AppIdent
+     ((ZRange.Compilers.Coq_type.Coq_type_primitive
+     ZRange.Compilers.Coq_type.Coq_unit),
+     (ZRange.Compilers.Coq_type.Coq_type_primitive t2),
+     (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive
+     (t2, (Obj.magic true))), ZRange.Compilers.Uncurried.Coq_expr.TT))
+| ZRange.Compilers.Coq_type.Coq_prod (a, b) ->
+  ZRange.Compilers.Uncurried.Coq_expr.Pair (a, b, (default_value a),
+    (default_value b))
+| ZRange.Compilers.Coq_type.Coq_arrow (s, d) ->
+  ZRange.Compilers.Uncurried.Coq_expr.Abs (s, d, (fun _ -> default_value d))
+| ZRange.Compilers.Coq_type.Coq_list a ->
+  ZRange.Compilers.Uncurried.Coq_expr.AppIdent
+    ((ZRange.Compilers.Coq_type.Coq_type_primitive
+    ZRange.Compilers.Coq_type.Coq_unit), (ZRange.Compilers.Coq_type.Coq_list
+    a), (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_nil
+    a), ZRange.Compilers.Uncurried.Coq_expr.TT)
+
+(** val transport_expr :
+    ZRange.Compilers.Coq_type.coq_type -> ZRange.Compilers.Coq_type.coq_type
+    -> (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr **)
+
+let transport_expr t1 t2 e =
+  match ZRange.Compilers.Coq_type.try_transport t1 t2 e with
+  | Some e' -> e'
+  | None -> default_value t2
+
+(** val dobeta_step :
+    (__ -> ZRange.Compilers.Coq_type.coq_type ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident,
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, __)
+    ZRange.Compilers.Uncurried.Coq_expr.expr)
+    ZRange.Compilers.Uncurried.Coq_expr.expr ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, __)
+    ZRange.Compilers.Uncurried.Coq_expr.expr) ->
+    ZRange.Compilers.Coq_type.coq_type ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident,
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr)
+    ZRange.Compilers.Uncurried.Coq_expr.expr ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr **)
+
+let dobeta_step dobeta0 _ = function
+| ZRange.Compilers.Uncurried.Coq_expr.Var (_, v) -> v
+| ZRange.Compilers.Uncurried.Coq_expr.TT ->
+  ZRange.Compilers.Uncurried.Coq_expr.TT
+| ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d, idc, args) ->
+  (match idc with
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive (
+       _, _) ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Let_In (
+       tx, tC) ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (tx,
+         (ZRange.Compilers.Coq_type.Coq_arrow (tx, tC)))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (tx,
+           (ZRange.Compilers.Coq_type.Coq_arrow (tx, tC)))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_succ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_add ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_sub ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_mul ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_max ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_nil _ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_cons t0 ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (t0,
+         (ZRange.Compilers.Coq_type.Coq_list t0))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (t0,
+           (ZRange.Compilers.Coq_type.Coq_list t0))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_fst (
+       a, b) ->
+     (match args with
+      | ZRange.Compilers.Uncurried.Coq_expr.Pair (a', _, a0, _) ->
+        transport_expr a' d (Obj.magic dobeta0 __ a' a0)
+      | _ ->
+        transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s,
+          d, idc,
+          (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (a, b)) s
+            (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (a, b))
+              args)))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_snd (
+       a, b) ->
+     (match args with
+      | ZRange.Compilers.Uncurried.Coq_expr.Pair (_, b', _, b0) ->
+        transport_expr b' d (Obj.magic dobeta0 __ b' b0)
+      | _ ->
+        transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s,
+          d, idc,
+          (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (a, b)) s
+            (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (a, b))
+              args)))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_bool_rect t0 ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit), t0)),
+         (ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit), t0)))),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_bool))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit), t0)),
+           (ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit), t0)))),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_bool))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_nat_rect p ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit), p)),
+         (ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat), p)), p)))),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit), p)),
+           (ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat), p)), p)))),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_pred ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_list_rect (
+       a, p) ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit), p)),
+         (ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_prod (a,
+         (ZRange.Compilers.Coq_type.Coq_list a))),
+         (ZRange.Compilers.Coq_type.Coq_arrow
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_unit), p)))), p)))),
+         (ZRange.Compilers.Coq_type.Coq_list a))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit), p)),
+           (ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_prod (a,
+           (ZRange.Compilers.Coq_type.Coq_list a))),
+           (ZRange.Compilers.Coq_type.Coq_arrow
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_unit), p)))), p)))),
+           (ZRange.Compilers.Coq_type.Coq_list a))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.List_nth_default t0 ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_prod (t0,
+         (ZRange.Compilers.Coq_type.Coq_list t0))),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_prod (t0,
+           (ZRange.Compilers.Coq_type.Coq_list t0))),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat))) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.List_nth_default_concrete (
+       t0, _, _) ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_list
+         (ZRange.Compilers.Coq_type.Coq_type_primitive t0)) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_list
+           (ZRange.Compilers.Coq_type.Coq_type_primitive t0)) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_shiftr _ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_shiftl _ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_land _ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_opp ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_of_nat ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Coq_nat) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Coq_nat) args))))
+   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_cast _ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z) args))))
+   | _ ->
+     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
+       idc,
+       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
+         ((ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z),
+         (ZRange.Compilers.Coq_type.Coq_type_primitive
+         ZRange.Compilers.Coq_type.Z))) s
+         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
+           ((ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z),
+           (ZRange.Compilers.Coq_type.Coq_type_primitive
+           ZRange.Compilers.Coq_type.Z))) args)))))
+| ZRange.Compilers.Uncurried.Coq_expr.App (s, d, f, x) ->
+  (match f with
+   | ZRange.Compilers.Uncurried.Coq_expr.Abs (s', d', f0) ->
+     transport_expr d' d
+       (Obj.magic dobeta0 __ d'
+         (f0 (transport_expr s s' (Obj.magic dobeta0 __ s x))))
+   | _ ->
+     ZRange.Compilers.Uncurried.Coq_expr.App (s, d,
+       (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_arrow (s, d)) f),
+       (Obj.magic dobeta0 __ s x)))
+| ZRange.Compilers.Uncurried.Coq_expr.Pair (a, b, a0, b0) ->
+  ZRange.Compilers.Uncurried.Coq_expr.Pair (a, b,
+    (Obj.magic dobeta0 __ a a0), (Obj.magic dobeta0 __ b b0))
+| ZRange.Compilers.Uncurried.Coq_expr.Abs (s, d, f) ->
+  ZRange.Compilers.Uncurried.Coq_expr.Abs (s, d, (fun v ->
+    Obj.magic dobeta0 __ d
+      (f (ZRange.Compilers.Uncurried.Coq_expr.Var (s, v)))))
+
+(** val dobeta :
+    ZRange.Compilers.Coq_type.coq_type ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident,
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr)
+    ZRange.Compilers.Uncurried.Coq_expr.expr ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr **)
+
+let rec dobeta t0 e =
+  dobeta_step (Obj.magic (fun _ -> dobeta)) t0 e
+
+(** val beta :
+    ZRange.Compilers.Coq_type.coq_type ->
+    ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident
+    ZRange.Compilers.Uncurried.Coq_expr.coq_Expr ->
+    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
+    ZRange.Compilers.Uncurried.Coq_expr.expr **)
+
+let beta t0 e =
+  dobeta t0 (Obj.magic e __)
+
 (** val k'' :
     ZRange.Compilers.Uncurried.Coq_canonicalize_list_recursion.Coq_expr.Uncurry.DefaultValue.Coq_expr.Flat.expr **)
 
@@ -28559,398 +28951,6 @@ let k'' =
     ZRange.Compilers.Coq_type.Coq_nat),
     (ZRange.Compilers.Coq_type.Coq_type_primitive
     ZRange.Compilers.Coq_type.Coq_nat)))), ((fun p->2*p) 1))))))))))
-
-(** val default_value :
-    ZRange.Compilers.Coq_type.coq_type ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr **)
-
-let rec default_value = function
-| ZRange.Compilers.Coq_type.Coq_type_primitive t1 ->
-  (match t1 with
-   | ZRange.Compilers.Coq_type.Coq_unit ->
-     ZRange.Compilers.Uncurried.Coq_expr.TT
-   | ZRange.Compilers.Coq_type.Z ->
-     let t2 = ZRange.Compilers.Coq_type.Z in
-     ZRange.Compilers.Uncurried.Coq_expr.AppIdent
-     ((ZRange.Compilers.Coq_type.Coq_type_primitive
-     ZRange.Compilers.Coq_type.Coq_unit),
-     (ZRange.Compilers.Coq_type.Coq_type_primitive t2),
-     (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive
-     (t2, (Obj.magic ((~-) 1)))), ZRange.Compilers.Uncurried.Coq_expr.TT)
-   | ZRange.Compilers.Coq_type.Coq_nat ->
-     let t2 = ZRange.Compilers.Coq_type.Coq_nat in
-     ZRange.Compilers.Uncurried.Coq_expr.AppIdent
-     ((ZRange.Compilers.Coq_type.Coq_type_primitive
-     ZRange.Compilers.Coq_type.Coq_unit),
-     (ZRange.Compilers.Coq_type.Coq_type_primitive t2),
-     (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive
-     (t2, (Obj.magic 0))), ZRange.Compilers.Uncurried.Coq_expr.TT)
-   | ZRange.Compilers.Coq_type.Coq_bool ->
-     let t2 = ZRange.Compilers.Coq_type.Coq_bool in
-     ZRange.Compilers.Uncurried.Coq_expr.AppIdent
-     ((ZRange.Compilers.Coq_type.Coq_type_primitive
-     ZRange.Compilers.Coq_type.Coq_unit),
-     (ZRange.Compilers.Coq_type.Coq_type_primitive t2),
-     (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive
-     (t2, (Obj.magic true))), ZRange.Compilers.Uncurried.Coq_expr.TT))
-| ZRange.Compilers.Coq_type.Coq_prod (a, b) ->
-  ZRange.Compilers.Uncurried.Coq_expr.Pair (a, b, (default_value a),
-    (default_value b))
-| ZRange.Compilers.Coq_type.Coq_arrow (s, d) ->
-  ZRange.Compilers.Uncurried.Coq_expr.Abs (s, d, (fun _ -> default_value d))
-| ZRange.Compilers.Coq_type.Coq_list a ->
-  ZRange.Compilers.Uncurried.Coq_expr.AppIdent
-    ((ZRange.Compilers.Coq_type.Coq_type_primitive
-    ZRange.Compilers.Coq_type.Coq_unit), (ZRange.Compilers.Coq_type.Coq_list
-    a), (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_nil
-    a), ZRange.Compilers.Uncurried.Coq_expr.TT)
-
-(** val transport_expr :
-    ZRange.Compilers.Coq_type.coq_type -> ZRange.Compilers.Coq_type.coq_type
-    -> (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr **)
-
-let transport_expr t1 t2 e =
-  match ZRange.Compilers.Coq_type.try_transport t1 t2 e with
-  | Some e' -> e'
-  | None -> default_value t2
-
-(** val dobeta_step :
-    (__ -> ZRange.Compilers.Coq_type.coq_type ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident,
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, __)
-    ZRange.Compilers.Uncurried.Coq_expr.expr)
-    ZRange.Compilers.Uncurried.Coq_expr.expr ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, __)
-    ZRange.Compilers.Uncurried.Coq_expr.expr) ->
-    ZRange.Compilers.Coq_type.coq_type ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident,
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr)
-    ZRange.Compilers.Uncurried.Coq_expr.expr ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr **)
-
-let dobeta_step dobeta0 _ = function
-| ZRange.Compilers.Uncurried.Coq_expr.Var (_, v) -> v
-| ZRange.Compilers.Uncurried.Coq_expr.TT ->
-  ZRange.Compilers.Uncurried.Coq_expr.TT
-| ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d, idc, args) ->
-  (match idc with
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_primitive (
-       _, _) ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Let_In (
-       tx, tC) ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (tx,
-         (ZRange.Compilers.Coq_type.Coq_arrow (tx, tC)))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (tx,
-           (ZRange.Compilers.Coq_type.Coq_arrow (tx, tC)))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_succ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_add ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_sub ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_mul ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Nat_max ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_nil _ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_cons t0 ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (t0,
-         (ZRange.Compilers.Coq_type.Coq_list t0))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (t0,
-           (ZRange.Compilers.Coq_type.Coq_list t0))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_fst (
-       a, b) ->
-     (match args with
-      | ZRange.Compilers.Uncurried.Coq_expr.Pair (a', _, a0, _) ->
-        transport_expr a' d (Obj.magic dobeta0 __ a' a0)
-      | _ ->
-        transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s,
-          d, idc,
-          (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (a, b)) s
-            (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (a, b))
-              args)))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_snd (
-       a, b) ->
-     (match args with
-      | ZRange.Compilers.Uncurried.Coq_expr.Pair (_, b', _, b0) ->
-        transport_expr b' d (Obj.magic dobeta0 __ b' b0)
-      | _ ->
-        transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s,
-          d, idc,
-          (transport_expr (ZRange.Compilers.Coq_type.Coq_prod (a, b)) s
-            (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod (a, b))
-              args)))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_bool_rect t0 ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit), t0)),
-         (ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit), t0)))),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_bool))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit), t0)),
-           (ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit), t0)))),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_bool))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_nat_rect p ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit), p)),
-         (ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat), p)), p)))),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit), p)),
-           (ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat), p)), p)))),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_pred ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Coq_list_rect (
-       a, p) ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit), p)),
-         (ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_prod (a,
-         (ZRange.Compilers.Coq_type.Coq_list a))),
-         (ZRange.Compilers.Coq_type.Coq_arrow
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_unit), p)))), p)))),
-         (ZRange.Compilers.Coq_type.Coq_list a))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit), p)),
-           (ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_prod (a,
-           (ZRange.Compilers.Coq_type.Coq_list a))),
-           (ZRange.Compilers.Coq_type.Coq_arrow
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_unit), p)))), p)))),
-           (ZRange.Compilers.Coq_type.Coq_list a))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.List_nth_default t0 ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_prod (t0,
-         (ZRange.Compilers.Coq_type.Coq_list t0))),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_prod (t0,
-           (ZRange.Compilers.Coq_type.Coq_list t0))),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat))) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.List_nth_default_concrete (
-       t0, _, _) ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_list
-         (ZRange.Compilers.Coq_type.Coq_type_primitive t0)) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_list
-           (ZRange.Compilers.Coq_type.Coq_type_primitive t0)) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_shiftr _ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_shiftl _ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_land _ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_opp ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_of_nat ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Coq_nat) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Coq_nat) args))))
-   | ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.Z_cast _ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z) args))))
-   | _ ->
-     transport_expr d d (ZRange.Compilers.Uncurried.Coq_expr.AppIdent (s, d,
-       idc,
-       (transport_expr (ZRange.Compilers.Coq_type.Coq_prod
-         ((ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z),
-         (ZRange.Compilers.Coq_type.Coq_type_primitive
-         ZRange.Compilers.Coq_type.Z))) s
-         (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_prod
-           ((ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z),
-           (ZRange.Compilers.Coq_type.Coq_type_primitive
-           ZRange.Compilers.Coq_type.Z))) args)))))
-| ZRange.Compilers.Uncurried.Coq_expr.App (s, d, f, x) ->
-  (match f with
-   | ZRange.Compilers.Uncurried.Coq_expr.Abs (s', d', f0) ->
-     transport_expr d' d
-       (Obj.magic dobeta0 __ d'
-         (f0 (transport_expr s s' (Obj.magic dobeta0 __ s x))))
-   | _ ->
-     ZRange.Compilers.Uncurried.Coq_expr.App (s, d,
-       (Obj.magic dobeta0 __ (ZRange.Compilers.Coq_type.Coq_arrow (s, d)) f),
-       (Obj.magic dobeta0 __ s x)))
-| ZRange.Compilers.Uncurried.Coq_expr.Pair (a, b, a0, b0) ->
-  ZRange.Compilers.Uncurried.Coq_expr.Pair (a, b,
-    (Obj.magic dobeta0 __ a a0), (Obj.magic dobeta0 __ b b0))
-| ZRange.Compilers.Uncurried.Coq_expr.Abs (s, d, f) ->
-  ZRange.Compilers.Uncurried.Coq_expr.Abs (s, d, (fun v ->
-    Obj.magic dobeta0 __ d
-      (f (ZRange.Compilers.Uncurried.Coq_expr.Var (s, v)))))
-
-(** val dobeta :
-    ZRange.Compilers.Coq_type.coq_type ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident,
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr)
-    ZRange.Compilers.Uncurried.Coq_expr.expr ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr **)
-
-let rec dobeta t0 e =
-  dobeta_step (Obj.magic (fun _ -> dobeta)) t0 e
-
-(** val beta :
-    ZRange.Compilers.Coq_type.coq_type ->
-    ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident
-    ZRange.Compilers.Uncurried.Coq_expr.coq_Expr ->
-    (ZRange.Compilers.Uncurried.Coq_expr.Coq_default.Coq_ident.ident, 'a1)
-    ZRange.Compilers.Uncurried.Coq_expr.expr **)
-
-let beta t0 e =
-  dobeta t0 (Obj.magic e __)
 
 (** val betaSlow :
     unit ->
