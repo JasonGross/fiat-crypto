@@ -2,8 +2,31 @@
 (* coqc version 8.8+alpha (March 2018) compiled on Mar 16 2018 14:18:30 with OCaml 4.02.3
    coqtop version jgross-Leopard-WS:/home/jgross/Downloads/coq/coq-master,master (f21deb6c861b359f0d3bf8b170d277cfa0d80171) *)
 Require Coq.FSets.FMapPositive.
-Require Crypto.Util.Option.
 Require Coq.micromega.Lia.
+Global Set Asymmetric Patterns.
+Reserved Notation "A <- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <-  X ; '/' B ']'").
+Module Export Crypto_DOT_Util_DOT_Option.
+  Module Export Crypto.
+    Module Export Util.
+      Module Export Option.
+        Definition bind {A B} (v : option A) (f : A -> option B) : option B
+          := match v with
+             | Some v => f v
+             | None => None
+             end.
+
+        Module Export Notations.
+          Delimit Scope option_scope with option.
+          Bind Scope option_scope with option.
+
+          Notation "A <- X ; B" := (bind X (fun A => B%option)) : option_scope.
+        End Notations.
+        Local Open Scope option_scope.
+
+      End Option.
+    End Util.
+  End Crypto.
+End Crypto_DOT_Util_DOT_Option.
 Module Export Crypto_DOT_Util_DOT_NatUtil.
   Module Export Crypto.
     Module Export Util.
