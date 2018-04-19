@@ -526,7 +526,7 @@ Module Export ZRange.
             | snd {A B} : ident (A * B) B
             | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
             | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
-            | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
+            | list_rect {A P} : ident ((unit -> P) * (A * list A * (unit -> P) -> P) * list A) P
             | list_case {A P} : ident ((unit -> P) * (A * list A -> P) * list A) P
             | pred : ident nat nat
             | List_length {T} : ident (list T) nat
@@ -598,10 +598,14 @@ Module Export ZRange.
                 => let rA := type.reify A in
                    let rT := type.reify T in
                    let pat := fresh "pat" in
+                   let Ptl' := fresh "Ptl" in
                    mkAppIdent (@ident.list_rect rA rT)
                               ((fun _ : Datatypes.unit => Pnil),
-                               (fun pat : A * Datatypes.list A * T
-                                => let '(a, tl, Ptl) := pat in PS),
+                               (fun pat : A * Datatypes.list A * (Datatypes.unit -> T)
+                                => let '(a, tl, Ptl') := pat in
+                                   match Ptl' tt return T with
+                                   | Ptl => PS
+                                   end),
                                ls)
               | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil ?PS ?ls
                 => let dummy := match goal with _ => fail 1 "list_rect successor case is not syntactically a function of three arguments:" PS end in
@@ -727,7 +731,7 @@ Module Export ZRange.
             | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
             | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
             | pred : ident nat nat
-            | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
+            | list_rect {A P} : ident ((unit -> P) * (A * list A * (unit -> P) -> P) * list A) P
             | List_nth_default {T} : ident (T * list T * nat) T
             | List_nth_default_concrete {T : type.primitive} (d : interp T) (n : Datatypes.nat) : ident (list T) T
             | Z_shiftr (offset : BinInt.Z) : ident Z Z
@@ -786,7 +790,7 @@ Module Export ZRange.
                    | bool_rect T => curry3 (fun t f => @Datatypes.bool_rect (fun _ => type.interp T) (t tt) (f tt))
                    | nat_rect P => curry3_2 (fun O_case => @Datatypes.nat_rect (fun _ => type.interp P) (O_case tt))
                    | pred => Nat.pred
-                   | list_rect A P => curry3_23 (fun N_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt))
+                   | list_rect A P => curry3_23 (fun N_case C_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt) (fun x xs rec => C_case x xs (fun _ => rec)))
                    | List_nth_default T => curry3 (@List.nth_default (type.interp T))
                    | List_nth_default_concrete T d n => fun ls => @List.nth_default (type.interp T) d ls n
                    | Z_shiftr n => fun v => Z.shiftr v n
@@ -869,12 +873,15 @@ Module Export ZRange.
                    let rB := type.reify B in
                    let pat := fresh "pat" in
                    let pat' := fresh "pat" in
+                   let rec' := fresh "rec" in
                    mkAppIdent (@ident.list_rect rA rB)
                               ((fun _ : Datatypes.unit => Pnil),
-                               (fun pat : A * Datatypes.list A * B
-                                => let '(pat', rec) := pat in
+                               (fun pat : A * Datatypes.list A * (Datatypes.unit -> B)
+                                => let '(pat', rec') := pat in
                                    let '(x, xs) := pat' in
-                                   Pcons),
+                                   match rec' tt return B with
+                                   | rec => Pcons
+                                   end),
                                ls)
               | @Datatypes.list_rect ?A (fun _ => ?B) ?Pnil ?Pcons ?ls
                 => let dummy := match goal with _ => fail 1 "list_rect cons case is not syntactically a function of three arguments:" Pcons end in
@@ -1657,7 +1664,7 @@ Module Export ZRange.
                                  @ k
                           | ident.list_rect A P
                             => λ (Pnil_Pcons_ls_k :
-                                    var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate P) -> R) -> R) * (type.untranslate R (type.translate A) * Compilers.type.list (type.untranslate R (type.translate A)) * type.untranslate R (type.translate P) * (type.untranslate R (type.translate P) -> R) -> R) * Compilers.type.list (type.untranslate R (type.translate A)) * (type.untranslate R (type.translate P) -> R))%ctype) ,
+                                    var ((()%cpstype * (untranslate R (type.translate P) -> R) -> R) * (untranslate R (type.translate A) * Compilers.type.list (untranslate R (type.translate A)) * (()%cpstype * (untranslate R (type.translate P) -> R) -> R) * (untranslate R (type.translate P) -> R) -> R) * Compilers.type.list (untranslate R (type.translate A)) * (untranslate R (type.translate P) -> R))%ctype) ,
                                let (Pnil_Pcons_ls, k) := var_eta (Var Pnil_Pcons_ls_k) in
                                let (Pnil_Pcons, ls) := var_eta Pnil_Pcons_ls in
                                let (Pnil, Pcons) := var_eta Pnil_Pcons in
@@ -1668,7 +1675,16 @@ Module Export ZRange.
                                       (λ x_xs_rec k,
                                        let (x_xs, rec) := var_eta (Var x_xs_rec) in
                                        let (x, xs) := var_eta x_xs in
-                                       rec @ (λ rec , Pcons @ (x, xs, Var rec, Var k))),
+                                       rec
+                                         @ TT
+                                         @ (λ rec ,
+                                            Pcons
+                                              @ (x,
+                                                 xs,
+                                                 (λ tt_k' ,
+                                                  let (tt, k') := var_eta (Var tt_k') in
+                                                  k' @ Var rec),
+                                                 Var k))),
                                       ls))
                                  @ k
                           | ident.List_nth_default T
@@ -2062,12 +2078,12 @@ Module Export ZRange.
                      end.
 
                 Fixpoint from_flat {t} (e : Flat.expr t)
-                  : forall var, PositiveMap.t { t : type & unit -> var t } -> @expr var t
-                  := match e in Flat.expr t return forall var, PositiveMap.t { t : type & unit -> var t } -> expr t with
+                  : forall var, PositiveMap.t { t : type & var t } -> @expr var t
+                  := match e in Flat.expr t return forall var, PositiveMap.t { t : type & var t } -> expr t with
                      | Flat.Var t v
                        => fun var ctx
                           => match (tv <- PositiveMap.find v ctx;
-                                      type.try_transport var _ _ (projT2 tv tt))%option with
+                                      type.try_transport var _ _ (projT2 tv))%option with
                              | Some v => Var v
                              | None => ERROR DefaultValue.expr.default
                              end
@@ -2086,7 +2102,7 @@ Module Export ZRange.
                      | Flat.Abs s cur_idx d f
                        => let f' := @from_flat d f in
                           fun var ctx
-                          => Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s (fun _ => v)) ctx))
+                          => Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
                      end.
 
                 Definition to_flat {t} (e : expr t) : Flat.expr t
@@ -2338,6 +2354,14 @@ Module Export ZRange.
                                         AppIdent idc (expr.reify args))
                            end.
 
+                      Definition lazy_list_rect {A : Type} (P : list A -> Type)
+                                 (N : unit -> P nil) (C : forall a (l : list A), (unit -> P l) -> P (a :: l))
+                        := fix F (l : list A) : P l :=
+                             match l as l0 return P l0 with
+                             | nil => N tt
+                             | cons x xs => C x xs (fun _ => F xs)
+                             end.
+
                       Definition interp {s d} (idc : ident s d) : value var (s -> d)
                         := match idc in ident s d return value var (s -> d) with
                            | ident.Let_In tx tC as idc
@@ -2387,14 +2411,14 @@ Module Export ZRange.
                                    | _ => default_interp idc O_case_S_case_n
                                    end
                            | ident.list_rect A P as idc
-                             => fun (nil_case_cons_case_ls : _ * expr ((type.unit -> P) * (A * type.list A * P -> P) * type.list A) + (_ * expr ((type.unit -> P) * (A * type.list A * P -> P)) + (_ + Datatypes.unit -> value var P) * value var (A * type.list A * P -> P)) * (_ * expr (type.list A) + list (value var A)))
+                             => fun (nil_case_cons_case_ls : _ * expr ((type.unit -> P) * (A * type.list A * (type.unit -> P) -> P) * type.list A) + (_ * expr ((type.unit -> P) * (A * type.list A * (type.unit -> P) -> P)) + (_ + Datatypes.unit -> value var P) * value var (A * type.list A * (type.unit -> P) -> P)) * (_ * expr (type.list A) + list (value var A)))
                                 => match nil_case_cons_case_ls with
                                    | inr (inr (nil_case, cons_case), inr ls)
-                                     => @list_rect
+                                     => @lazy_list_rect
                                           (value var A)
                                           (fun _ => value var P)
-                                          (nil_case (inr tt))
-                                          (fun x xs rec => cons_case (inr (inr (x, inr xs), rec)))
+                                          (fun tt => nil_case (inr tt))
+                                          (fun x xs rec => cons_case (inr (inr (x, inr xs), fun _ => rec tt)))
                                           ls
                                    | _ => default_interp idc nil_case_cons_case_ls
                                    end
@@ -2674,7 +2698,7 @@ Definition interp_ident {s d} (idc : ident s d) : type.interp s -> type.interp d
      | ident.bool_rect T => fun '(t, f, b) => if b then t tt else f tt
      | ident.nat_rect P => fun '(Z, S', n) => nat_rect _ (Z tt) (fun n rec => S' (n, rec)) n
      | ident.pred => pred
-     | ident.list_rect A P => fun '(N, C, ls) => list_rect _ (N tt) (fun x xs rec => C (x, xs, rec)) ls
+     | ident.list_rect A P => fun '(N, C, ls) => list_rect _ (N tt) (fun x xs rec => C (x, xs, fun _ => rec)) ls
      | ident.List_nth_default T => fun '(x, y, z) => nth_default x y z
      | ident.List_nth_default_concrete T d n => fun ls => nth_default d ls n
      | ident.Z_shiftr offset => fun v => Z.shiftr v offset
@@ -2703,10 +2727,26 @@ Fixpoint interp_expr {t} (e : @expr type.interp t) : type.interp t
      | Abs s d f => fun v => @interp_expr d (f v)
      end.
 
-Definition r := ltac:(let r := constr:(fun (n : nat) =>
-                                         combine (seq 0 n)
-                                                 (seq 0 n)) in
-                      let r := (eval cbv [seq] in (r 10%nat)) in
+Definition r := ltac:(let r := constr:((fun n
+                                        => let ls :=
+                                               ((fun start_len : nat * nat
+                                                => nat_rect
+                                                     (fun _ => nat -> list nat)
+                                                     (fun _ => nil)
+                                                     (fun len seq_len start => cons start (seq_len (S start)))
+                                                     (snd start_len) (fst start_len)) (0%nat, n)) in
+                                           list_rect
+                                             (fun _ => list nat -> list (nat*nat))
+                                          (fun _ => [])
+                                          (fun x xs rec (v:list nat)
+                                           => list_rect
+                                                (fun _ => list (nat*nat))
+                                                nil
+                                                (fun y ys _ => (x,y) :: rec ys)
+                                                v)
+                                          ls
+                                          ls)) in
+                      let r := (eval cbv [List.map seq Z.of_nat Pos.of_succ_nat Pos.succ] in (r)) in
                       let r := Reify r in
                       exact r).
 Definition e := Eval vm_compute in canonicalize_list_recursion r.
@@ -2725,16 +2765,276 @@ Definition k'
       CPS.CallFunWithIdContinuation
         (CPS.Translate
            (Uncurry
-              (e (*@ Reify 10%nat*))%Expr)).
-
-Definition prek'' := Eval vm_compute in option_map ToFlat k'.
-Definition k'' := Eval cbv in match prek'' as x return match x with Some _ => _ | _ => _ end with
+              (e @ Reify 10%nat)%Expr)).
+Definition prek'' := Eval cbv in match k' as x return match x with Some _ => _ | _ => _ end with
                               | Some v => v
                               | None => I
                               end.
+Definition k'' := Eval cbv in ToFlat prek''.
+
+Fixpoint default_value {var} (t : type) : @expr var t
+  := match t return expr t with
+     | type.unit => TT
+     | type.Z as t => ident.primitive (t:=t) (-1) @@ TT
+     | type.nat as t => ident.primitive (t:=t) 0%nat @@ TT
+     | type.bool as t => ident.primitive (t:=t) true @@ TT
+     | type.prod A B => (@default_value var A, @default_value var B)
+     | type.arrow s d => Abs (fun _ => @default_value var d)
+     | type.list A => ident.nil @@ TT
+     end%expr.
+
+Definition transport_expr {var} (t1 t2 : type) (e : @expr var t1) : @expr var t2
+  := match type.try_transport (@expr var) t1 t2 e with
+     | Some e' => e'
+     | None => default_value _
+     end.
+Reserved Notation "'dlet_nd' x .. y := v 'in' f"
+         (at level 200, x binder, y binder, f at level 200, format "'dlet_nd'  x .. y  :=  v  'in' '//' f").
+Notation "'dlet_nd' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .. (fun y => f) .. )) (only parsing).
+
+Definition dobeta_step
+           (dobeta : forall {var} {t}, @expr (@expr var) t -> @expr var t)
+           {var}
+           {t} (e : @expr (@expr var) t) : @expr var t
+  := match e in expr.expr t return expr t with
+     | Var t v => v
+     | TT => TT
+     | App s d (Abs s' d' f) x
+       => transport_expr
+            _ _
+            (@dobeta var d' (f (transport_expr _ _ (@dobeta var s x))))
+     | AppIdent _ _ (@ident.fst A B) (Pair A' B' a b)
+       => transport_expr
+            _ _
+            (@dobeta var A' a)
+     | AppIdent _ _ (@ident.snd A B) (Pair A' B' a b)
+       => transport_expr
+            _ _
+            (@dobeta var B' b)
+     | AppIdent s d idc args => transport_expr _ _ (AppIdent idc (transport_expr _ _ (@dobeta var _ args)))
+     | App s d f x
+       => App (@dobeta var _ f) (@dobeta var s x)
+     | Pair A B a b => Pair (@dobeta var A a) (@dobeta var B b)
+     | Abs s d f => Abs (fun v => @dobeta var d (f (Var v)))
+     end.
+
+Fixpoint dobeta {var} {t} (e : @expr (@expr var) t) : @expr var t
+  := @dobeta_step (@dobeta) var t e.
+Definition Beta {t} (e : Expr t) : Expr t
+  := fun var => dobeta (e _).
+Definition dobeta1_step
+           (dobeta1 : forall {var} {t}, @expr (@expr var) t -> @expr var t)
+           {var}
+           {t} (e : @expr (@expr var) t) : @expr var t
+  := match e in expr.expr t return expr t with
+     | Var t v => v
+     | TT => TT
+     | App s d (Abs s' d' f) x
+       => transport_expr
+            _ _
+            (unexpr (f (transport_expr _ _ (unexpr x))))
+     | AppIdent _ _ (@ident.fst A B) (Pair A' B' a b)
+       => transport_expr
+            _ _ (unexpr a)
+     | AppIdent _ _ (@ident.snd A B) (Pair A' B' a b)
+       => transport_expr
+            _ _ (unexpr b)
+     | AppIdent s d idc args => transport_expr _ _ (AppIdent idc (transport_expr _ _ (@dobeta1 var _ args)))
+     | App s d f x
+       => App (@dobeta1 var _ f) (@dobeta1 var s x)
+     | Pair A B a b => Pair (@dobeta1 var A a) (@dobeta1 var B b)
+     | Abs s d f => Abs (fun v => @dobeta1 var d (f (Var v)))
+     end.
+
+Fixpoint dobeta1 {var} {t} (e : @expr (@expr var) t) : @expr var t
+  := @dobeta1_step (@dobeta1) var t e.
+Definition Beta1 {t} (e : Expr t) : Expr t
+  := fun var => dobeta1 (e _).
 
 Definition ToFlatFromFlat_Fast (_ : unit) := ToFlat (FromFlat k'').
 Definition ToFlatFFromFlat_Slow (_ : unit) := ToFlat (PartialEvaluate false (FromFlat k'')).
+Print prek''.
+Fixpoint powf {A} (f : A -> A) (n : nat) : A -> A
+  := match n with
+     | O => f
+     | S n' => fun x => @powf A f n' (f x)
+     end.
+Definition BetaFast (_ : unit) := ToFlat (powf Beta1 500 (FromFlat k'')).
+Definition BetaSlow (_ : unit) := ToFlat (Beta (FromFlat k'')).
+
+Axiom IO_unit : Set.
+Axiom Return : forall t, t -> IO_unit.
+Module BetaFast.
+  Definition main := Return _ (BetaFast tt).
+End BetaFast.
+Module BetaSlow.
+  Definition main := Return _ (BetaSlow tt).
+End BetaSlow.
+Require Import Coq.extraction.Extraction.
+Set Warnings Append "-extraction-opaque-accessed".
+(*
+Require Import Coq.extraction.ExtrHaskellBasic.
+(* These brake things with missing Ord instances, so we don't import them
+Require Import Coq.extraction.ExtrHaskellNatInt.
+Require Import Coq.extraction.ExtrHaskellZInt.
+Require Import Coq.extraction.ExtrHaskellNatNum.
+Require Import Coq.extraction.ExtrHaskellZNum.*)
+Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
+Extract Constant Return => "\ v -> return v GHC.Base.>> return ()".
+Extraction Language Haskell.
+Redirect "/tmp/slowsmallbetafast.hs" Recursive Extraction BetaFast.main.
+Redirect "/tmp/slowsmallbetaslow.hs" Recursive Extraction BetaSlow.main.
+ *)
+(*
+Require Import Coq.extraction.ExtrOcamlBasic.
+Require Import Coq.extraction.ExtrOcamlNatInt.
+Require Import Coq.extraction.ExtrOcamlZInt.
+Extract Inlined Constant IO_unit => "()".
+Extract Constant Return => "fun v -> ()".
+Extraction Language OCaml.
+Redirect "/tmp/slowsmallbetafast.ml" Recursive Extraction BetaFast.main.
+Redirect "/tmp/slowsmallbetaslow.ml" Recursive Extraction BetaSlow.main.
+*)
+
+
+
+Time Definition foo := Eval lazy in (powf Beta1 500 prek'').
+Time Definition bar := Eval vm_compute in (powf Beta1 500 prek'').
+
+Definition
+Time Definition foo' := Eval vm_compute in Beta prek''.
+Eval lazy in fun v => Beta prek'' (fun _ => v).
+Eval lazy in fun v => (powf Beta1 500 prek'') (fun _ => v).
+Time Eval lazy in option_map Beta k'.
+Infix "f ∘ g" := (fun x => g (f x)) (at level 50).
+
+Compute option_map (powf Beta1 5) k'.
+
+Goal True.
+  pose (option_map Beta1 k') as x.
+  cbv [option_map k' Beta Beta1] in x.
+  cbv delta [dobeta dobeta1 unexpr] in x.
+  cbv iota in x; cbv beta in x.
+  cbv iota in x; cbv beta in x.
+  cbv iota in x; cbv beta in x.
+  cbv iota in x; cbv beta in x.
+  cbv iota in x; cbv beta in x.
+  cbv iota in x; cbv beta in x.
+  do 100 (
+  cbv iota in x; cbv beta in x).
+  cbv [dobeta] in x.
+
+Compute option_map Beta k'.
+
+Time Compute ToFlatFromFlat_Fast tt.
+Time Compute ToFlatFFromFlat_Slow tt.
+Goal True.
+  pose (ToFlatFFromFlat_Slow tt) as x.
+  hnf in x.
+  cbv [reflect Pos.succ] in x.
+  cbv [reflect_primitive invert_AppIdent FMapPositive.PositiveMap.key] in x.
+  set (k' := FromFlat k'' _) in (value of x).
+  hnf in k'.
+  subst k'.
+  set (k' := partial_evaluate' _ _) in (value of x).
+  set (k'' := (k' _)) in (value of x).
+  hnf in k'.
+  subst k'.
+  cbv beta in *.
+  cbv beta iota zeta in *.
+  cbn [value_step value_prestep type.interp] in *.
+  About from_flat.
+  About partial_evaluate'.
+  Ltac step := lazymatch goal with
+               | [ H := context[@from_flat ?t ?e ?var ?ctx] |- _ ]
+                 => let k := fresh "k" in
+                    set (k := @from_flat t e var ctx) in (value of H); hnf in k
+               | [ H := context[@partial_evaluate' ?b ?var ?t ?e] |- _ ]
+                 => lazymatch let v := fresh "v" in
+                    set (v := @partial_evaluate' b var t e) in (value of H)
+               end.
+  repeat step.
+  Ltac step' := match goal with
+                | [ H := context[partial_evaluate' _ ?k] |- _ ]
+                  => idtac H; subst k
+                end.
+  step'.
+  Ltac step'' := cbn [projT2 partial_evaluate'] in *; cbv [partial_evaluate'_step] in *.
+  step''.
+  repeat step.
+  step'; step''.
+  repeat step.
+  step'; step''; repeat step.
+  step'; step''; repeat step.
+  step'.
+  step'; step''; repeat step.
+  set (k' := from_flat _ _ _) in (value of k'').
+  hnf in k'.
+  subst k'.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'') at 1.
+  set (k'2 := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'2; subst k'2.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k'2 := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'2; subst k'2.
+  cbn [partial_evaluate' projT2] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k'2 := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'2; subst k'2.
+  cbn [partial_evaluate' projT2] in *.
+  cbv [partial_evaluate'_step] in k''.
+  hnf in k'; subst k'.
+  cbn [partial_evaluate' projT2] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'').
+  hnf in k'; subst k'.
+  cbn [partial_evaluate' projT2] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'') at 1.
+  set (k'2 := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'2; subst k'2.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k'2 := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'2; subst k'2.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k'2 := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'2; subst k'2.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+
+
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'.
+  subst k'.
+  Arguments FMapPositive.PositiveMap.add {_ _ _ _}.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'.
+  subst k'.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'.
+  subst k'.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  set (k' := from_flat _ _ _) in (value of k'') at 1.
+  hnf in k'.
+  subst k'.
+  cbn [partial_evaluate'] in *.
+  cbv [partial_evaluate'_step] in k''.
+  cbn [interp] in k''.
+
+  cbv [
+Eval cbv -[lazy_list_rect] in ToFlatFFromFlat_Slow.
 
 Time Compute ToFlatFromFlat_Fast tt.
 Time Compute ToFlatFFromFlat_Slow tt.
