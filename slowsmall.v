@@ -1371,32 +1371,34 @@ Module Export ZRange.
             Section with_var.
               Context {var : type -> Type}.
 
-              Fixpoint uncurry {t}
-                : @expr var t -> @expr var (type.uncurry t)
-                := match t return expr t -> expr (type.uncurry t) with
+              Fixpoint uncurry' {t}
+                : @expr (@expr var) t -> @expr var (type.uncurried_domain t) -> @expr var (type.final_codomain t)
+                := match t return expr t -> expr (type.uncurried_domain t) -> expr (type.final_codomain t) with
                    | type.arrow s d
                      => fun e
                         => let f := fun v
-                                    => @uncurry
+                                    => @uncurry'
                                          d
                                          match invert_Abs e with
                                          | Some f => f v
                                          | None => e @ Var v
                                          end%expr in
-                           match d return (var s -> expr (type.uncurry d)) -> expr (type.uncurry (s -> d)) with
+                           match d return (expr s -> expr (type.uncurried_domain d) -> expr (type.final_codomain d)) -> expr (type.uncurried_domain (s -> d)) -> expr (type.final_codomain d) with
                            | type.arrow _ _ as d
-                             => fun f
-                                => Abs (fun sdv
-                                        => Abs f @ (ident.fst @@ Var sdv) @ (ident.snd @@ Var sdv))
+                             => fun f sdv
+                                => f (ident.fst @@ sdv) (ident.snd @@ sdv)
                            | _
-                             => fun f
-                                => Abs (fun sv => f sv @ TT)
+                             => fun f sv => f sv TT
                            end f
                    | type.type_primitive _
                    | type.prod _ _
                    | type.list _
-                     => fun e => Abs (fun _ => e)
+                     => fun e _ => unexpr e
                    end%expr.
+
+              Definition uncurry {t} (e : @expr (@expr var) t)
+                : @expr var (type.uncurry t)
+                := Abs (fun v => @uncurry' t e (Var v)).
             End with_var.
 
             Definition Uncurry {t} (e : Expr t) : Expr (type.uncurry t)
