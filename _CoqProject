@@ -241,6 +241,10 @@ src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Jacobian.v
 src/Curves/Weierstrass/Projective.v
 src/Experiments/PartialEvaluationWithLetIn.v
+src/Experiments/PartialEvaluationWithLetInNoListWithRewriteCompilation.v
+src/Experiments/RewriteRules.v
+src/Experiments/RewriteRulesDecisionTreeNat.v
+src/Experiments/RewriteRulesSimpleNat.v
 src/Experiments/SimplyTypedArithmetic.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
