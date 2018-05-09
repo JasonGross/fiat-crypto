@@ -3604,7 +3604,6 @@ Module Compilers.
         Local Notation rSome v
           := (ZRange.type.base.option.Some (t:=base.reify_norm_type_of v) v)
                (only parsing).
-        Print partition.
         (** do bounds analysis on identifiers; take in optional bounds
             on arguments, return optional bounds on outputs. *)
         Definition interp {t} (idc : ident t) : type.option.interp t
