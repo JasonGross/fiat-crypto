@@ -60,6 +60,15 @@ Module type.
             => F _ x * @fold_for_each_lhs_of_arrow f F d xs
        end%type.
 
+  Fixpoint bind_for_each_lhs_of_arrowT {f : type -> Set} (F : forall t, f t -> Type -> Type) {t}
+    : for_each_lhs_of_arrow f t -> Type -> Type
+    := match t return for_each_lhs_of_arrow f t -> Type -> Type with
+       | Nat => fun _ T => T
+       | Arrow s d
+         => fun '(x, xs) T
+            => F _ x (@bind_for_each_lhs_of_arrowT f F d xs T)
+       end%type.
+
   Section fold_for_each_lhs_of_arrow.
     Context {f : type -> Set}
             (F : forall t, f t -> Type).
@@ -70,18 +79,94 @@ Module type.
            => F _ x * @fold_for_each_lhs_of_arrow_ind d xs
          end.
   End fold_for_each_lhs_of_arrow.
+  Section bind_for_each_lhs_of_arrow.
+    Context {f : type -> Set}
+            (F : forall t, f t -> Type -> Type)
+            (T : Type).
+    Fixpoint bind_for_each_lhs_of_arrow_indT {t} (xs : for_each_lhs_of_arrow_ind f t)
+      : Type
+      := match xs with
+         | NoLHS => T
+         | ArrowLHS s d x xs
+           => F _ x (@bind_for_each_lhs_of_arrow_indT d xs)
+         end%type.
 
-  Fixpoint try_transport_cps {T} (P : type -> Type) (t1 t2 : type) : P t1 -> (option (P t2) -> T) -> T
+    Section app.
+      Context (F' : forall t, f t -> Type)
+              (APP : forall t ft T, F t ft T -> F' t ft -> T).
+      Fixpoint app_fold_for_each_lhs_of_arrow_ind
+               {t} {xs : for_each_lhs_of_arrow_ind f t}
+        : bind_for_each_lhs_of_arrow_indT xs -> fold_for_each_lhs_of_arrow_ind F' xs -> T
+        := match xs return bind_for_each_lhs_of_arrow_indT xs -> fold_for_each_lhs_of_arrow_ind F' xs -> T with
+           | NoLHS => fun v _ => v
+           | ArrowLHS s d x xs
+             => fun G '(v, vs)
+                => @app_fold_for_each_lhs_of_arrow_ind d xs (APP _ _ _ G v) vs
+           end.
+    End app.
+  End bind_for_each_lhs_of_arrow.
+  Section bind_for_each_lhs_of_arrow2.
+    Context {f : type -> Set}
+            (F : forall t, f t -> Type -> Type)
+            {A B : Type}
+            (G : A -> B)
+            (lift_G : forall t ft A B, (A -> B) -> F t ft A -> F t ft B).
+    Fixpoint lift_bind_for_each_lhs_of_arrow_indT
+             {t} (xs : for_each_lhs_of_arrow_ind f t)
+      : bind_for_each_lhs_of_arrow_indT F A xs -> bind_for_each_lhs_of_arrow_indT F B xs
+      := match xs return bind_for_each_lhs_of_arrow_indT F A xs -> bind_for_each_lhs_of_arrow_indT F B xs with
+         | NoLHS => G
+         | ArrowLHS s d x xs
+           => lift_G
+                _ _ _ _
+                (@lift_bind_for_each_lhs_of_arrow_indT d xs)
+         end%type.
+  End bind_for_each_lhs_of_arrow2.
+
+  Fixpoint const_for_each_lhs_of_arrow {P : type -> Set} (v : forall t, P t) {t} : for_each_lhs_of_arrow P t
+    := match t with
+       | Nat => tt
+       | Arrow s d => (v s, @const_for_each_lhs_of_arrow P v d)
+       end.
+
+  Fixpoint try_transport_cps {T} (P : type -> Type) (t1 t2 : type) {struct t2} : P t1 -> (option (P t2) -> T) -> T
+    := match t2 with
+       | Nat
+         => fun v k
+            => match t1 with
+               | Nat => fun v => k (Some v)
+               | _ => fun _ => k None
+               end v
+       | Arrow s d
+         => fun v k
+            => match t1 return P t1 -> _ with
+               | Arrow s' d'
+                 => fun v
+                    => try_transport_cps
+                         (fun s => P (Arrow s _)) _ _ v
+                         (fun v'
+                          => match v' with
+                             | Some v'
+                               => try_transport_cps
+                                    (fun d => P (Arrow _ d)) _ _ v'
+                                    k
+                             | None => k None
+                             end)
+               | _ => fun _ => k None
+               end v
+       end.
+
+  Fixpoint try_transport_cps' {T} (P : type -> Type) (t1 t2 : type) {struct t1} : P t1 -> (option (P t2) -> T) -> T
     := match t1, t2 with
        | Nat, Nat => fun v k => k (Some v)
        | Arrow s d, Arrow s' d'
          => fun v k
-            => try_transport_cps
+            => try_transport_cps'
                  (fun s => P (Arrow s _)) _ _ v
                  (fun v'
                   => match v' with
                      | Some v'
-                       => try_transport_cps
+                       => try_transport_cps'
                             (fun d => P (Arrow _ d)) _ _ v'
                             k
                      | None => k None
@@ -91,6 +176,7 @@ Module type.
          => fun _ k => k None
        end.
 End type.
+Global Coercion type.for_each_lhs_of_arrow_of_ind : type.for_each_lhs_of_arrow_ind >-> type.for_each_lhs_of_arrow.
 Bind Scope for_each_lhs_of_arrow_scope with type.for_each_lhs_of_arrow_ind.
 Delimit Scope for_each_lhs_of_arrow_scope with for_each_lhs_of_arrow.
 Notation "[ ]" := type.NoLHS : for_each_lhs_of_arrow_scope.
@@ -157,6 +243,27 @@ Notation "0" := (pAppIdent O [])%pattern : pattern_scope.
 Notation "n '.+1'" := (pAppIdent S [n])%pattern (at level 10, format "n '.+1'") : pattern_scope.
 Notation "x + y" := (pAppIdent Add [x; y])%pattern : pattern_scope.
 
+(* urgh, this is ident-specific, and probably should not be ... *)
+Definition mkapp_from_context {t} (idc : ident t) (ctx : list (expr Nat))
+  : option (list (expr Nat))
+  := match idc, ctx with
+     | O as idc, ctx' => Some ((#idc) :: ctx')
+     | S as idc, x :: ctx' => Some ((#idc @ x) :: ctx')
+     | Add as idc, x :: y :: ctx' => Some ((#idc @ x @ y) :: ctx')
+     | S, _
+     | Add, _
+       => None
+     end%expr.
+
+(* we cheat to get that every argument is nat *)
+Definition unmkapp_to_context {t P} (idc : ident t) (args : type.for_each_lhs_of_arrow P t) (ctx : list (P Nat))
+  : list (P Nat)
+  := match idc in ident t return type.for_each_lhs_of_arrow P t -> list (P Nat) with
+     | O => fun _ => ctx
+     | S => fun '(x, _) => x :: ctx
+     | Add => fun '(x, (y, _)) => x :: y :: ctx
+     end args.
+
 Record > anyexpr := wrap { anyexpr_ty : type ; unwrap :> expr anyexpr_ty }.
 Arguments wrap {_} _.
 
@@ -170,6 +277,70 @@ Fixpoint invert_AppIdent_cps {T t} (e : expr t) (args : type.for_each_lhs_of_arr
        => fun args => @invert_AppIdent_cps _ _ f (x, args)
      | Literal n => fun _ k => k None
      end args.
+
+(*
+Fixpoint invert_AppIdentOrLiteral_cps' {T t} (e : expr t) (args : type.for_each_lhs_of_arrow expr t)
+         (T0 := { t' : _ & ident t' * type.for_each_lhs_of_arrow expr t' }%type)
+         {struct e}
+  : (T0 + match t with
+          | Nat => nat
+          | Arrow _ _ => Empty_set
+          end%type
+     -> T) -> T
+  := match e in expr t
+           return type.for_each_lhs_of_arrow expr t
+                  -> ((T0
+                       + match t with
+                         | Nat => nat
+                         | Arrow _ _ => Empty_set
+                         end%type
+                       -> T) -> T) with
+     | Ident t idc
+       => fun args k
+          => k (inl (existT (fun t' => ident t' * type.for_each_lhs_of_arrow expr t')%type
+                            t (idc, args)))
+     | App s d f x
+       => fun args k
+          => @invert_AppIdentOrLiteral_cps
+               _ _ f (x, args)
+               (fun v
+                => match v with
+                   | inl v => k (inl v)
+                   | inr v => match v with end
+                   end)
+     | Literal n => fun _ k => k (inr n)
+     end args.
+*)
+(* we want to eta-expand on actually possible identifiers *)
+Definition invert_AppIdentOrLiteral_cps {T} (e : expr Nat) (args : type.for_each_lhs_of_arrow expr Nat)
+           (T0P := fun t' => (ident t' * type.for_each_lhs_of_arrow expr t')%type)
+           (T0 := sigT T0P)
+           (k : option (T0 + nat) -> T)
+  : T
+  := match e with
+     | Literal n => k (Some (inr n))
+     | #O => k (Some (inl (existT T0P _ (O, tt))))
+     | #S @ x
+       => type.try_transport_cps
+            _ _ _ x
+            (fun x' => match x' with
+                       | Some x' => k (Some (inl (existT T0P _ (S, (x', tt)))))
+                       | None => k None
+                       end)
+     | #Add @ x @ y
+       => type.try_transport_cps
+            _ _ _ x
+            (fun x'
+             => type.try_transport_cps
+                  _ _ _ y
+                  (fun y'
+                   => match x', y' with
+                      | Some x', Some y'
+                        => k (Some (inl (existT T0P _ (Add, (x', (y', tt))))))
+                      | _, _ => k None
+                      end))
+     | _ => k None (* impossible *)
+     end%expr%option.
 
 Definition hlist {A} (f : A -> Set) (ls : list A)
   := fold_right
@@ -291,7 +462,7 @@ Definition swap_list {A} (i j : nat) (ls : list A) : option (list A)
      | _, _ => None
      end.
 
-Fixpoint eval_decision_tree {T} (ctx : list (expr Nat)) (d : decision_tree) (cont : option nat -> list anyexpr -> option (unit -> T) -> T) {struct d} : T
+Fixpoint eval_decision_tree {T} (ctx : list (expr Nat)) (d : decision_tree) (cont : option nat -> list (expr Nat) -> option (unit -> T) -> T) {struct d} : T
   := match d with
      | TryLeaf k onfailure
        => cont (Some k) ctx
@@ -300,38 +471,28 @@ Fixpoint eval_decision_tree {T} (ctx : list (expr Nat)) (d : decision_tree) (con
      | Switch icases lit_case
        => match ctx with
           | nil => cont None ctx None
-          | Literal n :: ctx'
-            => @eval_decision_tree
-                 T ctx' lit_case
-                 (fun k ctx''
-                  => cont k (wrap (Literal n) :: ctx''))
-          | App s d f x :: ctx'
-            => @eval_decision_tree
-                 T (wrap f :: wrap x :: ctx') app_case
-                 (fun k ctx''
-                  => match ctx'' with
-                     | wrap tf f' :: wrap tx x' :: ctx'''
-                       => type.try_transport_cps
-                            _ _ (s -> d) f'
-                            (fun f'
-                             => type.try_transport_cps
-                                  _ _ s x'
-                                  (fun x'
-                                   => match f', x' with
-                                      | Some f'', Some x''
-                                        => cont k (wrap (App f'' x'') :: ctx''')
-                                      | _, _ => cont None ctx
-                                      end))
-                     | _ => cont None ctx
+          | ctx0 :: ctx'
+            => invert_AppIdentOrLiteral_cps
+                 ctx0 tt
+                 (fun ctx0'
+                  => match ctx0' with
+                     | Some (inr n) (* Literal *)
+                       => @eval_decision_tree
+                            T ctx' lit_case
+                            (fun k ctx''
+                             => cont k (Literal n :: ctx''))
+                     | Some (inl (existT _ (idc, args)))
+                       => @eval_decision_tree
+                            T (unmkapp_to_context idc args ctx') (icases _ idc)
+                            (fun k ctx''
+                             => match mkapp_from_context idc ctx'' with
+                                | Some ctx'''
+                                  => cont k ctx'''
+                                | None => cont None ctx
+                                end)
+                     | None
+                       => cont None ctx None
                      end)
-          | Ident t idc :: ctx'
-            => eta_ident_cps
-                 idc
-                 (fun _ idc'
-                  => @eval_decision_tree
-                       T ctx' (icases (pident_of_ident idc'))
-                       (fun k ctx''
-                        => cont k (wrap (Ident idc') :: ctx'')))
           end
      | Swap i d'
        => match swap_list 0 i ctx with
@@ -348,13 +509,12 @@ Fixpoint eval_decision_tree {T} (ctx : list (expr Nat)) (d : decision_tree) (con
      end.
 
 Definition eval_rewrite_rules
-           {t}
            (d : decision_tree)
            (rew : list { p : pattern & { t' : type & binding_dataT p -> option (expr t') } })
-           (e : expr t)
-  : expr t
+           (e : expr Nat)
+  : expr Nat
   := eval_decision_tree
-       (wrap e::nil) d
+       (e::nil) d
        (fun k ctx default_on_rewrite_failure
         => match k, ctx with
            | Some k', e'::nil
@@ -395,48 +555,43 @@ Fixpoint first_satisfying_helper {A B} (f : A -> option B) (ls : list A) : optio
 Definition get_index_of_first_non_wildcard (p : list pattern) : option nat
   := first_satisfying_helper
        (fun '(n, x) => match x with
-                       | Wildcard _ => None
+                       | Wildcard => None
                        | _ => Some n
                        end)
        (enumerate p).
 
 Definition refine_pattern_literal (p : nat * list pattern) : option (nat * list pattern)
   := match p with
-     | (n, Wildcard _::ps)
+     | (n, Wildcard::ps)
      | (n, pLiteral::ps)
        => Some (n, ps)
-     | (_, pApp _ _::_)
-     | (_, pIdent _::_)
+     | (_, pAppIdent _ _ _::_)
      | (_, nil)
        => None
      end.
-Definition refine_pattern_app (p : nat * list pattern) : option (nat * list pattern)
+
+Definition refine_pattern_app_ident {t} (idc : ident t) (p : nat * list pattern) : option (nat * list pattern)
   := match p with
-     | (n, Wildcard _::ps)
-       => Some (n, Wildcard None :: Wildcard None :: ps)
-     | (n, pApp f x::ps)
-       => Some (n, f :: x :: ps)
-     | (_, pLiteral::_)
-     | (_, pIdent _::_)
-     | (_, nil)
-       => None
-     end.
-Definition refine_pattern_pident (c : pident) (p : nat * list pattern) : option (nat * list pattern)
-  := match p with
-     | (k, Wildcard _::ps)
-       => Some (k, ps)
-     | (k, pIdent c'::ps)
-       => pident_beq_cps
-            c c'
+     | (n, Wildcard::ps)
+       => let p' := unmkapp_to_context idc (type.const_for_each_lhs_of_arrow (fun _ => Wildcard)) ps in
+          Some (n, p')
+     | (n, pAppIdent _ idc' pargs::ps)
+       => ident_beq_cps
+            idc idc'
             (fun b
              => if b
-                then Some (k, ps)
+                then
+                  type.try_transport_cps
+                    (type.for_each_lhs_of_arrow_ind _) _ _ pargs
+                    (fun pargs'
+                     => (pargs' <- pargs';
+                           let p' := unmkapp_to_context idc pargs' ps in
+                           Some (n, p')))
                 else None)
-     | (_, pApp _ _::_)
      | (_, pLiteral::_)
      | (_, nil)
        => None
-     end.
+     end%option.
 
 Fixpoint omap {A B} (f : A -> option B) (ls : list A) : list B
   := match ls with
@@ -460,11 +615,10 @@ Definition compile_rewrites_step
                   Some (TryLeaf n1 onfailure))
           | Some Datatypes.O
             => lit_case <- compile_rewrites (omap refine_pattern_literal pattern_matrix);
-                 app_case <- compile_rewrites (omap refine_pattern_app pattern_matrix);
                  icases
-                   <- (eta_option_pident_cps
-                         (fun c => compile_rewrites (omap (refine_pattern_pident c) pattern_matrix)));
-                 Some (Switch app_case icases lit_case)
+                   <- (eta_option_ident_cps
+                         (fun _ idc => compile_rewrites (omap (refine_pattern_app_ident idc) pattern_matrix)));
+                 Some (Switch icases lit_case)
           | Some i
             => let pattern_matrix'
                    := List.map
@@ -492,35 +646,29 @@ Definition compile_rewrites (fuel : nat) (ps : list { p : pattern & { t' : type 
 
 Fixpoint with_bindingsT (p : pattern) (T : Type)
   := match p with
-     | Wildcard None => forall t, expr t -> T
-     | Wildcard (Some t) => expr t -> T
+     | Wildcard => expr Nat -> T
      | pLiteral => nat -> T
-     | pApp f x => with_bindingsT f (with_bindingsT x T)
-     | pIdent _ => T
+     | pAppIdent _ idc args
+       => type.bind_for_each_lhs_of_arrow_indT (fun _ => with_bindingsT) T args
      end.
 
 Fixpoint lift_with_bindings {p A B} (F : A -> B) {struct p} : with_bindingsT p A -> with_bindingsT p B
   := match p return with_bindingsT p A -> with_bindingsT p B with
-     | Wildcard (Some _) => fun f e => F (f e)
-     | Wildcard None => fun f t e => F (f t e)
+     | Wildcard => fun f e => F (f e)
      | pLiteral => fun f e => F (f e)
-     | pApp f x
-       => @lift_with_bindings f _ _ (@lift_with_bindings x _ _ F)
-     | pIdent _ => F
+     | pAppIdent t idc args
+       => type.lift_bind_for_each_lhs_of_arrow_indT
+            _ F (fun _ => @lift_with_bindings) args
      end.
 
 Fixpoint app_binding_data {T p} : forall (f : with_bindingsT p T) (v : binding_dataT p), T
   := match p return forall (f : with_bindingsT p T) (v : binding_dataT p), T with
-     | Wildcard None
-       => fun f v => f _ (unwrap v)
-     | Wildcard (Some _)
+     | Wildcard
      | pLiteral
        => fun f => f
-     | pApp f x
-       => fun F '(fv, xv)
-          => @app_binding_data _ x (@app_binding_data _ f F fv) xv
-     | pIdent _
-       => fun v 'tt => v
+     | pAppIdent t idc pargs
+       => type.app_fold_for_each_lhs_of_arrow_ind
+            _ _ _ (fun _ _ T => @app_binding_data T _)
      end.
 
 Notation make_rewrite' p f
@@ -536,11 +684,11 @@ Notation make_rewrite p f
       make_rewrite' p f').
 
 Definition rewrite_rules : list { p : pattern & { t' : type & binding_dataT p -> option (expr t') } }
-  := [make_rewrite (0 + ??ℕ) (fun x => x);
-        make_rewrite (??ℕ + 0) (fun x => x);
+  := [make_rewrite (0 + ??) (fun x => x);
+        make_rewrite (?? + 0) (fun x => x);
         make_rewrite (#? + #?) (fun x y => ##(x + y));
-        make_rewrite (??ℕ.+1 + ??ℕ) (fun x y => (x+y).+1);
-        make_rewrite (??ℕ + ??ℕ.+1) (fun x y => (x+y).+1)]%list.
+        make_rewrite (??.+1 + ??) (fun x y => (x+y).+1);
+        make_rewrite (?? + ??.+1) (fun x y => (x+y).+1)]%list.
 
 Definition dtree : decision_tree
   := Eval compute in invert_Some (compile_rewrites 100 rewrite_rules).
@@ -565,7 +713,7 @@ Arguments domatch / .
 Definition dorewrite
   := Eval cbn [bind_data_cps dorewrite' rewrite_rules domatch ctor_beq ctor_beq_cps list_rect Option.bind] in dorewrite'.
  *)
-Definition dorewrite1 {t} (e : expr t) : expr t
+Definition dorewrite1 (e : expr Nat) : expr Nat
   := eval_rewrite_rules dtree rewrite_rules e.
 
 Fixpoint value (t : type)
@@ -601,74 +749,191 @@ Arguments eval_rewrite_rules / .
 Arguments dtree / .
 Arguments eval_decision_tree / .
 Arguments eta_ident_cps / .
-Arguments eta_ident_pident_cps / .
 Arguments eta_option_ident_cps / .
-Arguments eta_option_pident_cps / .
 Arguments option_map _ _ _ !_ / .
 Arguments swap_list _ !_ !_ !_ / .
 Arguments set_nth _ !_ _ !_ / .
 Arguments lift_with_bindings / .
 Arguments app_binding_data / .
 Arguments do_rewrite_ident / .
-Arguments pident_of_ident / .
 Arguments anyexpr_ty / .
 Arguments unwrap / .
+Arguments invert_AppIdentOrLiteral_cps / .
+Arguments invert_AppIdent_cps / .
+Arguments mkapp_from_context / .
+Arguments unmkapp_to_context / .
+Arguments bind_for_each_lhs_of_arrow_data_cps / .
+Arguments type.app_fold_for_each_lhs_of_arrow_ind / .
+Arguments type.lift_bind_for_each_lhs_of_arrow_indT / .
 Definition dorewrite
-  := Eval cbv [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_ident_pident_cps eta_option_ident_cps eta_option_pident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps pident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data pident_of_ident type.try_transport_cps unwrap anyexpr_ty] in @dorewrite'.
+  := Eval cbn [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_cps' unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT] in @dorewrite'.
 Arguments dorewrite {t} e.
 Print dorewrite.
 (* dorewrite =
-fix dorewrite' (e : expr) : expr :=
-  match e with
-  | @AppCtor n (O as c) args | @AppCtor n (S as c) args =>
-      dlet args' : list expr := map dorewrite' args in
-      AppCtor c args'
-  | @AppCtor n (Add as c) ([] as args) =>
-      dlet args' : list expr := map dorewrite' args in
-      AppCtor c args'
-  | @AppCtor n (Add as c) ([x] as args) =>
-      dlet args' : list expr := map dorewrite' args in
-      AppCtor c args'
-  | @AppCtor n (Add as c) [x; y] =>
-      dlet x' : expr := dorewrite' x in
-      dlet y' : expr := dorewrite' y in
-      match x' with
-      | 0%expr => y'
-      | (x0.+1)%expr =>
-          match y' with
-          | 0%expr => (x0.+1)%expr
-          | (x1.+1)%expr => ((x0 + x1.+1).+1)%expr
-          | @AppCtor _ S (x1 :: _ :: _) | @AppCtor _ Add [x1] => (x' + y')%expr
-          | (x1 + x2)%expr => ((x0 + (x1 + x2)).+1)%expr
-          | @AppCtor _ Add (x1 :: x2 :: _ :: _) => (x' + y')%expr
-          | #(n1)%expr => ((x0 + #(n1)).+1)%expr
-          | _ => (x' + y')%expr
+fix dorewrite' (t : type) (e : expr t) {struct e} :
+value t :=
+  match e in (expr t0) return (value t0) with
+  | #(idc)%expr =>
+      match idc in (ident t1) return (value t1) with
+      | O => 0%expr
+      | S => fun x : expr Nat => (x.+1)%expr
+      | Add =>
+          fun x x0 : expr Nat =>
+          match x with
+          | 0%expr => x0
+          | @App s _ #(S)%expr y =>
+              match s as t2 return (expr t2 -> expr Nat) with
+              | Nat =>
+                  fun v : expr Nat =>
+                  match x0 with
+                  | 0%expr => (v.+1)%expr
+                  | @App s0 _ #(S)%expr y0 =>
+                      match s0 as t3 return (expr t3 -> expr Nat) with
+                      | Nat => fun v0 : expr Nat => ((v + v0.+1).+1)%expr
+                      | (s1 -> d1)%ctype =>
+                          fun _ : expr (s1 -> d1) => (x + x0)%expr
+                      end y0
+                  | @App s0 _ (@App s1 _ #(Add)%expr x1) y0 =>
+                      match s1 as t3 return (expr t3 -> expr Nat) with
+                      | Nat =>
+                          fun v0 : expr Nat =>
+                          match s0 as t3 return (expr t3 -> expr Nat) with
+                          | Nat =>
+                              fun v1 : expr Nat => ((v + (v0 + v1)).+1)%expr
+                          | (s2 -> d2)%ctype =>
+                              fun _ : expr (s2 -> d2) => (x + x0)%expr
+                          end y0
+                      | (s2 -> d2)%ctype =>
+                          fun _ : expr (s2 -> d2) =>
+                          match s0 as t3 return (expr t3 -> expr Nat) with
+                          | Nat => fun _ : expr Nat => (x + x0)%expr
+                          | (s3 -> d3)%ctype =>
+                              fun _ : expr (s3 -> d3) => (x + x0)%expr
+                          end y0
+                      end x1
+                  | @App s0 _ (@App s1 _ 0%expr _) _ | @App s0 _
+                    (@App s1 _ #(S)%expr _) _ | @App s0 _
+                    (@App s1 _ (_ @ _)%expr _) _ | @App s0 _
+                    (@App s1 _ ##(_)%expr _) _ => (x + x0)%expr
+                  | @App s0 _ 0%expr _ | @App s0 _ #
+                    (Add)%expr _ | @App s0 _ ##(_)%expr _ =>
+                      (x + x0)%expr
+                  | ##(n)%expr => ((v + ##(n)).+1)%expr
+                  | _ => (x + x0)%expr
+                  end
+              | (s0 -> d0)%ctype => fun _ : expr (s0 -> d0) => (x + x0)%expr
+              end y
+          | @App s _ (@App s0 _ #(Add)%expr x1) y =>
+              match s0 as t2 return (expr t2 -> expr Nat) with
+              | Nat =>
+                  fun v : expr Nat =>
+                  match s as t2 return (expr t2 -> expr Nat) with
+                  | Nat =>
+                      fun v0 : expr Nat =>
+                      match x0 with
+                      | 0%expr => (v + v0)%expr
+                      | @App s1 _ #(S)%expr y0 =>
+                          match s1 as t3 return (expr t3 -> expr Nat) with
+                          | Nat =>
+                              fun v1 : expr Nat => ((v + v0 + v1).+1)%expr
+                          | (s2 -> d2)%ctype =>
+                              fun _ : expr (s2 -> d2) => (x + x0)%expr
+                          end y0
+                      | @App s1 _ (@App s2 _ #(Add)%expr x2) y0 =>
+                          match s2 as t3 return (expr t3 -> expr Nat) with
+                          | Nat =>
+                              fun _ : expr Nat =>
+                              match s1 as t3 return (expr t3 -> expr Nat) with
+                              | Nat => fun _ : expr Nat => (x + x0)%expr
+                              | (s3 -> d3)%ctype =>
+                                  fun _ : expr (s3 -> d3) => (x + x0)%expr
+                              end y0
+                          | (s3 -> d3)%ctype =>
+                              fun _ : expr (s3 -> d3) =>
+                              match s1 as t3 return (expr t3 -> expr Nat) with
+                              | Nat => fun _ : expr Nat => (x + x0)%expr
+                              | (s4 -> d4)%ctype =>
+                                  fun _ : expr (s4 -> d4) => (x + x0)%expr
+                              end y0
+                          end x2
+                      | @App s1 _ (@App s2 _ 0%expr _) _ | @App s1 _
+                        (@App s2 _ #(S)%expr _) _ | @App s1 _
+                        (@App s2 _ (_ @ _)%expr _) _ | @App s1 _
+                        (@App s2 _ ##(_)%expr _) _ =>
+                          (x + x0)%expr
+                      | @App s1 _ 0%expr _ | @App s1 _ #
+                        (Add)%expr _ | @App s1 _ ##
+                        (_)%expr _ => (x + x0)%expr
+                      | _ => (x + x0)%expr
+                      end
+                  | (s1 -> d1)%ctype =>
+                      fun _ : expr (s1 -> d1) => (x + x0)%expr
+                  end y
+              | (s1 -> d1)%ctype =>
+                  fun _ : expr (s1 -> d1) =>
+                  match s as t2 return (expr t2 -> expr Nat) with
+                  | Nat => fun _ : expr Nat => (x + x0)%expr
+                  | (s2 -> d2)%ctype =>
+                      fun _ : expr (s2 -> d2) => (x + x0)%expr
+                  end y
+              end x1
+          | @App s _ (@App s0 _ 0%expr _) _ | @App s _
+            (@App s0 _ #(S)%expr _) _ | @App s _ (@App s0 _ (_ @ _)%expr _)
+            _ | @App s _ (@App s0 _ ##(_)%expr _) _ =>
+              (x + x0)%expr
+          | @App s _ 0%expr _ | @App s _ #(Add)%expr _ | @App s _ ##
+            (_)%expr _ => (x + x0)%expr
+          | ##(n)%expr =>
+              match x0 with
+              | 0%expr => ##(n)%expr
+              | @App s _ #(S)%expr y =>
+                  match s as t2 return (expr t2 -> expr Nat) with
+                  | Nat => fun v : expr Nat => ((##(n) + v).+1)%expr
+                  | (s0 -> d0)%ctype =>
+                      fun _ : expr (s0 -> d0) => (x + x0)%expr
+                  end y
+              | @App s _ (@App s0 _ #(Add)%expr x1) y =>
+                  match s0 as t2 return (expr t2 -> expr Nat) with
+                  | Nat =>
+                      fun _ : expr Nat =>
+                      match s as t2 return (expr t2 -> expr Nat) with
+                      | Nat => fun _ : expr Nat => (x + x0)%expr
+                      | (s1 -> d1)%ctype =>
+                          fun _ : expr (s1 -> d1) => (x + x0)%expr
+                      end y
+                  | (s1 -> d1)%ctype =>
+                      fun _ : expr (s1 -> d1) =>
+                      match s as t2 return (expr t2 -> expr Nat) with
+                      | Nat => fun _ : expr Nat => (x + x0)%expr
+                      | (s2 -> d2)%ctype =>
+                          fun _ : expr (s2 -> d2) => (x + x0)%expr
+                      end y
+                  end x1
+              | @App s _ (@App s0 _ 0%expr _) _ | @App s _
+                (@App s0 _ #(S)%expr _) _ | @App s _
+                (@App s0 _ (_ @ _)%expr _) _ | @App s _
+                (@App s0 _ ##(_)%expr _) _ => (x + x0)%expr
+              | @App s _ 0%expr _ | @App s _ #(Add)%expr _ | @App s _
+                ##(_)%expr _ => (x + x0)%expr
+              | ##(n0)%expr => ##(n + n0)%expr
+              | _ => (x + x0)%expr
+              end
+          | _ => (x + x0)%expr
           end
-      | @AppCtor _ S (x0 :: _ :: _) | @AppCtor _ Add [x0] => (x' + y')%expr
-      | (x0 + x1)%expr =>
-          match y' with
-          | 0%expr => (x0 + x1)%expr
-          | (x2.+1)%expr => ((x0 + x1 + x2).+1)%expr
-          | @AppCtor _ S (x2 :: _ :: _) => (x' + y')%expr
-          | _ => (x' + y')%expr
-          end
-      | @AppCtor _ Add (x0 :: x1 :: _ :: _) => (x' + y')%expr
-      | #(n0)%expr =>
-          match y' with
-          | 0%expr => #(n0)%expr
-          | (x0.+1)%expr => ((#(n0) + x0).+1)%expr
-          | @AppCtor _ S (x0 :: _ :: _) => (x' + y')%expr
-          | #(n1)%expr => #(n0 + n1)%expr
-          | _ => (x' + y')%expr
-          end
-      | _ => (x' + y')%expr
       end
-  | @AppCtor n (Add as c) ((x :: y :: _ :: _) as args) =>
-      dlet args' : list expr := map dorewrite' args in
-      AppCtor c args'
-  | #(n)%expr => #(n)%expr
+  | @App s d f x =>
+      match s as s0 return (expr (s0 -> d) -> expr s0 -> value d) with
+      | Nat =>
+          fun (f0 : expr (Nat -> d)) (x0 : expr Nat) =>
+          dorewrite' (Nat -> d)%ctype f0 (dorewrite' Nat x0)
+      | (s0 -> d0)%ctype =>
+          fun (f0 : expr ((s0 -> d0) -> d)) (x0 : expr (s0 -> d0)) =>
+          dorewrite' ((s0 -> d0) -> d)%ctype f0 x0
+      end f x
+  | ##(n)%expr => ##(n)%expr
   end
-     : expr -> expr
+     : forall t : type, expr t -> value t
 
-Argument scope is [expr_scope]
+Argument t is implicit and maximally inserted
+Argument scopes are [ctype_scope expr_scope]
 *)
