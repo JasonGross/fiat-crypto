@@ -442,52 +442,118 @@ Fixpoint invert_AppIdentOrLiteral_cps' {T t} (e : expr t) (args : type.for_each_
 (* we want to eta-expand on actually possible identifiers *)
 Section invert_AppIdentOrLiteral_cps.
   Context (do_literal : bool)
+          (do_ident : forall t, ident t -> bool)
           {t T}
           (e : expr (Base t)) (args : type.for_each_lhs_of_arrow expr t)
           (T0P := fun t' => (ident t' * type.for_each_lhs_of_arrow expr t' * expr (type.final_codomain t'))%type)
           (T0 := sigT T0P)
           (k : option (T0 + nat * expr Nat) -> T).
 
-  Definition invert_AppIdent_cps' {t} (e0 : expr t)
-    : T
-    := match e0 with
-       | (#O)
-         => match type.try_transport _ _ _ e with
-            | Some e' => k (Some (inl (existT T0P _ (O, tt, e'))))
+  Definition invert_AppIdent_0arg {t} (idc : ident (Base t)) : T
+    := if do_ident _ idc
+       then match type.try_transport _ _ _ e with
+            | Some e' => k (Some (inl (existT T0P _ (idc, tt, e'))))
             | None => k None
             end
-       | (#(S as idc) @ x)
-       | (#(FstNat as idc) @ x)
-       | (#(SndNat as idc) @ x)
-         => match type.try_transport _ _ _ x, type.try_transport _ _ _ e with
+       else k None.
+
+  Definition invert_AppIdent_1arg {s s' d} (idc : ident (s -> Base d)) (x : expr s') : T
+    := if do_ident _ idc
+       then match type.try_transport _ _ _ x, type.try_transport _ _ _ e with
             | Some x', Some e'
               => k (Some (inl (existT T0P _ (idc, (x', tt), e'))))
             | _, _ => k None
             end
-       | (#(Add as idc) @ x @ y)
-       | (#(PairNat as idc) @ x @ y)
-         => match type.try_transport _ _ _ x, type.try_transport _ _ _ y, type.try_transport _ _ _ e with
+       else k None.
+
+  Definition invert_AppIdent_2arg {a a' b b' c} (idc : ident (a -> b -> Base c)) (x : expr a') (y : expr b') : T
+    := if do_ident _ idc
+       then match type.try_transport _ _ _ x, type.try_transport _ _ _ y, type.try_transport _ _ _ e with
             | Some x', Some y', Some e'
               => k (Some (inl (existT T0P _ (idc, (x', (y', tt)), e'))))
             | _, _, _ => k None
             end
-       | _ => k None (* impossible *)
-       end%expr%option.
+       else k None.
+
+  Let do_ident_ge3arg := false.
+  Let do_ident_2arg := (do_ident _ Add || do_ident _ PairNat)%bool.
+  Let do_ident_ge2arg := (do_ident_2arg || do_ident_ge3arg)%bool.
+  Let do_ident_1arg := (do_ident _ S || do_ident _ FstNat || do_ident _ SndNat)%bool.
+  Let do_ident_ge1arg := (do_ident_1arg || do_ident_ge2arg)%bool.
+  Let do_ident_0arg := (do_ident _ O)%bool.
+  Let do_ident_ge0arg := (do_ident_0arg || do_ident_ge1arg)%bool.
+
+  Definition do_0arg_ident {t} (idc : ident t) : T
+    := (if do_ident_0arg
+        then match idc with
+             | O => invert_AppIdent_0arg O
+             | _ => k None
+             end
+        else k None)%bool.
+
+  Definition do_1arg_ident {t t'} (idc : ident t) (x : expr t') : T
+    := (if do_ident_1arg
+        then match idc with
+             | S => invert_AppIdent_1arg S x
+             | FstNat => invert_AppIdent_1arg FstNat x
+             | SndNat => invert_AppIdent_1arg SndNat x
+             | _ => k None
+             end
+        else k None)%bool.
+
+  Definition do_2arg_ident {t a b} (idc : ident t) (x : expr a) (y : expr b) : T
+    := (if do_ident_2arg
+        then match idc with
+             | Add => invert_AppIdent_2arg Add x y
+             | PairNat => invert_AppIdent_2arg PairNat x y
+             | _ => k None
+             end
+        else k None)%bool.
+
+  Definition do_ge2arg_ident {t a b} (f : expr t) (x : expr a) (y : expr b) : T
+    := (if do_ident_ge2arg
+        then match f with
+             | Ident _ idc
+               => do_2arg_ident idc x y
+             | App _ _ _ _ => k None
+             | Literal _ => k None
+             end
+        else k None).
+
+  Definition do_ge1arg_ident {t a} (f : expr t) (y : expr a) : T
+    := (if do_ident_ge1arg
+        then match f with
+             | Ident _ idc
+               => do_1arg_ident idc y
+             | App _ _ f' x
+               => do_ge2arg_ident f' x y
+             | Literal _ => k None
+             end
+        else k None).
 
   Definition invert_AppIdentOrLiteral_cps
     : T
-    := Eval cbv [invert_AppIdent_cps'] in
-        if do_literal
+    := Eval cbv [id
+                   do_ident_0arg do_ident_1arg do_ident_2arg
+                   do_ident_ge0arg do_ident_ge1arg do_ident_ge2arg do_ident_ge3arg
+                   do_0arg_ident do_1arg_ident do_2arg_ident
+                   do_ge1arg_ident do_ge2arg_ident
+                   invert_AppIdent_0arg invert_AppIdent_1arg invert_AppIdent_2arg type.final_codomain] in
+        if (do_ident_ge0arg || do_literal)%bool
         then match e with
-             | (Literal n)
-               => match type.try_transport _ _ _ e with
-                  | Some e' => k (Some (inr (n, e')))
-                  | None => k None
-                  end
-             | Ident t idc => invert_AppIdent_cps' (Ident idc)
-             | App s d f x => invert_AppIdent_cps' (App f x)
+             | Literal n
+               => if do_literal
+                  then match type.try_transport _ _ _ e with
+                       | Some e' => k (Some (inr (n, e')))
+                       | None => k None
+                       end
+                  else k None
+             | Ident _ idc
+               => do_0arg_ident idc
+             | App _ _ f x
+               => do_ge1arg_ident f x
              end
-        else invert_AppIdent_cps' e.
+        else k None.
 
   Definition invert_AppIdentOrLiteral_cps0
     : T
@@ -520,7 +586,7 @@ Section invert_AppIdentOrLiteral_cps.
        | _ => k None (* impossible *)
        end%expr%option.
 End invert_AppIdentOrLiteral_cps.
-Check eq_refl : invert_AppIdentOrLiteral_cps0 = invert_AppIdentOrLiteral_cps true.
+Check eq_refl : invert_AppIdentOrLiteral_cps0 = invert_AppIdentOrLiteral_cps true (fun _ _ => true).
 
 Definition hlist {A} (f : A -> Set) (ls : list A)
   := fold_right
@@ -677,6 +743,7 @@ Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont :
           | rExpr t ctx0 :: ctx'
             => invert_AppIdentOrLiteral_cps
                  do_literal
+                 (fun _ idc => match icases _ idc with Some _ => true | None => false end)
                  ctx0 (*tt*)
                  (fun ctx0'
                   => match ctx0' with
@@ -1027,13 +1094,13 @@ Arguments type_of_rawexpr / .
 Arguments expr_of_rawexpr / .
 Arguments type.final_codomain / .
 Definition dorewrite''
-  := Eval cbv [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_base_cps unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT type.invert_for_each_lhs_of_arrow_ind type.for_each_lhs_of_arrow_of_ind type_of_rawexpr expr_of_rawexpr type.final_codomain type.try_transport Option.bind] in @dorewrite'.
+  := Eval cbv [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_base_cps unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT type.invert_for_each_lhs_of_arrow_ind type.for_each_lhs_of_arrow_of_ind type_of_rawexpr expr_of_rawexpr type.final_codomain type.try_transport Option.bind orb] in @dorewrite'.
 Arguments dorewrite'' / .
 Definition dorewrite
   := Eval cbn [dorewrite'' type.try_transport_base Option.bind] in @dorewrite''.
 Arguments dorewrite {t} e.
 Print dorewrite.
-(* dorewrite =
+(*dorewrite =
 fix dorewrite' (t : type) (e : expr t) {struct e} :
 value t :=
   match e in (expr t0) return (value t0) with
@@ -1045,155 +1112,114 @@ value t :=
           fun x x0 : expr Nat =>
           match x with
           | 0%expr => x0
-          | @App s _ #(S)%expr y =>
-              match s as t2 return (expr t2 -> expr Nat) with
-              | Nat =>
-                  fun v : expr Nat =>
+          | @App s _ #(S)%expr x1 =>
+              match
+                type.try_transport_base (fun t2 : base_type => expr t2) s Nat
+                  x1
+              with
+              | Some x' =>
                   match x0 with
-                  | 0%expr => (v.+1)%expr
-                  | @App s0 _ #(S)%expr y0 =>
-                      match s0 as t3 return (expr t3 -> expr Nat) with
-                      | Nat => fun v0 : expr Nat => ((v + v0.+1).+1)%expr
-                      | (s1 -> d1)%ctype =>
-                          fun _ : expr (s1 -> d1) => (x + x0)%expr
-                      end y0
-                  | @App s0 _ (@App s1 _ #(Add)%expr x1) y0 =>
-                      match s1 as t3 return (expr t3 -> expr Nat) with
-                      | Nat =>
-                          fun v0 : expr Nat =>
-                          match s0 as t3 return (expr t3 -> expr Nat) with
-                          | Nat =>
-                              fun v1 : expr Nat => ((v + (v0 + v1)).+1)%expr
-                          | (s2 -> d2)%ctype =>
-                              fun _ : expr (s2 -> d2) => (x + x0)%expr
-                          end y0
-                      | (s2 -> d2)%ctype =>
-                          fun _ : expr (s2 -> d2) =>
-                          match s0 as t3 return (expr t3 -> expr Nat) with
-                          | Nat => fun _ : expr Nat => (x + x0)%expr
-                          | (s3 -> d3)%ctype =>
-                              fun _ : expr (s3 -> d3) => (x + x0)%expr
-                          end y0
-                      end x1
-                  | @App s0 _ (@App s1 _ 0%expr _) _ | @App s0 _
-                    (@App s1 _ #(S)%expr _) _ | @App s0 _
-                    (@App s1 _ (_ @ _)%expr _) _ | @App s0 _
-                    (@App s1 _ ##(_)%expr _) _ => (x + x0)%expr
+                  | 0%expr => x
+                  | @App s0 _ #(S)%expr x2 =>
+                      match
+                        type.try_transport_base
+                          (fun t3 : base_type => expr t3) s0 Nat x2
+                      with
+                      | Some x'0 => (((x' + x'0).+1).+1)%expr
+                      | None => (x + x0)%expr
+                      end
                   | @App s0 _ 0%expr _ | @App s0 _ #
-                    (Add)%expr _ | @App s0 _ ##(_)%expr _ =>
+                    (Add)%expr _ | @App s0 _ #(PairNat)%expr _ | @App s0 _
+                    #(FstNat)%expr _ | @App s0 _ #(SndNat)%expr _ | @App s0 _
+                    (_ @ _)%expr _ | @App s0 _ ##(_)%expr _ =>
                       (x + x0)%expr
-                  | ##(n)%expr => ((v + ##(n)).+1)%expr
                   | _ => (x + x0)%expr
                   end
-              | (s0 -> d0)%ctype => fun _ : expr (s0 -> d0) => (x + x0)%expr
-              end y
-          | @App s _ (@App s0 _ #(Add)%expr x1) y =>
-              match s0 as t2 return (expr t2 -> expr Nat) with
-              | Nat =>
-                  fun v : expr Nat =>
-                  match s as t2 return (expr t2 -> expr Nat) with
-                  | Nat =>
-                      fun v0 : expr Nat =>
-                      match x0 with
-                      | 0%expr => (v + v0)%expr
-                      | @App s1 _ #(S)%expr y0 =>
-                          match s1 as t3 return (expr t3 -> expr Nat) with
-                          | Nat =>
-                              fun v1 : expr Nat => ((v + v0 + v1).+1)%expr
-                          | (s2 -> d2)%ctype =>
-                              fun _ : expr (s2 -> d2) => (x + x0)%expr
-                          end y0
-                      | @App s1 _ (@App s2 _ #(Add)%expr x2) y0 =>
-                          match s2 as t3 return (expr t3 -> expr Nat) with
-                          | Nat =>
-                              fun _ : expr Nat =>
-                              match s1 as t3 return (expr t3 -> expr Nat) with
-                              | Nat => fun _ : expr Nat => (x + x0)%expr
-                              | (s3 -> d3)%ctype =>
-                                  fun _ : expr (s3 -> d3) => (x + x0)%expr
-                              end y0
-                          | (s3 -> d3)%ctype =>
-                              fun _ : expr (s3 -> d3) =>
-                              match s1 as t3 return (expr t3 -> expr Nat) with
-                              | Nat => fun _ : expr Nat => (x + x0)%expr
-                              | (s4 -> d4)%ctype =>
-                                  fun _ : expr (s4 -> d4) => (x + x0)%expr
-                              end y0
-                          end x2
-                      | @App s1 _ (@App s2 _ 0%expr _) _ | @App s1 _
-                        (@App s2 _ #(S)%expr _) _ | @App s1 _
-                        (@App s2 _ (_ @ _)%expr _) _ | @App s1 _
-                        (@App s2 _ ##(_)%expr _) _ =>
-                          (x + x0)%expr
-                      | @App s1 _ 0%expr _ | @App s1 _ #
-                        (Add)%expr _ | @App s1 _ ##
-                        (_)%expr _ => (x + x0)%expr
-                      | _ => (x + x0)%expr
-                      end
-                  | (s1 -> d1)%ctype =>
-                      fun _ : expr (s1 -> d1) => (x + x0)%expr
-                  end y
-              | (s1 -> d1)%ctype =>
-                  fun _ : expr (s1 -> d1) =>
-                  match s as t2 return (expr t2 -> expr Nat) with
-                  | Nat => fun _ : expr Nat => (x + x0)%expr
-                  | (s2 -> d2)%ctype =>
-                      fun _ : expr (s2 -> d2) => (x + x0)%expr
-                  end y
-              end x1
-          | @App s _ (@App s0 _ 0%expr _) _ | @App s _
-            (@App s0 _ #(S)%expr _) _ | @App s _ (@App s0 _ (_ @ _)%expr _)
-            _ | @App s _ (@App s0 _ ##(_)%expr _) _ =>
-              (x + x0)%expr
-          | @App s _ 0%expr _ | @App s _ #(Add)%expr _ | @App s _ ##
+              | None => (x + x0)%expr
+              end
+          | @App s _ 0%expr _ | @App s _ #(Add)%expr _ | @App s _
+            #(PairNat)%expr _ | @App s _ #(FstNat)%expr _ | @App s _
+            #(SndNat)%expr _ | @App s _ (_ @ _)%expr _ | @App s _ ##
             (_)%expr _ => (x + x0)%expr
           | ##(n)%expr =>
               match x0 with
-              | 0%expr => ##(n)%expr
-              | @App s _ #(S)%expr y =>
-                  match s as t2 return (expr t2 -> expr Nat) with
-                  | Nat => fun v : expr Nat => ((##(n) + v).+1)%expr
-                  | (s0 -> d0)%ctype =>
-                      fun _ : expr (s0 -> d0) => (x + x0)%expr
-                  end y
-              | @App s _ (@App s0 _ #(Add)%expr x1) y =>
-                  match s0 as t2 return (expr t2 -> expr Nat) with
-                  | Nat =>
-                      fun _ : expr Nat =>
-                      match s as t2 return (expr t2 -> expr Nat) with
-                      | Nat => fun _ : expr Nat => (x + x0)%expr
-                      | (s1 -> d1)%ctype =>
-                          fun _ : expr (s1 -> d1) => (x + x0)%expr
-                      end y
-                  | (s1 -> d1)%ctype =>
-                      fun _ : expr (s1 -> d1) =>
-                      match s as t2 return (expr t2 -> expr Nat) with
-                      | Nat => fun _ : expr Nat => (x + x0)%expr
-                      | (s2 -> d2)%ctype =>
-                          fun _ : expr (s2 -> d2) => (x + x0)%expr
-                      end y
-                  end x1
-              | @App s _ (@App s0 _ 0%expr _) _ | @App s _
-                (@App s0 _ #(S)%expr _) _ | @App s _
-                (@App s0 _ (_ @ _)%expr _) _ | @App s _
-                (@App s0 _ ##(_)%expr _) _ => (x + x0)%expr
+              | 0%expr => x
+              | @App s _ #(S)%expr x1 =>
+                  match
+                    type.try_transport_base (fun t2 : base_type => expr t2) s
+                      Nat x1
+                  with
+                  | Some x' => ((x + x').+1)%expr
+                  | None => (x + x0)%expr
+                  end
               | @App s _ 0%expr _ | @App s _ #(Add)%expr _ | @App s _
+                #(PairNat)%expr _ | @App s _ #(FstNat)%expr _ | @App s _
+                #(SndNat)%expr _ | @App s _ (_ @ _)%expr _ | @App s _
                 ##(_)%expr _ => (x + x0)%expr
               | ##(n0)%expr => ##(n + n0)%expr
               | _ => (x + x0)%expr
               end
           | _ => (x + x0)%expr
           end
+      | PairNat => fun x x0 : expr Nat => (#(PairNat) @ x @ x0)%expr
+      | FstNat =>
+          fun x : expr (Nat * Nat) =>
+          match x with
+          | @App s _ (@App s0 _ #(PairNat)%expr x1) x0 =>
+              match
+                type.try_transport_base (fun t2 : base_type => expr t2) s0 Nat
+                  x1
+              with
+              | Some x' =>
+                  match
+                    type.try_transport_base (fun t2 : base_type => expr t2) s
+                      Nat x0
+                  with
+                  | Some _ => x'
+                  | None => (#(FstNat) @ x)%expr
+                  end
+              | None => (#(FstNat) @ x)%expr
+              end
+          | @App s _ (@App s0 _ 0%expr _) _ | @App s _
+            (@App s0 _ #(S)%expr _) _ | @App s _ (@App s0 _ #(Add)%expr _) _ |
+            @App s _ (@App s0 _ #(FstNat)%expr _) _ | @App s _
+            (@App s0 _ #(SndNat)%expr _) _ | @App s _
+            (@App s0 _ (_ @ _)%expr _) _ | @App s _
+            (@App s0 _ ##(_)%expr _) _ => (#(FstNat) @ x)%expr
+          | @App s _ #(_)%expr _ | @App s _ ##(_)%expr _ =>
+              (#(FstNat) @ x)%expr
+          | _ => (#(FstNat) @ x)%expr
+          end
+      | SndNat =>
+          fun x : expr (Nat * Nat) =>
+          match x with
+          | @App s _ (@App s0 _ #(PairNat)%expr x1) x0 =>
+              match
+                type.try_transport_base (fun t2 : base_type => expr t2) s0 Nat
+                  x1
+              with
+              | Some _ =>
+                  match
+                    type.try_transport_base (fun t2 : base_type => expr t2) s
+                      Nat x0
+                  with
+                  | Some y' => y'
+                  | None => (#(SndNat) @ x)%expr
+                  end
+              | None => (#(SndNat) @ x)%expr
+              end
+          | @App s _ (@App s0 _ 0%expr _) _ | @App s _
+            (@App s0 _ #(S)%expr _) _ | @App s _ (@App s0 _ #(Add)%expr _) _ |
+            @App s _ (@App s0 _ #(FstNat)%expr _) _ | @App s _
+            (@App s0 _ #(SndNat)%expr _) _ | @App s _
+            (@App s0 _ (_ @ _)%expr _) _ | @App s _
+            (@App s0 _ ##(_)%expr _) _ => (#(SndNat) @ x)%expr
+          | @App s _ #(_)%expr _ | @App s _ ##(_)%expr _ =>
+              (#(SndNat) @ x)%expr
+          | _ => (#(SndNat) @ x)%expr
+          end
       end
-  | @App s d f x =>
-      match s as s0 return (expr (s0 -> d) -> expr s0 -> value d) with
-      | Nat =>
-          fun (f0 : expr (Nat -> d)) (x0 : expr Nat) =>
-          dorewrite' (Nat -> d)%ctype f0 (dorewrite' Nat x0)
-      | (s0 -> d0)%ctype =>
-          fun (f0 : expr ((s0 -> d0) -> d)) (x0 : expr (s0 -> d0)) =>
-          dorewrite' ((s0 -> d0) -> d)%ctype f0 x0
-      end f x
+  | @App s d f x => dorewrite' (s -> d)%ctype f (dorewrite' s x)
   | ##(n)%expr => ##(n)%expr
   end
      : forall t : type, expr t -> value t
