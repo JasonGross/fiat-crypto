@@ -194,6 +194,35 @@ Module type.
                | _ => fun _ => k None
                end v
        end.
+  Fixpoint try_transport_base (P : base_type -> Type) (t1 t2 : base_type)
+    : P t1 -> option (P t2)
+    := match t1, t2 with
+       | Nat, Nat => fun v => Some v
+       | Prod s d, Prod s' d'
+         => fun v
+            => (v' <- (try_transport_base
+                         (fun s => P (Prod s _)) _ _ v);
+                  try_transport_base
+                    (fun d => P (Prod _ d)) _ _ v')
+       | Nat, _
+       | Prod _ _, _
+         => fun _ => None
+       end%option.
+
+  Fixpoint try_transport (P : type -> Type) (t1 t2 : type)
+    : P t1 -> option (P t2)
+    := match t1, t2 with
+       | Base t1, Base t2 => try_transport_base (fun t => P (Base t)) t1 t2
+       | Arrow s d, Arrow s' d'
+         => fun v
+            => (v' <- (try_transport_base
+                         (fun s => P (Arrow s _)) _ _ v);
+                  try_transport
+                    (fun d => P (Arrow _ d)) _ _ v')
+       | Base _, _
+       | Arrow _ _, _
+         => fun _ => None
+       end%option.
 (*
   Fixpoint try_transport_cps' {T} (P : type -> Type) (t1 t2 : type) {struct t1} : P t1 -> (option (P t2) -> T) -> T
     := match t1, t2 with
@@ -397,25 +426,18 @@ Definition invert_AppIdentOrLiteral_cps {t T} (e : expr (Base t)) (args : type.f
      | #(S as idc) @ x
      | #(FstNat as idc) @ x
      | #(SndNat as idc) @ x
-       => type.try_transport_cps
-            _ _ _ x
-            (fun x' => match x' with
-                       | Some x' => k (Some (inl (existT T0P _ (idc, (x', tt)))))
-                       | None => k None
-                       end)
+       => match type.try_transport _ _ _ x with
+          | Some x'
+            => k (Some (inl (existT T0P _ (idc, (x', tt)))))
+          | None => k None
+          end
      | #(Add as idc) @ x @ y
      | #(PairNat as idc) @ x @ y
-       => type.try_transport_cps
-            _ _ _ x
-            (fun x'
-             => type.try_transport_cps
-                  _ _ _ y
-                  (fun y'
-                   => match x', y' with
-                      | Some x', Some y'
-                        => k (Some (inl (existT T0P _ (idc, (x', (y', tt))))))
-                      | _, _ => k None
-                      end))
+       => match type.try_transport _ _ _ x, type.try_transport _ _ _ y with
+          | Some x', Some y'
+            => k (Some (inl (existT T0P _ (idc, (x', (y', tt))))))
+          | _, _ => k None
+          end
      | _ => k None (* impossible *)
      end%expr%option.
 
@@ -775,6 +797,7 @@ Definition rewrite_rules : list { p : pattern & { t' : type & binding_dataT p ->
   := [make_rewrite (0 + ??ℕ) (fun x => x);
         make_rewrite (??ℕ + 0) (fun x => x);
         make_rewrite (#? + #?) (fun x y => ##(x + y));
+        make_rewrite (??ℕ.+1 + ??ℕ.+1) (fun x y => (x+y).+1.+1);
         make_rewrite (??ℕ.+1 + ??ℕ) (fun x y => (x+y).+1);
         make_rewrite (??ℕ + ??ℕ.+1) (fun x y => (x+y).+1);
         make_rewrite (pAppIdent FstNat [pAppIdent PairNat [??ℕ; ??ℕ] ])
@@ -858,7 +881,7 @@ Arguments bind_for_each_lhs_of_arrow_data_cps / .
 Arguments type.app_fold_for_each_lhs_of_arrow_ind / .
 Arguments type.lift_bind_for_each_lhs_of_arrow_indT / .
 Definition dorewrite
-  := Eval cbv [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_base_cps unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT] in @dorewrite'.
+  := Eval cbn [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_base_cps unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT type.try_transport type.try_transport_base] in @dorewrite'.
 Arguments dorewrite {t} e.
 Print dorewrite.
 (* dorewrite =
