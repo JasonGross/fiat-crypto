@@ -630,7 +630,7 @@ Fixpoint domatch {t} (ps : list { p : pattern & { t' : type & binding_dataT p ->
 Inductive decision_tree :=
 | TryLeaf (k : nat) (onfailure : decision_tree)
 | Failure
-| Switch (icases : forall t, ident t -> decision_tree)
+| Switch (icases : forall t, ident t -> option decision_tree)
          (lit_case : option decision_tree)
          (default : decision_tree)
 | Swap (i : nat) (cont : decision_tree).
@@ -649,6 +649,7 @@ Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont :
      | Failure => cont None ctx None
      | Switch icases lit_case default_case
        => let do_literal := match lit_case with Some _ => true | None => false end in
+          let default _ := @eval_decision_tree T ctx default_case cont in
           match ctx with
           | nil => cont None ctx None
           | rLiteral n alt :: ctx'
@@ -658,19 +659,21 @@ Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont :
                       T ctx' lit_case
                       (fun k ctx''
                        => cont k (rLiteral n alt :: ctx''))
-               | None
-                 => @eval_decision_tree
-                      T ctx default_case cont
+               | None => default tt
                end
           | rAppIdent t idc args alt :: ctx'
-            => @eval_decision_tree
-                 T (unmkapp_to_context (fun _ (x:rawexpr) => x) idc args ctx') (icases _ idc)
-                 (fun k ctx''
-                  => match mkapp_from_context idc ctx'' alt with
-                     | Some ctx'''
-                       => cont k ctx'''
-                     | None => cont None ctx
-                     end)
+            => match icases _ idc with
+               | Some icase
+                 => @eval_decision_tree
+                      T (unmkapp_to_context (fun _ (x:rawexpr) => x) idc args ctx') icase
+                      (fun k ctx''
+                       => match mkapp_from_context idc ctx'' alt with
+                          | Some ctx'''
+                            => cont k ctx'''
+                          | None => cont None ctx
+                          end)
+               | None => default tt
+               end
           | rExpr t ctx0 :: ctx'
             => invert_AppIdentOrLiteral_cps
                  do_literal
@@ -684,19 +687,21 @@ Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont :
                                  T ctx' lit_case
                                  (fun k ctx''
                                   => cont k (rLiteral n ctx0'' :: ctx''))
-                          | None
-                            => @eval_decision_tree
-                                 T ctx default_case cont
+                          | None => default tt
                           end
                      | Some (inl (existT _ (idc, args, ctx0'')))
-                       => @eval_decision_tree
-                            T (unmkapp_to_context (@rExpr) idc args ctx') (icases _ idc)
-                            (fun k ctx''
-                             => match mkapp_from_context idc ctx'' ctx0'' with
-                                | Some ctx'''
-                                  => cont k ctx'''
-                                | None => cont None ctx
-                                end)
+                       => match icases _ idc with
+                          | Some icase
+                            => @eval_decision_tree
+                                 T (unmkapp_to_context (@rExpr) idc args ctx') icase
+                                 (fun k ctx''
+                                  => match mkapp_from_context idc ctx'' ctx0'' with
+                                     | Some ctx'''
+                                       => cont k ctx'''
+                                     | None => cont None ctx
+                                     end)
+                          | None => default tt
+                          end
                      | None
                        => cont None ctx None
                      end)
@@ -786,6 +791,17 @@ Definition contains_pattern_literal (p : list (nat * list pattern)) : bool
      | None => false
      end.
 
+Definition contains_pattern_ident {t} (idc : ident t) (p : list (nat * list pattern)) : bool
+  := match find (fun '(n, p) => match p with
+                                | pAppIdent t' idc' _::_ => ident_beq_cps idc' idc (fun b => b)
+                                | _ => false
+                                end)
+                p
+     with
+     | Some _ => true
+     | None => false
+     end.
+
 Definition refine_pattern_literal (p : nat * list pattern) : option (nat * list pattern)
   := match p with
      | (n, Wildcard _::ps)
@@ -846,7 +862,9 @@ Definition compile_rewrites_step
                               else Some None);
                  icases
                    <- (eta_option_ident_cps
-                         (fun _ idc => compile_rewrites (omap (refine_pattern_app_ident idc) pattern_matrix)));
+                         (fun _ idc => if contains_pattern_ident idc pattern_matrix
+                                       then option_map Some (compile_rewrites (omap (refine_pattern_app_ident idc) pattern_matrix))
+                                       else Some None));
                  Some (Switch icases lit_case default_case)
           | Some i
             => let pattern_matrix'
