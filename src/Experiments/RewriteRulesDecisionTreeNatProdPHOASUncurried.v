@@ -440,31 +440,87 @@ Fixpoint invert_AppIdentOrLiteral_cps' {T t} (e : expr t) (args : type.for_each_
      end args.
 *)
 (* we want to eta-expand on actually possible identifiers *)
-Definition invert_AppIdentOrLiteral_cps {t T} (e : expr (Base t)) (args : type.for_each_lhs_of_arrow expr t)
-           (T0P := fun t' => (ident t' * type.for_each_lhs_of_arrow expr t' * expr (type.final_codomain t'))%type)
-           (T0 := sigT T0P)
-           (k : option (T0 + nat * expr Nat) -> T)
-  : T
-  := match e with
-     | (Literal n) as e => k (Some (inr (n, e)))
-     | (#O) as e => k (Some (inl (existT T0P _ (O, tt, e))))
-     | (#(S as idc) @ x) as e
-     | (#(FstNat as idc) @ x) as e
-     | (#(SndNat as idc) @ x) as e
-       => match type.try_transport _ _ _ x, type.try_transport _ _ _ e with
-          | Some x', Some e'
-            => k (Some (inl (existT T0P _ (idc, (x', tt), e'))))
-          | _, _ => k None
-          end
-     | (#(Add as idc) @ x @ y) as e
-     | (#(PairNat as idc) @ x @ y) as e
-       => match type.try_transport _ _ _ x, type.try_transport _ _ _ y, type.try_transport _ _ _ e with
-          | Some x', Some y', Some e'
-            => k (Some (inl (existT T0P _ (idc, (x', (y', tt)), e'))))
-          | _, _, _ => k None
-          end
-     | _ => k None (* impossible *)
-     end%expr%option.
+Section invert_AppIdentOrLiteral_cps.
+  Context (do_literal : bool)
+          {t T}
+          (e : expr (Base t)) (args : type.for_each_lhs_of_arrow expr t)
+          (T0P := fun t' => (ident t' * type.for_each_lhs_of_arrow expr t' * expr (type.final_codomain t'))%type)
+          (T0 := sigT T0P)
+          (k : option (T0 + nat * expr Nat) -> T).
+
+  Definition invert_AppIdent_cps' {t} (e0 : expr t)
+    : T
+    := match e0 with
+       | (#O)
+         => match type.try_transport _ _ _ e with
+            | Some e' => k (Some (inl (existT T0P _ (O, tt, e'))))
+            | None => k None
+            end
+       | (#(S as idc) @ x)
+       | (#(FstNat as idc) @ x)
+       | (#(SndNat as idc) @ x)
+         => match type.try_transport _ _ _ x, type.try_transport _ _ _ e with
+            | Some x', Some e'
+              => k (Some (inl (existT T0P _ (idc, (x', tt), e'))))
+            | _, _ => k None
+            end
+       | (#(Add as idc) @ x @ y)
+       | (#(PairNat as idc) @ x @ y)
+         => match type.try_transport _ _ _ x, type.try_transport _ _ _ y, type.try_transport _ _ _ e with
+            | Some x', Some y', Some e'
+              => k (Some (inl (existT T0P _ (idc, (x', (y', tt)), e'))))
+            | _, _, _ => k None
+            end
+       | _ => k None (* impossible *)
+       end%expr%option.
+
+  Definition invert_AppIdentOrLiteral_cps
+    : T
+    := Eval cbv [invert_AppIdent_cps'] in
+        if do_literal
+        then match e with
+             | (Literal n)
+               => match type.try_transport _ _ _ e with
+                  | Some e' => k (Some (inr (n, e')))
+                  | None => k None
+                  end
+             | Ident t idc => invert_AppIdent_cps' (Ident idc)
+             | App s d f x => invert_AppIdent_cps' (App f x)
+             end
+        else invert_AppIdent_cps' e.
+
+  Definition invert_AppIdentOrLiteral_cps0
+    : T
+    := match e with
+       | (Literal n)
+         => match type.try_transport _ _ _ e with
+            | Some e' => k (Some (inr (n, e')))
+            | None => k None
+            end
+       | (#O)
+         => match type.try_transport _ _ _ e with
+            | Some e' => k (Some (inl (existT T0P _ (O, tt, e'))))
+            | None => k None
+            end
+       | (#(S as idc) @ x)
+       | (#(FstNat as idc) @ x)
+       | (#(SndNat as idc) @ x)
+         => match type.try_transport _ _ _ x, type.try_transport _ _ _ e with
+            | Some x', Some e'
+              => k (Some (inl (existT T0P _ (idc, (x', tt), e'))))
+            | _, _ => k None
+            end
+       | (#(Add as idc) @ x @ y)
+       | (#(PairNat as idc) @ x @ y)
+         => match type.try_transport _ _ _ x, type.try_transport _ _ _ y, type.try_transport _ _ _ e with
+            | Some x', Some y', Some e'
+              => k (Some (inl (existT T0P _ (idc, (x', (y', tt)), e'))))
+            | _, _, _ => k None
+            end
+       | _ => k None (* impossible *)
+       end%expr%option.
+End invert_AppIdentOrLiteral_cps.
+Check eq_refl : invert_AppIdentOrLiteral_cps0 = invert_AppIdentOrLiteral_cps true.
 
 Definition hlist {A} (f : A -> Set) (ls : list A)
   := fold_right
@@ -575,7 +631,8 @@ Inductive decision_tree :=
 | TryLeaf (k : nat) (onfailure : decision_tree)
 | Failure
 | Switch (icases : forall t, ident t -> decision_tree)
-         (lit_case : decision_tree)
+         (lit_case : option decision_tree)
+         (default : decision_tree)
 | Swap (i : nat) (cont : decision_tree).
 
 Definition swap_list {A} (i j : nat) (ls : list A) : option (list A)
@@ -590,14 +647,21 @@ Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont :
        => cont (Some k) ctx
                (Some (fun 'tt => @eval_decision_tree T ctx onfailure cont))
      | Failure => cont None ctx None
-     | Switch icases lit_case
-       => match ctx with
+     | Switch icases lit_case default_case
+       => let do_literal := match lit_case with Some _ => true | None => false end in
+          match ctx with
           | nil => cont None ctx None
           | rLiteral n alt :: ctx'
-            => @eval_decision_tree
-                 T ctx' lit_case
-                 (fun k ctx''
-                  => cont k (rLiteral n alt :: ctx''))
+            => match lit_case with
+               | Some lit_case
+                 => @eval_decision_tree
+                      T ctx' lit_case
+                      (fun k ctx''
+                       => cont k (rLiteral n alt :: ctx''))
+               | None
+                 => @eval_decision_tree
+                      T ctx default_case cont
+               end
           | rAppIdent t idc args alt :: ctx'
             => @eval_decision_tree
                  T (unmkapp_to_context (fun _ (x:rawexpr) => x) idc args ctx') (icases _ idc)
@@ -609,14 +673,21 @@ Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont :
                      end)
           | rExpr t ctx0 :: ctx'
             => invert_AppIdentOrLiteral_cps
-                 ctx0 tt
+                 do_literal
+                 ctx0 (*tt*)
                  (fun ctx0'
                   => match ctx0' with
                      | Some (inr (n, ctx0'')) (* Literal *)
-                       => @eval_decision_tree
-                            T ctx' lit_case
-                            (fun k ctx''
-                             => cont k (rLiteral n ctx0'' :: ctx''))
+                       => match lit_case with
+                          | Some lit_case
+                            => @eval_decision_tree
+                                 T ctx' lit_case
+                                 (fun k ctx''
+                                  => cont k (rLiteral n ctx0'' :: ctx''))
+                          | None
+                            => @eval_decision_tree
+                                 T ctx default_case cont
+                          end
                      | Some (inl (existT _ (idc, args, ctx0'')))
                        => @eval_decision_tree
                             T (unmkapp_to_context (@rExpr) idc args ctx') (icases _ idc)
@@ -697,6 +768,24 @@ Definition get_index_of_first_non_wildcard (p : list pattern) : option nat
                        end)
        (enumerate p).
 
+Definition filter_pattern_wildcard (p : nat * list pattern) : nat * list pattern
+  := (fst p, filter (fun p => match p with
+                              | Wildcard _ => true
+                              | _ => false
+                              end)
+                    (snd p)).
+
+Definition contains_pattern_literal (p : list (nat * list pattern)) : bool
+  := match find (fun '(n, p) => match p with
+                                | pLiteral::_ => true
+                                | _ => false
+                                end)
+                p
+     with
+     | Some _ => true
+     | None => false
+     end.
+
 Definition refine_pattern_literal (p : nat * list pattern) : option (nat * list pattern)
   := match p with
      | (n, Wildcard _::ps)
@@ -751,11 +840,14 @@ Definition compile_rewrites_step
             => (onfailure <- compile_rewrites ps;
                   Some (TryLeaf n1 onfailure))
           | Some Datatypes.O
-            => lit_case <- compile_rewrites (omap refine_pattern_literal pattern_matrix);
+            => default_case <- compile_rewrites (List.map filter_pattern_wildcard pattern_matrix);
+                 lit_case <- (if contains_pattern_literal pattern_matrix
+                              then option_map Some (compile_rewrites (omap refine_pattern_literal pattern_matrix))
+                              else Some None);
                  icases
                    <- (eta_option_ident_cps
                          (fun _ idc => compile_rewrites (omap (refine_pattern_app_ident idc) pattern_matrix)));
-                 Some (Switch icases lit_case)
+                 Some (Switch icases lit_case default_case)
           | Some i
             => let pattern_matrix'
                    := List.map
@@ -917,10 +1009,10 @@ Arguments type_of_rawexpr / .
 Arguments expr_of_rawexpr / .
 Arguments type.final_codomain / .
 Definition dorewrite''
-  := Eval cbv [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_base_cps unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT type.invert_for_each_lhs_of_arrow_ind type.for_each_lhs_of_arrow_of_ind type_of_rawexpr expr_of_rawexpr type.final_codomain type.try_transport] in @dorewrite'.
+  := Eval cbv [dorewrite' dorewrite1 do_rewrite_ident eval_rewrite_rules dtree eval_decision_tree eta_ident_cps eta_option_ident_cps option_map List.app rewrite_rules nth_error bind_data_cps ident_beq_cps ident_beq_cps list_rect Option.bind swap_list set_nth update_nth lift_with_bindings app_binding_data type.try_transport_cps type.try_transport_base_cps unwrap anyexpr_ty invert_AppIdentOrLiteral_cps mkapp_from_context unmkapp_to_context invert_AppIdent_cps bind_for_each_lhs_of_arrow_data_cps type.app_fold_for_each_lhs_of_arrow_ind type.lift_bind_for_each_lhs_of_arrow_indT type.invert_for_each_lhs_of_arrow_ind type.for_each_lhs_of_arrow_of_ind type_of_rawexpr expr_of_rawexpr type.final_codomain type.try_transport Option.bind] in @dorewrite'.
 Arguments dorewrite'' / .
 Definition dorewrite
-  := Eval cbn [dorewrite'' type.try_transport_base] in @dorewrite''.
+  := Eval cbn [dorewrite'' type.try_transport_base Option.bind] in @dorewrite''.
 Arguments dorewrite {t} e.
 Print dorewrite.
 (* dorewrite =
