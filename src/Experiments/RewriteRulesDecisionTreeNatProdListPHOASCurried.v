@@ -43,8 +43,27 @@ Inductive expr {var : type -> Set} : type -> Set :=
 | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
 | Literal (n : nat) : expr Nat.
 
+Inductive pbase_type := pbAny | pNat | pProd (A B : pbase_type) | pList (A : pbase_type).
+Definition option_type := option type.
+Coercion Some_t (t : type) : option_type := Some t.
+Inductive ptype := pAny | pArrow (s : option_type) (d : ptype).
+Bind Scope ptype_scope with ptype.
+Bind Scope pbtype_scope with pbase_type.
+Bind Scope ctype_scope with option_type.
+Delimit Scope ptype_scope with ptype.
+Delimit Scope pbtype_scope with pbtype.
+Infix "->" := pArrow : ptype_scope.
+Infix "*" := pProd : pbtype_scope.
+Notation "'??'" := pAny : ptype_scope.
+Notation "'??'" := pbAny : pbtype_scope.
+Local Set Warnings Append "-notation-overridden".
+Notation "'??'" := (@None type) : ctype_scope.
+Notation "'??'" := (@None base_type) : ctype_scope.
+Notation "'??'" := None (only parsing) : ctype_scope.
+
 Inductive pattern : Set :=
-| Wildcard (t : option base_type)
+| Wildcard (t : ptype)
+| Wildcardb (t : pbase_type)
 | pIdent (idc : pident)
 | pApp (f x : pattern)
 | pLiteral.
@@ -70,9 +89,11 @@ Notation "[ x ; y ; .. ; z ]" :=  (#Cons @ x @ (#Cons @ y @ .. (#Cons @ z @ []) 
 Delimit Scope pattern_scope with pattern.
 Bind Scope pattern_scope with pattern.
 Notation "#?" := pLiteral : pattern_scope.
-Notation "??" := (Wildcard None) : pattern_scope.
-Notation "??ℕ" := (Wildcard (Some Nat)) : pattern_scope.
-Notation "??ℕℕ" := (Wildcard (Some (Prod Nat Nat))) : pattern_scope.
+Notation "???{ t }" := (Wildcardb t) (format "???{ t }") : pattern_scope.
+Notation "??{ t }" := (Wildcard t) (format "??{ t }") : pattern_scope.
+Notation "??" := (Wildcardb pbAny) : pattern_scope.
+Notation "??ℕ" := (Wildcardb pNat) : pattern_scope.
+Notation "??ℕℕ" := (Wildcardb (pProd pNat pNat)) : pattern_scope.
 Notation "# idc" := (pIdent idc) : pattern_scope.
 Infix "@" := pApp : pattern_scope.
 Notation "0" := (#pO)%pattern : pattern_scope.
@@ -314,22 +335,67 @@ Section with_var.
        | e' => k e'
        end.
 
-  Fixpoint binding_dataT (p : pattern)
-    := match p return Type with
-       | Wildcard None => anyexpr
-       | Wildcard (Some t) => expr t
+  Fixpoint pbase_interp (t : pbase_type) : Set
+    := match t return Set with
+       | pbAny => anyexpr
+       | pNat => nat
+       | pProd A B => pbase_interp A * pbase_interp B
+       | pList A => list (pbase_interp A)
+       end.
+
+  Fixpoint ptype_interp (t : ptype) : Set
+    := match t with
+       | pAny => anyexpr
+       | pArrow None d => anyexpr -> ptype_interp d
+       | pArrow (Some t) d => expr t -> ptype_interp d
+       end.
+
+  Fixpoint binding_dataT (p : pattern) : Set
+    := match p return Set with
+       | Wildcard t => ptype_interp t
+       | Wildcardb t => pbase_interp t
        | pIdent _ => unit
        | pApp f x => binding_dataT f * binding_dataT x
        | pLiteral => nat
        end%type.
 
+  Fixpoint bind_value_cps {T t1 t2}
+           (k : option (ptype_interp t1) -> T)
+           (v : value t2)
+           {struct t1}
+    : T.
+    refine (match t1 return (option (ptype_interp t1) -> T) -> T with
+            | pAny
+              => fun k
+                 => match t2 return value t2 -> T with
+                    | Base t2 => fun e => k (Some (wrap e))
+                    | Arrow _ _ => fun _ => k None
+                    end v
+            | pArrow None d
+              => fun k
+                 => match t2 return value t2 -> T with
+                    | Base _ => fun _ => k None
+                    | Arrow s d'
+                      => fun v => _
+                    end v
+            | pArrow (Some s) d => _
+            end k).
+2: { idtac.
+cbn in *.
+    :=
+  ============================
+  value (type_of_rawexpr e) -> T
+
+
   Fixpoint bind_data_cps {T} (e : rawexpr) (p : pattern) {struct p}
-    : (option (binding_dataT p) -> T) -> T
-    := match p return (option (binding_dataT p) -> T) -> T with
-       | Wildcard None
-         => fun k => k (Some (wrap (expr_of_rawexpr e)))
-       | Wildcard (Some _)
-         => fun k => type.try_transport_cps _ _ _ (expr_of_rawexpr e) k
+    : (option (binding_dataT p) -> T) -> T.
+    refine match p return (option (binding_dataT p) -> T) -> T with
+       | Wildcard t
+         => fun k => _ (value_of_rawexpr e)
+       | Wildcardb t
+         => fun k => _ e
+       (*| Wildcard (Some _)
+         => fun k => type.try_transport_cps _ _ _ (expr_of_rawexpr e) k*)
        | pIdent pidc
          => fun k
             => match e with
@@ -368,6 +434,7 @@ Section with_var.
                | _ => k None
                end
        end.
+    cbn in *.
 
   Inductive decision_tree :=
   | TryLeaf (k : nat) (onfailure : decision_tree)
@@ -768,9 +835,10 @@ Arguments type.try_transport_base_cps _ _ !_ !_ / .
 Arguments orb_pident / .
 Arguments or_opt_pident / .
 Arguments rValueOrExpr / .
+Arguments Some_t / .
 Definition dorewrite''
   := Eval cbv (*-[type.try_transport_base_cps value]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id rValueOrExpr dorewrite' eta_ident_cps do_rewrite_ident dorewrite1 dtree eval_rewrite_rules reveal_rawexpr_cps or_opt_pident orb_pident orb eta_ident_cps pident_of_ident anyexpr_ty eval_decision_tree nth_error rewrite_rules pident_ident_beq option_map expr_of_rawexpr type_of_rawexpr bind_data_cps app_binding_data lift_with_bindings swap_list set_nth update_nth unwrap binding_dataT]
+          [id Some_t rValueOrExpr dorewrite' eta_ident_cps do_rewrite_ident dorewrite1 dtree eval_rewrite_rules reveal_rawexpr_cps or_opt_pident orb_pident orb eta_ident_cps pident_of_ident anyexpr_ty eval_decision_tree nth_error rewrite_rules pident_ident_beq option_map expr_of_rawexpr type_of_rawexpr bind_data_cps app_binding_data lift_with_bindings swap_list set_nth update_nth unwrap binding_dataT]
     in @dorewrite'.
 Arguments dorewrite'' / .
 Definition dorewrite
