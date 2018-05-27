@@ -779,9 +779,10 @@ Arguments dorewrite {var t} e.
 Local Open Scope expr_scope.
 Print dorewrite.
 (*dorewrite =
-fix dorewrite' (t : type) (e : expr t) {struct e} :
-value t :=
+fix dorewrite' (var : type -> Set) (t : type) (e : expr t) {struct e} : value t :=
   match e in (expr t0) return (value t0) with
+  | $v => v
+  | @Abs _ s d f => fun x : value s => dorewrite' var d (f x)
   | #(idc) =>
       match idc in (ident t1) return (value t1) with
       | O => 0
@@ -789,97 +790,80 @@ value t :=
       | Add =>
           fun x x0 : expr Nat =>
           match x with
-          | 0 => x0
-          | @App s _ f x1 =>
+          | @Abs _ _ _ _ =>
               match x0 with
               | 0 => x
-              | @App s0 _ #(S) x2 =>
+              | @App _ s0 _ #(S) x1 =>
+                  type.try_transport_cps expr s0 Nat x1 (fun x' : option (expr Nat) => match x' with
+                                                                                       | Some x'' => (x + x'').+1
+                                                                                       | None => x + x0
+                                                                                       end)
+              | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _ #
+                (@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #(@Cons _) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _ ##
+                (_) _ => x + x0
+              | _ => x + x0
+              end
+          | 0 => x0
+          | @App _ s _ f x1 =>
+              match x0 with
+              | 0 => x
+              | @App _ s0 _ #(S) x2 =>
                   match f with
                   | #(S) =>
-                      type.try_transport_base_cps
-                        (fun x3 : base_type => expr x3) s Nat x1
+                      type.try_transport_cps expr s Nat x1
                         (fun x' : option (expr Nat) =>
                          match x' with
                          | Some x'' =>
-                             type.try_transport_base_cps
-                               (fun x3 : base_type => expr x3) s0 Nat x2
-                               (fun x'0 : option (expr Nat) =>
-                                match x'0 with
-                                | Some x''0 => ((x'' + x''0).+1).+1
-                                | None => x + x0
-                                end)
+                             type.try_transport_cps expr s0 Nat x2
+                               (fun x'0 : option (expr Nat) => match x'0 with
+                                                               | Some x''0 => ((x'' + x''0).+1).+1
+                                                               | None => x + x0
+                                                               end)
                          | None => x + x0
                          end)
-                  | _ @ _ =>
-                      type.try_transport_base_cps
-                        (fun x4 : base_type => expr x4) s0 Nat x2
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x + x'').+1
-                         | None => x + x0
-                         end)
-                  | _ =>
-                      type.try_transport_base_cps
-                        (fun x3 : base_type => expr x3) s0 Nat x2
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x + x'').+1
-                         | None => x + x0
-                         end)
+                  | _ => type.try_transport_cps expr s0 Nat x2 (fun x' : option (expr Nat) => match x' with
+                                                                                              | Some x'' => (x + x'').+1
+                                                                                              | None => x + x0
+                                                                                              end)
                   end
-              | @App s0 _ (_ @ _) _ =>
+              | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _ #
+                (@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #(@Cons _) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _ ##
+                (_) _ =>
                   match f with
-                  | #(S) =>
-                      type.try_transport_base_cps
-                        (fun x4 : base_type => expr x4) s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x'' + x0).+1
-                         | None => x + x0
-                         end)
+                  | #(S) => type.try_transport_cps expr s Nat x1 (fun x' : option (expr Nat) => match x' with
+                                                                                                | Some x'' => (x'' + x0).+1
+                                                                                                | None => x + x0
+                                                                                                end)
                   | _ => x + x0
                   end
-              | @App s0 _ 0 _ | @App s0 _ #(Add) _ | @App s0 _ #
-                (@Pair _ _) _ | @App s0 _ #(@Fst _ _) _ | @App s0 _
-                #(@Snd _ _) _ | @App s0 _ ##(_) _ =>
+              | ##(n) =>
                   match f with
                   | #(S) =>
-                      type.try_transport_base_cps
-                        (fun x3 : base_type => expr x3) s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x'' + x0).+1
-                         | None => x + x0
-                         end)
+                      type.try_transport_cps expr s Nat x1 (fun x' : option (expr Nat) => match x' with
+                                                                                          | Some x'' => x'' + ##(Datatypes.S n)
+                                                                                          | None => x + x0
+                                                                                          end)
                   | _ => x + x0
                   end
               | _ =>
                   match f with
-                  | #(S) =>
-                      type.try_transport_base_cps
-                        (fun x2 : base_type => expr x2) s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x'' + x0).+1
-                         | None => x + x0
-                         end)
+                  | #(S) => type.try_transport_cps expr s Nat x1 (fun x' : option (expr Nat) => match x' with
+                                                                                                | Some x'' => (x'' + x0).+1
+                                                                                                | None => x + x0
+                                                                                                end)
                   | _ => x + x0
                   end
               end
           | ##(n) =>
               match x0 with
               | 0 => x
-              | @App s _ #(S) x1 =>
-                  type.try_transport_base_cps (fun x2 : base_type => expr x2)
-                    s Nat x1
-                    (fun x' : option (expr Nat) =>
-                     match x' with
-                     | Some x'' => (x + x'').+1
-                     | None => x + x0
-                     end)
-              | @App s _ 0 _ | @App s _ #(Add) _ | @App s _ #
-                (@Pair _ _) _ | @App s _ #(@Fst _ _) _ | @App s _ #
-                (@Snd _ _) _ | @App s _ (_ @ _) _ | @App s _ ##
+              | @App _ s _ #(S) x1 =>
+                  type.try_transport_cps expr s Nat x1 (fun x' : option (expr Nat) => match x' with
+                                                                                      | Some x'' => ##(Datatypes.S n) + x''
+                                                                                      | None => x + x0
+                                                                                      end)
+              | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #
+                (@Fst _ _) _ | @App _ s _ #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _ (_ @ _) _ | @App _ s _ ##
                 (_) _ => x + x0
               | ##(n0) => ##(n + n0)
               | _ => x + x0
@@ -887,17 +871,13 @@ value t :=
           | _ =>
               match x0 with
               | 0 => x
-              | @App s _ #(S) x1 =>
-                  type.try_transport_base_cps (fun x2 : base_type => expr x2)
-                    s Nat x1
-                    (fun x' : option (expr Nat) =>
-                     match x' with
-                     | Some x'' => (x + x'').+1
-                     | None => x + x0
-                     end)
-              | @App s _ 0 _ | @App s _ #(Add) _ | @App s _ #
-                (@Pair _ _) _ | @App s _ #(@Fst _ _) _ | @App s _ #
-                (@Snd _ _) _ | @App s _ (_ @ _) _ | @App s _ ##
+              | @App _ s _ #(S) x1 =>
+                  type.try_transport_cps expr s Nat x1 (fun x' : option (expr Nat) => match x' with
+                                                                                      | Some x'' => (x + x'').+1
+                                                                                      | None => x + x0
+                                                                                      end)
+              | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #
+                (@Fst _ _) _ | @App _ s _ #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _ (_ @ _) _ | @App _ s _ ##
                 (_) _ => x + x0
               | _ => x + x0
               end
@@ -906,44 +886,37 @@ value t :=
       | @Fst A B =>
           fun x : expr (A * B) =>
           match x with
-          | @App s0 _ #(@Pair _ _) x1 @ _ =>
-              type.try_transport_base_cps (fun x2 : base_type => expr x2) s0 A
-                x1
-                (fun fv : option (expr A) =>
-                 match fv with
-                 | Some fv0 => fv0
-                 | None => #(Fst) @ x
-                 end)
-          | @App s0 _ 0 _ @ _ | @App s0 _ #(S) _ @ _ |
-            @App s0 _ #(Add) _ @ _ | @App s0 _ #(@Fst _ _) _ @ _ |
-            @App s0 _ #(@Snd _ _) _ @ _ | @App s0 _ (_ @ _) _ @ _ |
-            @App s0 _ ##(_) _ @ _ => #(Fst) @ x
+          | @App _ s0 _ #(@Pair _ _) x1 @ _ =>
+              type.try_transport_cps expr s0 A x1 (fun fv' : option (expr A) => match fv' with
+                                                                                | Some fv'' => fv''
+                                                                                | None => #(Fst) @ x
+                                                                                end)
+          | @App _ s0 _ ($_) _ @ _ | @App _ s0 _ (@Abs _ _ _ _) _ @ _ | @App _ s0 _ 0 _ @ _ | @App _ s0 _ #(S) _ @ _ | @App _ s0 _ #(Add) _ @ _ |
+            @App _ s0 _ #(@Fst _ _) _ @ _ | @App _ s0 _ #(@Snd _ _) _ @ _ | @App _ s0 _ [] _ @ _ | @App _ s0 _ #(@Cons _) _ @ _ | @App _ s0 _ (_ @ _) _ @ _ |
+            @App _ s0 _ ##(_) _ @ _ => #(Fst) @ x
           | _ => #(Fst) @ x
           end
       | @Snd A B =>
           fun x : expr (A * B) =>
           match x with
-          | @App s _ (#(@Pair _ _) @ _) x0 =>
-              type.try_transport_base_cps (fun x2 : base_type => expr x2) s B
-                x0
-                (fun fv : option (expr B) =>
-                 match fv with
-                 | Some fv0 => fv0
-                 | None => #(Snd) @ x
-                 end)
-          | @App s _ #(_) _ | @App s _ (0 @ _) _ | @App s _
-            (_.+1) _ | @App s _ (#(Add) @ _) _ | @App s _
-            (#(@Fst _ _) @ _) _ | @App s _ (#(@Snd _ _) @ _) _ | @App s _
-            (_ @ _ @ _) _ | @App s _ (##(_) @ _) _ | @App s _ ##
-            (_) _ => #(Snd) @ x
+          | @App _ s _ (#(@Pair _ _) @ _) x0 =>
+              type.try_transport_cps expr s B x0 (fun fv' : option (expr B) => match fv' with
+                                                                               | Some fv'' => fv''
+                                                                               | None => #(Snd) @ x
+                                                                               end)
+          | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ($_ @ _) _ | @App _ s _ (@Abs _ _ _ _ @ _) _ | @App _ s _
+            (0 @ _) _ | @App _ s _ (_.+1) _ | @App _ s _ (#(Add) @ _) _ | @App _ s _ (#(@Fst _ _) @ _) _ | @App _ s _ (#(@Snd _ _) @ _) _ | @App _ s _
+            ([] @ _) _ | @App _ s _ (#(@Cons _) @ _) _ | @App _ s _ (_ @ _ @ _) _ | @App _ s _ (##(_) @ _) _ | @App _ s _ ##(_) _ => #(Snd) @ x
           | _ => #(Snd) @ x
           end
+      | @Nil A => []
+      | @Cons A => fun (x : expr A) (x0 : expr (List A)) => x :: x0
       end
-  | @App s d f x => dorewrite' (s -> d)%ctype f (dorewrite' s x)
+  | @App _ s d f x => dorewrite' var (s -> d)%ctype f (dorewrite' var s x)
   | ##(n) => ##(n)
   end
-     : forall t : type, expr t -> value t
+     : forall (var : type -> Set) (t : type), expr t -> value t
 
-Argument t is implicit and maximally inserted
-Argument scopes are [ctype_scope expr_scope]
+Arguments var, t are implicit and maximally inserted
+Argument scopes are [function_scope ctype_scope expr_scope]
 *)
