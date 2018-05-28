@@ -25,8 +25,72 @@ Inductive ident : type -> Type :=
 | Snd {A B} : ident (A * B -> B)
 | Nil {A} : ident (List A)
 | Cons {A : base_type} : ident (A -> List A -> List A)
-| ListMap {A B : base_type} : ident ((A -> B) -> List A -> List B).
+| ListMap {A B : base_type} : ident ((A -> B) -> List A -> List B)
+| ListApp {A} : ident (List A -> List A -> List A).
 
+(*
+Show Match ident.
+*)
+(*
+<<<
+#!/usr/bin/env python2
+
+show_match_ident = r"""match # with
+ | O =>
+ | S =>
+ | Add =>
+ | Pair A B =>
+ | Fst A B =>
+ | Snd A B =>
+ | Nil A =>
+ | Cons A =>
+ | ListMap A B =>
+ | ListApp A =>
+ end"""
+ctors = [i.strip('|=> ').split(' ') for i in show_match_ident.split('\n') if i.strip().startswith('|')]
+pctors = ['p' + i[0] for i in ctors]
+print(r"""Inductive pident : Type :=
+| %s.
+""" % '\n| '.join(pctors))
+print(r"""Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
+  := match X, Y with
+     | %s
+       => true
+     | %s
+       => false
+     end.
+""" % ('\n     | '.join(pctor + ', ' + ' '.join([ctor[0]] + ['_'] * (len(ctor)-1))
+                        for pctor, ctor in zip(pctors, ctors)),
+       '\n     | '.join(pctor + ', _' for pctor in pctors)))
+print(r"""Definition eta_ident_cps {T t} (idc : ident t)
+           (f : forall t, ident t -> T t)
+  : T t
+  := match idc with
+     | %s
+     end.
+""" % ('\n     | '.join(' '.join(ctor) + ' => f _ '
+                        + (('%s' if len(ctor) == 1 else '(@%s)')
+                           % ' '.join(ctor))
+                        for ctor in ctors)))
+print(r"""Definition eta_option_pident_cps {T} (f : pident -> option T)
+  : option (pident -> T)
+  := (%s;
+      Some (fun c
+            => match c with
+               | %s
+               end))%%option.
+""" % (';\n      '.join('f' + ctor[0] + ' <- f p' + ctor[0] for ctor in ctors),
+       '\n               | '.join('p' + ctor[0] + ' => f' + ctor[0] for ctor in ctors)))
+print(r"""Definition pident_of_ident {t} (idc : ident t) : pident
+  := match idc with
+     | %s
+     end.
+""" % ('\n     | '.join(' '.join(ctor) + ' => ' + pctor for ctor, pctor in zip(ctors, pctors))))
+print(r"""Definition orb_pident (f : pident -> bool) : bool
+  := (%s)%%bool.
+""" % ' || '.join('f ' + pctor for pctor in pctors))
+>>>
+*)
 Inductive pident : Type :=
 | pO
 | pS
@@ -36,7 +100,97 @@ Inductive pident : Type :=
 | pSnd
 | pNil
 | pCons
-| pListMap.
+| pListMap
+| pListApp.
+
+Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
+  := match X, Y with
+     | pO, O
+     | pS, S
+     | pAdd, Add
+     | pPair, Pair _ _
+     | pFst, Fst _ _
+     | pSnd, Snd _ _
+     | pNil, Nil _
+     | pCons, Cons _
+     | pListMap, ListMap _ _
+     | pListApp, ListApp _
+       => true
+     | pO, _
+     | pS, _
+     | pAdd, _
+     | pPair, _
+     | pFst, _
+     | pSnd, _
+     | pNil, _
+     | pCons, _
+     | pListMap, _
+     | pListApp, _
+       => false
+     end.
+
+Definition eta_ident_cps {T t} (idc : ident t)
+           (f : forall t, ident t -> T t)
+  : T t
+  := match idc with
+     | O => f _ O
+     | S => f _ S
+     | Add => f _ Add
+     | Pair A B => f _ (@Pair A B)
+     | Fst A B => f _ (@Fst A B)
+     | Snd A B => f _ (@Snd A B)
+     | Nil A => f _ (@Nil A)
+     | Cons A => f _ (@Cons A)
+     | ListMap A B => f _ (@ListMap A B)
+     | ListApp A => f _ (@ListApp A)
+     end.
+
+Definition eta_option_pident_cps {T} (f : pident -> option T)
+  : option (pident -> T)
+  := (fO <- f pO;
+      fS <- f pS;
+      fAdd <- f pAdd;
+      fPair <- f pPair;
+      fFst <- f pFst;
+      fSnd <- f pSnd;
+      fNil <- f pNil;
+      fCons <- f pCons;
+      fListMap <- f pListMap;
+      fListApp <- f pListApp;
+      Some (fun c
+            => match c with
+               | pO => fO
+               | pS => fS
+               | pAdd => fAdd
+               | pPair => fPair
+               | pFst => fFst
+               | pSnd => fSnd
+               | pNil => fNil
+               | pCons => fCons
+               | pListMap => fListMap
+               | pListApp => fListApp
+               end))%option.
+
+Definition pident_of_ident {t} (idc : ident t) : pident
+  := match idc with
+     | O => pO
+     | S => pS
+     | Add => pAdd
+     | Pair A B => pPair
+     | Fst A B => pFst
+     | Snd A B => pSnd
+     | Nil A => pNil
+     | Cons A => pCons
+     | ListMap A B => pListMap
+     | ListApp A => pListApp
+     end.
+
+Definition orb_pident (f : pident -> bool) : bool
+  := (f pO || f pS || f pAdd || f pPair || f pFst || f pSnd || f pNil || f pCons || f pListMap || f pListApp)%bool.
+(*===*)
+
+Definition or_opt_pident {T} (f : pident -> option T) : bool
+  := orb_pident (fun p => match f p with Some _ => true | None => false end).
 
 Inductive expr {var : type -> Type} : type -> Type :=
 | Var {t} (v : var t) : expr t
@@ -83,6 +237,7 @@ Notation "n '.+1'" := (#S @ n)%expr (at level 10, format "n '.+1'") : expr_scope
 Notation "x + y" := (#Add @ x @ y)%expr : expr_scope.
 Notation "( x , y , .. , z )" := (#Pair @ .. (#Pair @ x @ y) .. @ z)%expr : expr_scope.
 Notation "x :: xs" := (#Cons @ x @ xs)%expr : expr_scope.
+Notation "xs ++ ys" := (#ListApp @ xs @ ys)%expr : expr_scope.
 Notation "[ ]" := (#Nil)%expr : expr_scope.
 Notation "[ x ]" := (x :: [])%expr : expr_scope.
 Notation "[ x ; y ; .. ; z ]" :=  (#Cons @ x @ (#Cons @ y @ .. (#Cons @ z @ []) ..))%expr : expr_scope.
@@ -103,6 +258,7 @@ Notation "n '.+1'" := (#pS @ n)%pattern (at level 10, format "n '.+1'") : patter
 Notation "x + y" := (#pAdd @ x @ y)%pattern : pattern_scope.
 Notation "( x , y , .. , z )" := (#pPair @ .. (#pPair @ x @ y) .. @ z)%pattern : pattern_scope.
 Notation "x :: xs" := (#pCons @ x @ xs)%pattern : pattern_scope.
+Notation "xs ++ ys" := (#pListApp @ xs @ ys)%pattern : pattern_scope.
 Notation "[ ]" := (#pNil)%pattern : pattern_scope.
 Notation "[ x ]" := (x :: [])%pattern : pattern_scope.
 Notation "[ x ; y ; .. ; z ]" :=  (#pCons @ x @ (#pCons @ y @ .. (#pCons @ z @ []) ..))%pattern : pattern_scope.
@@ -240,87 +396,6 @@ Section with_var.
     := match t with
        | Base t => @rExpr t
        | Arrow _ _ => @rValue _
-       end.
-
-  Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
-    := match X, Y with
-       | pO, O
-       | pS, S
-       | pAdd, Add
-       | pPair, Pair _ _
-       | pFst, Fst _ _
-       | pSnd, Snd _ _
-       | pNil, Nil _
-       | pCons, Cons _
-       | pListMap, ListMap _ _
-         => true
-       | pO, _
-       | pS, _
-       | pAdd, _
-       | pPair, _
-       | pFst, _
-       | pSnd, _
-       | pNil, _
-       | pCons, _
-       | pListMap, _
-         => false
-       end.
-
-  Definition eta_ident_cps {T t} (idc : ident t)
-             (f : forall t, ident t -> T t)
-    : T t
-    := match idc with
-       | O => f _ O
-       | S => f _ S
-       | Add => f _ Add
-       | Pair A B => f _ (@Pair A B)
-       | Fst A B => f _ (@Fst A B)
-       | Snd A B => f _ (@Snd A B)
-       | Nil A => f _ (@Nil A)
-       | Cons A => f _ (@Cons A)
-       | ListMap A B => f _ (@ListMap A B)
-       end.
-
-  Definition eta_option_pident_cps {T} (f : pident -> option T)
-    : option (pident -> T)
-    := (fO <- f pO;
-          fS <- f pS;
-          fAdd <- f pAdd;
-          fPair <- f pPair;
-          fFst <- f pFst;
-          fSnd <- f pSnd;
-          fNil <- f pNil;
-          fCons <- f pCons;
-          fListMap <- f pListMap;
-          Some (fun c
-                => match c with
-                   | pO => fO
-                   | pS => fS
-                   | pAdd => fAdd
-                   | pPair => fPair
-                   | pFst => fFst
-                   | pSnd => fSnd
-                   | pNil => fNil
-                   | pCons => fCons
-                   | pListMap => fListMap
-                   end))%option.
-
-  Definition orb_pident (f : pident -> bool) : bool
-    := (f pO || f pS || f pAdd || f pPair || f pFst || f pSnd || f pNil || f pCons || f pListMap)%bool.
-  Definition or_opt_pident {T} (f : pident -> option T) : bool
-    := orb_pident (fun p => match f p with Some _ => true | None => false end).
-
-  Definition pident_of_ident {t} (idc : ident t) : pident
-    := match idc with
-       | O => pO
-       | S => pS
-       | Add => pAdd
-       | Pair A B => pPair
-       | Fst A B => pFst
-       | Snd A B => pSnd
-       | Nil A => pNil
-       | Cons A => pCons
-       | ListMap A B => pListMap
        end.
 
   Definition try_rExpr_cps {T t} (k : option rawexpr -> T) : expr t -> T
@@ -926,6 +1001,13 @@ Section with_var.
           make_rewrite (??ℕ + ??ℕ.+1) (fun x y => (x+y).+1);
           make_rewrite (#pFst @ (??, ??)) (fun tx x ty y => x);
           make_rewrite (#pSnd @ (??, ??)) (fun tx x ty y => y);
+          make_rewrite'_cps
+            (?? ++ ??)
+            (fun _ xs _ ys
+             => xs <-- @cast expr _ (List _) xs;
+                xs <-- reflect_list_cps xs;
+                ys <-- reflect_list_cps ys;
+                oret (wrap (reify_list (List.app xs ys))));
           make_rewrite'_cps
             (#pListMap @ ??{?? -> ??} @ ??)
             (fun _ _ f _ xs
