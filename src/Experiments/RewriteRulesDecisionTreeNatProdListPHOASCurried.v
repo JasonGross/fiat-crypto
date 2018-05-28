@@ -339,7 +339,8 @@ Arguments wrap {_ _} _.
 
 Section with_var.
   Context {var : type -> Type}.
-  Local Notation topexpr := (@expr).
+  Local Notation topexpr := expr.
+  Local Notation topanyexpr := anyexpr.
   Local Notation expr := (@expr var).
   Local Notation anyexpr := (@anyexpr var).
 
@@ -641,9 +642,25 @@ Section with_var.
             end
        end.
 
+  Local Notation opt_anyexprP ivar
+    := (fun should_do_again : bool => @topanyexpr (if should_do_again then ivar else var)).
+  Local Notation opt_anyexpr ivar
+    := (option (sigT (opt_anyexprP ivar))).
+
+  Local Notation rewrite_rulesT' ivar
+    := (list { p : pattern & binding_dataT p -> forall T, (opt_anyexpr ivar  -> T) -> T })
+         (only parsing).
+
   Definition eval_rewrite_rules
+             {ivar}
+             (do_again : forall t, @topexpr ivar t -> expr t)
+             (maybe_do_again
+              := fun (should_do_again : bool) t
+                 => if should_do_again return ((@topexpr (if should_do_again then ivar else var) t) -> expr t)
+                    then do_again t
+                    else id)
              (d : decision_tree)
-             (rew : list { p : pattern & binding_dataT p -> forall T, (option anyexpr -> T) -> T })
+             (rew : rewrite_rulesT' ivar)
              (e : rawexpr)
     : expr (type_of_rawexpr e)
     := eval_decision_tree
@@ -661,12 +678,13 @@ Section with_var.
                                => f v _
                                     (fun fv
                                      => match fv return expr (type_of_rawexpr e) with
-                                        | Some fv
+                                        | Some (existT should_do_again fv)
                                           => type.try_transport_cps
                                                _ _ _ (unwrap fv)
                                                (fun fv'
                                                 => match fv', default_on_rewrite_failure with
-                                                   | Some fv'', _ => fv''
+                                                   | Some fv'', _
+                                                     => maybe_do_again should_do_again _ fv''
                                                    | None, Some default => default tt
                                                    | None, None => expr_of_rawexpr e
                                                    end)
@@ -830,7 +848,7 @@ Section with_var.
        | Datatypes.S fuel' => compile_rewrites_step (@compile_rewrites' fuel') pattern_matrix
        end.
 
-  Definition compile_rewrites (fuel : nat) (ps : list { p : pattern & binding_dataT p -> forall T, (option anyexpr -> T) -> T })
+  Definition compile_rewrites {ivar} (fuel : nat) (ps : rewrite_rulesT' ivar)
     := compile_rewrites' fuel (enumerate (List.map (fun p => projT1 p :: nil) ps)).
 
   Fixpoint with_bindingsT (p : pattern) (T : Type)
@@ -922,7 +940,7 @@ Section with_var.
                           | _ => Nat
                           end)) -> T)
       -> T
-    := match e in topexpr _ t
+    := match e in topexpr t
              return (option (list (expr match t return base_type with
                                         | Base (List t) => t
                                         | _ => Nat
@@ -976,21 +994,30 @@ Section with_var.
   Definition oret {A} (v : A) : continuation (option A) := fun T k => k (Some v).
   Notation make_rewrite'_cps p f
     := (existT
-          (fun p' : pattern => binding_dataT p' -> forall T, (option anyexpr -> T) -> T)
+          (fun p' : pattern => binding_dataT p' -> continuation (opt_anyexpr value))
           p%pattern
-          (fun v T (k : option anyexpr -> T)
+          (fun v T (k : opt_anyexpr value -> T)
            => @app_binding_data _ p%pattern f%expr v T k)).
   Notation make_rewrite' p f
     := (existT
-          (fun p' : pattern => binding_dataT p' -> forall T, (option anyexpr -> T) -> T)
+          (fun p' : pattern => binding_dataT p' -> continuation (opt_anyexpr value))
           p%pattern
-          (fun v T (k : option anyexpr -> T)
+          (fun v T (k : opt_anyexpr value -> T)
            => k (@app_binding_data _ p%pattern f%expr v))).
   Notation make_rewrite p f
-    := (let f' := (@lift_with_bindings p _ _ (fun x:anyexpr => Some x) f%expr) in
+    := (let f' := (@lift_with_bindings p _ _ (fun x:anyexpr => Some (existT (opt_anyexprP value) false x)) f%expr) in
         make_rewrite' p f').
+  Notation make_rewrite_step p f
+    := (let f' := (@lift_with_bindings p _ _ (fun x:@topanyexpr value => Some (existT (opt_anyexprP value) true x)) f%expr) in
+        make_rewrite' p f').
+  Notation make_rewrite_cps p f
+    := (let f' := (@lift_with_bindings p _ _ (fun x:continuation (option anyexpr) => (x' <-- x; oret (existT (opt_anyexprP value) false x'))%continuation) f%expr) in
+        make_rewrite'_cps p f').
+  Notation make_rewrite_step_cps p f
+    := (let f' := (@lift_with_bindings p _ _ (fun x:continuation (option (@topanyexpr value)) => (x' <-- x; oret (existT (opt_anyexprP value) true x'))%continuation) f%expr) in
+        make_rewrite'_cps p f').
 
-  Definition rewrite_rules : list { p : pattern & binding_dataT p -> forall T, (option anyexpr -> T) -> T }
+  Definition rewrite_rules : rewrite_rulesT' value
     := [make_rewrite (0 + ??ℕ) (fun x => x);
           make_rewrite (??ℕ + 0) (fun x => x);
           make_rewrite (#? + #?) (fun x y => ##(x + y));
@@ -1001,20 +1028,20 @@ Section with_var.
           make_rewrite (??ℕ + ??ℕ.+1) (fun x y => (x+y).+1);
           make_rewrite (#pFst @ (??, ??)) (fun tx x ty y => x);
           make_rewrite (#pSnd @ (??, ??)) (fun tx x ty y => y);
-          make_rewrite'_cps
+          make_rewrite_cps
             (?? ++ ??)
             (fun _ xs _ ys
              => xs <-- @cast expr _ (List _) xs;
                 xs <-- reflect_list_cps xs;
                 ys <-- reflect_list_cps ys;
                 oret (wrap (reify_list (List.app xs ys))));
-          make_rewrite'_cps
+          make_rewrite_cps
             (#pListMap @ ??{?? -> ??} @ ??)
             (fun _ _ f _ xs
              => xs <-- @cast expr _ (List _) xs;
                   xs <-- reflect_list_cps xs;
                   oret (wrap (reify_list (List.map f xs))));
-          make_rewrite'_cps
+          make_rewrite_cps
             (#pListMap @ ??{?? -> ??} @ (?? :: ??))
             (fun _ _ f _ x _ xs
              => xs <-- @cast expr _ (List _) xs;
@@ -1045,31 +1072,59 @@ Arguments domatch / .
 Definition dorewrite
   := Eval cbn [bind_data_cps dorewrite' rewrite_rules domatch ctor_beq ctor_beq_cps list_rect Option.bind] in dorewrite'.
    *)
-  Definition dorewrite1 (e : rawexpr) : expr (type_of_rawexpr e)
-    := eval_rewrite_rules dtree rewrite_rules e.
+  Definition default_fuel := List.length rewrite_rules.
 
-  Fixpoint do_rewrite_ident (t : type) : forall e : rawexpr, (forall P, P (type_of_rawexpr e) -> P t) -> value t
-    := match t return forall e : rawexpr, (forall P, P (type_of_rawexpr e) -> P t) -> value t with
-       | Base _
-         => fun e k => k _ (dorewrite1 e)
-       | Arrow s d
-         => fun f k x => @do_rewrite_ident d (rApp f (rValueOrExpr x) (k _ (expr_of_rawexpr f) @ reify x))%expr (fun _ => id)
-       end.
+  Section with_do_again.
+    Context (do_again : forall t, @topexpr value t -> expr t).
+
+    Definition dorewrite1 (e : rawexpr) : expr (type_of_rawexpr e)
+      := eval_rewrite_rules do_again dtree rewrite_rules e.
+
+    Fixpoint do_rewrite_ident (t : type) : forall e : rawexpr, (forall P, P (type_of_rawexpr e) -> P t) -> value t
+      := match t return forall e : rawexpr, (forall P, P (type_of_rawexpr e) -> P t) -> value t with
+         | Base _
+           => fun e k => k _ (dorewrite1 e)
+         | Arrow s d
+           => fun f k x => @do_rewrite_ident d (rApp f (rValueOrExpr x) (k _ (expr_of_rawexpr f) @ reify x))%expr (fun _ => id)
+         end.
+
+    Fixpoint dorewrite' {t} (e : @topexpr value t) : value t
+      := match e in topexpr t return value t with
+         | Ident t idc
+           => eta_ident_cps idc (fun t' idc' => do_rewrite_ident t' (rIdent idc' #idc') (fun _ => id))
+         | App s d f x => @dorewrite' _ f (@dorewrite' _ x)
+         | Literal n => Literal n
+         | Var t v => v
+         | Abs s d f => fun x : value s => @dorewrite' d (f x)
+         end.
+
+    Fixpoint nbe {t} (e : @topexpr value t) : value t
+      := match e in topexpr t return value t with
+         | Abs s d f => fun x : value s => @nbe d (f x)
+         | App s d f x => @nbe _ f (@nbe _ x)
+         | Var t v => v
+         | Ident t idc => reflect (Ident idc)
+         | Literal n => Literal n
+         end.
+  End with_do_again.
 End with_var.
 
-Fixpoint dorewrite' {var : type -> Set} {t} (e : @expr (@value var) t) : @value var t
-  := match e in expr t return value t with
-     | Ident t idc
-       => eta_ident_cps idc (fun t' idc' => do_rewrite_ident t' (rIdent idc' #idc') (fun _ => id))
-     | App s d f x => @dorewrite' var _ f (@dorewrite' var _ x)
-     | Literal n => Literal n
-     | Var t v => v
-     | Abs s d f => fun x : value s => @dorewrite' var d (f x)
-     end.
+Fixpoint dorewrite'' (fuel : nat) {var t} e : @value var t
+  := @dorewrite'
+       var
+       (fun t' e'
+        => match fuel with
+           | Datatypes.O
+             => reify (nbe e')
+           | Datatypes.S fuel' => reify (@dorewrite'' fuel' var t' e')
+           end)
+       t e.
 
 Arguments bind_data_cps / .
 Arguments dorewrite1 / .
 Arguments dorewrite' / .
+Arguments dorewrite'' / .
+Arguments default_fuel / .
 Arguments do_rewrite_ident / .
 Arguments rewrite_rules / .
 (*Arguments domatch / .*)
@@ -1103,226 +1158,237 @@ Arguments ret / .
 Arguments oret / .
 Arguments bind_continuation / .
 Arguments option_bind_continuation / .
-Definition dorewrite''
+Arguments lift_ptype_interp_cps / .
+Definition dorewrite''' {var}
   := Eval cbv (*-[type.try_transport_base_cps value]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id Some_t rValueOrExpr dorewrite' eta_ident_cps do_rewrite_ident dorewrite1 dtree eval_rewrite_rules reveal_rawexpr_cps or_opt_pident orb_pident orb eta_ident_cps pident_of_ident anyexpr_ty eval_decision_tree nth_error rewrite_rules pident_ident_beq option_map expr_of_rawexpr type_of_rawexpr bind_data_cps app_binding_data lift_with_bindings swap_list set_nth update_nth unwrap binding_dataT app_ptype_interp_cps bind_value_cps projT1 projT2 value_of_rawexpr cast ret oret bind_continuation option_bind_continuation]
-    in @dorewrite'.
-Arguments dorewrite'' / .
+          [id dorewrite'' List.length Some_t rValueOrExpr dorewrite' eta_ident_cps do_rewrite_ident dorewrite1 dtree eval_rewrite_rules reveal_rawexpr_cps or_opt_pident orb_pident orb eta_ident_cps pident_of_ident anyexpr_ty eval_decision_tree nth_error rewrite_rules pident_ident_beq option_map expr_of_rawexpr type_of_rawexpr bind_data_cps app_binding_data lift_with_bindings swap_list set_nth update_nth unwrap binding_dataT app_ptype_interp_cps bind_value_cps projT1 projT2 value_of_rawexpr cast ret oret bind_continuation option_bind_continuation lift_ptype_interp_cps default_fuel]
+    in @dorewrite'' (@default_fuel var) var.
+Arguments dorewrite''' / .
 Definition dorewrite
-  := Eval cbn [dorewrite'' type.try_transport_cps type.try_transport_base_cps Option.bind reify reflect] in @dorewrite''.
+  := Eval cbn [dorewrite''' type.try_transport_cps type.try_transport_base_cps Option.bind reify reflect nbe] in @dorewrite'''.
 Arguments dorewrite {var t} e.
 Local Open Scope expr_scope.
+Arguments expr : clear implicits.
 Print dorewrite.
 (*dorewrite =
-fix dorewrite' (var : type -> Set) (t : type) (e : expr t) {struct e} :
-  value t :=
-  match e in (expr t0) return (value t0) with
-  | $v => v
-  | @Abs _ s d f => fun x : value s => dorewrite' var d (f x)
-  | #(idc) =>
-      match idc in (ident t1) return (value t1) with
-      | O => 0
-      | S => fun x : expr Nat => x.+1
-      | Add =>
-          fun x x0 : expr Nat =>
-          match x with
-          | @Abs _ _ _ _ =>
-              match x0 with
-              | 0 => x
-              | @App _ s0 _ #(S) x1 =>
-                  type.try_transport_cps expr s0 Nat x1
-                    (fun x' : option (expr Nat) =>
-                     match x' with
-                     | Some x'' => (x + x'').+1
-                     | None => x + x0
-                     end)
-              | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0
-                _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #
-                (@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _
-                #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #
-                (@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _
-                (_ @ _) _ | @App _ s0 _ ##(_) _ =>
-                  x + x0
-              | _ => x + x0
-              end
-          | 0 => x0
-          | @App _ s _ f x1 =>
-              match x0 with
-              | 0 => x
-              | @App _ s0 _ #(S) x2 =>
-                  match f with
-                  | #(S) =>
-                      type.try_transport_cps expr s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' =>
-                             type.try_transport_cps expr s0 Nat x2
-                               (fun x'0 : option (expr Nat) =>
-                                match x'0 with
-                                | Some x''0 => ((x'' + x''0).+1).+1
-                                | None => x + x0
-                                end)
-                         | None => x + x0
-                         end)
-                  | _ =>
-                      type.try_transport_cps expr s0 Nat x2
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x + x'').+1
-                         | None => x + x0
-                         end)
-                  end
-              | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0
-                _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #
-                (@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _
-                #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #
-                (@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _
-                (_ @ _) _ | @App _ s0 _ ##(_) _ =>
-                  match f with
-                  | #(S) =>
-                      type.try_transport_cps expr s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x'' + x0).+1
-                         | None => x + x0
-                         end)
-                  | _ => x + x0
-                  end
-              | ##(n) =>
-                  match f with
-                  | #(S) =>
-                      type.try_transport_cps expr s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => x'' + ##(Datatypes.S n)
-                         | None => x + x0
-                         end)
-                  | _ => x + x0
-                  end
-              | _ =>
-                  match f with
-                  | #(S) =>
-                      type.try_transport_cps expr s Nat x1
-                        (fun x' : option (expr Nat) =>
-                         match x' with
-                         | Some x'' => (x'' + x0).+1
-                         | None => x + x0
-                         end)
-                  | _ => x + x0
-                  end
-              end
-          | ##(n) =>
-              match x0 with
-              | 0 => x
-              | @App _ s _ #(S) x1 =>
-                  type.try_transport_cps expr s Nat x1
-                    (fun x' : option (expr Nat) =>
-                     match x' with
-                     | Some x'' => ##(Datatypes.S n) + x''
-                     | None => x + x0
-                     end)
-              | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0
-                _ | @App _ s _ #(Add) _ | @App _ s _ #
-                (@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
-                #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #
-                (@Cons _) _ | @App _ s _ #(@ListMap _ _) _ | @App _ s _
-                (_ @ _) _ | @App _ s _ ##(_) _ => x + x0
-              | ##(n0) => ##(n + n0)
-              | _ => x + x0
-              end
-          | _ =>
-              match x0 with
-              | 0 => x
-              | @App _ s _ #(S) x1 =>
-                  type.try_transport_cps expr s Nat x1
-                    (fun x' : option (expr Nat) =>
-                     match x' with
-                     | Some x'' => (x + x'').+1
-                     | None => x + x0
-                     end)
-              | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0
-                _ | @App _ s _ #(Add) _ | @App _ s _ #
-                (@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
-                #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #
-                (@Cons _) _ | @App _ s _ #(@ListMap _ _) _ | @App _ s _
-                (_ @ _) _ | @App _ s _ ##(_) _ => x + x0
-              | _ => x + x0
-              end
-          end
-      | @Pair A B => fun (x : expr A) (x0 : expr B) => (x, x0)
-      | @Fst A B =>
-          fun x : expr (A * B) =>
-          match x with
-          | @App _ s0 _ #(@Pair _ _) x1 @ _ =>
-              type.try_transport_cps expr s0 A x1
-                (fun fv' : option (expr A) =>
-                 match fv' with
-                 | Some fv'' => fv''
-                 | None => #(Fst) @ x
-                 end)
-          | @App _ s0 _ ($_) _ @ _ | @App _ s0 _ (@Abs _ _ _ _) _ @ _ |
-            @App _ s0 _ 0 _ @ _ | @App _ s0 _ #(S) _ @ _ |
-            @App _ s0 _ #(Add) _ @ _ | @App _ s0 _ #(@Fst _ _) _ @ _ |
-            @App _ s0 _ #(@Snd _ _) _ @ _ | @App _ s0 _ [] _ @ _ |
-            @App _ s0 _ #(@Cons _) _ @ _ | @App _ s0 _ #(@ListMap _ _) _ @ _ |
-            @App _ s0 _ (_ @ _) _ @ _ | @App _ s0 _ ##(_) _ @ _ =>
-              #(Fst) @ x
-          | _ => #(Fst) @ x
-          end
-      | @Snd A B =>
-          fun x : expr (A * B) =>
-          match x with
-          | @App _ s _ (#(@Pair _ _) @ _) x0 =>
-              type.try_transport_cps expr s B x0
-                (fun fv' : option (expr B) =>
-                 match fv' with
-                 | Some fv'' => fv''
-                 | None => #(Snd) @ x
-                 end)
-          | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #
-            (_) _ | @App _ s _ ($_ @ _) _ | @App _ s _
-            (@Abs _ _ _ _ @ _) _ | @App _ s _ (0 @ _) _ | @App _ s _
-            (_.+1) _ | @App _ s _ (#(Add) @ _) _ | @App _ s _
-            (#(@Fst _ _) @ _) _ | @App _ s _ (#(@Snd _ _) @ _) _ | @App _ s _
-            ([] @ _) _ | @App _ s _ (#(@Cons _) @ _) _ | @App _ s _
-            (#(@ListMap _ _) @ _) _ | @App _ s _ (_ @ _ @ _) _ | @App _ s _
-            (##(_) @ _) _ | @App _ s _ ##(_) _ => #(Snd) @ x
-          | _ => #(Snd) @ x
-          end
-      | @Nil A => []
-      | @Cons A => fun (x : expr A) (x0 : expr (List A)) => x :: x0
-      | @ListMap A B =>
-          fun (x : expr A -> expr B) (x0 : expr (List A)) =>
-          type.try_transport_base_cps (fun A0 : base_type => expr (List A0)) A
-            A x0
-            (fun x' : option (expr (List A)) =>
-             match x' with
-             | Some x'0 =>
-                 reflect_list_cps x'0 (expr (List B))
-                   (fun x'1 : option (list (expr A)) =>
-                    match x'1 with
-                    | Some x'2 =>
-                        type.try_transport_base_cps
-                          (fun A0 : base_type => expr (List A0)) B B
-                          (reify_list (map x x'2))
-                          (fun fv' : option (expr (List B)) =>
-                           match fv' with
-                           | Some fv'' => fv''
-                           | None =>
-                               match x0 with
-                               | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
-                                   type.try_transport_cps expr s
-                                     (List A) x1
-                                     (fun x'3 : option (expr (List A)) =>
-                                      match x'3 with
-                                      | Some x'4 =>
-                                          type.try_transport_cps expr s0 A x2
-                                            (fun x'5 : option (expr A) =>
-                                             match x'5 with
-                                             | Some x'6 =>
-                                                 type.try_transport_base_cps
+fun (var : type -> Type) (t : type) (e : expr value t) =>
+(fix dorewrite' (t0 : type) (e0 : expr value t0) {struct e0} :
+ value t0 :=
+   match e0 in (expr _ t1) return (value t1) with
+   | $v => v
+   | @Abs _ s d f => fun x : value s => dorewrite' d (f x)
+   | #(idc) =>
+       match idc in (ident t2) return (value t2) with
+       | O => 0
+       | S => fun x : expr var Nat => x.+1
+       | Add =>
+           fun x x0 : expr var Nat =>
+           match x with
+           | @Abs _ _ _ _ =>
+               match x0 with
+               | 0 => x
+               | @App _ s0 _ #(S) x1 =>
+                   type.try_transport_cps (expr var) s0 Nat x1
+                     (fun x' : option (expr var Nat) =>
+                      match x' with
+                      | Some x'' => (x + x'').+1
+                      | None => x + x0
+                      end)
+               | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0
+                 _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #
+                 (@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _
+                 #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #
+                 (@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _
+                 #(@ListApp _) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _ ##
+                 (_) _ => x + x0
+               | _ => x + x0
+               end
+           | 0 => x0
+           | @App _ s _ f x1 =>
+               match x0 with
+               | 0 => x
+               | @App _ s0 _ #(S) x2 =>
+                   match f with
+                   | #(S) =>
+                       type.try_transport_cps (expr var) s Nat x1
+                         (fun x' : option (expr var Nat) =>
+                          match x' with
+                          | Some x'' =>
+                              type.try_transport_cps
+                                (expr var) s0 Nat x2
+                                (fun x'0 : option (expr var Nat) =>
+                                 match x'0 with
+                                 | Some x''0 => ((x'' + x''0).+1).+1
+                                 | None => x + x0
+                                 end)
+                          | None => x + x0
+                          end)
+                   | _ =>
+                       type.try_transport_cps (expr var) s0 Nat x2
+                         (fun x' : option (expr var Nat) =>
+                          match x' with
+                          | Some x'' => (x + x'').+1
+                          | None => x + x0
+                          end)
+                   end
+               | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0
+                 _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #
+                 (@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _
+                 #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #
+                 (@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _
+                 #(@ListApp _) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _ ##
+                 (_) _ =>
+                   match f with
+                   | #(S) =>
+                       type.try_transport_cps (expr var) s Nat x1
+                         (fun x' : option (expr var Nat) =>
+                          match x' with
+                          | Some x'' => (x'' + x0).+1
+                          | None => x + x0
+                          end)
+                   | _ => x + x0
+                   end
+               | ##(n) =>
+                   match f with
+                   | #(S) =>
+                       type.try_transport_cps (expr var) s Nat x1
+                         (fun x' : option (expr var Nat) =>
+                          match x' with
+                          | Some x'' => x'' + ##(Datatypes.S n)
+                          | None => x + x0
+                          end)
+                   | _ => x + x0
+                   end
+               | _ =>
+                   match f with
+                   | #(S) =>
+                       type.try_transport_cps (expr var) s Nat x1
+                         (fun x' : option (expr var Nat) =>
+                          match x' with
+                          | Some x'' => (x'' + x0).+1
+                          | None => x + x0
+                          end)
+                   | _ => x + x0
+                   end
+               end
+           | ##(n) =>
+               match x0 with
+               | 0 => x
+               | @App _ s _ #(S) x1 =>
+                   type.try_transport_cps (expr var) s Nat x1
+                     (fun x' : option (expr var Nat) =>
+                      match x' with
+                      | Some x'' => ##(Datatypes.S n) + x''
+                      | None => x + x0
+                      end)
+               | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _
+                 0 _ | @App _ s _ #(Add) _ | @App _ s _ #
+                 (@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
+                 #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #
+                 (@Cons _) _ | @App _ s _ #(@ListMap _ _) _ | @App _ s _
+                 #(@ListApp _) _ | @App _ s _ (_ @ _) _ | @App _ s _ ##
+                 (_) _ => x + x0
+               | ##(n0) => ##(n + n0)
+               | _ => x + x0
+               end
+           | _ =>
+               match x0 with
+               | 0 => x
+               | @App _ s _ #(S) x1 =>
+                   type.try_transport_cps (expr var) s Nat x1
+                     (fun x' : option (expr var Nat) =>
+                      match x' with
+                      | Some x'' => (x + x'').+1
+                      | None => x + x0
+                      end)
+               | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _
+                 0 _ | @App _ s _ #(Add) _ | @App _ s _ #
+                 (@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
+                 #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #
+                 (@Cons _) _ | @App _ s _ #(@ListMap _ _) _ | @App _ s _
+                 #(@ListApp _) _ | @App _ s _ (_ @ _) _ | @App _ s _ ##
+                 (_) _ => x + x0
+               | _ => x + x0
+               end
+           end
+       | @Pair A B => fun (x : expr var A) (x0 : expr var B) => (x, x0)
+       | @Fst A B =>
+           fun x : expr var (A * B) =>
+           match x with
+           | @App _ s0 _ #(@Pair _ _) x1 @ _ =>
+               type.try_transport_cps (expr var) s0 A x1
+                 (fun fv' : option (expr var A) =>
+                  match fv' with
+                  | Some fv'' => fv''
+                  | None => #(Fst) @ x
+                  end)
+           | @App _ s0 _ ($_) _ @ _ | @App _ s0 _ (@Abs _ _ _ _) _ @ _ |
+             @App _ s0 _ 0 _ @ _ | @App _ s0 _ #(S) _ @ _ |
+             @App _ s0 _ #(Add) _ @ _ | @App _ s0 _ #(@Fst _ _) _ @ _ |
+             @App _ s0 _ #(@Snd _ _) _ @ _ | @App _ s0 _ [] _ @ _ |
+             @App _ s0 _ #(@Cons _) _ @ _ |
+             @App _ s0 _ #(@ListMap _ _) _ @ _ |
+             @App _ s0 _ #(@ListApp _) _ @ _ | @App _ s0 _ (_ @ _) _ @ _ |
+             @App _ s0 _ ##(_) _ @ _ => #(Fst) @ x
+           | _ => #(Fst) @ x
+           end
+       | @Snd A B =>
+           fun x : expr var (A * B) =>
+           match x with
+           | @App _ s _ (#(@Pair _ _) @ _) x0 =>
+               type.try_transport_cps (expr var) s B x0
+                 (fun fv' : option (expr var B) =>
+                  match fv' with
+                  | Some fv'' => fv''
+                  | None => #(Snd) @ x
+                  end)
+           | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #
+             (_) _ | @App _ s _ ($_ @ _) _ | @App _ s _
+             (@Abs _ _ _ _ @ _) _ | @App _ s _ (0 @ _) _ | @App _ s _
+             (_.+1) _ | @App _ s _ (#(Add) @ _) _ | @App _ s _
+             (#(@Fst _ _) @ _) _ | @App _ s _ (#(@Snd _ _) @ _) _ | @App _ s _
+             ([] @ _) _ | @App _ s _ (#(@Cons _) @ _) _ | @App _ s _
+             (#(@ListMap _ _) @ _) _ | @App _ s _ (#(@ListApp _) @ _) _ | @App
+             _ s _ (_ @ _ @ _) _ | @App _ s _ (##(_) @ _) _ | @App _ s _ ##
+             (_) _ => #(Snd) @ x
+           | _ => #(Snd) @ x
+           end
+       | @Nil A => []
+       | @Cons A => fun (x : expr var A) (x0 : expr var (List A)) => x :: x0
+       | @ListMap A B =>
+           fun (x : expr var A -> expr var B) (x0 : expr var (List A)) =>
+           type.try_transport_base_cps
+             (fun A0 : base_type => expr var (List A0)) A A x0
+             (fun x' : option (expr var (List A)) =>
+              match x' with
+              | Some x'0 =>
+                  reflect_list_cps x'0 (expr var (List B))
+                    (fun x'1 : option (list (expr var A)) =>
+                     match x'1 with
+                     | Some x'2 =>
+                         type.try_transport_base_cps
+                           (fun A0 : base_type => expr var (List A0)) B B
+                           (reify_list (map x x'2))
+                           (fun fv' : option (expr var (List B)) =>
+                            match fv' with
+                            | Some fv'' => fv''
+                            | None =>
+                                match x0 with
+                                | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
+                                    type.try_transport_cps
+                                      (expr var) s
+                                      (List A) x1
+                                      (fun x'3 : option (expr var (List A)) =>
+                                       match x'3 with
+                                       | Some x'4 =>
+                                           type.try_transport_cps
+                                             (expr var) s0 A x2
+                                             (fun x'5 : option (expr var A) =>
+                                              match x'5 with
+                                              | Some x'6 =>
+                                                  type.try_transport_base_cps
                                                   (fun A1 : base_type =>
-                                                  expr (List A1)) B B
+                                                  expr var (List A1)) B B
                                                   (x x'6
                                                   ::
                                                   #
@@ -1332,7 +1398,7 @@ fix dorewrite' (var : type -> Set) (t : type) (e : expr t) {struct e} :
                                                   (fun
                                                   fv'0 :
                                                   option
-                                                  (expr (List B)) =>
+                                                  (expr var (List B)) =>
                                                   match fv'0 with
                                                   | Some fv'' => fv''
                                                   | None =>
@@ -1341,163 +1407,203 @@ fix dorewrite' (var : type -> Set) (t : type) (e : expr t) {struct e} :
                                                   (λ x3 : var A,
                                                   x ($x3)) @ x0
                                                   end)
-                                             | None =>
-                                                 #(ListMap) @
-                                                 (λ x3 : var A,
+                                              | None =>
+                                                  #
+                                                  (ListMap) @
+                                                  (λ x3 : var A,
                                                   x ($x3)) @ x0
-                                             end)
-                                      | None =>
-                                          #(ListMap) @ (λ x3 : var A,
+                                              end)
+                                       | None =>
+                                           #(ListMap) @ (λ x3 : var A,
                                                   x ($x3)) @ x0
-                                      end)
-                               | @App _ s _ (@App _ s0 _ (_ @ _) _) _ =>
-                                   #(ListMap) @ (λ x4 : var A,
-                                                 x ($x4)) @ x0
-                               | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s
-                                 _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s
-                                 _ (@App _ s0 _ 0 _) _ | @App _ s _
-                                 (@App _ s0 _ #(S) _) _ | @App _ s _
-                                 (@App _ s0 _ #(Add) _) _ | @App _ s _
-                                 (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _
-                                 (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
-                                 (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
-                                 (@App _ s0 _ [] _) _ | @App _ s _
-                                 (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s
-                                 _ (@App _ s0 _ ##(_) _) _ =>
-                                   #(ListMap) @ (λ x3 : var A,
-                                                 x ($x3)) @ x0
-                               | @App _ s _ ($_) _ | @App _ s _
-                                 (@Abs _ _ _ _) _ | @App _ s _ #
-                                 (_) _ | @App _ s _ ##
-                                 (_) _ =>
-                                   #(ListMap) @ (λ x2 : var A,
-                                                 x ($x2)) @ x0
-                               | _ => #(ListMap) @ (λ x1 : var A,
+                                       end)
+                                | @App _ s _ (@App _ s0 _ (_ @ _) _) _ =>
+                                    #(ListMap) @ (λ x4 : var A,
+                                                  x ($x4)) @ x0
+                                | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s
+                                  _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _
+                                  s _ (@App _ s0 _ 0 _) _ | @App _ s _
+                                  (@App _ s0 _ #(S) _) _ | @App _ s _
+                                  (@App _ s0 _ #(Add) _) _ | @App _ s _
+                                  (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _
+                                  (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
+                                  (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
+                                  (@App _ s0 _ [] _) _ | @App _ s _
+                                  (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s
+                                  _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s
+                                  _ (@App _ s0 _ ##(_) _) _ =>
+                                    #(ListMap) @ (λ x3 : var A,
+                                                  x ($x3)) @ x0
+                                | @App _ s _ ($_) _ | @App _ s _
+                                  (@Abs _ _ _ _) _ | @App _ s _ #
+                                  (_) _ | @App _ s _ ##
+                                  (_) _ =>
+                                    #(ListMap) @ (λ x2 : var A,
+                                                  x ($x2)) @ x0
+                                | _ =>
+                                    #(ListMap) @ (λ x1 : var A,
                                                   x ($x1)) @ x0
-                               end
-                           end)
-                    | None =>
-                        match x0 with
-                        | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
-                            type.try_transport_cps expr s
-                              (List A) x1
-                              (fun x'2 : option (expr (List A)) =>
-                               match x'2 with
-                               | Some x'3 =>
-                                   type.try_transport_cps expr s0 A x2
-                                     (fun x'4 : option (expr A) =>
-                                      match x'4 with
-                                      | Some x'5 =>
-                                          type.try_transport_base_cps
-                                            (fun A1 : base_type =>
-                                             expr (List A1)) B B
-                                            (x x'5
-                                             :: #(ListMap) @
-                                                (λ v : var A,
-                                                 x ($v)) @ x'3)
-                                            (fun fv' : option (expr (List B))
-                                             =>
-                                             match fv' with
-                                             | Some fv'' => fv''
-                                             | None =>
-                                                 #(ListMap) @
-                                                 (λ x3 : var A,
+                                end
+                            end)
+                     | None =>
+                         match x0 with
+                         | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
+                             type.try_transport_cps
+                               (expr var) s (List A) x1
+                               (fun x'2 : option (expr var (List A)) =>
+                                match x'2 with
+                                | Some x'3 =>
+                                    type.try_transport_cps
+                                      (expr var) s0 A x2
+                                      (fun x'4 : option (expr var A) =>
+                                       match x'4 with
+                                       | Some x'5 =>
+                                           type.try_transport_base_cps
+                                             (fun A1 : base_type =>
+                                              expr var (List A1)) B B
+                                             (x x'5
+                                              :: #(ListMap) @
+                                                 (λ v : var A,
+                                                  x ($v)) @ x'3)
+                                             (fun
+                                                fv' :
+                                                 option
+                                                  (expr var (List B)) =>
+                                              match fv' with
+                                              | Some fv'' => fv''
+                                              | None =>
+                                                  #
+                                                  (ListMap) @
+                                                  (λ x3 : var A,
                                                   x ($x3)) @ x0
-                                             end)
-                                      | None =>
-                                          #(ListMap) @ (λ x3 : var A,
+                                              end)
+                                       | None =>
+                                           #(ListMap) @ (λ x3 : var A,
                                                   x ($x3)) @ x0
-                                      end)
-                               | None =>
-                                   #(ListMap) @ (λ x3 : var A,
-                                                 x ($x3)) @ x0
-                               end)
-                        | @App _ s _ (@App _ s0 _ (_ @ _) _) _ =>
-                            #(ListMap) @ (λ x4 : var A,
-                                          x ($x4)) @ x0
-                        | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _
-                          (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
-                          (@App _ s0 _ 0 _) _ | @App _ s _
-                          (@App _ s0 _ #(S) _) _ | @App _ s _
-                          (@App _ s0 _ #(Add) _) _ | @App _ s _
-                          (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _
-                          (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
-                          (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
-                          (@App _ s0 _ [] _) _ | @App _ s _
-                          (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _
-                          (@App _ s0 _ ##(_) _) _ =>
-                            #(ListMap) @ (λ x3 : var A,
-                                          x ($x3)) @ x0
-                        | @App _ s _ ($_) _ | @App _ s _
-                          (@Abs _ _ _ _) _ | @App _ s _ #
-                          (_) _ | @App _ s _ ##(_) _ =>
-                            #(ListMap) @ (λ x2 : var A,
-                                          x ($x2)) @ x0
-                        | _ => #(ListMap) @ (λ x1 : var A,
-                                             x ($x1)) @ x0
-                        end
-                    end)
-             | None =>
-                 match x0 with
-                 | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
-                     type.try_transport_cps expr s
-                       (List A) x1
-                       (fun x'0 : option (expr (List A)) =>
-                        match x'0 with
-                        | Some x'1 =>
-                            type.try_transport_cps expr s0 A x2
-                              (fun x'2 : option (expr A) =>
-                               match x'2 with
-                               | Some x'3 =>
-                                   type.try_transport_base_cps
-                                     (fun A1 : base_type => expr (List A1)) B
-                                     B
-                                     (x x'3
-                                      :: #(ListMap) @ (λ v : var A,
+                                       end)
+                                | None =>
+                                    #(ListMap) @ (λ x3 : var A,
+                                                  x ($x3)) @ x0
+                                end)
+                         | @App _ s _ (@App _ s0 _ (_ @ _) _) _ =>
+                             #(ListMap) @ (λ x4 : var A,
+                                           x ($x4)) @ x0
+                         | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _
+                           (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
+                           (@App _ s0 _ 0 _) _ | @App _ s _
+                           (@App _ s0 _ #(S) _) _ | @App _ s _
+                           (@App _ s0 _ #(Add) _) _ | @App _ s _
+                           (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _
+                           (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
+                           (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
+                           (@App _ s0 _ [] _) _ | @App _ s _
+                           (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _
+                           (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _
+                           (@App _ s0 _ ##(_) _) _ =>
+                             #(ListMap) @ (λ x3 : var A,
+                                           x ($x3)) @ x0
+                         | @App _ s _ ($_) _ | @App _ s _
+                           (@Abs _ _ _ _) _ | @App _ s _ #
+                           (_) _ | @App _ s _ ##(_) _ =>
+                             #(ListMap) @ (λ x2 : var A,
+                                           x ($x2)) @ x0
+                         | _ => #(ListMap) @ (λ x1 : var A,
+                                              x ($x1)) @ x0
+                         end
+                     end)
+              | None =>
+                  match x0 with
+                  | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
+                      type.try_transport_cps (expr var) s
+                        (List A) x1
+                        (fun x'0 : option (expr var (List A)) =>
+                         match x'0 with
+                         | Some x'1 =>
+                             type.try_transport_cps
+                               (expr var) s0 A x2
+                               (fun x'2 : option (expr var A) =>
+                                match x'2 with
+                                | Some x'3 =>
+                                    type.try_transport_base_cps
+                                      (fun A1 : base_type =>
+                                       expr var (List A1)) B B
+                                      (x x'3
+                                       :: #(ListMap) @ (λ v : var A,
                                                   x ($v)) @ x'1)
-                                     (fun fv' : option (expr (List B)) =>
-                                      match fv' with
-                                      | Some fv'' => fv''
-                                      | None =>
-                                          #(ListMap) @ (λ x3 : var A,
+                                      (fun fv' : option (expr var (List B)) =>
+                                       match fv' with
+                                       | Some fv'' => fv''
+                                       | None =>
+                                           #(ListMap) @ (λ x3 : var A,
                                                   x ($x3)) @ x0
-                                      end)
-                               | None =>
-                                   #(ListMap) @ (λ x3 : var A,
+                                       end)
+                                | None =>
+                                    #(ListMap) @ (λ x3 : var A,
+                                                  x ($x3)) @ x0
+                                end)
+                         | None => #(ListMap) @ (λ x3 : var A,
                                                  x ($x3)) @ x0
-                               end)
-                        | None => #(ListMap) @ (λ x3 : var A,
-                                                x ($x3)) @ x0
-                        end)
-                 | @App _ s _ (@App _ s0 _ (_ @ _) _) _ =>
-                     #(ListMap) @ (λ x4 : var A,
-                                   x ($x4)) @ x0
-                 | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _
-                   (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
-                   (@App _ s0 _ 0 _) _ | @App _ s _
-                   (@App _ s0 _ #(S) _) _ | @App _ s _
-                   (@App _ s0 _ #(Add) _) _ | @App _ s _
-                   (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _
-                   (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
-                   (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
-                   (@App _ s0 _ [] _) _ | @App _ s _
-                   (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _
-                   (@App _ s0 _ ##(_) _) _ =>
-                     #(ListMap) @ (λ x3 : var A,
-                                   x ($x3)) @ x0
-                 | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s
-                   _ #(_) _ | @App _ s _ ##(_) _ =>
-                     #(ListMap) @ (λ x2 : var A,
-                                   x ($x2)) @ x0
-                 | _ => #(ListMap) @ (λ x1 : var A,
-                                      x ($x1)) @ x0
-                 end
-             end)
-      end
-  | @App _ s d f x => dorewrite' var (s -> d)%ctype f (dorewrite' var s x)
-  | ##(n) => ##(n)
-  end
-     : forall (var : type -> Set) (t : type), expr t -> value t
+                         end)
+                  | @App _ s _ (@App _ s0 _ (_ @ _) _) _ =>
+                      #(ListMap) @ (λ x4 : var A,
+                                    x ($x4)) @ x0
+                  | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _
+                    (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
+                    (@App _ s0 _ 0 _) _ | @App _ s _
+                    (@App _ s0 _ #(S) _) _ | @App _ s _
+                    (@App _ s0 _ #(Add) _) _ | @App _ s _
+                    (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _
+                    (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
+                    (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
+                    (@App _ s0 _ [] _) _ | @App _ s _
+                    (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _
+                    (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _
+                    (@App _ s0 _ ##(_) _) _ =>
+                      #(ListMap) @ (λ x3 : var A,
+                                    x ($x3)) @ x0
+                  | @App _ s _ ($_) _ | @App _ s _
+                    (@Abs _ _ _ _) _ | @App _ s _ #
+                    (_) _ | @App _ s _ ##(_) _ =>
+                      #(ListMap) @ (λ x2 : var A,
+                                    x ($x2)) @ x0
+                  | _ => #(ListMap) @ (λ x1 : var A,
+                                       x ($x1)) @ x0
+                  end
+              end)
+       | @ListApp A =>
+           fun x x0 : expr var (List A) =>
+           type.try_transport_base_cps
+             (fun A0 : base_type => expr var (List A0)) A A x
+             (fun x' : option (expr var (List A)) =>
+              match x' with
+              | Some x'0 =>
+                  reflect_list_cps x'0 (expr var (List A))
+                    (fun x'1 : option (list (expr var A)) =>
+                     match x'1 with
+                     | Some x'2 =>
+                         reflect_list_cps x0 (expr var (List A))
+                           (fun x'3 : option (list (expr var A)) =>
+                            match x'3 with
+                            | Some x'4 =>
+                                type.try_transport_base_cps
+                                  (fun A0 : base_type => expr var (List A0)) A
+                                  A (reify_list (x'2 ++ x'4))
+                                  (fun fv' : option (expr var (List A)) =>
+                                   match fv' with
+                                   | Some fv'' => fv''
+                                   | None => x ++ x0
+                                   end)
+                            | None => x ++ x0
+                            end)
+                     | None => x ++ x0
+                     end)
+              | None => x ++ x0
+              end)
+       end
+   | @App _ s d f x => dorewrite' (s -> d)%ctype f (dorewrite' s x)
+   | ##(n) => ##(n)
+   end) t e
+     : forall (var : type -> Type) (t : type), expr value t -> value t
 
 Arguments var, t are implicit and maximally inserted
 Argument scopes are [function_scope ctype_scope expr_scope]
