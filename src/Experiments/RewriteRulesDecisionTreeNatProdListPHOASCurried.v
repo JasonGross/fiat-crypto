@@ -7,7 +7,7 @@ Require Import Crypto.Util.LetIn.
 Import ListNotations.
 
 Set Boolean Equality Schemes.
-Inductive base_type := Nat | Prod (A B : base_type) | List (A : base_type).
+Inductive base_type := Unit | Bool | Nat | Prod (A B : base_type) | List (A : base_type).
 Inductive type := Base (t : base_type) | Arrow (s : type) (d : type).
 Coercion Base : base_type >-> type.
 Bind Scope ctype_scope with type.
@@ -15,22 +15,31 @@ Bind Scope ctype_scope with base_type.
 Delimit Scope ctype_scope with ctype.
 Infix "->" := Arrow : ctype_scope.
 Infix "*" := Prod : ctype_scope.
+Notation "( )" := Unit : ctype_scope.
 
-About fold_right.
+About partition.
 Inductive ident : type -> Type :=
 | O : ident Nat
 | S : ident (Nat -> Nat)
+| NatRect {P : base_type} : ident ((Unit -> P) -> (Nat -> P -> P) -> Nat -> P)
+| NatEqb : ident (Nat -> Nat -> Bool)
 | Add : ident (Nat -> Nat -> Nat)
 | Pair {A B : base_type} : ident (A -> B -> A * B)
 | Fst {A B} : ident (A * B -> A)
 | Snd {A B} : ident (A * B -> B)
+| MatchPair {A B P : base_type} : ident ((A -> B -> P) -> A * B -> P)
 | Nil {A} : ident (List A)
 | Cons {A : base_type} : ident (A -> List A -> List A)
 | ListMap {A B : base_type} : ident ((A -> B) -> List A -> List B)
 | ListApp {A} : ident (List A -> List A -> List A)
 | ListFlatMap {A B : base_type} : ident ((A -> List B) -> List A -> List B)
-| ListRect {A : base_type} {P : base_type} : ident (P -> (A -> List A -> P -> P) -> List A -> P)
-| ListFoldRight {A : base_type} {B : base_type} : ident ((B -> A -> A) -> A -> List B -> A).
+| ListRect {A : base_type} {P : base_type} : ident ((Unit -> P) -> (A -> List A -> P -> P) -> List A -> P)
+| ListFoldRight {A : base_type} {B : base_type} : ident ((B -> A -> A) -> (Unit -> A) -> List B -> A)
+| ListPartition {A : base_type} : ident ((A -> Bool) -> List A -> List A * List A)
+| TT : ident Unit
+| iTrue : ident Bool
+| iFalse : ident Bool
+| BoolRect {P : base_type} : ident ((Unit -> P) -> (Unit -> P) -> Bool -> P).
 
 Show Match ident.
 (*
@@ -40,10 +49,13 @@ Show Match ident.
 show_match_ident = r"""match # with
  | O =>
  | S =>
+ | NatRect P =>
+ | NatEqb =>
  | Add =>
  | Pair A B =>
  | Fst A B =>
  | Snd A B =>
+ | MatchPair A B P =>
  | Nil A =>
  | Cons A =>
  | ListMap A B =>
@@ -51,9 +63,14 @@ show_match_ident = r"""match # with
  | ListFlatMap A B =>
  | ListRect A P =>
  | ListFoldRight A B =>
+ | ListPartition A =>
+ | TT =>
+ | iTrue =>
+ | iFalse =>
+ | BoolRect P =>
  end
 
-"""
+""".replace('=>', '=>')
 ctors = [i.strip('|=> ').split(' ') for i in show_match_ident.split('\n') if i.strip().startswith('|')]
 pctors = ['p' + i[0] for i in ctors]
 print(r"""Inductive pident : Type :=
@@ -101,26 +118,37 @@ print(r"""Definition orb_pident (f : pident -> bool) : bool
 Inductive pident : Type :=
 | pO
 | pS
+| pNatRect
+| pNatEqb
 | pAdd
 | pPair
 | pFst
 | pSnd
+| pMatchPair
 | pNil
 | pCons
 | pListMap
 | pListApp
 | pListFlatMap
 | pListRect
-| pListFoldRight.
+| pListFoldRight
+| pListPartition
+| pTT
+| piTrue
+| piFalse
+| pBoolRect.
 
 Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
   := match X, Y with
      | pO, O
      | pS, S
+     | pNatRect, NatRect _
+     | pNatEqb, NatEqb
      | pAdd, Add
      | pPair, Pair _ _
      | pFst, Fst _ _
      | pSnd, Snd _ _
+     | pMatchPair, MatchPair _ _ _
      | pNil, Nil _
      | pCons, Cons _
      | pListMap, ListMap _ _
@@ -128,13 +156,21 @@ Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
      | pListFlatMap, ListFlatMap _ _
      | pListRect, ListRect _ _
      | pListFoldRight, ListFoldRight _ _
+     | pListPartition, ListPartition _
+     | pTT, TT
+     | piTrue, iTrue
+     | piFalse, iFalse
+     | pBoolRect, BoolRect _
        => true
      | pO, _
      | pS, _
+     | pNatRect, _
+     | pNatEqb, _
      | pAdd, _
      | pPair, _
      | pFst, _
      | pSnd, _
+     | pMatchPair, _
      | pNil, _
      | pCons, _
      | pListMap, _
@@ -142,6 +178,11 @@ Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
      | pListFlatMap, _
      | pListRect, _
      | pListFoldRight, _
+     | pListPartition, _
+     | pTT, _
+     | piTrue, _
+     | piFalse, _
+     | pBoolRect, _
        => false
      end.
 
@@ -151,10 +192,13 @@ Definition eta_ident_cps {T t} (idc : ident t)
   := match idc with
      | O => f _ O
      | S => f _ S
+     | NatRect P => f _ (@NatRect P)
+     | NatEqb => f _ NatEqb
      | Add => f _ Add
      | Pair A B => f _ (@Pair A B)
      | Fst A B => f _ (@Fst A B)
      | Snd A B => f _ (@Snd A B)
+     | MatchPair A B P => f _ (@MatchPair A B P)
      | Nil A => f _ (@Nil A)
      | Cons A => f _ (@Cons A)
      | ListMap A B => f _ (@ListMap A B)
@@ -162,16 +206,24 @@ Definition eta_ident_cps {T t} (idc : ident t)
      | ListFlatMap A B => f _ (@ListFlatMap A B)
      | ListRect A P => f _ (@ListRect A P)
      | ListFoldRight A B => f _ (@ListFoldRight A B)
+     | ListPartition A => f _ (@ListPartition A)
+     | TT => f _ TT
+     | iTrue => f _ iTrue
+     | iFalse => f _ iFalse
+     | BoolRect P => f _ (@BoolRect P)
      end.
 
 Definition eta_option_pident_cps {T} (f : pident -> option T)
   : option (pident -> T)
   := (fO <- f pO;
       fS <- f pS;
+      fNatRect <- f pNatRect;
+      fNatEqb <- f pNatEqb;
       fAdd <- f pAdd;
       fPair <- f pPair;
       fFst <- f pFst;
       fSnd <- f pSnd;
+      fMatchPair <- f pMatchPair;
       fNil <- f pNil;
       fCons <- f pCons;
       fListMap <- f pListMap;
@@ -179,14 +231,22 @@ Definition eta_option_pident_cps {T} (f : pident -> option T)
       fListFlatMap <- f pListFlatMap;
       fListRect <- f pListRect;
       fListFoldRight <- f pListFoldRight;
+      fListPartition <- f pListPartition;
+      fTT <- f pTT;
+      fiTrue <- f piTrue;
+      fiFalse <- f piFalse;
+      fBoolRect <- f pBoolRect;
       Some (fun c
             => match c with
                | pO => fO
                | pS => fS
+               | pNatRect => fNatRect
+               | pNatEqb => fNatEqb
                | pAdd => fAdd
                | pPair => fPair
                | pFst => fFst
                | pSnd => fSnd
+               | pMatchPair => fMatchPair
                | pNil => fNil
                | pCons => fCons
                | pListMap => fListMap
@@ -194,16 +254,24 @@ Definition eta_option_pident_cps {T} (f : pident -> option T)
                | pListFlatMap => fListFlatMap
                | pListRect => fListRect
                | pListFoldRight => fListFoldRight
+               | pListPartition => fListPartition
+               | pTT => fTT
+               | piTrue => fiTrue
+               | piFalse => fiFalse
+               | pBoolRect => fBoolRect
                end))%option.
 
 Definition pident_of_ident {t} (idc : ident t) : pident
   := match idc with
      | O => pO
      | S => pS
+     | NatRect P => pNatRect
+     | NatEqb => pNatEqb
      | Add => pAdd
      | Pair A B => pPair
      | Fst A B => pFst
      | Snd A B => pSnd
+     | MatchPair A B P => pMatchPair
      | Nil A => pNil
      | Cons A => pCons
      | ListMap A B => pListMap
@@ -211,10 +279,16 @@ Definition pident_of_ident {t} (idc : ident t) : pident
      | ListFlatMap A B => pListFlatMap
      | ListRect A P => pListRect
      | ListFoldRight A B => pListFoldRight
+     | ListPartition A => pListPartition
+     | TT => pTT
+     | iTrue => piTrue
+     | iFalse => piFalse
+     | BoolRect P => pBoolRect
      end.
 
 Definition orb_pident (f : pident -> bool) : bool
-  := (f pO || f pS || f pAdd || f pPair || f pFst || f pSnd || f pNil || f pCons || f pListMap || f pListApp || f pListFlatMap || f pListRect || f pListFoldRight)%bool.
+  := (f pO || f pS || f pNatRect || f pNatEqb || f pAdd || f pPair || f pFst || f pSnd || f pMatchPair || f pNil || f pCons || f pListMap || f pListApp || f pListFlatMap || f pListRect || f pListFoldRight || f pListPartition || f pTT || f piTrue || f piFalse || f pBoolRect)%bool.
+
 (*===*)
 
 Definition or_opt_pident {T} (f : pident -> option T) : bool
@@ -227,7 +301,7 @@ Inductive expr {var : type -> Type} : type -> Type :=
 | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
 | Literal (n : nat) : expr Nat.
 
-Inductive pbase_type := pbAny | pNat | pProd (A B : pbase_type) | pList (A : pbase_type).
+Inductive pbase_type := pbAny | pNat | pUnit | pBool | pProd (A B : pbase_type) | pList (A : pbase_type).
 Definition option_type := option type.
 Coercion Some_t (t : type) : option_type := Some t.
 Inductive ptype := pAny | pBase (t : pbase_type) | pArrow (s : option_type) (d : ptype).
@@ -240,6 +314,8 @@ Delimit Scope pbtype_scope with pbtype.
 Infix "->" := pArrow : ptype_scope.
 Infix "*" := pProd : pbtype_scope.
 Infix "*" := pProd : ptype_scope.
+Notation "( )" := pUnit : pbtype_scope.
+Notation "( )" := pUnit : ptype_scope.
 Notation "'??'" := pbAny : pbtype_scope.
 Notation "'??'" := pAny : ptype_scope.
 Local Set Warnings Append "-notation-overridden".
@@ -262,6 +338,7 @@ Infix "@" := App : expr_scope.
 Notation "\ x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
 Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
 Notation "'$' x" := (Var x) (at level 10, format "'$' x") : expr_scope.
+Notation "( )" := (#TT)%expr : expr_scope.
 Notation "0" := (#O)%expr : expr_scope.
 Notation "n '.+1'" := (#S @ n)%expr (at level 10, format "n '.+1'") : expr_scope.
 Notation "x + y" := (#Add @ x @ y)%expr : expr_scope.
@@ -283,6 +360,7 @@ Notation "??ℕ" := (Wildcarde (Some (Base Nat))) : pattern_scope.
 Notation "??ℕℕ" := (Wildcarde (Some (Base (Prod Nat Nat)))) : pattern_scope.
 Notation "# idc" := (pIdent idc) : pattern_scope.
 Infix "@" := pApp : pattern_scope.
+Notation "( )" := (#pTT)%pattern : pattern_scope.
 Notation "0" := (#pO)%pattern : pattern_scope.
 Notation "n '.+1'" := (#pS @ n)%pattern (at level 10, format "n '.+1'") : pattern_scope.
 Notation "x + y" := (#pAdd @ x @ y)%pattern : pattern_scope.
@@ -298,7 +376,10 @@ Module type.
            {struct t2}
   : (option (P t1 -> P t2) -> T) -> T
     := match t2, t1 with
-       | Nat, Nat => fun k => k (Some (fun v => v))
+       | Nat, Nat
+       | Unit, Unit
+       | Bool, Bool
+         => fun k => k (Some (fun v => v))
        | List A, List A'
          => try_make_transport_base_cps
               (fun A => P (List A)) _ _
@@ -319,6 +400,8 @@ Module type.
                      | None => k None
                      end)
        | Nat, _
+       | Unit, _
+       | Bool, _
        | List _, _
        | Prod _ _, _
          => fun k => k None
@@ -529,6 +612,8 @@ Section with_var.
     := match t return Type with
        | pbAny => anyexpr
        | pNat => nat
+       | pUnit => unit
+       | pBool => bool
        | pProd A B => pbase_interp A * pbase_interp B
        | pList A => list (pbase_interp A)
        end.
@@ -543,6 +628,8 @@ Section with_var.
             | qexists => { t : base_type & K t }
             end
        | pNat => K Nat
+       | pUnit => K Unit
+       | pBool => K Bool
        | pProd A B
          => @pbase_type_interp_cps
               quant A
@@ -596,6 +683,18 @@ Section with_var.
          => fun k
             => match t2 return K t2 -> T with
                | Nat => fun v => k (Some v)
+               | _ => fun _ => k None
+               end v
+       | pUnit
+         => fun k
+            => match t2 return K t2 -> T with
+               | Unit => fun v => k (Some v)
+               | _ => fun _ => k None
+               end v
+       | pBool
+         => fun k
+            => match t2 return K t2 -> T with
+               | Bool => fun v => k (Some v)
                | _ => fun _ => k None
                end v
        | pProd A B
@@ -1037,7 +1136,10 @@ Section with_var.
                              -> pbase_type_interp_cps quant t K2 with
        | pbAny, qforall => fun f t => F t (f t)
        | pbAny, qexists => fun tf => existT _ _ (F _ (projT2 tf))
-       | pNat, _ => F _
+       | pNat, _
+       | pUnit, _
+       | pBool, _
+         => F _
        | pProd A B, _
          => @lift_pbase_type_interp_cps
               _ _ quant
@@ -1098,7 +1200,10 @@ Section with_var.
     := match t return pbase_type_interp_cps qforall t K1
                       -> pbase_type_interp_cps qexists t K2 -> T with
        | pbAny => fun f tv => F _ (f _) (projT2 tv)
-       | pNat => fun f v => F _ f v
+       | pNat
+       | pUnit
+       | pBool
+         => fun f v => F _ f v
        | pProd A B
          => @app_pbase_type_interp_cps
               _
@@ -1241,7 +1346,7 @@ Section with_var.
   Notation make_rewrite_step_cps p f
     := (let f' := (@lift_with_bindings p _ _ (fun x:continuation (option (@topanyexpr value)) => (x' <-- x; oret (existT (opt_anyexprP value) true x'))%continuation) f%expr) in
         make_rewrite'_cps p f').
-About ListFoldRight.
+  Print partition.
   Definition rewrite_rules : rewrite_rulesT' value
     := [make_rewrite (0 + ??ℕ) (fun x => x);
           make_rewrite (??ℕ + 0) (fun x => x);
@@ -1251,8 +1356,17 @@ About ListFoldRight.
           make_rewrite (??ℕ.+1 + ??ℕ.+1) (fun x y => (x+y).+1.+1);
           make_rewrite (??ℕ.+1 + ??ℕ) (fun x y => (x+y).+1);
           make_rewrite (??ℕ + ??ℕ.+1) (fun x y => (x+y).+1);
+          make_rewrite (#pNatEqb @ #? @ #?) (fun x y => if Nat.eqb x y then #iTrue else #iFalse);
           make_rewrite (#pFst @ (??, ??)) (fun tx x ty y => x);
           make_rewrite (#pSnd @ (??, ??)) (fun tx x ty y => y);
+          make_rewrite (#pBoolRect @ ??{Unit -> pBase ??} @ ??{Unit -> pBase ??} @ #piTrue) (fun _ t _ f => t #TT);
+          make_rewrite (#pBoolRect @ ??{Unit -> pBase ??} @ ??{Unit -> pBase ??} @ #piFalse) (fun _ t _ f => f #TT);
+          make_rewrite_cps
+            (#pMatchPair @ ??{?? -> ?? -> pBase ??} @ (??, ??))
+            (fun _ _ _ f _ x _ y
+             => x <-- cast x;
+                  y <-- cast y;
+                  oret (wrap (f x y)));
           make_rewrite_cps
             (??{pList ??} ++ ??{pList ??})
             (fun _ xs _ ys
@@ -1265,7 +1379,23 @@ About ListFoldRight.
             (fun _ _ f _ xs
              => xs <-- @cast expr _ (List _) xs;
                   xs <-- reflect_list_cps xs;
-                  oret (wrap (#ListFoldRight @ (λ ls1 ls2, $ls1 ++ $ls2) @ [] @ $(reify_list (List.map (fun x => f x) xs))%expr)));
+                  oret (wrap (#ListFoldRight @ (λ ls1 ls2, $ls1 ++ $ls2) @ (λ _, []) @ $(reify_list (List.map (fun x => f x) xs))%expr)));
+          make_rewrite_step_cps
+            (#pListPartition @ ??{?? -> pBool} @ ??{pList ??})
+            (fun _ f _ xs
+             => xs <-- @cast expr _ (List _) xs;
+                  xs <-- reflect_list_cps xs;
+                  oret (wrap (list_rect
+                                _
+                                ([], [])
+                                (fun x tl partition_tl
+                                 => #MatchPair
+                                     @ (λ g d, #BoolRect
+                                                @ (λ _, ($x :: $g, $d))
+                                                @ (λ _, ($g, $x :: $d))
+                                                @ $(f x))
+                                     @ partition_tl)
+                                xs)%expr));
           make_rewrite_cps
             (#pListFoldRight @ ??{?? -> ?? -> ??} @ ??{pBase ??} @ ??{pList ??})
             (fun _ _ _ f A init B xs
@@ -1419,7 +1549,7 @@ Arguments default_fuel / .
 Set Printing Depth 1000000.
 Definition dorewrite''' {var}
   := Eval cbv (*-[value reify default_fuel reflect nbe type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id orb projT1 projT2 nth_error set_nth update_nth anyexpr_ty app_binding_data app_pbase_type_interp_cps app_ptype_interp_cps bind_base_cps bind_continuation bind_data_cps binding_dataT bind_value_cps cast continuation dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_pbase_type_interp_cps lift_ptype_interp_cps lift_with_bindings option_bind_continuation orb_pident oret or_opt_pident pbase_type_interp_cps pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps unwrap value_of_rawexpr with_bindingsT]
+          [id orb projT1 projT2 nth_error set_nth update_nth anyexpr_ty app_binding_data app_pbase_type_interp_cps app_ptype_interp_cps bind_base_cps bind_continuation bind_data_cps binding_dataT bind_value_cps cast continuation dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_pbase_type_interp_cps lift_ptype_interp_cps lift_with_bindings option_bind_continuation orb_pident oret or_opt_pident pbase_type_interp_cps pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps unwrap value_of_rawexpr with_bindingsT Some_t]
     in @dorewrite'' default_fuel var.
 Arguments dorewrite''' / .
 Definition dorewrite
@@ -1439,6 +1569,45 @@ fun var : type -> Type =>
           match idc in (ident t2) return (value t2) with
           | O => 0
           | S => fun x : expr var0 Nat => x.+1
+          | @NatRect P =>
+              fun (x : expr var0 ( ) -> expr var0 P) (x0 : expr var0 Nat -> expr var0 P -> expr var0 P) (x1 : expr var0 Nat) =>
+              #(NatRect) @ (λ x2 : var0 ( )%ctype,
+                            x ($x2)) @ (λ (x2 : var0 Nat)(x3 : var0 P),
+                                        x0 ($x2) ($x3)) @ x1
+          | NatEqb =>
+              fun x x0 : expr var0 Nat =>
+              match x with
+              | ##(n) =>
+                  match x0 with
+                  | ##(n0) =>
+                      type.try_make_transport_cps (expr var0)
+                        (let (anyexpr_ty, _) :=
+                           if n =? n0
+                           then {| anyexpr_ty := Bool; unwrap := #(iTrue) |}
+                           else {| anyexpr_ty := Bool; unwrap := #(iFalse) |} in
+                         anyexpr_ty) Bool
+                        (fun
+                           tr : option
+                                  (expr var0
+                                     (let (anyexpr_ty, _) :=
+                                        if n =? n0
+                                        then {| anyexpr_ty := Bool; unwrap := #(iTrue) |}
+                                        else {| anyexpr_ty := Bool; unwrap := #(iFalse) |} in
+                                      anyexpr_ty) -> expr var0 Bool) =>
+                         match tr with
+                         | Some tr0 =>
+                             tr0
+                               (let (anyexpr_ty, unwrap) as a return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) :=
+                                  if n =? n0
+                                  then {| anyexpr_ty := Bool; unwrap := #(iTrue) |}
+                                  else {| anyexpr_ty := Bool; unwrap := #(iFalse) |} in
+                                unwrap)
+                         | None => #(NatEqb) @ x @ x0
+                         end)
+                  | _ => #(NatEqb) @ x @ x0
+                  end
+              | _ => #(NatEqb) @ x @ x0
+              end
           | Add =>
               fun x x0 : expr var0 Nat =>
               match x with
@@ -1452,10 +1621,12 @@ fun var : type -> Type =>
                          | Some tr0 => (x + tr0 x1).+1
                          | None => x + x0
                          end)
-                  | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _
-                    #(@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #
-                    (@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _ #(@ListApp _) _ | @App _ s0 _ #
-                    (@ListFlatMap _ _) _ | @App _ s0 _ #(@ListRect _ _) _ | @App _ s0 _ #(@ListFoldRight _ _) _ | @App _ s0 _
+                  | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(@NatRect _) _ | @App _ s0 _
+                    #(NatEqb) _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _
+                    #(@Snd _ _) _ | @App _ s0 _ #(@MatchPair _ _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #(@Cons _) _ | @App _ s0 _
+                    #(@ListMap _ _) _ | @App _ s0 _ #(@ListApp _) _ | @App _ s0 _ #(@ListFlatMap _ _) _ | @App _ s0 _ #
+                    (@ListRect _ _) _ | @App _ s0 _ #(@ListFoldRight _ _) _ | @App _ s0 _ #(@ListPartition _) _ | @App _ s0 _
+                    ( ) _ | @App _ s0 _ #(iTrue) _ | @App _ s0 _ #(iFalse) _ | @App _ s0 _ #(@BoolRect _) _ | @App _ s0 _
                     (_ @ _) _ | @App _ s0 _ ##(_) _ => x + x0
                   | _ => x + x0
                   end
@@ -1486,10 +1657,12 @@ fun var : type -> Type =>
                              | None => x + x0
                              end)
                       end
-                  | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(Add) _ | @App _ s0 _
-                    #(@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #
-                    (@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _ #(@ListApp _) _ | @App _ s0 _ #
-                    (@ListFlatMap _ _) _ | @App _ s0 _ #(@ListRect _ _) _ | @App _ s0 _ #(@ListFoldRight _ _) _ | @App _ s0 _
+                  | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(@NatRect _) _ | @App _ s0 _
+                    #(NatEqb) _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _
+                    #(@Snd _ _) _ | @App _ s0 _ #(@MatchPair _ _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #(@Cons _) _ | @App _ s0 _
+                    #(@ListMap _ _) _ | @App _ s0 _ #(@ListApp _) _ | @App _ s0 _ #(@ListFlatMap _ _) _ | @App _ s0 _ #
+                    (@ListRect _ _) _ | @App _ s0 _ #(@ListFoldRight _ _) _ | @App _ s0 _ #(@ListPartition _) _ | @App _ s0 _
+                    ( ) _ | @App _ s0 _ #(iTrue) _ | @App _ s0 _ #(iFalse) _ | @App _ s0 _ #(@BoolRect _) _ | @App _ s0 _
                     (_ @ _) _ | @App _ s0 _ ##(_) _ =>
                       match f with
                       | #(S) =>
@@ -1534,11 +1707,13 @@ fun var : type -> Type =>
                          | Some tr0 => ##(Datatypes.S n) + tr0 x1
                          | None => x + x0
                          end)
-                  | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(Add) _ | @App _ s _ #
-                    (@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _ #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #
-                    (@Cons _) _ | @App _ s _ #(@ListMap _ _) _ | @App _ s _ #(@ListApp _) _ | @App _ s _ #(@ListFlatMap _ _) _ | @App _
-                    s _ #(@ListRect _ _) _ | @App _ s _ #(@ListFoldRight _ _) _ | @App _ s _ (_ @ _) _ | @App _ s _ ##
-                    (_) _ => x + x0
+                  | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(@NatRect _) _ | @App _ s _ #
+                    (NatEqb) _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _ #
+                    (@Snd _ _) _ | @App _ s _ #(@MatchPair _ _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _
+                    #(@ListMap _ _) _ | @App _ s _ #(@ListApp _) _ | @App _ s _ #(@ListFlatMap _ _) _ | @App _ s _ #
+                    (@ListRect _ _) _ | @App _ s _ #(@ListFoldRight _ _) _ | @App _ s _ #(@ListPartition _) _ | @App _ s _
+                    ( ) _ | @App _ s _ #(iTrue) _ | @App _ s _ #(iFalse) _ | @App _ s _ #(@BoolRect _) _ | @App _ s _
+                    (_ @ _) _ | @App _ s _ ##(_) _ => x + x0
                   | ##(n0) => ##(n + n0)
                   | _ => x + x0
                   end
@@ -1552,11 +1727,13 @@ fun var : type -> Type =>
                          | Some tr0 => (x + tr0 x1).+1
                          | None => x + x0
                          end)
-                  | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(Add) _ | @App _ s _ #
-                    (@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _ #(@Snd _ _) _ | @App _ s _ [] _ | @App _ s _ #
-                    (@Cons _) _ | @App _ s _ #(@ListMap _ _) _ | @App _ s _ #(@ListApp _) _ | @App _ s _ #(@ListFlatMap _ _) _ | @App _
-                    s _ #(@ListRect _ _) _ | @App _ s _ #(@ListFoldRight _ _) _ | @App _ s _ (_ @ _) _ | @App _ s _ ##
-                    (_) _ => x + x0
+                  | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(@NatRect _) _ | @App _ s _ #
+                    (NatEqb) _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _ #
+                    (@Snd _ _) _ | @App _ s _ #(@MatchPair _ _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _
+                    #(@ListMap _ _) _ | @App _ s _ #(@ListApp _) _ | @App _ s _ #(@ListFlatMap _ _) _ | @App _ s _ #
+                    (@ListRect _ _) _ | @App _ s _ #(@ListFoldRight _ _) _ | @App _ s _ #(@ListPartition _) _ | @App _ s _
+                    ( ) _ | @App _ s _ #(iTrue) _ | @App _ s _ #(iFalse) _ | @App _ s _ #(@BoolRect _) _ | @App _ s _
+                    (_ @ _) _ | @App _ s _ ##(_) _ => x + x0
                   | _ => x + x0
                   end
               end
@@ -1571,9 +1748,12 @@ fun var : type -> Type =>
                                                                       | None => #(Fst) @ x
                                                                       end)
               | @App _ s0 _ ($_) _ @ _ | @App _ s0 _ (@Abs _ _ _ _) _ @ _ | @App _ s0 _ 0 _ @ _ | @App _ s0 _ #(S) _ @ _ |
-                @App _ s0 _ #(Add) _ @ _ | @App _ s0 _ #(@Fst _ _) _ @ _ | @App _ s0 _ #(@Snd _ _) _ @ _ | @App _ s0 _ [] _ @ _ |
-                @App _ s0 _ #(@Cons _) _ @ _ | @App _ s0 _ #(@ListMap _ _) _ @ _ | @App _ s0 _ #(@ListApp _) _ @ _ |
-                @App _ s0 _ #(@ListFlatMap _ _) _ @ _ | @App _ s0 _ #(@ListRect _ _) _ @ _ | @App _ s0 _ #(@ListFoldRight _ _) _ @ _ |
+                @App _ s0 _ #(@NatRect _) _ @ _ | @App _ s0 _ #(NatEqb) _ @ _ | @App _ s0 _ #(Add) _ @ _ |
+                @App _ s0 _ #(@Fst _ _) _ @ _ | @App _ s0 _ #(@Snd _ _) _ @ _ | @App _ s0 _ #(@MatchPair _ _ _) _ @ _ |
+                @App _ s0 _ [] _ @ _ | @App _ s0 _ #(@Cons _) _ @ _ | @App _ s0 _ #(@ListMap _ _) _ @ _ |
+                @App _ s0 _ #(@ListApp _) _ @ _ | @App _ s0 _ #(@ListFlatMap _ _) _ @ _ | @App _ s0 _ #(@ListRect _ _) _ @ _ |
+                @App _ s0 _ #(@ListFoldRight _ _) _ @ _ | @App _ s0 _ #(@ListPartition _) _ @ _ | @App _ s0 _ ( ) _ @ _ |
+                @App _ s0 _ #(iTrue) _ @ _ | @App _ s0 _ #(iFalse) _ @ _ | @App _ s0 _ #(@BoolRect _) _ @ _ |
                 @App _ s0 _ (_ @ _) _ @ _ | @App _ s0 _ ##(_) _ @ _ => #(Fst) @ x
               | _ => #(Fst) @ x
               end
@@ -1587,12 +1767,59 @@ fun var : type -> Type =>
                                                                      | None => #(Snd) @ x
                                                                      end)
               | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ($_ @ _) _ | @App _ s _
-                (@Abs _ _ _ _ @ _) _ | @App _ s _ (0 @ _) _ | @App _ s _ (_.+1) _ | @App _ s _ (#(Add) @ _) _ | @App _ s _
-                (#(@Fst _ _) @ _) _ | @App _ s _ (#(@Snd _ _) @ _) _ | @App _ s _ ([] @ _) _ | @App _ s _ (#(@Cons _) @ _) _ | @App _ s
-                _ (#(@ListMap _ _) @ _) _ | @App _ s _ (#(@ListApp _) @ _) _ | @App _ s _ (#(@ListFlatMap _ _) @ _) _ | @App _ s _
-                (#(@ListRect _ _) @ _) _ | @App _ s _ (#(@ListFoldRight _ _) @ _) _ | @App _ s _ (_ @ _ @ _) _ | @App _ s _
+                (@Abs _ _ _ _ @ _) _ | @App _ s _ (0 @ _) _ | @App _ s _ (_.+1) _ | @App _ s _ (#(@NatRect _) @ _) _ | @App _ s _
+                (#(NatEqb) @ _) _ | @App _ s _ (#(Add) @ _) _ | @App _ s _ (#(@Fst _ _) @ _) _ | @App _ s _
+                (#(@Snd _ _) @ _) _ | @App _ s _ (#(@MatchPair _ _ _) @ _) _ | @App _ s _ ([] @ _) _ | @App _ s _
+                (#(@Cons _) @ _) _ | @App _ s _ (#(@ListMap _ _) @ _) _ | @App _ s _ (#(@ListApp _) @ _) _ | @App _ s _
+                (#(@ListFlatMap _ _) @ _) _ | @App _ s _ (#(@ListRect _ _) @ _) _ | @App _ s _ (#(@ListFoldRight _ _) @ _) _ | @App _ s
+                _ (#(@ListPartition _) @ _) _ | @App _ s _ (( ) @ _) _ | @App _ s _ (#(iTrue) @ _) _ | @App _ s _
+                (#(iFalse) @ _) _ | @App _ s _ (#(@BoolRect _) @ _) _ | @App _ s _ (_ @ _ @ _) _ | @App _ s _
                 (##(_) @ _) _ | @App _ s _ ##(_) _ => #(Snd) @ x
               | _ => #(Snd) @ x
+              end
+          | @MatchPair A B P =>
+              fun (x : expr var0 A -> expr var0 B -> expr var0 P) (x0 : expr var0 (A * B)) =>
+              match x0 with
+              | @App _ s _ (@App _ s0 _ #(@Pair _ _) x2) x1 =>
+                  type.try_make_transport_cps (expr var0) s0 A
+                    (fun tr : option (expr var0 s0 -> expr var0 A) =>
+                     match tr with
+                     | Some tr0 =>
+                         type.try_make_transport_cps (expr var0) s B
+                           (fun tr1 : option (expr var0 s -> expr var0 B) =>
+                            match tr1 with
+                            | Some tr2 =>
+                                type.try_make_transport_base_cps (fun x3 : base_type => expr var0 x3) P P
+                                  (fun tr3 : option (expr var0 P -> expr var0 P) =>
+                                   match tr3 with
+                                   | Some tr4 => tr4 (x (tr0 x2) (tr2 x1))
+                                   | None => #(MatchPair) @ (λ (x3 : var0 A)(x4 : var0 B),
+                                                             x ($x3) ($x4)) @ x0
+                                   end)
+                            | None => #(MatchPair) @ (λ (x3 : var0 A)(x4 : var0 B),
+                                                      x ($x3) ($x4)) @ x0
+                            end)
+                     | None => #(MatchPair) @ (λ (x3 : var0 A)(x4 : var0 B),
+                                               x ($x3) ($x4)) @ x0
+                     end)
+              | @App _ s _ (@App _ s0 _ (_ @ _) _) _ => #(MatchPair) @ (λ (x4 : var0 A)(x5 : var0 B),
+                                                                        x ($x4) ($x5)) @ x0
+              | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
+                (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ | @App _ s _
+                (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s
+                _ (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ #(@MatchPair _ _ _) _) _ | @App _ s _
+                (@App _ s0 _ [] _) _ | @App _ s _ (@App _ s0 _ #(@Cons _) _) _ | @App _ s _ (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s
+                _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _
+                (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _
+                (@App _ s0 _ #(@ListPartition _) _) _ | @App _ s _ (@App _ s0 _ ( ) _) _ | @App _ s _ (@App _ s0 _ #(iTrue) _) _ | @App
+                _ s _ (@App _ s0 _ #(iFalse) _) _ | @App _ s _ (@App _ s0 _ #(@BoolRect _) _) _ | @App _ s _
+                (@App _ s0 _ ##(_) _) _ => #(MatchPair) @ (λ (x3 : var0 A)(x4 : var0 B),
+                                                           x ($x3) ($x4)) @ x0
+              | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ##(_) _ =>
+                  #(MatchPair) @ (λ (x2 : var0 A)(x3 : var0 B),
+                                  x ($x2) ($x3)) @ x0
+              | _ => #(MatchPair) @ (λ (x1 : var0 A)(x2 : var0 B),
+                                     x ($x1) ($x2)) @ x0
               end
           | @Nil A => []
           | @Cons A => fun (x : expr var0 A) (x0 : expr var0 (List A)) => x :: x0
@@ -1638,12 +1865,16 @@ fun var : type -> Type =>
                                    | @App _ s _ (@App _ s0 _ (_ @ _) _) _ => #(ListMap) @ (λ x4 : var0 A,
                                                                                            x ($x4)) @ x0
                                    | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
-                                     (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ |
-                                     @App _ s _ (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
-                                     (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ [] _) _ | @App _ s _
-                                     (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _
-                                     (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _
-                                     (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _ (@App _ s0 _ ##(_) _) _ =>
+                                     (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _)
+                                     _ | @App _ s _ (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _
+                                     (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
+                                     (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ #(@MatchPair _ _ _) _) _ | @App _ s _
+                                     (@App _ s0 _ [] _) _ | @App _ s _ (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _
+                                     (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _
+                                     (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s
+                                     _ (@App _ s0 _ #(@ListPartition _) _) _ | @App _ s _ (@App _ s0 _ ( ) _) _ | @App _ s _
+                                     (@App _ s0 _ #(iTrue) _) _ | @App _ s _ (@App _ s0 _ #(iFalse) _) _ | @App _ s _
+                                     (@App _ s0 _ #(@BoolRect _) _) _ | @App _ s _ (@App _ s0 _ ##(_) _) _ =>
                                        #(ListMap) @ (λ x3 : var0 A,
                                                      x ($x3)) @ x0
                                    | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ##(_) _ =>
@@ -1681,12 +1912,16 @@ fun var : type -> Type =>
                             | @App _ s _ (@App _ s0 _ (_ @ _) _) _ => #(ListMap) @ (λ x4 : var0 A,
                                                                                     x ($x4)) @ x0
                             | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
-                              (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _
+                              (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ |
+                              @App _ s _ (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _
                               (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
-                              (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ [] _) _ | @App _ s _
-                              (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _
-                              (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _
-                              (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _ (@App _ s0 _ ##(_) _) _ =>
+                              (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ #(@MatchPair _ _ _) _) _ | @App _ s _
+                              (@App _ s0 _ [] _) _ | @App _ s _ (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _
+                              (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _
+                              (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _
+                              (@App _ s0 _ #(@ListPartition _) _) _ | @App _ s _ (@App _ s0 _ ( ) _) _ | @App _ s _
+                              (@App _ s0 _ #(iTrue) _) _ | @App _ s _ (@App _ s0 _ #(iFalse) _) _ | @App _ s _
+                              (@App _ s0 _ #(@BoolRect _) _) _ | @App _ s _ (@App _ s0 _ ##(_) _) _ =>
                                 #(ListMap) @ (λ x3 : var0 A,
                                               x ($x3)) @ x0
                             | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ##(_) _ =>
@@ -1724,13 +1959,17 @@ fun var : type -> Type =>
                      | @App _ s _ (@App _ s0 _ (_ @ _) _) _ => #(ListMap) @ (λ x4 : var0 A,
                                                                              x ($x4)) @ x0
                      | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
-                       (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _
-                       (@App _ s0 _ #(@Pair _ _) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _
-                       (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ [] _) _ | @App _ s _ (@App _ s0 _ #(@ListMap _ _) _) _ |
-                       @App _ s _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _
-                       (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _
-                       (@App _ s0 _ ##(_) _) _ => #(ListMap) @ (λ x3 : var0 A,
-                                                                x ($x3)) @ x0
+                       (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ | @App _ s _
+                       (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _ (@App _ s0 _ #(@Pair _ _) _) _ |
+                       @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _ s _ (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _
+                       (@App _ s0 _ #(@MatchPair _ _ _) _) _ | @App _ s _ (@App _ s0 _ [] _) _ | @App _ s _
+                       (@App _ s0 _ #(@ListMap _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _
+                       (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _
+                       (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListPartition _) _) _ | @App _ s _
+                       (@App _ s0 _ ( ) _) _ | @App _ s _ (@App _ s0 _ #(iTrue) _) _ | @App _ s _ (@App _ s0 _ #(iFalse) _) _ | @App _ s
+                       _ (@App _ s0 _ #(@BoolRect _) _) _ | @App _ s _ (@App _ s0 _ ##(_) _) _ =>
+                         #(ListMap) @ (λ x3 : var0 A,
+                                       x ($x3)) @ x0
                      | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ##(_) _ =>
                          #(ListMap) @ (λ x2 : var0 A,
                                        x ($x2)) @ x0
@@ -1783,13 +2022,15 @@ fun var : type -> Type =>
                                        nbe
                                          (tr2
                                             (#(ListFoldRight) @ (λ ls1 ls2 : value (List B),
-                                                                 $ls1 ++ $ls2) @ [] @
+                                                                 $ls1 ++ $ls2) @ (λ _ : value ( ),
+                                                                                  []) @
                                              $(reify_list (map (fun x1 : expr var0 A => x x1) x'0))))
                                    | Datatypes.S fuel' =>
                                        dorewrite'' fuel' var0 (List B)
                                          (tr2
                                             (#(ListFoldRight) @ (λ ls1 ls2 : value (List B),
-                                                                 $ls1 ++ $ls2) @ [] @
+                                                                 $ls1 ++ $ls2) @ (λ _ : value ( ),
+                                                                                  []) @
                                              $(reify_list (map (fun x1 : expr var0 A => x x1) x'0))))
                                    end
                                | None => #(ListFlatMap) @ (λ x1 : var0 A,
@@ -1802,95 +2043,107 @@ fun var : type -> Type =>
                                              x ($x1)) @ x0
                  end)
           | @ListRect A P =>
-              fun (x : expr var0 P) (x0 : expr var0 A -> expr var0 (List A) -> expr var0 P -> expr var0 P) (x1 : expr var0 (List A)) =>
-              type.try_make_transport_base_cps (fun x2 : base_type => value (x2 -> List A -> P -> P)) A A
-                (fun trs : option (value (A -> List A -> P -> P) -> value (A -> List A -> P -> P)) =>
-                 match trs with
-                 | Some trs0 =>
-                     type.try_make_transport_base_cps (fun A0 : base_type => value (A -> List A0 -> P -> P)) A A
-                       (fun trs1 : option (value (A -> List A -> P -> P) -> value (A -> List A -> P -> P)) =>
-                        match trs1 with
-                        | Some trs2 =>
-                            type.try_make_transport_base_cps (fun x2 : base_type => value (A -> List A -> x2 -> P)) P P
-                              (fun trs3 : option (value (A -> List A -> P -> P) -> value (A -> List A -> P -> P)) =>
-                               match trs3 with
-                               | Some trs4 =>
-                                   type.try_make_transport_base_cps (fun x2 : base_type => value (A -> List A -> P -> x2)) P P
-                                     (fun trd : option (value (A -> List A -> P -> P) -> value (A -> List A -> P -> P)) =>
+              fun (x : expr var0 ( ) -> expr var0 P) (x0 : expr var0 A -> expr var0 (List A) -> expr var0 P -> expr var0 P)
+                (x1 : expr var0 (List A)) =>
+              #(ListRect) @ (λ x2 : var0 ( )%ctype,
+                             x ($x2)) @ (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
+                                         x0 ($x2) ($x3) ($x4)) @ x1
+          | @ListFoldRight A B =>
+              fun (x : expr var0 B -> expr var0 A -> expr var0 A) (x0 : expr var0 ( ) -> expr var0 A) (x1 : expr var0 (List B)) =>
+              #(ListFoldRight) @ (λ (x2 : var0 B)(x3 : var0 A),
+                                  x ($x2) ($x3)) @ (λ x2 : var0 ( )%ctype,
+                                                    x0 ($x2)) @ x1
+          | @ListPartition A =>
+              fun (x : expr var0 A -> expr var0 Bool) (x0 : expr var0 (List A)) =>
+              type.try_make_transport_base_cps (fun A0 : base_type => expr var0 (List A0)) A A
+                (fun tr : option (expr var0 (List A) -> expr var0 (List A)) =>
+                 match tr with
+                 | Some tr0 =>
+                     reflect_list_cps (tr0 x0) (expr var0 (List A * List A))
+                       (fun x' : option (list (expr var0 A)) =>
+                        match x' with
+                        | Some x'0 =>
+                            type.try_make_transport_base_cps (fun A0 : base_type => expr value (List A0 * List A)) A A
+                              (fun trs : option (expr value (List A * List A) -> expr value (List A * List A)) =>
+                               match trs with
+                               | Some trs0 =>
+                                   type.try_make_transport_base_cps (fun A0 : base_type => expr value (List A * List A0)) A A
+                                     (fun trd : option (expr value (List A * List A) -> expr value (List A * List A)) =>
                                       match trd with
                                       | Some trd0 =>
-                                          reflect_list_cps x1 (expr var0 P)
-                                            (fun x' : option (list (expr var0 A)) =>
-                                             match x' with
-                                             | Some x'0 =>
-                                                 type.try_make_transport_base_cps (fun x2 : base_type => expr var0 x2) P P
-                                                   (fun tr : option (expr var0 P -> expr var0 P) =>
-                                                    match tr with
-                                                    | Some tr0 =>
-                                                        tr0
-                                                          (list_rect (fun _ : list (expr var0 A) => expr var0 P) x
-                                                             (fun (x'1 : expr var0 A) (xs' : list (expr var0 A)) (rec : expr var0 P) =>
-                                                              trd0 (trs4 (trs2 (trs0 x0))) x'1 (reify_list xs') rec) x'0)
-                                                    | None =>
-                                                        #(ListRect) @ x @
-                                                        (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
-                                                         x0 ($x2) ($x3) ($x4)) @ x1
-                                                    end)
-                                             | None =>
-                                                 #(ListRect) @ x @
-                                                 (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
-                                                  x0 ($x2) ($x3) ($x4)) @ x1
-                                             end)
-                                      | None =>
-                                          #(ListRect) @ x @ (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
-                                                             x0 ($x2) ($x3) ($x4)) @ x1
+                                          match fuel with
+                                          | 0 =>
+                                              nbe
+                                                (trd0
+                                                   (trs0
+                                                      (list_rect (fun _ : list (value A) => expr value (List A * List A))
+                                                         ([], [])
+                                                         (fun (x1 : value A) (_ : list (value A))
+                                                            (partition_tl : expr value (List A * List A)) =>
+                                                          #(MatchPair) @
+                                                          (λ g d : value (List A),
+                                                           #(BoolRect) @ (λ _ : value ( ),
+                                                                          ($x1 :: $g, $d)) @ (λ _ : value ( ),
+                                                                                              ($g, $x1 :: $d)) @ $
+                                                           (x x1)) @ partition_tl) x'0)))
+                                          | Datatypes.S fuel' =>
+                                              dorewrite'' fuel' var0 (List A * List A)%ctype
+                                                (trd0
+                                                   (trs0
+                                                      (list_rect (fun _ : list (value A) => expr value (List A * List A))
+                                                         ([], [])
+                                                         (fun (x1 : value A) (_ : list (value A))
+                                                            (partition_tl : expr value (List A * List A)) =>
+                                                          #(MatchPair) @
+                                                          (λ g d : value (List A),
+                                                           #(BoolRect) @ (λ _ : value ( ),
+                                                                          ($x1 :: $g, $d)) @ (λ _ : value ( ),
+                                                                                              ($g, $x1 :: $d)) @ $
+                                                           (x x1)) @ partition_tl) x'0)))
+                                          end
+                                      | None => #(ListPartition) @ (λ x1 : var0 A,
+                                                                    x ($x1)) @ x0
                                       end)
-                               | None => #(ListRect) @ x @ (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
-                                                            x0 ($x2) ($x3) ($x4)) @ x1
+                               | None => #(ListPartition) @ (λ x1 : var0 A,
+                                                             x ($x1)) @ x0
                                end)
-                        | None => #(ListRect) @ x @ (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
-                                                     x0 ($x2) ($x3) ($x4)) @ x1
+                        | None => #(ListPartition) @ (λ x1 : var0 A,
+                                                      x ($x1)) @ x0
                         end)
-                 | None => #(ListRect) @ x @ (λ (x2 : var0 A)(x3 : var0 (List A))(x4 : var0 P),
-                                              x0 ($x2) ($x3) ($x4)) @ x1
+                 | None => #(ListPartition) @ (λ x1 : var0 A,
+                                               x ($x1)) @ x0
                  end)
-          | @ListFoldRight A B =>
-              fun (x : expr var0 B -> expr var0 A -> expr var0 A) (x0 : expr var0 A) (x1 : expr var0 (List B)) =>
-              type.try_make_transport_base_cps (fun x2 : base_type => value (x2 -> A -> A)) B B
-                (fun trs : option (value (B -> A -> A) -> value (B -> A -> A)) =>
-                 match trs with
-                 | Some trs0 =>
-                     type.try_make_transport_base_cps (fun x2 : base_type => value (B -> x2 -> A)) A A
-                       (fun trs1 : option (value (B -> A -> A) -> value (B -> A -> A)) =>
-                        match trs1 with
-                        | Some trs2 =>
-                            type.try_make_transport_base_cps (fun x2 : base_type => value (B -> A -> x2)) A A
-                              (fun trd : option (value (B -> A -> A) -> value (B -> A -> A)) =>
-                               match trd with
-                               | Some trd0 =>
-                                   reflect_list_cps x1 (expr var0 A)
-                                     (fun x' : option (list (expr var0 B)) =>
-                                      match x' with
-                                      | Some x'0 =>
-                                          type.try_make_transport_base_cps (fun x2 : base_type => expr var0 x2) A A
-                                            (fun tr : option (expr var0 A -> expr var0 A) =>
-                                             match tr with
-                                             | Some tr0 => tr0 (fold_right (trd0 (trs2 (trs0 x))) x0 x'0)
-                                             | None => #(ListFoldRight) @ (λ (x2 : var0 B)(x3 : var0 A),
-                                                                           x ($x2) ($x3)) @ x0 @ x1
-                                             end)
-                                      | None => #(ListFoldRight) @ (λ (x2 : var0 B)(x3 : var0 A),
-                                                                    x ($x2) ($x3)) @ x0 @ x1
-                                      end)
-                               | None => #(ListFoldRight) @ (λ (x2 : var0 B)(x3 : var0 A),
-                                                             x ($x2) ($x3)) @ x0 @ x1
-                               end)
-                        | None => #(ListFoldRight) @ (λ (x2 : var0 B)(x3 : var0 A),
-                                                      x ($x2) ($x3)) @ x0 @ x1
-                        end)
-                 | None => #(ListFoldRight) @ (λ (x2 : var0 B)(x3 : var0 A),
-                                               x ($x2) ($x3)) @ x0 @ x1
-                 end)
+          | TT => ( )
+          | iTrue => #(iTrue)
+          | iFalse => #(iFalse)
+          | @BoolRect P =>
+              fun (x x0 : expr var0 ( ) -> expr var0 P) (x1 : expr var0 Bool) =>
+              match x1 with
+              | #(iTrue) =>
+                  type.try_make_transport_base_cps (fun x2 : base_type => expr var0 x2) P P
+                    (fun tr : option (expr var0 P -> expr var0 P) =>
+                     match tr with
+                     | Some tr0 => tr0 (x ( ))
+                     | None => #(BoolRect) @ (λ x2 : var0 ( )%ctype,
+                                              x ($x2)) @ (λ x2 : var0 ( )%ctype,
+                                                          x0 ($x2)) @ x1
+                     end)
+              | #(iFalse) =>
+                  type.try_make_transport_base_cps (fun x2 : base_type => expr var0 x2) P P
+                    (fun tr : option (expr var0 P -> expr var0 P) =>
+                     match tr with
+                     | Some tr0 => tr0 (x0 ( ))
+                     | None => #(BoolRect) @ (λ x2 : var0 ( )%ctype,
+                                              x ($x2)) @ (λ x2 : var0 ( )%ctype,
+                                                          x0 ($x2)) @ x1
+                     end)
+              | _ @ _ => #(BoolRect) @ (λ x3 : var0 ( )%ctype,
+                                        x ($x3)) @ (λ x3 : var0 ( )%ctype,
+                                                    x0 ($x3)) @ x1
+              | _ => #(BoolRect) @ (λ x2 : var0 ( )%ctype,
+                                    x ($x2)) @ (λ x2 : var0 ( )%ctype,
+                                                x0 ($x2)) @ x1
+              end
           end
       | @App _ s d f x => dorewrite' (s -> d)%ctype f (dorewrite' s x)
       | ##(n) => ##(n)
@@ -1900,3 +2153,4 @@ fun var : type -> Type =>
 Arguments var, t are implicit and maximally inserted
 Argument scopes are [function_scope ctype_scope expr_scope]
 *)
+Timeout 10 Time Compute dorewrite (#ListPartition @ (λ x, #NatEqb @ $x @ ##1) @ [##0; ##1; ##1; ##2])%expr.
