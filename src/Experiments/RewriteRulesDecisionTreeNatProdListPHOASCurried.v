@@ -16,6 +16,7 @@ Delimit Scope ctype_scope with ctype.
 Infix "->" := Arrow : ctype_scope.
 Infix "*" := Prod : ctype_scope.
 
+About fold_right.
 Inductive ident : type -> Type :=
 | O : ident Nat
 | S : ident (Nat -> Nat)
@@ -26,11 +27,12 @@ Inductive ident : type -> Type :=
 | Nil {A} : ident (List A)
 | Cons {A : base_type} : ident (A -> List A -> List A)
 | ListMap {A B : base_type} : ident ((A -> B) -> List A -> List B)
-| ListApp {A} : ident (List A -> List A -> List A).
+| ListApp {A} : ident (List A -> List A -> List A)
+| ListFlatMap {A B : base_type} : ident ((A -> List B) -> List A -> List B)
+| ListRect {A : base_type} {P} : ident (P -> (A -> List A -> P -> P) -> List A -> P)
+| ListFoldRight {A} {B : base_type} : ident ((B -> A -> A) -> A -> List B -> A).
 
-(*
 Show Match ident.
-*)
 (*
 <<<
 #!/usr/bin/env python2
@@ -46,7 +48,12 @@ show_match_ident = r"""match # with
  | Cons A =>
  | ListMap A B =>
  | ListApp A =>
- end"""
+ | ListFlatMap A B =>
+ | ListRect A P =>
+ | ListFoldRight A B =>
+ end
+
+"""
 ctors = [i.strip('|=> ').split(' ') for i in show_match_ident.split('\n') if i.strip().startswith('|')]
 pctors = ['p' + i[0] for i in ctors]
 print(r"""Inductive pident : Type :=
@@ -101,7 +108,10 @@ Inductive pident : Type :=
 | pNil
 | pCons
 | pListMap
-| pListApp.
+| pListApp
+| pListFlatMap
+| pListRect
+| pListFoldRight.
 
 Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
   := match X, Y with
@@ -115,6 +125,9 @@ Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
      | pCons, Cons _
      | pListMap, ListMap _ _
      | pListApp, ListApp _
+     | pListFlatMap, ListFlatMap _ _
+     | pListRect, ListRect _ _
+     | pListFoldRight, ListFoldRight _ _
        => true
      | pO, _
      | pS, _
@@ -126,6 +139,9 @@ Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
      | pCons, _
      | pListMap, _
      | pListApp, _
+     | pListFlatMap, _
+     | pListRect, _
+     | pListFoldRight, _
        => false
      end.
 
@@ -143,6 +159,9 @@ Definition eta_ident_cps {T t} (idc : ident t)
      | Cons A => f _ (@Cons A)
      | ListMap A B => f _ (@ListMap A B)
      | ListApp A => f _ (@ListApp A)
+     | ListFlatMap A B => f _ (@ListFlatMap A B)
+     | ListRect A P => f _ (@ListRect A P)
+     | ListFoldRight A B => f _ (@ListFoldRight A B)
      end.
 
 Definition eta_option_pident_cps {T} (f : pident -> option T)
@@ -157,6 +176,9 @@ Definition eta_option_pident_cps {T} (f : pident -> option T)
       fCons <- f pCons;
       fListMap <- f pListMap;
       fListApp <- f pListApp;
+      fListFlatMap <- f pListFlatMap;
+      fListRect <- f pListRect;
+      fListFoldRight <- f pListFoldRight;
       Some (fun c
             => match c with
                | pO => fO
@@ -169,6 +191,9 @@ Definition eta_option_pident_cps {T} (f : pident -> option T)
                | pCons => fCons
                | pListMap => fListMap
                | pListApp => fListApp
+               | pListFlatMap => fListFlatMap
+               | pListRect => fListRect
+               | pListFoldRight => fListFoldRight
                end))%option.
 
 Definition pident_of_ident {t} (idc : ident t) : pident
@@ -183,10 +208,13 @@ Definition pident_of_ident {t} (idc : ident t) : pident
      | Cons A => pCons
      | ListMap A B => pListMap
      | ListApp A => pListApp
+     | ListFlatMap A B => pListFlatMap
+     | ListRect A P => pListRect
+     | ListFoldRight A B => pListFoldRight
      end.
 
 Definition orb_pident (f : pident -> bool) : bool
-  := (f pO || f pS || f pAdd || f pPair || f pFst || f pSnd || f pNil || f pCons || f pListMap || f pListApp)%bool.
+  := (f pO || f pS || f pAdd || f pPair || f pFst || f pSnd || f pNil || f pCons || f pListMap || f pListApp || f pListFlatMap || f pListRect || f pListFoldRight)%bool.
 (*===*)
 
 Definition or_opt_pident {T} (f : pident -> option T) : bool
@@ -202,7 +230,8 @@ Inductive expr {var : type -> Type} : type -> Type :=
 Inductive pbase_type := pbAny | pNat | pProd (A B : pbase_type) | pList (A : pbase_type).
 Definition option_type := option type.
 Coercion Some_t (t : type) : option_type := Some t.
-Inductive ptype := pAny | pArrow (s : option_type) (d : ptype).
+Inductive ptype := pAny | pBase (t : pbase_type) | pArrow (s : option_type) (d : ptype).
+Coercion pBase : pbase_type >-> ptype.
 Bind Scope ptype_scope with ptype.
 Bind Scope pbtype_scope with pbase_type.
 Bind Scope ctype_scope with option_type.
@@ -210,8 +239,9 @@ Delimit Scope ptype_scope with ptype.
 Delimit Scope pbtype_scope with pbtype.
 Infix "->" := pArrow : ptype_scope.
 Infix "*" := pProd : pbtype_scope.
-Notation "'??'" := pAny : ptype_scope.
+Infix "*" := pProd : ptype_scope.
 Notation "'??'" := pbAny : pbtype_scope.
+Notation "'??'" := pAny : ptype_scope.
 Local Set Warnings Append "-notation-overridden".
 Notation "'??'" := (@None type) : ctype_scope.
 Notation "'??'" := (@None base_type) : ctype_scope.
@@ -264,6 +294,79 @@ Notation "[ x ]" := (x :: [])%pattern : pattern_scope.
 Notation "[ x ; y ; .. ; z ]" :=  (#pCons @ x @ (#pCons @ y @ .. (#pCons @ z @ []) ..))%pattern : pattern_scope.
 
 Module type.
+  Fixpoint try_make_transport_base_cps {T} (P : base_type -> Type) (t1 t2 : base_type)
+           {struct t2}
+  : (option (P t1 -> P t2) -> T) -> T
+    := match t2, t1 with
+       | Nat, Nat => fun k => k (Some (fun v => v))
+       | List A, List A'
+         => try_make_transport_base_cps
+              (fun A => P (List A)) _ _
+       | Prod s d, Prod s' d'
+         => fun k
+            => try_make_transport_base_cps
+                 (fun s => P (Prod s _)) _ _
+                 (fun trs
+                  => match trs with
+                     | Some trs
+                       => try_make_transport_base_cps
+                            (fun d => P (Prod _ d)) _ _
+                            (fun trd
+                             => match trd with
+                                | Some trd => k (Some (fun v => trd (trs v)))
+                                | None => k None
+                                end)
+                     | None => k None
+                     end)
+       | Nat, _
+       | List _, _
+       | Prod _ _, _
+         => fun k => k None
+       end.
+
+  Fixpoint try_make_transport_cps {T} (P : type -> Type) (t1 t2 : type) {struct t2} : (option (P t1 -> P t2) -> T) -> T
+    := match t2, t1 with
+       | Base t2, Base t1
+         => try_make_transport_base_cps P t1 t2
+       | Arrow s d, Arrow s' d'
+         => fun k
+            => try_make_transport_cps
+                 (fun s => P (Arrow s _)) _ _
+                 (fun trs
+                  => match trs with
+                     | Some trs
+                       => try_make_transport_cps
+                            (fun d => P (Arrow _ d)) _ _
+                            (fun trd
+                             => match trd with
+                                | Some trd => k (Some (fun v => trd (trs v)))
+                                | None => k None
+                                end)
+                     | None => k None
+                     end)
+       | Base _, _
+       | Arrow _ _, _
+         => fun k => k None
+       end.
+  Definition try_transport_base_cps {T} (P : base_type -> Type) (t1 t2 : base_type) (v : P t1) (k : option (P t2) -> T) : T
+    := try_make_transport_base_cps
+         P t1 t2
+         (fun tr
+          => match tr with
+             | Some tr => k (Some (tr v))
+             | None => k None
+             end).
+
+  Definition try_transport_cps {T} (P : type -> Type) (t1 t2 : type) (v : P t1) (k : option (P t2) -> T) : T
+    := try_make_transport_cps
+         P t1 t2
+         (fun tr
+          => match tr with
+             | Some tr => k (Some (tr v))
+             | None => k None
+             end).
+
+(*
   Fixpoint try_transport_base_cps {T} (P : base_type -> Type) (t1 t2 : base_type)
            {struct t2}
   : P t1 -> (option (P t2) -> T) -> T
@@ -329,6 +432,7 @@ Module type.
                | _ => fun _ => k None
                end v
        end.
+*)
   Definition try_transport (P : type -> Type) (t1 t2 : type) (v : P t1) : option (P t2)
     := try_transport_cps P t1 t2 v id.
 End type.
@@ -431,12 +535,34 @@ Section with_var.
 
   Inductive quant_type := qforall | qexists.
 
+  Fixpoint pbase_type_interp_cps (quant : quant_type) (t : pbase_type) (K : base_type -> Type) : Type
+    := match t with
+       | pbAny
+         => match quant with
+            | qforall => forall t : base_type, K t
+            | qexists => { t : base_type & K t }
+            end
+       | pNat => K Nat
+       | pProd A B
+         => @pbase_type_interp_cps
+              quant A
+              (fun A'
+               => @pbase_type_interp_cps
+                    quant B (fun B' => K (Prod A' B')))
+       | pList A
+         => @pbase_type_interp_cps
+              quant A (fun A' => K (List A'))
+       end.
+
   Fixpoint ptype_interp_cps (quant : quant_type) (t : ptype) (kt : type -> type) (K : type -> Type) : Type
     := match t with
-       | pAny => match quant with
-                 | qforall => forall t : base_type, K (kt t)
-                 | qexists => { t : base_type & K (kt t) }
-                 end
+       | pBase t
+         => pbase_type_interp_cps quant t (fun t => K (kt (Base t)))
+       | pAny
+         => match quant with
+            | qforall => forall t : type, K (kt t)
+            | qexists => { t : type & K (kt t) }
+            end
        | pArrow None d
          => match quant with
             | qforall => forall t : base_type, @ptype_interp_cps quant d (fun d => kt (t -> d)%ctype) K
@@ -458,6 +584,48 @@ Section with_var.
        | pLiteral => nat
        end%type.
 
+  Fixpoint bind_base_cps {T t1 t2}
+           (K : base_type -> Type)
+           (k : option (pbase_type_interp_cps qexists t1 K) -> T)
+           (v : K t2)
+           {struct t1}
+    : T
+    := match t1 return (option (pbase_type_interp_cps qexists t1 K) -> T) -> T with
+       | pbAny => fun k => k (Some (existT K t2 v))
+       | pNat
+         => fun k
+            => match t2 return K t2 -> T with
+               | Nat => fun v => k (Some v)
+               | _ => fun _ => k None
+               end v
+       | pProd A B
+         => fun k
+            => match t2 return K t2 -> T with
+               | Prod A' B'
+                 => fun v
+                    => @bind_base_cps
+                         T B B' (fun B' => K (A' * B')%ctype)
+                         (fun v'
+                          => match v' with
+                             | Some v''
+                               => @bind_base_cps
+                                    T A A' (fun A' => pbase_type_interp_cps qexists B (fun B' => K (A' * B')%ctype))
+                                    k
+                                    v''
+                             | None => k None
+                             end)
+                         v
+               | _ => fun _ => k None
+               end v
+       | pList A
+         => fun k
+            => match t2 return K t2 -> T with
+               | List A'
+                 => @bind_base_cps T A A' (fun A'' => K (List A'')) k
+               | _ => fun _ => k None
+               end v
+       end k.
+
   Fixpoint bind_value_cps {T t1 t2}
            (kt : type -> type)
            (K := fun t => value (kt t))
@@ -466,12 +634,13 @@ Section with_var.
            {struct t1}
     : T
     := match t1 return (option (ptype_interp_cps qexists t1 kt value) -> T) -> T with
-       | pAny
+       | pBase t1
          => fun k
             => match t2 return K t2 -> T with
-               | Base t2 => fun e => k (Some (existT _ t2 e))
+               | Base t2 => fun e => bind_base_cps K k e
                | Arrow _ _ => fun _ => k None
                end v
+       | pAny => fun k => k (Some (existT _ t2 v))
        | pArrow None d
          => fun k
             => match t2 return K t2 -> T with
@@ -861,17 +1030,40 @@ Section with_var.
        | pIdent _ => T
        end.
 
+  Fixpoint lift_pbase_type_interp_cps {K1 K2} {quant} (F : forall t : base_type, K1 t -> K2 t) {t}
+    : pbase_type_interp_cps quant t K1
+      -> pbase_type_interp_cps quant t K2
+    := match t, quant return pbase_type_interp_cps quant t K1
+                             -> pbase_type_interp_cps quant t K2 with
+       | pbAny, qforall => fun f t => F t (f t)
+       | pbAny, qexists => fun tf => existT _ _ (F _ (projT2 tf))
+       | pNat, _ => F _
+       | pProd A B, _
+         => @lift_pbase_type_interp_cps
+              _ _ quant
+              (fun A'
+               => @lift_pbase_type_interp_cps
+                    _ _ quant (fun _ => F _) B)
+              A
+       | pList A, _
+         => @lift_pbase_type_interp_cps
+              _ _ quant (fun _ => F _) A
+       end.
+
   Fixpoint lift_ptype_interp_cps {A B : Type} {quant kt} (F : A -> B) {t}
     : ptype_interp_cps quant t kt (fun eT => value eT -> A)
       -> ptype_interp_cps quant t kt (fun eT => value eT -> B)
     := match t, quant return ptype_interp_cps quant t kt (fun eT => value eT -> A)
                              -> ptype_interp_cps quant t kt (fun eT => value eT -> B) with
-       | pAny, qforall => fun f t e => F (f t e)
-       | pAny, qexists
-         => fun tf
-            => existT (fun t : base_type => value (kt t) -> B)
-                      (projT1 tf)
-                      (fun e => F (projT2 tf e))
+       | pAny, qforall => fun f t x => F (f t x)
+       | pAny, qexists => fun tf => existT (fun t => value (kt t) -> B)
+                                           _
+                                           (fun x => F (projT2 tf x))
+       | pBase t, _
+         => lift_pbase_type_interp_cps
+              (K1:=fun eT => _ -> A)
+              (K2:=fun eT => _ -> B)
+              (fun _ f x => F (f x))
        | pArrow None d, qforall
          => fun f t
             => @lift_ptype_interp_cps _ _ _ (fun d => kt (_ -> d)%ctype) F d (f t)
@@ -898,6 +1090,32 @@ Section with_var.
          => F
        end.
 
+  Fixpoint app_pbase_type_interp_cps {T : Type} {K1 K2 : base_type -> Type}
+           (F : forall t, K1 t -> K2 t -> T)
+           {t}
+    : pbase_type_interp_cps qforall t K1
+      -> pbase_type_interp_cps qexists t K2 -> T
+    := match t return pbase_type_interp_cps qforall t K1
+                      -> pbase_type_interp_cps qexists t K2 -> T with
+       | pbAny => fun f tv => F _ (f _) (projT2 tv)
+       | pNat => fun f v => F _ f v
+       | pProd A B
+         => @app_pbase_type_interp_cps
+              _
+              (fun A' => pbase_type_interp_cps qforall B (fun B' => K1 (A' * B')%ctype))
+              (fun A' => pbase_type_interp_cps qexists B (fun B' => K2 (A' * B')%ctype))
+              (fun A'
+               => @app_pbase_type_interp_cps
+                    _
+                    (fun B' => K1 (A' * B')%ctype)
+                    (fun B' => K2 (A' * B')%ctype)
+                    (fun _ => F _)
+                    B)
+              A
+       | pList A
+         => @app_pbase_type_interp_cps T (fun A' => K1 (List A')) (fun A' => K2 (List A')) (fun _ => F _) A
+       end.
+
   Fixpoint app_ptype_interp_cps {T : Type} {kt : type -> type} {K : type -> Type}
            {t}
     : ptype_interp_cps qforall t kt (fun eT => K eT -> T)
@@ -905,6 +1123,11 @@ Section with_var.
     := match t return ptype_interp_cps qforall t kt (fun eT => K eT -> T)
                       -> ptype_interp_cps qexists t kt K -> T with
        | pAny => fun f tv => f _ (projT2 tv)
+       | pBase t
+         => app_pbase_type_interp_cps
+              (K1:=fun t => K (kt t) -> T)
+              (K2:=fun t => K (kt t))
+              (fun _ f v => f v)
        | pArrow (Some s) d
          => @app_ptype_interp_cps T (fun d => kt (_ -> d)%ctype) K d
        | pArrow None d
@@ -988,6 +1211,8 @@ Section with_var.
   Bind Scope continuation_scope with continuation.
   Notation "v <- x ; f" := (bind_continuation x (fun v => f%continuation)) : continuation_scope.
   Notation "v <-- x ; f" := (option_bind_continuation x (fun v => f%continuation)) : continuation_scope.
+  Definition mkcast {P : type -> Type} {t1 t2 : type} : continuation (option (P t1 -> P t2))
+    := fun T k => type.try_make_transport_cps P t1 t2 k.
   Definition cast {P : type -> Type} {t1 t2 : type} (v : P t1) : continuation (option (P t2))
     := fun T k => type.try_transport_cps P t1 t2 v k.
   Definition ret {A} (v : A) : continuation A := fun T k => k v.
@@ -1016,7 +1241,7 @@ Section with_var.
   Notation make_rewrite_step_cps p f
     := (let f' := (@lift_with_bindings p _ _ (fun x:continuation (option (@topanyexpr value)) => (x' <-- x; oret (existT (opt_anyexprP value) true x'))%continuation) f%expr) in
         make_rewrite'_cps p f').
-
+About ListRect.
   Definition rewrite_rules : rewrite_rulesT' value
     := [make_rewrite (0 + ??ℕ) (fun x => x);
           make_rewrite (??ℕ + 0) (fun x => x);
@@ -1029,20 +1254,39 @@ Section with_var.
           make_rewrite (#pFst @ (??, ??)) (fun tx x ty y => x);
           make_rewrite (#pSnd @ (??, ??)) (fun tx x ty y => y);
           make_rewrite_cps
-            (?? ++ ??)
+            (??{pList ??} ++ ??{pList ??})
             (fun _ xs _ ys
              => xs <-- @cast expr _ (List _) xs;
                 xs <-- reflect_list_cps xs;
                 ys <-- reflect_list_cps ys;
-                oret (wrap (reify_list (List.app xs ys))));
+                oret (wrap (reify_list (List.app xs ys))));(*
+          make_rewrite_step_cps
+            (#pListFlatMap @ ??{?? -> pList ??} @ ??{pList ??})
+            (fun _ _ f _ xs
+             => xs <-- @cast expr _ (List _) xs;
+                  xs <-- reflect_list_cps xs;
+                  oret (wrap (fold_right
+                                (fun ls1 ls2 => ($ls1 ++ ls2)%expr)
+                                ([]%expr)
+                                (List.map f xs))));*)
           make_rewrite_cps
-            (#pListMap @ ??{?? -> ??} @ ??)
+            (#pListRect @ ??{pBase ??} @ ??{?? -> ?? -> ?? -> ??} @ ??{pList ??})
+            (fun P Pnil _ _ _ _ Pcons A xs
+             => Pcons <-- @cast value _ (A -> List A -> P -> P)%ctype Pcons;
+                  xs <-- reflect_list_cps xs;
+                  oret (wrap (list_rect
+                                (fun _ => expr P)
+                                Pnil
+                                (fun x' xs' rec => Pcons x' (reify_list xs') rec)
+                                xs)));
+          make_rewrite_cps
+            (#pListMap @ ??{?? -> pBase ??} @ ??{pList ??})
             (fun _ _ f _ xs
              => xs <-- @cast expr _ (List _) xs;
                   xs <-- reflect_list_cps xs;
                   oret (wrap (reify_list (List.map f xs))));
           make_rewrite_cps
-            (#pListMap @ ??{?? -> ??} @ (?? :: ??))
+            (#pListMap @ ??{?? -> pBase ??} @ (?? :: ??))
             (fun _ _ f _ x _ xs
              => xs <-- @cast expr _ (List _) xs;
                   x <-- cast x;
@@ -1139,6 +1383,7 @@ Arguments swap_list _ !_ !_ !_ / .
 Arguments set_nth _ !_ _ !_ / .
 Arguments lift_with_bindings / .
 Arguments bind_value_cps / .
+Arguments bind_base_cps / .
 Arguments app_ptype_interp_cps / .
 Arguments app_binding_data / .
 Arguments anyexpr_ty / .
@@ -1148,6 +1393,8 @@ Arguments expr_of_rawexpr / .
 Arguments reveal_rawexpr_cps / .
 Arguments type.try_transport_cps _ _ !_ !_ / .
 Arguments type.try_transport_base_cps _ _ !_ !_ / .
+Arguments type.try_make_transport_cps _ _ !_ !_.
+Arguments type.try_make_transport_base_cps _ _ !_ !_.
 Arguments orb_pident / .
 Arguments or_opt_pident / .
 Arguments rValueOrExpr / .
@@ -1159,13 +1406,66 @@ Arguments oret / .
 Arguments bind_continuation / .
 Arguments option_bind_continuation / .
 Arguments lift_ptype_interp_cps / .
+Arguments lift_pbase_type_interp_cps / .
+Arguments app_pbase_type_interp_cps / .
+Arguments option_type / .
+Arguments pbase_type_interp_cps / .
+Arguments ptype_interp / .
+Arguments ptype_interp_cps / .
+
+Axiom var : type -> Type.
+Goal True.
+  pose (@dorewrite'' (@default_fuel var) var) as e.
+  cbv [dorewrite'' default_fuel length rewrite_rules] in e.
+  set (k := fun t' e' => reify _) in (value of e).
+  unfold dorewrite' at 1 in (value of e).
+  cbv [eta_ident_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps Nat.add] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps Nat.add] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps ] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps reify reflect reify_list reflect_list_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps reify reflect reify_list reflect_list_cps] in e.
+  unfold do_rewrite_ident at 1 in (value of e).
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps reify reflect reify_list reflect_list_cps] in e.
+About do_rewrite_ident.
+Arguments do_rewrite_ident _ _ !_.
+  cbn [do_rewrite_ident] in e.
+  unfold do_rewrite_ident at 2 in (value of e).
+  cbv beta iota in e.
+  cbv -[do_rewrite_ident value k type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app] in e.
+  cbn [type.try_make_transport_cps type.try_make_transport_base_cps reify reflect reify_list reflect_list_cps] in e.
+oSet Debug Cbv.
 Definition dorewrite''' {var}
   := Eval cbv (*-[type.try_transport_base_cps value]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id dorewrite'' List.length Some_t rValueOrExpr dorewrite' eta_ident_cps do_rewrite_ident dorewrite1 dtree eval_rewrite_rules reveal_rawexpr_cps or_opt_pident orb_pident orb eta_ident_cps pident_of_ident anyexpr_ty eval_decision_tree nth_error rewrite_rules pident_ident_beq option_map expr_of_rawexpr type_of_rawexpr bind_data_cps app_binding_data lift_with_bindings swap_list set_nth update_nth unwrap binding_dataT app_ptype_interp_cps bind_value_cps projT1 projT2 value_of_rawexpr cast ret oret bind_continuation option_bind_continuation lift_ptype_interp_cps default_fuel]
+          delta [id dorewrite'' List.length Some_t rValueOrExpr dorewrite' eta_ident_cps do_rewrite_ident dorewrite1 dtree eval_rewrite_rules reveal_rawexpr_cps or_opt_pident orb_pident orb eta_ident_cps pident_of_ident anyexpr_ty eval_decision_tree nth_error rewrite_rules pident_ident_beq option_map expr_of_rawexpr type_of_rawexpr bind_data_cps app_binding_data lift_with_bindings swap_list set_nth update_nth unwrap binding_dataT app_ptype_interp_cps bind_value_cps bind_base_cps projT1 projT2 value_of_rawexpr cast ret oret bind_continuation option_bind_continuation lift_ptype_interp_cps with_bindingsT continuation lift_pbase_type_interp_cps app_pbase_type_interp_cps option_type pbase_type_interp_cps ptype_interp ptype_interp_cps default_fuel]
     in @dorewrite'' (@default_fuel var) var.
 Arguments dorewrite''' / .
 Definition dorewrite
-  := Eval cbn [dorewrite''' type.try_transport_cps type.try_transport_base_cps Option.bind reify reflect nbe] in @dorewrite'''.
+  := Eval cbn [dorewrite''' type.try_transport_cps type.try_transport_base_cps type.try_make_transport_cps type.try_make_transport_base_cps Option.bind reify reflect nbe] in @dorewrite'''.
 Arguments dorewrite {var t} e.
 Local Open Scope expr_scope.
 Arguments expr : clear implicits.
