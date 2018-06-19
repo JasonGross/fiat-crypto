@@ -7,6 +7,8 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
 Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
 Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
+Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Definition.
+Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Proofs.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -16,6 +18,7 @@ Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
@@ -459,9 +462,33 @@ Module Positional. Section Positional.
   End sub.
   Hint Rewrite @eval_opp @eval_sub : push_eval.
   Hint Rewrite @length_sub @length_opp : distr_length.
+
+  Section select.
+    Definition select (mask cond:Z) (p:list Z) :=
+      dlet t := Z.zselect cond 0 mask in List.map (Z.land t) p.
+
+    Lemma map_and_0 n (p:list Z) : length p = n -> map (Z.land 0) p = zeros n.
+    Proof.
+      intro; subst; induction p as [|x xs IHxs]; [reflexivity | ].
+      cbn; f_equal; auto.
+    Qed.
+    Lemma eval_select n mask cond p (H:List.map (Z.land mask) p = p) :
+      length p = n
+      -> eval n (select mask cond p) =
+         if dec (cond = 0) then 0 else eval n p.
+    Proof.
+      cbv [select Let_In].
+      rewrite Z.zselect_correct; break_match.
+      { intros; erewrite map_and_0 by eassumption. apply eval_zeros. }
+      { rewrite H; reflexivity. }
+    Qed.
+    Lemma length_select n mask cond p :
+      length p = n -> length (select mask cond p) = n.
+    Proof. cbv [select Let_In]; break_match; intros; distr_length. Qed.
+  End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
-Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp : distr_length.
+Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp length_select : distr_length.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
 
@@ -481,8 +508,14 @@ Section Positional_nonuniform.
 
   Lemma eval_weight_mul n p k :
     (forall i, In i (seq 0 n) -> weight i = k * weight' i) ->
-    eval weight n
-    ->
+    eval weight n p = k * eval weight' n p.
+  Proof.
+    setoid_rewrite List.in_seq.
+    revert n weight weight'; induction p as [|x xs IHxs], n as [|n]; intros weight weight' Hwt;
+      cbv [eval to_associational Associational.eval] in *; cbn in *; try omega.
+    rewrite Hwt, Z.mul_add_distr_l, Z.mul_assoc by omega.
+    erewrite <- !map_S_seq, IHxs; [ reflexivity | ]; cbn; eauto with omega.
+  Qed.
 End Positional_nonuniform.
 End Positional.
 
@@ -1661,6 +1694,10 @@ Module Rows.
       fine; we should check this. *)
       Definition sub n p q := flatten n [p; map (fun x => dlet y := x in Z.opp y) q].
 
+      Definition conditional_add n mask cond (p q:list Z) :=
+        let qq := Positional.select mask cond q in
+        add n p qq.
+
       Hint Rewrite eval_cons eval_nil using solve [auto] : push_eval.
 
       Definition mul base n m (p q : list Z) :=
@@ -1766,9 +1803,26 @@ Module Rows.
         autorewrite with push_eval; reflexivity.
       Qed.
 
-      (* returns lowest limb and all-but-lowest-limb *)
+      (* returns all-but-lowest-limb and lowest limb *)
       Definition divmod (p : list Z) : list Z * Z
         := (tl p, hd 0 p).
+      (*Lemma eval_divmod n (p : list Z) :
+        length p = S n ->
+        (forall i, (i <= n)%nat ->
+                   nth_default 0 p i = (Positional.eval weight (S n) p mod weight (S i)) / (weight i)) ->
+        let pv := Positional.eval weight (S n) p in
+        Positional.eval (fun i => weight (S i) / weight 1) n (fst (divmod p)) = pv / weight 1
+        /\ snd (divmod p) = pv mod weight 1.
+      Proof.
+        cbv [is_div_mod divmod]; destruct p; cbn [fst snd hd tl length]; [ omega | ].
+        intros Hlen Hsmall.
+        split.
+        2: {
+          etransitivity; [ exact (Hsmall 0%nat ltac:(omega)) | ].
+
+        revert H0.
+        push_Zmod.
+hd 0 p).
       Lemma eval_divmod n (p : list Z) :
         length p = S n -> p = partition (S n) (Positional.eval weight (S n) p) ->
         is_div_mod (Positional.eval (fun i => weight (S i) / weight 1) n)
@@ -1776,11 +1830,13 @@ Module Rows.
                    (Positional.eval weight (S n) p)
                    (weight 1).
       Proof.
-        cbv [is_div_mod divmod]; cbn [fst snd].
-Print Positional.eval.
-
+        cbv [is_div_mod divmod]; destruct p; cbn [fst snd hd tl length]; [ omega | ].
+        intros.
+        rewrite eval_
+       *)
     End Ops.
   End Rows.
+  Hint Rewrite length_flatten length_flatten' length_partition length_sum_rows length_from_columns length_fst_from_columns' length_snd_from_columns' : distr_length.
 End Rows.
 
 Module BaseConversion.
@@ -2016,3 +2072,290 @@ Module BaseConversion.
     Qed.
   End widemul.
 End BaseConversion.
+
+(* TODO: rename this module? *)
+Module Freeze.
+  Section Freeze.
+    Context weight {wprops : @weight_properties weight}.
+
+    Definition freeze n mask (m p:list Z) : list Z :=
+      let '(p, carry) := Rows.sub weight n p m in
+      let '(r, carry) := Rows.conditional_add weight n mask carry p m in
+      r.
+
+    Lemma freezeZ m s c y y0 z z0 c0 a :
+      m = s - c ->
+      0 < c < s ->
+      s <> 0 ->
+      0 <= y < 2*m ->
+      y0 = y - m ->
+      z = y0 mod s ->
+      c0 = y0 / s ->
+      z0 = z + (if (dec (c0 = 0)) then 0 else m) ->
+      a = z0 mod s ->
+      a mod m = y0 mod m.
+    Proof.
+      clear. intros. subst. break_match.
+      { rewrite Z.add_0_r, Z.mod_mod by omega.
+        assert (-(s-c) <= y - (s-c) < s-c) by omega.
+        match goal with H : s <> 0 |- _ =>
+                        rewrite (proj2 (Z.mod_small_iff _ s H))
+                          by (apply Z.div_small_iff; assumption)
+        end.
+        reflexivity. }
+      { rewrite <-Z.add_mod_l, Z.sub_mod_full.
+        rewrite Z.mod_same, Z.sub_0_r, Z.mod_mod by omega.
+        rewrite Z.mod_small with (b := s)
+          by (pose proof (Z.div_small (y - (s-c)) s); omega).
+        f_equal. ring. }
+    Qed.
+
+    Lemma length_freeze n mask m p :
+      length m = n -> length p = n -> length (freeze n mask m p) = n.
+    Proof.
+      cbv [freeze Rows.conditional_add Rows.add]; eta_expand; intros.
+      distr_length; try assumption; cbn; intros; destruct_head'_or; destruct_head' False; subst.
+      distr_length.
+      erewrite Rows.length_sum_rows by (reflexivity || eassumption || omega).
+
+    Lemma eval_freeze {n} c mask m p
+          (n_nonzero:n<>0%nat)
+          (Hc : 0 < Associational.eval c < weight n)
+          (Hmask : List.map (Z.land mask) m = m)
+          modulus (Hm : Positional.eval weight n m = Z.pos modulus)
+          (Hp : 0 <= Positional.eval weight n p < 2*(Z.pos modulus))
+          (Hsc : Z.pos modulus = weight n - Associational.eval c)
+      : Z.equiv_modulo (Z.pos modulus)
+                       (Positional.eval weight n (@freeze n mask m p))
+                       (Positional.eval weight n p).
+    Proof.
+      cbv [freeze_cps freeze].
+      repeat progress autounfold.
+      pose proof Z.add_get_carry_full_mod.
+      pose proof Z.add_get_carry_full_div.
+      pose proof div_correct. pose proof modulo_correct.
+      pose proof @div_id. pose proof @modulo_id.
+      pose proof @Z.add_get_carry_full_cps_correct.
+      autorewrite with uncps push_id push_basesystem_eval.
+
+      pose proof (weight_nonzero n).
+
+      remember (B.Positional.eval weight p) as y.
+      remember (y + -B.Positional.eval weight m) as y0.
+      rewrite Hm in *.
+
+      transitivity y0; cbv [mod_eq].
+      { eapply (freezeZ (Z.pos modulus) (weight n) (B.Associational.eval c) y y0);
+          try assumption; reflexivity. }
+      { subst y0.
+        assert (Z.pos modulus <> 0) by auto using Z.positive_is_nonzero, Zgt_pos_0.
+        rewrite Z.add_mod by assumption.
+        rewrite Z.mod_opp_l_z by auto using Z.mod_same.
+        rewrite Z.add_0_r, Z.mod_mod by assumption.
+        reflexivity. }
+    Qed.
+*)
+
+  (*
+Module WordByWordMontgomery.
+*)
+  (*Section with_args.
+  Context (wt : nat -> Z)
+          (r : positive)
+          (sz : nat)
+          (m : positive)
+          (m_enc : Z^sz)
+          (r' : Z)
+          (r'_correct : ((Z.pos r * r') mod (Z.pos m) = 1)%Z)
+          (m' : Z)
+          (m'_correct : ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)%Z)
+          (m_enc_correct_montgomery : Z.pos m = MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc)
+          (r'_pow_correct : ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc = 1)%Z)
+          (* computable *)
+          (r_big : Z.pos r > 1)
+          (m_big : 1 < Z.pos m)
+          (m_enc_small : small (Z.pos r) m_enc)
+          (map_m_enc : Tuple.map (Z.land (Z.pos r - 1)) m_enc = m_enc).
+
+  Local Ltac t_fin :=
+    repeat match goal with
+           | _ => assumption
+           | [ |- ?x = ?x ] => reflexivity
+           | [ |- and _ _ ] => split
+           | [ |- (0 <= MontgomeryAPI.eval (Z.pos r) _)%Z ] => apply MontgomeryAPI.eval_small
+           | _ => rewrite <- !m_enc_correct_montgomery
+           | _ => rewrite !r'_correct
+           | _ => rewrite !Z.mod_1_l by assumption; reflexivity
+           | _ => rewrite !(Z.mul_comm m' (Z.pos m))
+           | _ => lia
+           end.
+
+
+  Local Definition mul'_gen
+    : { f:Z^sz -> Z^sz -> Z^sz
+      | forall (A B : Z^sz),
+          small (Z.pos r) A -> small (Z.pos r) B ->
+          let eval := MontgomeryAPI.eval (Z.pos r) in
+          (small (Z.pos r) (f A B)
+           /\ (eval B < eval m_enc -> 0 <= eval (f A B) < eval m_enc)
+           /\ (eval (f A B) mod Z.pos m
+               = (eval A * eval B * r'^(Z.of_nat sz)) mod Z.pos m))%Z
+      }.
+  Proof.
+    exists (fun A B => redc (r:=r)(R_numlimbs:=sz) m_enc A B m').
+    abstract (
+        intros;
+        split; [ | split ];
+        [ apply small_redc with (ri:=r') | apply redc_bound_N with (ri:=r') | rewrite !m_enc_correct_montgomery; apply redc_mod_N ];
+        t_fin
+      ).
+  Defined.
+
+  Import ModularArithmetic.
+
+  Definition montgomery_to_F_gen (v : Z) : F m
+    := (F.of_Z m v * F.of_Z m (r'^Z.of_nat sz)%Z)%F.
+
+  Local Definition mul_ext_gen
+    : { f:Z^sz -> Z^sz -> Z^sz
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        (forall (A : Z^sz) (_ : small (Z.pos r) A)
+                (B : Z^sz) (_ : small (Z.pos r) B),
+            montgomery_to_F_gen (eval (f A B))
+            = (montgomery_to_F_gen (eval A) * montgomery_to_F_gen (eval B))%F)
+        /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
+                   (B : Z^sz) (_ : small (Z.pos r) B),
+               (eval B < eval m_enc -> 0 <= eval (f A B) < eval m_enc)%Z) }.
+  Proof.
+    exists (proj1_sig mul'_gen).
+    abstract (
+        split; intros A Asm B Bsm;
+        pose proof (proj2_sig mul'_gen A B Asm Bsm) as H;
+        cbv zeta in *;
+        try solve [ destruct_head'_and; assumption ];
+        rewrite ModularArithmeticTheorems.F.eq_of_Z_iff in H;
+        unfold montgomery_to_F_gen;
+        destruct H as [H1 [H2 H3]];
+        rewrite H3;
+        rewrite <- !ModularArithmeticTheorems.F.of_Z_mul;
+        f_equal; nia
+      ).
+  Defined.
+
+  Local Definition add_ext_gen
+    : { f:Z^sz -> Z^sz -> Z^sz
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        ((forall (A : Z^sz) (_ : small (Z.pos r) A)
+                 (B : Z^sz) (_ : small (Z.pos r) B),
+             (eval A < eval m_enc
+              -> eval B < eval m_enc
+              -> montgomery_to_F_gen (eval (f A B))
+                 = (montgomery_to_F_gen (eval A) + montgomery_to_F_gen (eval B))%F))
+         /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
+                    (B : Z^sz) (_ : small (Z.pos r) B),
+                (eval A < eval m_enc
+                 -> eval B < eval m_enc
+                 -> 0 <= eval (f A B) < eval m_enc)))%Z }.
+  Proof.
+    exists (fun A B => add (r:=r)(R_numlimbs:=sz) m_enc A B).
+    abstract (
+        split; intros;
+        unfold montgomery_to_F_gen; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?ModularArithmeticTheorems.F.of_Z_add;
+        rewrite <- ?Z.mul_add_distr_r;
+        [ rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_enc_correct_montgomery; push_Zmod; rewrite eval_add_mod_N; pull_Zmod
+        | apply add_bound ];
+        t_fin
+      ).
+  Defined.
+
+  Local Definition sub_ext_gen
+    : { f:Z^sz -> Z^sz -> Z^sz
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        ((forall (A : Z^sz) (_ : small (Z.pos r) A)
+                 (B : Z^sz) (_ : small (Z.pos r) B),
+             (eval A < eval m_enc
+              -> eval B < eval m_enc
+              -> montgomery_to_F_gen (eval (f A B))
+                 = (montgomery_to_F_gen (eval A) - montgomery_to_F_gen (eval B))%F))
+         /\ (forall (A : Z^sz) (_ : small (Z.pos r) A)
+                    (B : Z^sz) (_ : small (Z.pos r) B),
+                (eval A < eval m_enc
+                 -> eval B < eval m_enc
+                 -> 0 <= eval (f A B) < eval m_enc)))%Z }.
+  Proof.
+    exists (fun A B => sub (r:=r) (R_numlimbs:=sz) m_enc A B).
+    abstract (
+        split; intros;
+        unfold montgomery_to_F_gen; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?ModularArithmeticTheorems.F.of_Z_sub;
+        rewrite <- ?Z.mul_sub_distr_r;
+        [ rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_enc_correct_montgomery; push_Zmod; rewrite eval_sub_mod_N; pull_Zmod
+        | apply sub_bound ];
+        t_fin
+      ).
+  Defined.
+
+  Local Definition opp_ext_gen
+    : { f:Z^sz -> Z^sz
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        ((forall (A : Z^sz) (_ : small (Z.pos r) A),
+             (eval A < eval m_enc
+              -> montgomery_to_F_gen (eval (f A))
+                 = (F.opp (montgomery_to_F_gen (eval A)))%F))
+         /\ (forall (A : Z^sz) (_ : small (Z.pos r) A),
+                (eval A < eval m_enc
+                 -> 0 <= eval (f A) < eval m_enc)))%Z }.
+  Proof.
+    exists (fun A => opp (r:=r) (R_numlimbs:=sz) m_enc A).
+    abstract (
+        split; intros;
+        unfold montgomery_to_F_gen; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?F_of_Z_opp;
+        rewrite <- ?Z.mul_opp_l;
+        [ rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_enc_correct_montgomery; push_Zmod; rewrite eval_opp_mod_N; pull_Zmod
+        | apply opp_bound ];
+        t_fin
+      ).
+  Defined.
+
+  (* This is kind-of stupid, but we add it for consistency *)
+  Local Definition carry_ext_gen
+    : { f:Z^sz -> Z^sz
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        ((forall (A : Z^sz) (_ : small (Z.pos r) A),
+             (eval A < eval m_enc
+              -> montgomery_to_F_gen (eval (f A))
+                 = montgomery_to_F_gen (eval A))))
+         /\ (forall (A : Z^sz) (_ : small (Z.pos r) A),
+                (eval A < eval m_enc
+                 -> 0 <= eval (f A) < eval m_enc))%Z }.
+  Proof.
+    exists (fun A => A).
+    abstract (
+        split; eauto; split; auto;
+        apply MontgomeryAPI.eval_small; auto; lia
+      ).
+  Defined.
+
+  Local Definition nonzero_ext_gen
+    : { f:Z^sz -> Z
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        forall (A : Z^sz) (_ : small (Z.pos r) A),
+          (eval A < eval m_enc
+           -> f A = 0 <-> (montgomery_to_F_gen (eval A) = F.of_Z m 0))%Z }.
+  Proof.
+    exists (fun A => nonzero (R_numlimbs:=sz) A).
+    abstract (
+        intros eval A H **; rewrite (@eval_nonzero r) by (eassumption || reflexivity);
+        subst eval;
+        unfold montgomery_to_F_gen, uweight in *; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul;
+        rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_enc_correct_montgomery;
+        let H := fresh in
+        split; intro H;
+        [ rewrite H; autorewrite with zsimplify_const; reflexivity
+        | cut ((MontgomeryAPI.eval (Z.pos r) A * (r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz)) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc = 0)%Z;
+          [ rewrite Z.mul_mod, r'_pow_correct; autorewrite with zsimplify_const; pull_Zmod; [ | t_fin ];
+            rewrite Z.mod_small; [ trivial | split; try assumption; apply MontgomeryAPI.eval_small; try assumption; lia ]
+          | rewrite Z.mul_assoc, Z.mul_mod, H by t_fin; autorewrite with zsimplify_const; reflexivity ] ]
+      ).
+  Defined.
+End with_args.
+*)
