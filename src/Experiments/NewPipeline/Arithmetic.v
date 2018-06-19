@@ -462,6 +462,28 @@ Module Positional. Section Positional.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
 Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp : distr_length.
+Section Positional_nonuniform.
+  Context (weight weight' : nat -> Z).
+
+  Lemma eval_hd_tl n (xs:list Z) :
+    length xs = n ->
+    eval weight n xs = weight 0%nat * hd 0 xs + eval (fun i => weight (S i)) (pred n) (tl xs).
+  Proof.
+    intro; subst; destruct xs as [|x xs]; [ cbn; omega | ].
+    cbv [eval to_associational Associational.eval] in *; cbn.
+    rewrite <- map_S_seq; reflexivity.
+  Qed.
+
+  Lemma eval_cons n (x:Z) (xs:list Z) :
+    length xs = n ->
+    eval weight (S n) (x::xs) = weight 0%nat * x + eval (fun i => weight (S i)) n xs.
+  Proof. intro; subst; apply eval_hd_tl; reflexivity. Qed.
+
+  Lemma eval_weight_mul n p k :
+    (forall i, In i (seq 0 n) -> weight i = k * weight' i) ->
+    eval weight n
+    ->
+End Positional_nonuniform.
 End Positional.
 
 Record weight_properties {weight : nat -> Z} :=
@@ -1743,6 +1765,20 @@ Module Rows.
         rewrite <-Z.div_mod'' by auto.
         autorewrite with push_eval; reflexivity.
       Qed.
+
+      (* returns lowest limb and all-but-lowest-limb *)
+      Definition divmod (p : list Z) : list Z * Z
+        := (tl p, hd 0 p).
+      Lemma eval_divmod n (p : list Z) :
+        length p = S n -> p = partition (S n) (Positional.eval weight (S n) p) ->
+        is_div_mod (Positional.eval (fun i => weight (S i) / weight 1) n)
+                   (divmod p)
+                   (Positional.eval weight (S n) p)
+                   (weight 1).
+      Proof.
+        cbv [is_div_mod divmod]; cbn [fst snd].
+Print Positional.eval.
+
     End Ops.
   End Rows.
 End Rows.
