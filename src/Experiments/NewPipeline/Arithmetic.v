@@ -184,7 +184,7 @@ Module Positional. Section Positional.
   Qed.
 
   (* SKIP over this: zeros, add_to_nth *)
-  Local Ltac push := repeat autorewrite with push_eval push_map distr_length
+  Local Ltac push := autorewrite with push_eval push_map distr_length
     push_flat_map push_fold_right push_nth_default cancel_pair natsimplify.
   Definition zeros n : list Z := repeat 0 n.
   Lemma length_zeros n : length (zeros n) = n. Proof. cbv [zeros]; distr_length. Qed.
@@ -201,9 +201,10 @@ Module Positional. Section Positional.
   Proof. cbv [add_to_nth]; distr_length. Qed.
   Hint Rewrite length_add_to_nth : distr_length.
   Lemma eval_add_to_nth (n:nat) (i:nat) (x:Z) (xs:list Z) (H:(i<length xs)%nat)
-        (Hn : (i < n)%nat) :
+        (Hn : length xs = n) (* N.B. We really only need [i < Nat.min n (length xs)] *) :
     eval n (add_to_nth i x xs) = weight i * x + eval n xs.
   Proof.
+    subst n.
     cbv [eval to_associational add_to_nth].
     rewrite ListUtil.combine_update_nth_r at 1.
     rewrite <-(update_nth_id i (List.combine _ _)) at 2.
@@ -241,13 +242,14 @@ Module Positional. Section Positional.
     List.fold_right (fun t ls =>
       dlet_nd p := place t (pred n) in
       add_to_nth (fst p) (snd p) ls ) (zeros n) p.
-  Lemma eval_from_associational nin nout p (n_nz:(nin<>O /\ nout<>O /\ (nin <= nout)%nat) \/ p = nil) :
-    eval nout (from_associational nin p) = Associational.eval p.
+  Lemma eval_from_associational n p (n_nz:n<>O \/ p = nil) :
+    eval n (from_associational n p) = Associational.eval p.
   Proof. destruct n_nz; [ induction p | subst p ];
   cbv [from_associational Let_In] in *; push; try
-  pose proof place_in_range a (pred nin); try omega; try nsatz;
-  try apply fold_right_invariant; cbv [zeros add_to_nth];
-  intros; distr_length.                                       Qed.
+  pose proof place_in_range a (pred n); try omega; try nsatz;
+  apply fold_right_invariant; cbv [zeros add_to_nth];
+  intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
+  try omega.                                                  Qed.
   Hint Rewrite @eval_from_associational : push_eval.
   Lemma length_from_associational n p : length (from_associational n p) = n.
   Proof. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
@@ -292,27 +294,19 @@ Module Positional. Section Positional.
   End mulmod.
   Hint Rewrite @eval_mulmod : push_eval.
 
-  Definition add (na nb nab:nat) (a b:list Z) : list Z
-    := let a_a := to_associational na a in
-       let b_a := to_associational nb b in
-       from_associational nab (a_a ++ b_a).
-  Lemma eval_add na nb nab (f g:list Z)
-        (Hf : length f = na) (Hg : length g = nb)
-        (H0 : nab = 0%nat -> na = 0%nat /\ nb = 0%nat) :
-    eval nab (add na nb nab f g) = (eval na f + eval nb g).
-  Proof.
-    cbv [add]; push; trivial.
-    destruct nab; auto; destruct f, g; subst; cbn [length] in *;
-      auto with omega.
-  Qed.
-  Hint Rewrite @eval_add : push_eval.
-  Lemma eval_add_uniform n (f g:list Z)
+  Definition add (n:nat) (a b:list Z) : list Z
+    := let a_a := to_associational n a in
+       let b_a := to_associational n b in
+       from_associational n (a_a ++ b_a).
+  Lemma eval_add n (f g:list Z)
         (Hf : length f = n) (Hg : length g = n) :
-    eval n (add n n n f g) = (eval n f + eval n g).
-  Proof. push; lia.                                           Qed.
-  Lemma length_add na nb nab f g :
-    length (add na nb nab f g) = nab.
-  Proof. clear; cbv [add]; distr_length.                      Qed.
+    eval n (add n f g) = (eval n f + eval n g).
+  Proof. cbv [add]; push; trivial. destruct n; auto.          Qed.
+  Hint Rewrite @eval_add : push_eval.
+  Lemma length_add n f g
+        (Hf : length f = n) (Hg : length g = n) :
+    length (add n f g) = n.
+  Proof. clear -Hf Hf; cbv [add]; distr_length.               Qed.
   Hint Rewrite @length_add : distr_length.
 
   Section Carries.
@@ -328,7 +322,7 @@ Module Positional. Section Positional.
                               weight (S i) / weight i <> 0 ->
       eval m (carry n m i p) = eval n p.
     Proof.
-      cbv [carry]; intros; push; [|lia].
+      cbv [carry]; intros; push; [|tauto].
       rewrite @Associational.eval_carry by eauto.
       apply eval_to_associational.
     Qed. Hint Rewrite @eval_carry : push_eval.
@@ -410,46 +404,38 @@ Module Positional. Section Positional.
   Hint Rewrite @length_encode : distr_length.
 
   Section sub.
-    Context (na nb nab:nat)
+    Context (n:nat)
             (s:Z) (s_nz:s <> 0)
             (c:list (Z * Z))
             (m_nz:s - Associational.eval c <> 0)
             (coef:Z).
 
-    Definition negate_snd (b:list Z) : list Z
-      := let B := to_associational nb b in
-         let negB := Associational.negate_snd B in
-         from_associational nb negB.
+    Definition negate_snd (a:list Z) : list Z
+      := let A := to_associational n a in
+         let negA := Associational.negate_snd A in
+         from_associational n negA.
 
     Definition scmul (x:Z) (a:list Z) : list Z
-      := let A := to_associational na a in
+      := let A := to_associational n a in
          let R := Associational.mul A [(1, x)] in
-         from_associational na R.
+         from_associational n R.
 
     Definition balance : list Z
-      := scmul coef (encode nb s c (s - Associational.eval c)).
+      := scmul coef (encode n s c (s - Associational.eval c)).
 
     Definition sub (a b:list Z) : list Z
-      := let ca := add nb na nab balance a in
+      := let ca := add n balance a in
          let _b := negate_snd b in
-         add nab nb nab ca _b.
+         add n ca _b.
     Lemma eval_sub a b
-      : (nab = 0%nat -> na = 0%nat /\ nb = 0%nat) ->
-        (forall i, In i (seq 0 (Nat.max (Nat.max na nb) nab)) -> weight (S i) / weight i <> 0) ->
-        (List.length a = na) -> (List.length b = nb) ->
-        eval nab (sub a b) mod (s - Associational.eval c)
-        = (eval na a - eval nb b) mod (s - Associational.eval c).
+      : (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
+        (List.length a = n) -> (List.length b = n) ->
+        eval n (sub a b) mod (s - Associational.eval c)
+        = (eval n a - eval n b) mod (s - Associational.eval c).
     Proof.
-      destruct (zerop nab); intros;
-        [ destruct a, b; subst; cbn in *; omega | ].
-      intros; cbv [sub balance scmul negate_snd]; push;
+      destruct (zerop n); subst; try reflexivity.
+      intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
         eauto with omega.
-      2:destruct nb, b; cbn; push; try auto with omega.
-2:{ idtac. destruct nab; try lia.
-3:push.
-        eauto with omega.
-      rewrite eval_add.
-      2:rewrite length_add.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
     Hint Rewrite eval_sub : push_eval.
@@ -1450,7 +1436,8 @@ Module Rows.
             length row1 = n -> length row2 = n -> (i < n)%nat ->
             nth_default 0 (fst (sum_rows row1 row2)) i
             = ((Positional.eval weight n row1 + Positional.eval weight n row2) mod weight (S i)) / (weight i).
-        Proof.          cbv [sum_rows]; intros. rewrite <-(Nat.add_0_r n).
+        Proof.
+          cbv [sum_rows]; intros. rewrite <-(Nat.add_0_r n).
           rewrite <-(app_nil_l row1), <-(app_nil_l row2).
           apply sum_rows'_partitions; intros;
             autorewrite with cancel_pair push_eval zsimplify_fast push_nth_default; distr_length.
@@ -1641,12 +1628,7 @@ Module Rows.
     End Flatten.
 
     Section Ops.
-      (** We could just write [flatten n [p; q]], but that doesn't
-          handle non-uniform lengths of rows.  So instead we pass
-          through [Associational]. *)
-Check Positional.add.
-      Definition add np nq (p q : list Z)
-        := Positional.to_associational
+      Definition add n p q := flatten n [p; q].
 
       (* TODO: Although cleaner, using Positional.negate snd inserts
       dlets which prevent add-opp=>sub transformation in partial
@@ -1762,37 +1744,6 @@ Check Positional.add.
         autorewrite with push_eval; reflexivity.
       Qed.
     End Ops.
-
-  Section div_mod.
-    Definition divmod (a:list Z) : list Z * Z
-      := (tl a, hd 0 a).
-    Lemma eval_divmod_div n a
-      : (forall i, In i (seq 0 n) -> weight (S i) / weight i = weight 1) ->
-        eval n (fst (divmod a)) = (eval n a) / weight 1.
-    Proof.
-      cbv [divmod fst snd]; intros; destruct a; cbn [hd tl]; push;
-        eauto with omega.
-      rewrite eval_cons.
-      eauto with omega.
-    Lemma eval_sub a b
-      : (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
-        (List.length a = n) -> (List.length b = n) ->
-        eval n (sub a b) mod (s - Associational.eval c)
-        = (eval n a - eval n b) mod (s - Associational.eval c).
-    Proof.
-      destruct (zerop n); subst; try reflexivity.
-      intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
-        eauto with omega.
-      push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
-    Qed.
-    Hint Rewrite eval_sub : push_eval.
-    Lemma length_sub a b
-      : length a = n -> length b = n ->
-        length (sub a b) = n.
-    Proof. intros; cbv [sub balance scmul negate_snd]; repeat distr_length. Qed.
-    Hint Rewrite length_sub : distr_length.
-
-
   End Rows.
 End Rows.
 
