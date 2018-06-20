@@ -2082,6 +2082,87 @@ Module BaseConversion.
   End widemul.
 End BaseConversion.
 
+(* TODO: rename this module? *)
+Module Freeze.
+  Section Freeze.
+    Context weight {wprops : @weight_properties weight}.
+
+    Definition freeze n mask (m p:list Z) : list Z :=
+      let '(p, carry) := Rows.sub weight n p m in
+      let '(r, carry) := Rows.conditional_add weight n mask carry p m in
+      r.
+
+    Lemma freezeZ m s c y y0 z z0 c0 a :
+      m = s - c ->
+      0 < c < s ->
+      s <> 0 ->
+      0 <= y < 2*m ->
+      y0 = y - m ->
+      z = y0 mod s ->
+      c0 = y0 / s ->
+      z0 = z + (if (dec (c0 = 0)) then 0 else m) ->
+      a = z0 mod s ->
+      a mod m = y0 mod m.
+    Proof.
+      clear. intros. subst. break_match.
+      { rewrite Z.add_0_r, Z.mod_mod by omega.
+        assert (-(s-c) <= y - (s-c) < s-c) by omega.
+        match goal with H : s <> 0 |- _ =>
+                        rewrite (proj2 (Z.mod_small_iff _ s H))
+                          by (apply Z.div_small_iff; assumption)
+        end.
+        reflexivity. }
+      { rewrite <-Z.add_mod_l, Z.sub_mod_full.
+        rewrite Z.mod_same, Z.sub_0_r, Z.mod_mod by omega.
+        rewrite Z.mod_small with (b := s)
+          by (pose proof (Z.div_small (y - (s-c)) s); omega).
+        f_equal. ring. }
+    Qed.
+
+    Lemma length_freeze n mask m p :
+      length m = n -> length p = n -> length (freeze n mask m p) = n.
+    Proof.
+      cbv [freeze Rows.conditional_add Rows.add]; eta_expand; intros.
+      distr_length; try assumption; cbn; intros; destruct_head'_or; destruct_head' False; subst.
+      distr_length.
+      erewrite Rows.length_sum_rows by (reflexivity || eassumption || omega).
+
+    Lemma eval_freeze {n} c mask m p
+          (n_nonzero:n<>0%nat)
+          (Hc : 0 < Associational.eval c < weight n)
+          (Hmask : List.map (Z.land mask) m = m)
+          modulus (Hm : Positional.eval weight n m = Z.pos modulus)
+          (Hp : 0 <= Positional.eval weight n p < 2*(Z.pos modulus))
+          (Hsc : Z.pos modulus = weight n - Associational.eval c)
+      : Z.equiv_modulo (Z.pos modulus)
+                       (Positional.eval weight n (@freeze n mask m p))
+                       (Positional.eval weight n p).
+    Proof.
+      cbv [freeze_cps freeze].
+      repeat progress autounfold.
+      pose proof Z.add_get_carry_full_mod.
+      pose proof Z.add_get_carry_full_div.
+      pose proof div_correct. pose proof modulo_correct.
+      pose proof @div_id. pose proof @modulo_id.
+      pose proof @Z.add_get_carry_full_cps_correct.
+      autorewrite with uncps push_id push_basesystem_eval.
+
+      pose proof (weight_nonzero n).
+
+      remember (B.Positional.eval weight p) as y.
+      remember (y + -B.Positional.eval weight m) as y0.
+      rewrite Hm in *.
+
+      transitivity y0; cbv [mod_eq].
+      { eapply (freezeZ (Z.pos modulus) (weight n) (B.Associational.eval c) y y0);
+          try assumption; reflexivity. }
+      { subst y0.
+        assert (Z.pos modulus <> 0) by auto using Z.positive_is_nonzero, Zgt_pos_0.
+        rewrite Z.add_mod by assumption.
+        rewrite Z.mod_opp_l_z by auto using Z.mod_same.
+        rewrite Z.add_0_r, Z.mod_mod by assumption.
+        reflexivity. }
+    Qed.
 Module WordByWordMontgomery.
   Section with_args.
     Local Notation small v := (forall i,
@@ -2283,87 +2364,6 @@ Module WordByWordMontgomery.
       ).
   Defined.
 End with_args.
-(* TODO: rename this module? *)
-Module Freeze.
-  Section Freeze.
-    Context weight {wprops : @weight_properties weight}.
-
-    Definition freeze n mask (m p:list Z) : list Z :=
-      let '(p, carry) := Rows.sub weight n p m in
-      let '(r, carry) := Rows.conditional_add weight n mask carry p m in
-      r.
-
-    Lemma freezeZ m s c y y0 z z0 c0 a :
-      m = s - c ->
-      0 < c < s ->
-      s <> 0 ->
-      0 <= y < 2*m ->
-      y0 = y - m ->
-      z = y0 mod s ->
-      c0 = y0 / s ->
-      z0 = z + (if (dec (c0 = 0)) then 0 else m) ->
-      a = z0 mod s ->
-      a mod m = y0 mod m.
-    Proof.
-      clear. intros. subst. break_match.
-      { rewrite Z.add_0_r, Z.mod_mod by omega.
-        assert (-(s-c) <= y - (s-c) < s-c) by omega.
-        match goal with H : s <> 0 |- _ =>
-                        rewrite (proj2 (Z.mod_small_iff _ s H))
-                          by (apply Z.div_small_iff; assumption)
-        end.
-        reflexivity. }
-      { rewrite <-Z.add_mod_l, Z.sub_mod_full.
-        rewrite Z.mod_same, Z.sub_0_r, Z.mod_mod by omega.
-        rewrite Z.mod_small with (b := s)
-          by (pose proof (Z.div_small (y - (s-c)) s); omega).
-        f_equal. ring. }
-    Qed.
-
-    Lemma length_freeze n mask m p :
-      length m = n -> length p = n -> length (freeze n mask m p) = n.
-    Proof.
-      cbv [freeze Rows.conditional_add Rows.add]; eta_expand; intros.
-      distr_length; try assumption; cbn; intros; destruct_head'_or; destruct_head' False; subst.
-      distr_length.
-      erewrite Rows.length_sum_rows by (reflexivity || eassumption || omega).
-
-    Lemma eval_freeze {n} c mask m p
-          (n_nonzero:n<>0%nat)
-          (Hc : 0 < Associational.eval c < weight n)
-          (Hmask : List.map (Z.land mask) m = m)
-          modulus (Hm : Positional.eval weight n m = Z.pos modulus)
-          (Hp : 0 <= Positional.eval weight n p < 2*(Z.pos modulus))
-          (Hsc : Z.pos modulus = weight n - Associational.eval c)
-      : Z.equiv_modulo (Z.pos modulus)
-                       (Positional.eval weight n (@freeze n mask m p))
-                       (Positional.eval weight n p).
-    Proof.
-      cbv [freeze_cps freeze].
-      repeat progress autounfold.
-      pose proof Z.add_get_carry_full_mod.
-      pose proof Z.add_get_carry_full_div.
-      pose proof div_correct. pose proof modulo_correct.
-      pose proof @div_id. pose proof @modulo_id.
-      pose proof @Z.add_get_carry_full_cps_correct.
-      autorewrite with uncps push_id push_basesystem_eval.
-
-      pose proof (weight_nonzero n).
-
-      remember (B.Positional.eval weight p) as y.
-      remember (y + -B.Positional.eval weight m) as y0.
-      rewrite Hm in *.
-
-      transitivity y0; cbv [mod_eq].
-      { eapply (freezeZ (Z.pos modulus) (weight n) (B.Associational.eval c) y y0);
-          try assumption; reflexivity. }
-      { subst y0.
-        assert (Z.pos modulus <> 0) by auto using Z.positive_is_nonzero, Zgt_pos_0.
-        rewrite Z.add_mod by assumption.
-        rewrite Z.mod_opp_l_z by auto using Z.mod_same.
-        rewrite Z.add_0_r, Z.mod_mod by assumption.
-        reflexivity. }
-    Qed.
 *)
 
   (*
