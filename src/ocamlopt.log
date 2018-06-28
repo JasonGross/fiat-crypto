@@ -1,0 +1,465 @@
+File "bug_bad_extraction.ml", line 404, characters 1-56213:
+Error: The type of this module,
+       sig
+         module Raw : sig val of_pos : positive -> char list -> char list end
+         val of_pos : positive -> char list
+         val of_Z : z -> char list
+         type uint =
+             Nil
+           | D0 of uint
+           | D1 of uint
+           | D2 of uint
+           | D3 of uint
+           | D4 of uint
+           | D5 of uint
+           | D6 of uint
+           | D7 of uint
+           | D8 of uint
+           | D9 of uint
+         val revapp : uint -> uint -> uint
+         val rev : uint -> uint
+         module Little :
+           sig
+             val double : uint -> uint
+             val succ_double : uint -> uint
+             module Pos :
+               sig
+                 val to_little_uint : positive -> uint
+                 val to_uint : positive -> uint
+                 module String :
+                   sig
+                     val of_uint : uint -> char list
+                     val decimal_string_of_pos : positive -> char list
+                     val decimal_string_of_Z : z -> char list
+                     type 't coq_Show = bool -> 't -> char list
+                     val show : 'a -> 'a
+                     val maybe_wrap_parens : bool -> char list -> char list
+                     val show_unit : 'a -> 'b -> char list
+                     val show_bool : 'a -> bool -> char list
+                     val show_positive : 'a -> positive -> char list
+                     val show_N : 'a -> n -> char list
+                     val show_nat : 'a -> nat -> char list
+                     module Hex :
+                       sig
+                         val show_Z : 'a -> z -> char list
+                         val bind :
+                           'a option -> ('a -> 'b option) -> 'b option
+                         module ZRange :
+                           sig
+                             type zrange = { lower : z; upper : z; }
+                             val lower : zrange -> z
+                             val upper : zrange -> z
+                             val is_tighter_than_bool :
+                               zrange -> zrange -> bool
+                             val show_zrange : 'a -> zrange -> char list
+                             module Language :
+                               sig
+                                 module Compilers :
+                                   sig
+                                     module Coq_type :
+                                       sig
+                                         type 'base_type coq_type =
+                                             Coq_base of 'base_type
+                                           | Coq_arrow of
+                                               'base_type coq_type *
+                                               'base_type coq_type
+                                         type ('base_type, 'base_interp)
+                                              interp =
+                                             __
+                                       end
+                                     module Coq_base :
+                                       sig
+                                         module Coq_type :
+                                           sig
+                                             type base =
+                                                 Coq_unit
+                                               | Z
+                                               | Coq_bool
+                                               | Coq_nat
+                                             type coq_type =
+                                                 Coq_type_base of base
+                                               | Coq_prod of coq_type *
+                                                   coq_type
+                                               | Coq_list of coq_type
+                                           end
+                                         type interp = __
+                                       end
+                                     module Coq_expr :
+                                       sig
+                                         type ('base_type, 'ident, 'var) expr =
+                                             Ident of
+                                               'base_type Coq_type.coq_type *
+                                               'ident
+                                           | Var of
+                                               'base_type Coq_type.coq_type *
+                                               'var
+                                           | Abs of
+                                               'base_type Coq_type.coq_type *
+                                               'base_type Coq_type.coq_type *
+                                               ('var ->
+                                                ('base_type, 'ident, 'var)
+                                                expr)
+                                           | App of
+                                               'base_type Coq_type.coq_type *
+                                               'base_type Coq_type.coq_type *
+                                               ('base_type, 'ident, 'var)
+                                               expr *
+                                               ('base_type, 'ident, 'var)
+                                               expr
+                                           | LetIn of
+                                               'base_type Coq_type.coq_type *
+                                               'base_type Coq_type.coq_type *
+                                               ('base_type, 'ident, 'var)
+                                               expr *
+                                               ('var ->
+                                                ('base_type, 'ident, 'var)
+                                                expr)
+                                       end
+                                     module Coq_ident :
+                                       sig
+                                         type ident =
+                                             Literal of
+                                               Coq_base.Coq_type.base *
+                                               Coq_base.interp
+                                           | Nat_succ
+                                           | Nat_pred
+                                           | Nat_max
+                                           | Nat_mul
+                                           | Nat_add
+                                           | Nat_sub
+                                           | Coq_nil of
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_cons of
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_pair of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_fst of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_snd of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_pair_rect of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_bool_rect of
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_nat_rect of
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_list_rect of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | Coq_list_case of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | List_length of
+                                               Coq_base.Coq_type.coq_type
+                                           | List_seq
+                                           | List_repeat of
+                                               Coq_base.Coq_type.coq_type
+                                           | List_combine of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | List_map of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | List_app of
+                                               Coq_base.Coq_type.coq_type
+                                           | List_rev of
+                                               Coq_base.Coq_type.coq_type
+                                           | List_flat_map of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | List_partition of
+                                               Coq_base.Coq_type.coq_type
+                                           | List_fold_right of
+                                               Coq_base.Coq_type.coq_type *
+                                               Coq_base.Coq_type.coq_type
+                                           | List_update_nth of
+                                               Coq_base.Coq_type.coq_type
+                                           | List_nth_default of
+                                               Coq_base.Coq_type.coq_type
+                                           | Z_add
+                                           | Z_mul
+                                           | Z_pow
+                                           | Z_sub
+                                           | Z_opp
+                                           | Z_div
+                                           | Z_modulo
+                                           | Z_log2
+                                           | Z_log2_up
+                                           | Z_eqb
+                                           | Z_leb
+                                           | Z_geb
+                                           | Z_of_nat
+                                           | Z_to_nat
+                                           | Z_shiftr
+                                           | Z_shiftl
+                                           | Z_land
+                                           | Z_lor
+                                           | Z_bneg
+                                           | Z_lnot_modulo
+                                           | Z_mul_split
+                                           | Z_add_get_carry
+                                           | Z_add_with_carry
+                                           | Z_add_with_get_carry
+                                           | Z_sub_get_borrow
+                                           | Z_sub_with_get_borrow
+                                           | Z_zselect
+                                           | Z_add_modulo
+                                           | Z_rshi
+                                           | Z_cc_m
+                                           | Z_cast of zrange
+                                           | Z_cast2 of (zrange * zrange)
+                                           | Coq_fancy_add of z * z
+                                           | Coq_fancy_addc of z * z
+                                           | Coq_fancy_sub of z * z
+                                           | Coq_fancy_subb of z * z
+                                           | Coq_fancy_mulll of z
+                                           | Coq_fancy_mullh of z
+                                           | Coq_fancy_mulhl of z
+                                           | Coq_fancy_mulhh of z
+                                           | Coq_fancy_rshi of z * z
+                                           | Coq_fancy_selc
+                                           | Coq_fancy_selm of z
+                                           | Coq_fancy_sell
+                                           | Coq_fancy_addm
+                                       end
+                                     module Coq__1 = Coq_ident
+                                     module Coq_invert_expr :
+                                       sig
+                                         module Coq_ident :
+                                           sig
+                                             val invert_Literal :
+                                               'a ->
+                                               Coq_ident.ident ->
+                                               Coq_base.interp option
+                                           end
+                                         val invert_Literal :
+                                           'a ->
+                                           ('b, Coq_ident.ident, 'c)
+                                           Coq_expr.expr ->
+                                           Coq_base.interp option
+                                       end
+                                     module Coq_defaults :
+                                       sig
+                                         val type_base :
+                                           'a -> 'a Coq_type.coq_type
+                                       end
+                                   end
+                               end
+                             module Compilers :
+                               sig
+                                 module ToString :
+                                   sig
+                                     module PHOAS :
+                                       sig
+                                         module Coq_type :
+                                           sig
+                                             module Coq_base :
+                                               sig
+                                                 val show_base :
+                                                   'a ->
+                                                   Language.Compilers.Coq_base.Coq_type.base ->
+                                                   char list
+                                                 val show_type :
+                                                   bool ->
+                                                   Language.Compilers.Coq_base.Coq_type.coq_type ->
+                                                   char list
+                                                 val show :
+                                                   bool ->
+                                                   Language.Compilers.Coq_base.Coq_type.coq_type ->
+                                                   char list
+                                               end
+                                             val show_type :
+                                               (bool -> 'a -> char list) ->
+                                               bool ->
+                                               'a
+                                               Language.Compilers.Coq_type.coq_type ->
+                                               char list
+                                             val show :
+                                               (bool -> 'a -> char list) ->
+                                               bool ->
+                                               'a
+                                               Language.Compilers.Coq_type.coq_type ->
+                                               char list
+                                           end
+                                         module Coq_ident :
+                                           sig
+                                             val show_range_or_ctype :
+                                               zrange -> char list
+                                             val show_compact_Z :
+                                               'a -> z -> char list
+                                             val show_ident :
+                                               'a ->
+                                               bool ->
+                                               Language.Compilers.Coq_ident.ident ->
+                                               char list
+                                           end
+                                         module Coq_expr :
+                                           sig
+                                             val show_var_expr :
+                                               (bool -> 'a -> char list) ->
+                                               ('a
+                                                Language.Compilers.Coq_type.coq_type ->
+                                                bool -> 'b -> char list) ->
+                                               'a
+                                               Language.Compilers.Coq_type.coq_type ->
+                                               bool ->
+                                               ('a, 'b, 'c)
+                                               Language.Compilers.Coq_expr.expr ->
+                                               char list
+                                             val partially_show_expr :
+                                               (bool -> 'a -> char list) ->
+                                               ('a
+                                                Language.Compilers.Coq_type.coq_type ->
+                                                bool -> 'b -> char list) ->
+                                               'a
+                                               Language.Compilers.Coq_type.coq_type ->
+                                               bool ->
+                                               ('a, 'b, 'c)
+                                               Language.Compilers.Coq_expr.expr ->
+                                               char list
+                                           end
+                                       end
+                                     module C :
+                                       sig
+                                         module Coq_type :
+                                           sig
+                                             type primitive = Z | Zptr
+                                             type coq_type =
+                                                 Coq_type_primitive of
+                                                   primitive
+                                               | Coq_prod of coq_type *
+                                                   coq_type
+                                               | Coq_unit
+                                           end
+                                         module Coq_int :
+                                           sig
+                                             type coq_type =
+                                                 Coq_signed of nat
+                                               | Coq_unsigned of nat
+                                             val lgbitwidth_of :
+                                               coq_type -> nat
+                                             val bitwidth_of : coq_type -> z
+                                             val is_signed : coq_type -> bool
+                                             val is_unsigned :
+                                               coq_type -> bool
+                                             val to_zrange :
+                                               coq_type -> zrange
+                                             val show_type :
+                                               bool -> coq_type -> char list
+                                           end
+                                         type ident =
+                                             Coq_literal of z
+                                           | List_nth of nat
+                                           | Addr
+                                           | Dereference
+                                           | Z_shiftr of z
+                                           | Z_shiftl of z
+                                           | Z_land
+                                           | Z_lor
+                                           | Z_add
+                                           | Z_mul
+                                           | Z_sub
+                                           | Z_opp
+                                           | Z_lnot of Coq_int.coq_type
+                                           | Z_bneg
+                                           | Z_mul_split of z
+                                           | Z_add_with_get_carry of z
+                                           | Z_sub_with_get_borrow of z
+                                           | Z_zselect of Coq_int.coq_type
+                                           | Z_add_modulo
+                                           | Z_static_cast of
+                                               Coq_int.coq_type
+                                         type arith_expr =
+                                             AppIdent of Coq_type.coq_type *
+                                               Coq_type.coq_type * ident *
+                                               arith_expr
+                                           | Var of Coq_type.primitive *
+                                               char list
+                                           | Pair of Coq_type.coq_type *
+                                               Coq_type.coq_type *
+                                               arith_expr * arith_expr
+                                           | TT
+                                         type stmt =
+                                             Call of arith_expr
+                                           | Assign of bool *
+                                               Coq_type.primitive *
+                                               Coq_int.coq_type option *
+                                               char list * arith_expr
+                                           | AssignZPtr of char list *
+                                               Coq_int.coq_type option *
+                                               arith_expr
+                                           | DeclareVar of
+                                               Coq_type.primitive *
+                                               Coq_int.coq_type option *
+                                               char list
+                                           | AssignNth of char list * 
+                                               nat * arith_expr
+                                         type expr = stmt list
+                                         module OfPHOAS :
+                                           sig
+                                             type var_data = __
+                                             val bind2_err :
+                                               ('a, 'b list) sum ->
+                                               ('c, 'b list) sum ->
+                                               ('a -> 'c -> ('d, 'b list) sum) ->
+                                               ('d, 'b list) sum
+                                             val bind4_err :
+                                               ('a, 'b list) sum ->
+                                               ('c, 'b list) sum ->
+                                               ('d, 'b list) sum ->
+                                               ('e, 'b list) sum ->
+                                               ('a ->
+                                                'c ->
+                                                'd -> 'e -> ('f, 'b list) sum) ->
+                                               ('f, 'b list) sum
+                                             val maybe_log2 : z -> z option
+                                             val bounds_check :
+                                               char list ->
+                                               'a ->
+                                               Language.Compilers.Coq_ident.ident ->
+                                               z ->
+                                               Language.Compilers.Coq_base.Coq_type.coq_type
+                                               Language.Compilers.Coq_type.coq_type ->
+                                               (Language.Compilers.Coq_base.Coq_type.coq_type,
+                                                Language.Compilers.Coq_ident.ident,
+                                                'b)
+                                               Language.Compilers.Coq_expr.expr ->
+                                               Coq_int.coq_type option ->
+                                               (unit, char list list) sum
+                                             val admit : 'a
+                                             val recognize_3arg_2ref_ident :
+                                               Language.Compilers.Coq_ident.ident ->
+                                               Coq_int.coq_type option *
+                                               Coq_int.coq_type option ->
+                                               ('_a * '_b) *
+                                               (((Language.Compilers.Coq_base.Coq_type.coq_type,
+                                                  Language.Compilers.Coq_ident.ident,
+                                                  '_c)
+                                                 Language.Compilers.Coq_expr.expr *
+                                                 (arith_expr *
+                                                  Coq_int.coq_type option)) *
+                                                (((Language.Compilers.Coq_base.Coq_type.coq_type,
+                                                   Language.Compilers.Coq_ident.ident,
+                                                   '_d)
+                                                  Language.Compilers.Coq_expr.expr *
+                                                  (arith_expr *
+                                                   Coq_int.coq_type option)) *
+                                                 '_e)) ->
+                                               (arith_expr -> stmt list,
+                                                char list list)
+                                               sum
+                                           end
+                                       end
+                                   end
+                               end
+                           end
+                       end
+                   end
+               end
+           end
+       end, contains type variables that cannot be generalized
