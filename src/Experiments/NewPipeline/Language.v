@@ -425,53 +425,54 @@ Module Compilers.
       Context {base_type : Type}.
       Local Notation type := (type base_type).
       Context {ident : type -> Type}
+              {annot : type -> Type}
               {var : type -> Type}.
 
       Inductive expr : type -> Type :=
       | Ident {t} (idc : ident t) : expr t
-      | Var {t} (v : var t) : expr t
-      | Abs {s d} (f : var s -> expr d) : expr (s -> d)
+      | Var {t} (a : annot t) (v : var t) : expr t
+      | Abs {s d} (a_s : annot s) (a_d : annot d) (f : var s -> expr d) : expr (s -> d)
       | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
-      | LetIn {A B} (x : expr A) (f : var A -> expr B) : expr B
+      | LetIn {A B} (a_B : annot B) (x : expr A) (f : var A -> expr B) : expr B
       .
     End with_var.
 
-    Fixpoint interp {base_type ident} {interp_base_type : base_type -> Type}
+    Fixpoint interp {base_type ident annot} {interp_base_type : base_type -> Type}
              (interp_ident : forall t, ident t -> type.interp interp_base_type t)
-             {t} (e : @expr base_type ident (type.interp interp_base_type) t)
+             {t} (e : @expr base_type ident annot (type.interp interp_base_type) t)
       : type.interp interp_base_type t
       := match e in expr t return type.interp _ t with
          | Ident t idc => interp_ident _ idc
-         | Var t v => v
-         | Abs s d f => fun x : type.interp interp_base_type s
-                        => @interp _ _ _ interp_ident _ (f x)
-         | App s d f x => (@interp _ _ _ interp_ident _ f)
-                            (@interp _ _ _ interp_ident _ x)
-         | LetIn A B x f
-           => dlet y := @interp _ _ _ interp_ident _ x in
-               @interp _ _ _ interp_ident _ (f y)
+         | Var t a v => v
+         | Abs s d a_s a_d f => fun x : type.interp interp_base_type s
+                                => @interp _ _ _ _ interp_ident _ (f x)
+         | App s d f x => (@interp _ _ _ _ interp_ident _ f)
+                            (@interp _ _ _ _ interp_ident _ x)
+         | LetIn A B a_B x f
+           => dlet y := @interp _ _ _ _ interp_ident _ x in
+               @interp _ _ _ _ interp_ident _ (f y)
          end.
 
-    Definition Expr {base_type ident} t := forall var, @expr base_type ident var t.
-    Definition APP {base_type ident s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
-      := fun var => @App base_type ident var s d (f var) (x var).
+    Definition Expr {base_type ident annot} t := forall var, @expr base_type ident annot var t.
+    Definition APP {base_type ident annot s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
+      := fun var => @App base_type ident annot var s d (f var) (x var).
 
-    Definition Interp {base_type ident interp_base_type} interp_ident {t} (e : @Expr base_type ident t)
+    Definition Interp {base_type ident annot interp_base_type} interp_ident {t} (e : @Expr base_type ident annot t)
       : type.interp interp_base_type t
-      := @interp base_type ident interp_base_type interp_ident t (e _).
+      := @interp base_type ident annot interp_base_type interp_ident t (e _).
 
     (** [Interp (APP _ _)] is the same thing as Gallina application of
         the [Interp]retations of the two arguments to [APP]. *)
-    Definition Interp_APP {base_type ident interp_base_type interp_ident} {s d} (f : @Expr base_type ident (s -> d)) (x : @Expr base_type ident s)
-      : @Interp base_type ident interp_base_type interp_ident _ (APP f x)
+    Definition Interp_APP {base_type ident annot interp_base_type interp_ident} {s d} (f : @Expr base_type ident annot (s -> d)) (x : @Expr base_type ident annot s)
+      : @Interp base_type ident annot interp_base_type interp_ident _ (APP f x)
         = Interp interp_ident f (Interp interp_ident x)
       := eq_refl.
 
     (** Same as [Interp_APP], but for any reflexive relation, not just
         [eq] *)
-    Definition Interp_APP_rel_reflexive {base_type ident interp_base_type interp_ident} {s d} {R} {H:Reflexive R}
-               (f : @Expr base_type ident (s -> d)) (x : @Expr base_type ident s)
-      : R (@Interp base_type ident interp_base_type interp_ident _ (APP f x))
+    Definition Interp_APP_rel_reflexive {base_type ident annot interp_base_type interp_ident} {s d} {R} {H:Reflexive R}
+               (f : @Expr base_type ident annot (s -> d)) (x : @Expr base_type ident annot s)
+      : R (@Interp base_type ident annot interp_base_type interp_ident _ (APP f x))
           (Interp interp_ident f (Interp interp_ident x))
       := H _.
 
@@ -560,13 +561,13 @@ Module Compilers.
       let do_reify_ident term else_tac
           := reify_ident
                term
-               ltac:(fun idc => constr:(@Ident base_type ident var _ idc))
+               ltac:(fun idc => constr:(@Ident base_type ident (fun _ => unit) var _ idc))
                       reify_rec
                       else_tac in
       let __ := Reify.debug_enter_reify_in_context term in
       lazymatch value_ctx with
       | context[@var_context.cons _ _ ?T ?rT term ?v _]
-        => constr:(@Var base_type ident var rT v)
+        => constr:(@Var base_type ident (fun _ => unit) var rT tt v)
       | _
         =>
         lazymatch term with
@@ -595,7 +596,7 @@ Module Compilers.
              let rb := reify_rec b in
              lazymatch rb with
              | @Abs _ _ _ ?s ?d ?f
-               => constr:(@LetIn base_type ident var s d ra f)
+               => constr:(@LetIn base_type ident (fun _ => unit) var s d tt ra f)
              | ?rb => let __ := match goal with
                                 | _ => fail 1 "Invalid non-Abs function reification of" b "to" rb
                                 end in
@@ -636,7 +637,7 @@ Module Compilers.
                      end) in
             lazymatch rf0 with
             | (fun _ => ?rf)
-              => constr:(@Abs base_type ident var rT _ rf)
+              => constr:(@Abs base_type ident (fun _ => unit) var rT _ tt tt rf)
             | _
               => (* This will happen if the reified term still
                     mentions the non-var variable.  By chance, [cbv
@@ -708,7 +709,7 @@ Module Compilers.
     Ltac Reify_rhs base_type ident reify_base_type reify_ident base_interp interp_ident _ :=
       let RHS := lazymatch goal with |- _ = ?RHS => RHS end in
       let R := Reify base_type ident reify_base_type reify_ident RHS in
-      transitivity (@Interp base_type ident base_interp interp_ident _ R);
+      transitivity (@Interp base_type ident _ base_interp interp_ident _ R);
       [ | reflexivity ].
 
     Module Export Notations.
@@ -719,10 +720,14 @@ Module Compilers.
       Bind Scope Expr_scope with Expr.
       Infix "@" := App : expr_scope.
       Infix "@" := APP : Expr_scope.
-      Notation "\ x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
-      Notation "'λ' x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
-      Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
-      Notation "'$' x" := (Var x) (at level 10, format "'$' x") : expr_scope.
+      Notation "\ x .. y , f" := (Abs _ _ (fun x => .. (Abs _ _ (fun y => f%expr)) .. )) (only printing) : expr_scope.
+      Notation "'λ' x .. y , f" := (Abs _ _ (fun x => .. (Abs _ _ (fun y => f%expr)) .. )) (only printing) : expr_scope.
+      Notation "\ x .. y , f" := (Abs tt tt (fun x => .. (Abs tt tt (fun y => f%expr)) .. )) : expr_scope.
+      Notation "'λ' x .. y , f" := (Abs tt tt (fun x => .. (Abs tt tt (fun y => f%expr)) .. )) : expr_scope.
+      Notation "'expr_let' x := A 'in' b" := (LetIn _ A (fun x => b%expr)) (only printing) : expr_scope.
+      Notation "'expr_let' x := A 'in' b" := (LetIn tt A (fun x => b%expr)) : expr_scope.
+      Notation "'$' x" := (Var tt x) (at level 10, format "'$' x") : expr_scope.
+      Notation "'$' x" := (Var _ x) (at level 10, format "'$' x", only printing) : expr_scope.
       Notation "### x" := (Ident x) : expr_scope.
     End Notations.
   End expr.
@@ -1246,34 +1251,34 @@ Module Compilers.
         end
       end.
 
-    Definition reify_list {var} {t} (ls : list (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.list t))
+    Definition reify_list {annot var} {t} (ls : list (@expr.expr base.type ident annot var (type.base t))) : @expr.expr base.type ident annot var (type.base (base.type.list t))
       := Datatypes.list_rect
            (fun _ => _)
            (expr.Ident ident.nil)
            (fun x _ xs => expr.Ident ident.cons @ x @ xs)%expr
            ls.
 
-    Fixpoint smart_Literal {var} {t:base.type} : base.interp t -> @expr.expr base.type ident var (type.base t)
+    Fixpoint smart_Literal {annot var} {t:base.type} : base.interp t -> @expr.expr base.type ident annot var (type.base t)
       := match t with
          | base.type.type_base t => fun v => expr.Ident (ident.Literal v)
          | base.type.prod A B
            => fun '((a, b) : base.interp A * base.interp B)
-              => expr.Ident ident.pair @ (@smart_Literal var A a) @ (@smart_Literal var B b)
+              => expr.Ident ident.pair @ (@smart_Literal annot var A a) @ (@smart_Literal annot var B b)
          | base.type.list A
            => fun v : list (base.interp A)
-              => reify_list (List.map (@smart_Literal var A) v)
+              => reify_list (List.map (@smart_Literal annot var A) v)
          end%expr.
 
     Module Export Notations.
       Delimit Scope ident_scope with ident.
       Bind Scope ident_scope with ident.
-      Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
+      Global Arguments expr.Ident {base_type%type ident%function annot%function var%function t%etype} idc%ident.
       Notation "## x" := (Literal x) (only printing) : ident_scope.
       Notation "## x" := (Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
       Notation "## x" := (expr.Ident (Literal x)) (only printing) : expr_scope.
       Notation "## x" := (smart_Literal (t:=base.reify_type_of x) x) (only parsing) : expr_scope.
       Notation "# x" := (expr.Ident x) : expr_pat_scope.
-      Notation "# x" := (@expr.Ident base.type _ _ _ x) : expr_scope.
+      Notation "# x" := (@expr.Ident base.type _ _ _ _ x) : expr_scope.
       Notation "x @ y" := (expr.App x%expr_pat y%expr_pat) : expr_pat_scope.
       Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair) .. (expr.App (expr.App (#pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
       Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair)%expr_pat .. (expr.App (expr.App (#pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
@@ -1329,8 +1334,8 @@ Module Compilers.
     End ident.
 
     Section with_var_gen.
-      Context {base_type} {ident var : type base_type -> Type}.
-      Local Notation expr := (@expr base_type ident var).
+      Context {base_type} {ident annot var : type base_type -> Type}.
+      Local Notation expr := (@expr base_type ident annot var).
       Local Notation if_arrow f t
         := (match t return Type with
             | type.arrow s d => f s d
@@ -1351,13 +1356,13 @@ Module Compilers.
       Definition invert_Abs {s d} (e : expr (s -> d))
         : option (var s -> expr d)%type
         := match e in expr.expr t return option (if_arrow (fun s d => var s -> expr d) t) with
-           | expr.Abs s d f => Some f
+           | expr.Abs s d _ _ f => Some f
            | _ => None
            end.
       Definition invert_LetIn {t} (e : expr t)
         : option { s : _ & expr s * (var s -> expr t) }%type
         := match e with
-           | expr.LetIn A B x f => Some (existT _ A (x, f))
+           | expr.LetIn A B _ x f => Some (existT _ A (x, f))
            | _ => None
            end.
       Definition invert_App2 {t} (e : expr t)
@@ -1382,7 +1387,7 @@ Module Compilers.
       Definition invert_Var {t} (e : expr t)
         : option (var t)
         := match e with
-           | expr.Var t v => Some v
+           | expr.Var t _ v => Some v
            | _ => None
            end.
 
@@ -1390,13 +1395,6 @@ Module Compilers.
         := match t with
            | type.base t => fun e _ => e
            | type.arrow s d => fun e x => @App_curried d (e @ (fst x)) (snd x)
-           end.
-      Fixpoint smart_App_curried {t} (e : expr t) : type.for_each_lhs_of_arrow var t -> expr (type.base (type.final_codomain t))
-        := match e in expr.expr t return type.for_each_lhs_of_arrow var t -> expr (type.base (type.final_codomain t)) with
-           | expr.Abs s d f
-             => fun v => @smart_App_curried d (f (fst v)) (snd v)
-           | e
-             => fun v => @App_curried _ e (type.map_for_each_lhs_of_arrow (fun _ v => expr.Var v) v)
            end.
       Fixpoint invert_App_curried {t} (e : expr t)
         : type.for_each_lhs_of_arrow expr t -> { t' : _ & expr t' * type.for_each_lhs_of_arrow expr t' }%type
@@ -1416,9 +1414,21 @@ Module Compilers.
            end e.
     End with_var_gen.
 
+    Section with_var_no_annot.
+      Context {base_type} {ident var : type base_type -> Type}.
+      Local Notation expr := (@expr base_type ident (fun _ => unit) var).
+      Fixpoint smart_App_curried {t} (e : expr t) : type.for_each_lhs_of_arrow var t -> expr (type.base (type.final_codomain t))
+        := match e in expr.expr t return type.for_each_lhs_of_arrow var t -> expr (type.base (type.final_codomain t)) with
+           | expr.Abs s d _ _ f
+             => fun v => @smart_App_curried d (f (fst v)) (snd v)
+           | e
+             => fun v => App_curried e (type.map_for_each_lhs_of_arrow (fun _ v => expr.Var tt v) v)
+           end.
+    End with_var_no_annot.
+
     Section with_var.
-      Context {var : type base.type -> Type}.
-      Local Notation expr := (@expr base.type ident var).
+      Context {annot var : type base.type -> Type}.
+      Local Notation expr := (@expr base.type ident annot var).
       Local Notation try_transportP P := (@type.try_transport base.type (@base.try_make_transport_cps) P _ _).
       Local Notation try_transport := (try_transportP _).
       Let type_base (v : base.type) : type.type base.type := type.base v.
@@ -1486,38 +1496,38 @@ Module Compilers.
                 end x y
            | _ => None
            end.
+
+      Fixpoint reflect_list_cps' {t} (e : expr t) {struct e}
+        : ~> option (list (expr (type.base match t return base.type with
+                                           | type.base (base.type.list t) => t
+                                           | _ => base.type.unit
+                                           end)))
+        := match e in expr.expr t return ~> option (list (expr (type.base match t return base.type with
+                                                                          | type.base (base.type.list t) => t
+                                                                          | _ => base.type.unit
+                                                                          end)))
+           with
+           | [] => (return (Some nil))
+           | x :: xs
+             => (x' <-- type.try_transport_cps base.try_make_transport_cps expr _ _ x;
+                   xs' <-- @reflect_list_cps' _ xs;
+                   xs' <-- type.try_transport_cps base.try_make_transport_cps (fun t => list (expr (type.base match t return base.type with
+                                                                                                              | type.base (base.type.list t) => t
+                                                                                                              | _ => base.type.unit
+                                                                                                              end))) _ _ xs';
+                 return (Some (x' :: xs')%list))
+           | _ => (return None)
+           end%expr_pat%expr%cps.
+
+      Definition reflect_list_cps {t} (e : expr (type.base (base.type.list t)))
+        : ~> option (list (expr (type.base t)))
+        := reflect_list_cps' e.
+
+      Definition reflect_list {t} (e : expr (type.base (base.type.list t)))
+        : option (list (expr (type.base t)))
+        := reflect_list_cps e _ id.
     End with_var.
-
-    Fixpoint reflect_list_cps' {var t} (e : @expr.expr base.type ident var t) {struct e}
-      : ~> option (list (@expr.expr base.type ident var (type.base match t return base.type with
-                                                                   | type.base (base.type.list t) => t
-                                                                   | _ => base.type.unit
-                                                                   end)))
-      := match e in expr.expr t return ~> option (list (@expr.expr base.type ident var (type.base match t return base.type with
-                                                                                                  | type.base (base.type.list t) => t
-                                                                                                  | _ => base.type.unit
-                                                                                                  end)))
-         with
-         | [] => (return (Some nil))
-         | x :: xs
-           => (x' <-- type.try_transport_cps base.try_make_transport_cps (@expr.expr base.type ident var) _ _ x;
-                xs' <-- @reflect_list_cps' var _ xs;
-                xs' <-- type.try_transport_cps base.try_make_transport_cps (fun t => list (@expr.expr _ _ _ (type.base match t return base.type with
-                                                                                                                  | type.base (base.type.list t) => t
-                                                                                                                  | _ => base.type.unit
-                                                                                                                  end))) _ _ xs';
-              return (Some (x' :: xs')%list))
-         | _ => (return None)
-         end%expr_pat%expr%cps.
-
-    Definition reflect_list_cps {var t} (e : @expr.expr base.type ident var (type.base (base.type.list t)))
-      : ~> option (list (@expr.expr base.type ident var (type.base t)))
-      := reflect_list_cps' e.
-    Global Arguments reflect_list_cps {var t} e [T] k.
-
-    Definition reflect_list {var t} (e : @expr.expr base.type ident var (type.base (base.type.list t)))
-      : option (list (@expr.expr base.type ident var (type.base t)))
-      := reflect_list_cps e id.
+    Global Arguments reflect_list_cps {annot var t} e [T] k.
   End invert_expr.
 
   Module DefaultValue.
@@ -1549,8 +1559,8 @@ Module Compilers.
     Module expr.
       Module base.
         Section with_var.
-          Context {var : type.type base.type -> Type}.
-          Fixpoint default {t : base.type} : @expr base.type ident var (type.base t)
+          Context {annot var : type.type base.type -> Type}.
+          Fixpoint default {t : base.type} : @expr base.type ident annot var (type.base t)
             := match t with
                | base.type.prod A B
                  => (@default A, @default B)
@@ -1563,12 +1573,12 @@ Module Compilers.
                end%expr.
         End with_var.
 
-        Definition Default {t : base.type} : expr.Expr (type.base t) := fun _ => default.
+        Definition Default {annot} {t : base.type} : expr.Expr (annot:=annot) (type.base t) := fun _ => default.
       End base.
 
       Section with_var.
         Context {var : type base.type -> Type}.
-        Fixpoint default {t : type base.type} : @expr base.type ident var t
+        Fixpoint default {t : type base.type} : @expr base.type ident (fun _ => unit) var t
           := match t with
              | type.base x => base.default
              | type.arrow s d => λ _, @default d
@@ -1597,9 +1607,9 @@ Module Compilers.
   Module GallinaReify.
     Module base.
       Section reify.
-        Context {var : type -> Type}.
+        Context {annot var : type -> Type}.
         Fixpoint reify {t : base.type} {struct t}
-          : base.interp t -> @expr var t
+          : base.interp t -> @expr annot var t
           := match t return base.interp t -> expr t with
              | base.type.prod A B as t
                => fun '((a, b) : base.interp A * base.interp B)
@@ -1616,8 +1626,8 @@ Module Compilers.
              end.
       End reify.
 
-      Definition Reify_as (t : base.type) (v : base.interp t) : Expr t
-        := fun var => reify v.
+      Definition Reify_as {annot} (t : base.type) (v : base.interp t) : Expr t
+        := fun var => @reify annot var t v.
 
       (** [Reify] does Ltac type inference to get the type *)
       Notation Reify v
@@ -1636,24 +1646,24 @@ Module Compilers.
     Section reify.
       Context {var : type -> Type}.
       Fixpoint reify {t : type} {struct t}
-        : value var t -> @expr var t
+        : value var t -> @expr (fun _ => unit) var t
         := match t return value var t -> expr t with
            | type.arrow s d
              => fun (f : var s -> value var d)
                 => (λ x , @reify d (f x))%expr
            | type.base t
-             => @base.reify var t
+             => @base.reify _ var t
            end.
     End reify.
 
     Fixpoint reify_as_interp {t : type} {struct t}
-      : type.interp base.interp t -> @expr (type.interp base.interp) t
+      : type.interp base.interp t -> @expr _ (type.interp base.interp) t
       := match t return type.interp base.interp t -> expr t with
          | type.arrow s d
            => fun (f : type.interp base.interp s -> type.interp base.interp d)
               => (λ x , @reify_as_interp d (f x))%expr
          | type.base t
-           => @base.reify _ t
+           => @base.reify _ _ t
          end.
 
     Definition Reify_as (t : type) (v : forall var, value var t) : Expr t
