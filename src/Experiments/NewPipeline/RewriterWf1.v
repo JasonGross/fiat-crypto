@@ -1744,6 +1744,43 @@ Module Compilers.
             : Transitive (@value_interp_related t) | 10
             := fun v1 v2 v3 => value_interp_related_trans.
 
+          Lemma value'_interp_related_of_wf {with_lets G t v1 v2}
+                (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
+            : @wf_value' _ _ _ _ with_lets G t v1 v2
+              -> @value'_interp_related _ _ t v1 v2.
+          Proof using Type.
+            intro H.
+            revert with_lets G HG v1 v2 H; induction t as [|s IHs d IHd]; cbn [wf_value' value'_interp_related value'] in *; intros.
+            { destruct with_lets;
+                [ rewrite <- !UnderLets.interp_to_expr | ];
+                eapply expr.wf_interp_Proper_gen2; eauto using UnderLets.wf_to_expr. }
+            { etransitivity; [ | etransitivity ];
+                [ eapply IHd; revgoals; [ eapply H; revgoals | ] | | eapply IHd; revgoals; [ eapply H; revgoals | ] ].
+
+              3:eassumption.
+
+              F
+              { eapply expr.wf_interp_Proper_gen2; eauto. }
+                { eapply UnderLets.wf_to_expr; eassumption. }
+                { eassumption.
+
+
+
+              Search UnderLets.interp UnderLets.wf.
+              { eapply UnderLets.wf_
+            Focus 2.
+            { eapply IHd; revgoals.
+              match goal with H : _ |- _ => eapply H; [ | ]  end.
+              Focus 2.
+              eapply IHs.
+
+              2:eauto.
+              2: match g
+            eauto.
+            destruct with_lets.
+            Search (UnderLets_maybe_interp _).
+
+
           Lemma interp_reify_reflect {with_lets t} e v
             : expr.interp ident_interp e == v -> expr.interp ident_interp (@reify _ with_lets t (reflect e)) == v.
           Proof using Type.
@@ -1816,6 +1853,13 @@ Module Compilers.
                                 (fun v1 => expr.interp ident_interp v1 == expr.interp ident_interp v2))
                                v1
                 end).
+
+          Lemma interp_of_wf_unification_resultT {G t p v1 v2}
+            : @wf_unification_resultT _ _ G t p v1 v2
+              -> related_unification_resultT (fun t => value_interp_related) v1 v2.
+          Proof using Type.
+            cbv [wf_unification_resultT]; apply map_related_unification_resultT.
+            Search wf_value value_interp_related.
 
           Definition rewrite_rule_data_interp_goodT
                      {t} {p : pattern t} (r : @rewrite_rule_data t p)
