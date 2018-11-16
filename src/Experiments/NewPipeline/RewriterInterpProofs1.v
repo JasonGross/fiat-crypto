@@ -19,6 +19,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.CPSId.
+Require Import Crypto.Util.Tactics.TransparentAssert.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.SetoidList.
@@ -422,6 +423,7 @@ Module Compilers.
         Local Notation pattern_collect_vars := (@pattern.collect_vars pident ident_collect_vars).
         Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps ident var pident pident_arg_types type_vars_of_pident).
         Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
+        Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
         Let type_base (t : base.type) : type := type.base t.
         Coercion type_base : base.type >-> type.
 
@@ -468,6 +470,40 @@ Module Compilers.
                             | match goal with
                               | [ H : _ |- _ ] => apply H; clear H
                               end ].
+        Qed.
+
+        Lemma eqv_refl_of_value_interp_related1 {with_lets t v e1 e2}
+          : @value_interp_related1 ident ident_interp with_lets t v e1
+            -> @value_interp_related1 ident ident_interp with_lets t v e2
+            -> e1 == e2.
+        Proof using Type.
+          revert with_lets v; induction t as [|s IHs d IHd]; cbn [value_interp_related1 type.related]; cbv [respectful]; [ intros; subst; reflexivity | ]; intros.
+          eapply IHd; match goal with H : _ |- _ => apply H end.
+          all: eapply @interp_reflect with (e:=expr.Var _); cbn [expr.interp].
+          all: (idtac + (etransitivity; (idtac + symmetry))); eassumption.
+        Qed.
+
+        Global Instance value_interp_related1_Proper_iff {with_lets t v}
+          : Proper (type.eqv ==> iff) (@value_interp_related1 ident ident_interp with_lets t v) | 10.
+        Proof using Type.
+          cbv [Proper respectful].
+          revert with_lets v; induction t as [|s IHs d IHd]; cbn [value_interp_related1 type.related]; cbv [respectful].
+          { intros; subst; reflexivity. }
+          { split; intros; (eapply IHd; [ | now eauto ]).
+            all: match goal with H : _ |- _ => (idtac + symmetry); apply H end.
+            all: eapply eqv_refl_of_value_interp_related1; eassumption. }
+        Qed.
+
+        Global Instance value_interp_related1_Proper_impl {with_lets t v}
+          : Proper (type.eqv ==> Basics.impl) (@value_interp_related1 ident ident_interp with_lets t v) | 10.
+        Proof using Type.
+          intros ? ? H; destruct (@value_interp_related1_Proper_iff with_lets t v _ _ H); assumption.
+        Qed.
+
+        Global Instance value_interp_related1_Proper_flip_impl {with_lets t v}
+          : Proper (type.eqv ==> Basics.flip Basics.impl) (@value_interp_related1 ident ident_interp with_lets t v) | 10.
+        Proof using Type.
+          intros ? ? H; destruct (@value_interp_related1_Proper_iff with_lets t v _ _ H); assumption.
         Qed.
 
         Lemma interp_splice_under_lets_with_value {T t} v k v2
@@ -1195,79 +1231,238 @@ good rewrite rule : interp_data_related d1 d2 -> interp_related a1 (rewrite on d
 Lemma 4: glue together
          *)
 
-        Lemma interp_rewrite_with_default_rule_helper
-              {t'} {p : pattern t'}
-          : forall {d e re ev e2 f}
-                   (Hup : unify_pattern re p _ (@Some _) = Some d)
-                   (Happ1 : pattern.type.app_forall_vars (pattern_default_interp p) (projT1 d) = Some f)
-                   (Happ2 : app_transport_with_unification_resultT'_cps f (projT2 d) _ (@Some _) = Some e2)
-                   (Hre : @rawexpr_equiv_expr _ e re)
-                   (Hev : expr.interp ident_interp e == ev),
-            expr.interp ident_interp e2 == ev.
+        Lemma value_interp_related1_value_of_rawexpr_of_rawexpr_equiv_expr
+              {G} {re e}
+              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
+          : @rawexpr_equiv_expr _ e re
+            -> expr.wf G e e
+            -> value_of_rawexpr re === expr.interp ident_interp e.
         Proof using Type.
-          cbv [pattern_default_interp].
-          intros; destruct d; cbn [projT1 projT2] in *.
-          exfalso; clear.
-          Check (pattern.type.app_forall_vars (pattern.type.lam_forall_vars ?[a]) ?[x] = Some ?[b]).
-            destruct_head'_sigT; cbn [projT1 projT2] in *.
-          Search pattern.type.app_forall_vars.
+          revert e; induction re; cbn.
+          all: repeat first [ reflexivity
+                            | exfalso; assumption
+                            | assumption
+                            | progress intros
+                            | progress subst
+                            | progress destruct_head'_and
+                            | progress inversion_sigma
+                            | progress destruct_head'_sig
+                            | progress cbn [eq_rect expr.interp] in *
+                            | progress eliminate_hprop_eq
+                            | progress expr.inversion_wf_constr
+                            | match goal with
+                              | [ |- reflect _ === _ ] => apply interp_reflect
+                              | [ |- ident_interp _ _ == ident_interp _ _ ] => apply ident_interp_Proper
+                              | [ H : expr.wf _ ?e ?e |- expr.interp _ ?e == expr.interp _ ?e ]
+                                => eapply expr.wf_interp_Proper_gen1; [ | exact H ]
+                              end
+                            | break_innermost_match_hyps_step ].
+          erewrite interp_reify.
+          apply
+          Lemma valu
+          Search value_interp_related1.
+          Print value_interp_related1.
+          Focus 2.
+          lazymatch goal with
+          end.
+          Search reflect value_interp_related1.
+          Print Compile.rawexpr_equiv_expr.
+          revert
 
-          Print Compile.app_with_unification_resultT_cps.
-          Search pattern.type.lam_forall_vars.
-          induction p; cbn [pattern_default_interp unify_pattern].
-          Print Compile.pattern_default_interp.
-          re
-          : rewrite_with_rule do_again e re rewr = Some v
-            -> @rawexpr_equiv_expr t e re
-            -> expr.interp ident_interp e == ev
-            -> expr.interp ident_interp (UnderLets.interp ident_interp v) == ev.
+        Lemma app_transport_pattern_default_interp'_cps_id
+              {t p evm1 evm2 K f x}
+          : @app_transport_with_unification_resultT'_cps
+              t p evm1 evm2 _
+              (@pattern_default_interp' K t p _ f)
+              x _ (@Some _)
+            = option_map
+                f
+                (@app_transport_with_unification_resultT'_cps
+                   t p evm1 evm2 _
+                   (@pattern_default_interp' _ t p _ id)
+                   x _ (@Some _)).
+        Proof using Type.
+          cbv [id]; revert evm1 evm2 K f x; induction p; cbn; intros.
+          all: repeat first [ reflexivity
+                            | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
+                            | progress rewrite_type_transport_correct
+                            | break_innermost_match_step
+                            | progress type_beq_to_eq
+                            | progress cbn [Option.bind option_map] in *
+                            | rewrite !app_lam_type_of_list
+                            | progress fold (@with_unification_resultT') in *
+                            | match goal with
+                              | [ IH : forall a b c d e, _ = option_map _ _ |- _ ]
+                                => etransitivity; rewrite IH; clear IH; [ reflexivity | ]
+                              end
+                            | progress cbv [option_map] ].
+        Qed.
 
+        Lemma interp_rewrite_with_default_rule_helper
+              {t'} {p : pattern t'} {evm evm'} {G}
+              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
+          : forall {d e re e2}
+                   (Hevm : types_match_with evm re p)
+                   (Hevm' : types_match_with evm' re p)
+                   (Hup : unify_pattern' re p evm' _ (@Some _) = Some d)
+                   (Happ : app_transport_with_unification_resultT'_cps (pattern_default_interp' p evm id) d _ (@Some _) = Some e2)
+                   (Hre : @rawexpr_equiv_expr _ e re)
+                   (e_ok : expr.wf G e e),
+            expr.interp ident_interp e2 == expr.interp ident_interp e.
+        Proof using Type.
+          induction p; cbn [unify_pattern' app_transport_with_unification_resultT'_cps types_match_with]; intros.
+          all: repeat first [ progress cbn [Option.bind pattern_default_interp' expr.interp eq_rect rawexpr_equiv_expr] in *
+                            | progress cbv [option_bind'] in *
+                            | assumption
+                            | exfalso; assumption
+                            | progress fold (@with_unification_resultT') in *
+                            | match goal with
+                              | [ H : context[app_transport_with_unification_resultT'_cps (pattern_default_interp' _ _ ?fv) _ _ ?k] |- _ ]
+                                => lazymatch fv with
+                                   | (fun x => x) => fail
+                                   | @id _ => fail
+                                   | _ => idtac
+                                   end;
+                                   lazymatch k with
+                                   | @Some _ => idtac
+                                   | (fun x => Some x) => idtac
+                                   end;
+                                   rewrite @app_transport_pattern_default_interp'_cps_id with (f:=fv) in H;
+                                   cbv [option_map] in H
+                              | [ H : @rawexpr_equiv_expr (type.arrow ?s (pattern.type.subst_default ?d ?evm)) ?e ?re,
+                                      H' : types_match_with ?evm ?re ?p |- _ ]
+                                => let H'' := fresh in
+                                   is_var s; pose proof (types_match_with_rawexpr_equiv_expr H' H) as H'';
+                                   cbn [pattern.type.subst_default] in H''; type.inversion_type
+                              | [ H : forall d0 e re e2, types_match_with ?evm re ?p -> _,
+                                    H' : types_match_with ?evm _ ?p |- _ ]
+                                => specialize (fun d0 e e2 => H d0 e _ e2 H')
+                              | [ H : forall d0 e e2, types_match_with ?evm ?re ?p -> _,
+                                    H' : types_match_with ?evm ?re ?p |- _ ]
+                                => specialize (fun d0 e e2 => H d0 e e2 H')
+                              | [ H : forall d0 e e2, Some ?v = Some d0 -> _ |- _ ]
+                                => specialize (fun e e2 => H v e e2 eq_refl)
+                              | [ H : forall e e2, app_transport_with_unification_resultT'_cps (pattern_default_interp' ?p _ (fun x => x)) _ _ (@Some _) = Some e2 -> _,
+                                    H' : app_transport_with_unification_resultT'_cps (pattern_default_interp' ?p _ (fun x => x)) _ _ _ = Some _ |- _ ]
+                                => specialize (fun e => H e _ H')
+                              | [ H : forall e0, rawexpr_equiv_expr e0 ?re -> _,
+                                    H' : rawexpr_equiv_expr _ ?re |- _ ]
+                                => specialize (H _ H')
+                              end
+                            | progress cbn [fst snd] in *
+                            | progress expr.invert_match
+                            | progress subst
+                            | progress destruct_head'_and
+                            | progress inversion_option
+                            | progress inversion_sigma
+                            | progress destruct_head'_sig
+                            | progress rewrite_type_transport_correct
+                            | progress type_beq_to_eq
+                            | progress specialize_by_assumption
+                            | progress cps_id'_with_option unify_pattern'_cps_id
+                            | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
+                            | progress expr.inversion_wf_constr
+                            | progress eliminate_hprop_eq
+                            | rewrite pident_unify_unknown_correct in *
+                            | break_match_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
+                            | break_match_hyps_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
+                            | break_innermost_match_step
+                            | break_innermost_match_hyps_step
+                            | rewrite !app_lam_type_of_list
+                            | match goal with
+                              | [ |- expr.interp _ (reify _) == _ ]
+                                => apply interp_reify
+                              | [ |- context[rew ?pf in _] ] => is_var pf; destruct pf
+                              | [ |- context[pident_to_typed _ _ _ _] ]
+                                => erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
+                              | [ H : match ?x with Some _ => _ | None => None end = _ |- _ ]
+                                => destruct x eqn:?
+                              | [ H : match rew ?pf in expr.Abs _ with expr.Abs _ _ _ => False | _ => _ end |- _ ]
+                                => exfalso; clear -H; destruct pf; cbn [eq_rect] in *
+                              | [ |- ident_interp _ _ == ident_interp _ _ ] => apply ident_interp_Proper; reflexivity
+                              | [ H : _ == _ |- _ == _ ] => apply H; assumption
+                              end
+                            | progress cbv [Option.bind] in * ].
+          Focus 2.
+          match goal with
+          hyp_appl
+          cbn [type.related] in *.
+          match goal with
+          end.
 
+          expr.wf_inv
+          wf_in
+          rewrite
+          lazymatch goal with
+          | [ H : forall ev, ?e == ev -> _, H' : ?e == _ |- _ ] => specialize (H _ H')
+          end.
+          lazymatch goal with
+          end.
+                H'' : types_match_with _ ?re ?p |- _ ]
+            => pose proof (types_match_with_rawexpr_equiv_expr H'' H')
+          end.
+          end.
 
-  Heqo0 : pattern.type.app_forall_vars (pattern_default_interp p) (projT1 u) = Some w
-  e0 : expr
-         (pattern.type.subst_default t'
-            (fold_right
-               (fun (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap) =>
-                k
-                  match PositiveMap.find i (projT1 u) with
-                  | Some v => PositiveMap.add i v evm'
-                  | None => evm'
-                  end) (fun evm : EvarMap => evm)
-               (rev (PositiveSet.elements (pattern_collect_vars p))) (PositiveMap.empty base.type)))
-  Heqo1 : app_transport_with_unification_resultT'_cps pident_arg_types w
-            (projT2 u)
-            (expr
-               (pattern.type.subst_default t'
-                  (fold_right
-                     (fun (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap) =>
-                      k
-                        match PositiveMap.find i (projT1 u) with
-                        | Some v => PositiveMap.add i v evm'
-                        | None => evm'
-                        end) (fun evm : EvarMap => evm)
-                     (rev (PositiveSet.elements (pattern_collect_vars p)))
-                     (PositiveMap.empty base.type)))) Some = Some e0
+          lazymatch goal with
+          | [ H : match ?t with type.base _ => False | type.arrow s d => @?P s d end |- _ ]
+            => match goal with
+               | [ H' : context[rew ?F H in _] |- _ ]
+                 => generalize dependent (F H); clear H; intro H
+               end
+          end.
+          rewrite <- (eq_sym_involutive pf).
+          case (eq_sym pf).
 
-          t' : ptype
-  p : pattern t'
-  re : rawexpr
-  x : EvarMap
-  ev : type.interp base.interp (pattern.type.subst_default t' x)
-  e : expr (pattern.type.subst_default t' x)
-  u : unification_resultT pident_arg_types p
-  Heqo : Compile.unify_pattern pident_arg_types pident_unify pident_unify_unknown re p
-           (unification_resultT pident_arg_types p) Some = Some u
-  e2 : expr (pattern.type.subst_default t' x)
-  Heqo0 : app_with_unification_resultT_cps pident_arg_types type_vars_of_pident
-            (pattern_default_interp p) u
-            {evm' : EvarMap & expr (pattern.type.subst_default t' evm')} Some =
-          Some (existT (fun evm' : EvarMap => expr (pattern.type.subst_default t' evm')) x e2)
-  H2 : type.related (fun t : base.type => eq) (expr.interp ident_interp e) ev
-  H1 : rawexpr_equiv_expr e re
-  ============================
-  type.related (fun t : base.type => eq) (expr.interp ident_interp e2) ev
-*)
+          Search eq_sym.
+            => let H' := fresh in
+               transparent assert (H' : { s : _ & { d : _ | type.arrow s d = t /\ P s d } })
+                 by (clear -H; destruct t; [ exfalso; assumption | eauto ])
+          end.
+          assert (
+          assert
+
+          clear -
+          match goal with
+          | [ H : context[pattern.type.subst_default (type.arrow ?s ?d) _], H' : context[pattern.type.subst_default ?d ?evm] |- _ ]
+            => change (pattern.type.subst_default d evm) with (type.codomain (pattern.type.subst_default (type.arrow s d) evm)) in *
+          end.
+          move d at bottom.
+          generalize dependent (pattern.type.subst_default d evm).
+          match goal with
+              end.
+          lazymatch goal with
+          end.
+
+          match goal with
+          end.
+          match goal with
+          end.
+          move e2 at bottom.
+          match goal with
+          end.
+          Print with_unification_resultT'.
+
+          move d at bottom.
+
+          remember (pattern.type.subst_default d evm) eqn:? in *.
+          destruct (pattern.type.subst_default d evm) eqn:?.
+
+          expr.invert_subst.
+          expr.inversion_expr.
+          match goal with
+          end.
+
+          .
+
+          apply Sigma.path_sigT_uncurried.
+          Search eq sigT.
+          Set Printing All.
+          erewrite interp_reify.
+          2:reflexivity.
+          Search ident_interp pident_to_typed.
+          Search app_type_of_list lam_type_of_list.
+          all: cbn [pattern_default_interp'].
+          *)
 
         Lemma interp_rewrite_with_default_rule
               (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
@@ -1279,12 +1474,14 @@ Lemma 4: glue together
             -> expr.interp ident_interp e == ev
             -> expr.interp ident_interp (UnderLets.interp ident_interp v) == ev.
         Proof using pident_unify_to_typed.
-          destruct ap as [t' p]; subst rewr; cbv [rewrite_with_rule rew_should_do_again pattern.type_of_anypattern pattern.pattern_of_anypattern rew_under_lets rew_with_opt rew_replacement normalize_deep_rewrite_rule maybe_do_again app_with_unification_resultT_cps option_bind'] in *; cbn [projT1 projT2] in *.
+          destruct ap as [t' p]; subst rewr; cbv [rewrite_with_rule rew_should_do_again pattern.type_of_anypattern pattern.pattern_of_anypattern rew_under_lets rew_with_opt rew_replacement normalize_deep_rewrite_rule maybe_do_again app_with_unification_resultT_cps option_bind' pattern_default_interp unify_pattern] in *; cbn [projT1 projT2] in *.
           repeat first [ match goal with
                          | [ |- Option.bind ?x _ = Some _ -> _ ]
                            => destruct x eqn:?; cbn [Option.bind]; [ | intros; solve [ inversion_option ] ]
                          end
                        | progress cps_id'_with_option unify_pattern_cps_id
+                       | progress cps_id'_with_option unify_types_cps_id
+                       | progress cps_id'_with_option unify_pattern'_cps_id
                        | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
                        | progress cps_id'_with_option app_with_unification_resultT_cps_id ].
           repeat first [ break_match_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
@@ -1299,6 +1496,8 @@ Lemma 4: glue together
                        | solve [ intros; inversion_option ]
                        | rewrite !UnderLets.interp_splice
                        | match goal with
+                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ]
+                           => pose proof (pattern.type.app_forall_vars_lam_forall_vars H); clear H
                          | [ H : Option.bind ?x _ = Some _ |- _ ]
                            => destruct x eqn:?; cbn [Option.bind] in H; [ | solve [ inversion_option ] ]
                          | [ |- expr.interp _ (UnderLets.interp _ (maybe_do_again _ _ _ _)) == _ ]
@@ -1311,8 +1510,12 @@ Lemma 4: glue together
                               end
                          end ].
 
-          match goal with
-               end
+          move Heqo0 at bottom.
+          epose proof (pattern.type.app_forall_vars_lam_forall_vars Heqo0).
+          eapply pattern.type.app_forall_vars_lam_forall_vars in Heqo0.
+          lazymatch goal with
+          | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ]
+            => apply pattern.type.app_forall_vars_lam_forall_vars in H
           end.
           Search (_ (rew _ in _)).
           move u0 at bottom.
