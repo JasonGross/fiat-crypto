@@ -408,8 +408,9 @@ Module Compilers.
         Local Notation rawexpr_equiv_expr := (@rawexpr_equiv_expr ident var).
         Local Notation rewrite_rule_data_interp_goodT := (@rewrite_rule_data_interp_goodT ident pident pident_arg_types type_vars_of_pident pident_to_typed ident_interp).
         Local Notation rewrite_rules_interp_goodT := (@rewrite_rules_interp_goodT ident pident pident_arg_types type_vars_of_pident pident_to_typed ident_interp).
+        Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pident pident_arg_types type_vars_of_pident).
         Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pident pident_arg_types type_vars_of_pident).
-        Local Notation unify_pattern := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
+        Local Notation unify_pattern := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation unify_pattern' := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation under_with_unification_resultT_relation_hetero := (@under_with_unification_resultT_relation_hetero ident var pident pident_arg_types type_vars_of_pident).
         Local Notation under_with_unification_resultT'_relation_hetero := (@under_with_unification_resultT'_relation_hetero ident var pident pident_arg_types).
@@ -419,6 +420,8 @@ Module Compilers.
         Local Notation pattern_default_interp := (@pattern_default_interp ident pident pident_arg_types type_vars_of_pident pident_to_typed).
         Local Notation ident_collect_vars := (@ident_collect_vars pident type_vars_of_pident).
         Local Notation pattern_collect_vars := (@pattern.collect_vars pident ident_collect_vars).
+        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps ident var pident pident_arg_types type_vars_of_pident).
+        Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
         Let type_base (t : base.type) : type := type.base t.
         Coercion type_base : base.type >-> type.
 
@@ -1190,28 +1193,99 @@ Lemma 2: wf_data_related -> interp_data_related
 Lemma 3: wf e1 e2 -> structural e1 r1 -> wf e1' r1 e2' r2 -> wf e1 a1 (or wf a1 e2?)
 good rewrite rule : interp_data_related d1 d2 -> interp_related a1 (rewrite on d2)
 Lemma 4: glue together
+         *)
+
+        Lemma interp_rewrite_with_default_rule_helper
+              {t'} {p : pattern t'}
+          : forall {d e re ev e2 f}
+                   (Hup : unify_pattern re p _ (@Some _) = Some d)
+                   (Happ1 : pattern.type.app_forall_vars (pattern_default_interp p) (projT1 d) = Some f)
+                   (Happ2 : app_transport_with_unification_resultT'_cps f (projT2 d) _ (@Some _) = Some e2)
+                   (Hre : @rawexpr_equiv_expr _ e re)
+                   (Hev : expr.interp ident_interp e == ev),
+            expr.interp ident_interp e2 == ev.
+        Proof using Type.
+          cbv [pattern_default_interp].
+          intros; destruct d; cbn [projT1 projT2] in *.
+          exfalso; clear.
+          Check (pattern.type.app_forall_vars (pattern.type.lam_forall_vars ?[a]) ?[x] = Some ?[b]).
+            destruct_head'_sigT; cbn [projT1 projT2] in *.
+          Search pattern.type.app_forall_vars.
+
+          Print Compile.app_with_unification_resultT_cps.
+          Search pattern.type.lam_forall_vars.
+          induction p; cbn [pattern_default_interp unify_pattern].
+          Print Compile.pattern_default_interp.
+          re
+          : rewrite_with_rule do_again e re rewr = Some v
+            -> @rawexpr_equiv_expr t e re
+            -> expr.interp ident_interp e == ev
+            -> expr.interp ident_interp (UnderLets.interp ident_interp v) == ev.
+
+
+
+  Heqo0 : pattern.type.app_forall_vars (pattern_default_interp p) (projT1 u) = Some w
+  e0 : expr
+         (pattern.type.subst_default t'
+            (fold_right
+               (fun (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap) =>
+                k
+                  match PositiveMap.find i (projT1 u) with
+                  | Some v => PositiveMap.add i v evm'
+                  | None => evm'
+                  end) (fun evm : EvarMap => evm)
+               (rev (PositiveSet.elements (pattern_collect_vars p))) (PositiveMap.empty base.type)))
+  Heqo1 : app_transport_with_unification_resultT'_cps pident_arg_types w
+            (projT2 u)
+            (expr
+               (pattern.type.subst_default t'
+                  (fold_right
+                     (fun (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap) =>
+                      k
+                        match PositiveMap.find i (projT1 u) with
+                        | Some v => PositiveMap.add i v evm'
+                        | None => evm'
+                        end) (fun evm : EvarMap => evm)
+                     (rev (PositiveSet.elements (pattern_collect_vars p)))
+                     (PositiveMap.empty base.type)))) Some = Some e0
+
+          t' : ptype
+  p : pattern t'
+  re : rawexpr
+  x : EvarMap
+  ev : type.interp base.interp (pattern.type.subst_default t' x)
+  e : expr (pattern.type.subst_default t' x)
+  u : unification_resultT pident_arg_types p
+  Heqo : Compile.unify_pattern pident_arg_types pident_unify pident_unify_unknown re p
+           (unification_resultT pident_arg_types p) Some = Some u
+  e2 : expr (pattern.type.subst_default t' x)
+  Heqo0 : app_with_unification_resultT_cps pident_arg_types type_vars_of_pident
+            (pattern_default_interp p) u
+            {evm' : EvarMap & expr (pattern.type.subst_default t' evm')} Some =
+          Some (existT (fun evm' : EvarMap => expr (pattern.type.subst_default t' evm')) x e2)
+  H2 : type.related (fun t : base.type => eq) (expr.interp ident_interp e) ev
+  H1 : rawexpr_equiv_expr e re
+  ============================
+  type.related (fun t : base.type => eq) (expr.interp ident_interp e2) ev
 *)
 
         Lemma interp_rewrite_with_default_rule
               (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
-              (Hdo_again : forall G t e1 e2,
-                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 === v2)
-                  -> expr.wf G e1 e2
-                  -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
-              (rewr : rewrite_ruleT)
-              (Hrewr : rewrite_rule_data_interp_goodT (projT2 rewr))
-              t e re v
+              {ap}
+              (rewr : rewrite_ruleT := existT rewrite_ruleTP ap {| rew_replacement := pattern_default_interp (pattern.pattern_of_anypattern ap) |})
+              t e re v ev
           : rewrite_with_rule do_again e re rewr = Some v
             -> @rawexpr_equiv_expr t e re
-            -> expr.interp ident_interp (UnderLets.interp ident_interp v) == expr.interp ident_interp e.
+            -> expr.interp ident_interp e == ev
+            -> expr.interp ident_interp (UnderLets.interp ident_interp v) == ev.
         Proof using pident_unify_to_typed.
-          destruct rewr as [p r].
-          cbv [rewrite_with_rule].
+          destruct ap as [t' p]; subst rewr; cbv [rewrite_with_rule rew_should_do_again pattern.type_of_anypattern pattern.pattern_of_anypattern rew_under_lets rew_with_opt rew_replacement normalize_deep_rewrite_rule maybe_do_again app_with_unification_resultT_cps option_bind'] in *; cbn [projT1 projT2] in *.
           repeat first [ match goal with
                          | [ |- Option.bind ?x _ = Some _ -> _ ]
                            => destruct x eqn:?; cbn [Option.bind]; [ | intros; solve [ inversion_option ] ]
                          end
                        | progress cps_id'_with_option unify_pattern_cps_id
+                       | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
                        | progress cps_id'_with_option app_with_unification_resultT_cps_id ].
           repeat first [ break_match_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
                        | progress rewrite_type_transport_correct
@@ -1230,8 +1304,17 @@ Lemma 4: glue together
                          | [ |- expr.interp _ (UnderLets.interp _ (maybe_do_again _ _ _ _)) == _ ]
                            => apply interp_maybe_do_again_gen; [ assumption | ]
                          | [ |- context[rew ?pf in _] ] => is_var pf; destruct pf
+                         | [ |- context[(rew [?P] ?pf in ?f) ?x] ]
+                           => lazymatch P with
+                              | fun t : ?T => ?A -> @?B t
+                                => replace ((rew [P] pf in f) x) with (rew [B] pf in f x) by now case pf
+                              end
                          end ].
-          cbv [rew_should_do_again rew_with_opt rew_under_lets rew_replacement] in *; destruct r; break_innermost_match_step; revgoals.
+
+          match goal with
+               end
+          end.
+          Search (_ (rew _ in _)).
           move u0 at bottom.
           move Hrewr at bottom.
           cbv [rewrite_rule_data_interp_goodT] in *.
