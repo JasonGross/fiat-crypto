@@ -775,6 +775,89 @@ Module Compilers.
 
           Local Notation "e1 === e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
 
+          Local Notation maybe_to_expr with_lets
+            := (if with_lets as wl return (if wl then _ else _) -> expr _
+                then UnderLets.to_expr
+                else (fun x => x)).
+
+          Fixpoint value'_equiv {with_lets1 with_lets2 t}
+            : @value' var with_lets1 t -> @value' var with_lets2 t -> Prop
+            := match t return value' _ t -> value' _ t -> Prop with
+               | type.base t => fun e1 e2 => maybe_to_expr with_lets1 e1 = maybe_to_expr with_lets2 e2
+               | type.arrow s d
+                 => fun (f1 f2 : value' _ _ -> value' _ _)
+                    => forall x1 x2,
+                        @value'_equiv _ _ s x1 x2
+                        -> @value'_equiv _ _ d (f1 x1) (f2 x2)
+               end.
+
+          Lemma value'_equiv_sym_iff {with_lets1 with_lets2 t v1 v2}
+            : @value'_equiv with_lets1 with_lets2 t v1 v2
+              <-> @value'_equiv with_lets2 with_lets1 t v2 v1.
+          Proof using Type.
+            revert with_lets1 with_lets2 v1 v2.
+            induction t as [|s IHs d IHd]; cbn; intros; try tauto.
+            { split; symmetry; assumption. }
+            { setoid_rewrite IHd at 1.
+              split; intro H; intros; apply H, IHs; assumption. }
+          Qed.
+
+          Lemma value'_equiv_sym {with_lets1 with_lets2 t v1 v2}
+            : @value'_equiv with_lets1 with_lets2 t v1 v2
+              -> @value'_equiv with_lets2 with_lets1 t v2 v1.
+          Proof using Type. apply value'_equiv_sym_iff. Qed.
+
+          Lemma value'_equiv_trans {with_lets1 with_lets2 with_lets3 t v1 v2 v3}
+            : @value'_equiv with_lets1 with_lets2 t v1 v2
+              -> @value'_equiv with_lets2 with_lets3 t v2 v3
+              -> @value'_equiv with_lets1 with_lets3 t v1 v3.
+          Proof using Type.
+            revert with_lets1 with_lets2 with_lets3 v1 v2 v3.
+            induction t as [|s IHs d IHd]; cbn; intros; try tauto.
+            { etransitivity; eassumption. }
+            { eapply IHd; [ now eauto | ]; clear IHd.
+              match goal with H : _ |- _ => eapply H end.
+              eapply IHs.
+              all: (idtac + eapply value'_equiv_sym); eassumption. }
+          Qed.
+
+          Global Instance value'_equiv_Symmetric {with_lets t}
+            : Symmetric (@value'_equiv with_lets with_lets t) | 10
+            := fun v1 v2 => value'_equiv_sym.
+
+          Global Instance value'_equiv_Transitive {with_lets t}
+            : Transitive (@value'_equiv with_lets with_lets t) | 10
+            := fun v1 v2 v3 => value'_equiv_trans.
+
+          Lemma value'_equiv_reflect {with_lets1 with_lets2 t e1 e2}
+            : e1 = e2
+              -> @value'_equiv with_lets1 with_lets2 t (reflect e1) (reflect e2).
+          Proof using Type.
+            revert with_lets1 with_lets2.
+            induction t as [|s IHs d IHd]; cbn [reify reflect value'_equiv]; intros.
+            { break_innermost_match; subst; reflexivity. }
+            { fold (@reify var) (@reflect var).
+              apply IHd, f_equal2; [ assumption | ]
+
+
+              Print reify.
+            re
+              eapply H.
+              eassumption.
+              eapply IHs.
+              eassumption.
+              eapply value'_equiv_sym.
+              eexact H1.
+              Set Printing Implicit.
+            all: inversion_sigma; type.inversion_type.
+            cbv [Reflexive]; revert with_lets; induction t as [|s IHs d IHd]; intros; break_innermost_match; cbn; [ reflexivity | ].
+            intros; eapply IHd.
+          Global Instance value'_equiv_Reflexive {with_lets t}
+            : Reflexive (@value'_equiv with_lets with_lets t t) | 10.
+          Proof using Type.
+            cbv [Reflexive]; revert with_lets; induction t as [|s IHs d IHd]; intros; break_innermost_match; cbn; [ reflexivity | ].
+            intros; eapply IHd.
+
           Fixpoint rawexpr_equiv_expr {t0} (e1 : expr t0) (r2 : rawexpr) {struct r2} : Prop
             := match r2 with
                | rIdent _ t idc t' alt
@@ -787,7 +870,7 @@ Module Compilers.
                        | _ => False
                        end
                | rExpr t e => e === e1
-               | rValue t e => reify e === e1
+               | rValue t e => value'_equiv e (@reflect _ false _ e1)
                end.
 
           Definition rawexpr_ok (r : rawexpr) := rawexpr_equiv_expr (expr_of_rawexpr r) r.
@@ -797,10 +880,8 @@ Module Compilers.
                | rExpr t e, r
                | r, rExpr t e
                  => rawexpr_equiv_expr e r
-                                       (*
                | rValue t1 e1, rValue t2 e2
-                 => existT _ t1 e1 = existT _ t2 e2
-                                        *)
+                 => value'_equiv e1 e2
                | rValue t e, r
                | r, rValue t e
                  => rawexpr_equiv_expr (reify e) r
@@ -889,7 +970,11 @@ Module Compilers.
           Proof using Type.
             cbv [Proper respectful Basics.impl]; intros e e' ? r1 r2 H0 H1; subst e'.
             revert r2 t e H1 H0.
-            induction r1, r2; cbn in *; repeat equiv_t_step.
+            induction r1, r2; cbn in *.
+            { repeat equiv_t_step. }
+            { repeat equiv_t_step. }
+            { repeat equiv_t_step. }
+            {
           Qed.
 
           Local Instance rawexpr_equiv_expr_Proper' {t}
