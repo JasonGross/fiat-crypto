@@ -791,6 +791,8 @@ Module Compilers.
                         -> @value'_equiv _ _ d (f1 x1) (f2 x2)
                end.
 
+          Local Notation "v1 ==== v2" := (related_sigT_by_eq (fun t => @value'_equiv _ _ t) (existT (value' _) _ v1) (existT (value' _) _ v2)).
+
           Lemma value'_equiv_sym_iff {with_lets1 with_lets2 t v1 v2}
             : @value'_equiv with_lets1 with_lets2 t v1 v2
               <-> @value'_equiv with_lets2 with_lets1 t v2 v1.
@@ -829,35 +831,6 @@ Module Compilers.
             : Transitive (@value'_equiv with_lets with_lets t) | 10
             := fun v1 v2 v3 => value'_equiv_trans.
 
-          Lemma value'_equiv_reflect {with_lets1 with_lets2 t e1 e2}
-            : e1 = e2
-              -> @value'_equiv with_lets1 with_lets2 t (reflect e1) (reflect e2).
-          Proof using Type.
-            revert with_lets1 with_lets2.
-            induction t as [|s IHs d IHd]; cbn [reify reflect value'_equiv]; intros.
-            { break_innermost_match; subst; reflexivity. }
-            { fold (@reify var) (@reflect var).
-              apply IHd, f_equal2; [ assumption | ]
-
-
-              Print reify.
-            re
-              eapply H.
-              eassumption.
-              eapply IHs.
-              eassumption.
-              eapply value'_equiv_sym.
-              eexact H1.
-              Set Printing Implicit.
-            all: inversion_sigma; type.inversion_type.
-            cbv [Reflexive]; revert with_lets; induction t as [|s IHs d IHd]; intros; break_innermost_match; cbn; [ reflexivity | ].
-            intros; eapply IHd.
-          Global Instance value'_equiv_Reflexive {with_lets t}
-            : Reflexive (@value'_equiv with_lets with_lets t t) | 10.
-          Proof using Type.
-            cbv [Reflexive]; revert with_lets; induction t as [|s IHs d IHd]; intros; break_innermost_match; cbn; [ reflexivity | ].
-            intros; eapply IHd.
-
           Fixpoint rawexpr_equiv_expr {t0} (e1 : expr t0) (r2 : rawexpr) {struct r2} : Prop
             := match r2 with
                | rIdent _ t idc t' alt
@@ -870,8 +843,20 @@ Module Compilers.
                        | _ => False
                        end
                | rExpr t e => e === e1
-               | rValue t e => value'_equiv e (@reflect _ false _ e1)
+               | rValue t e => e ==== @reflect _ false _ e1
                end.
+
+          Fixpoint rawexpr_equiv_value' {under_lets t}
+            : forall (v : @value' var under_lets t) (r : @rawexpr var), Prop.
+            refine match t return @value' var under_lets t -> @rawexpr var -> Prop with
+                   | type.base t
+                     => fun e r => rawexpr_equiv_expr (maybe_to_expr under_lets e) r
+                   | type.arrow s d
+                     => fun v r
+                        => forall x y,
+                            @rawexpr_equiv_value' _ s x y
+                            -> @rawexpr_equiv_value' _ d (v x) (rApp r y (expr_of_rawexpr r @ expr_of_rawexpr y))
+                   end; cbn.
 
           Definition rawexpr_ok (r : rawexpr) := rawexpr_equiv_expr (expr_of_rawexpr r) r.
 
@@ -881,7 +866,7 @@ Module Compilers.
                | r, rExpr t e
                  => rawexpr_equiv_expr e r
                | rValue t1 e1, rValue t2 e2
-                 => value'_equiv e1 e2
+                 => e1 ==== e2
                | rValue t e, r
                | r, rValue t e
                  => rawexpr_equiv_expr (reify e) r
@@ -897,10 +882,12 @@ Module Compilers.
                  => False
                end.
 
+          (*
           Global Instance rawexpr_equiv_Reflexive : Reflexive rawexpr_equiv.
           Proof using Type.
             intro x; induction x; cbn; repeat apply conj; break_innermost_match; try reflexivity; auto.
           Qed.
+           *)
 
           Global Instance rawexpr_equiv_Symmetric : Symmetric rawexpr_equiv.
           Proof using Type.
@@ -915,7 +902,8 @@ Module Compilers.
                            | solve [ auto ]
                            | apply conj
                            | (exists eq_refl)
-                           | apply path_sigT_uncurried ].
+                           | apply path_sigT_uncurried
+                           | symmetry; assumption ].
           Qed.
 
           Lemma rawexpr_equiv_expr_to_rawexpr_equiv {t} e r
@@ -974,7 +962,14 @@ Module Compilers.
             { repeat equiv_t_step. }
             { repeat equiv_t_step. }
             { repeat equiv_t_step. }
-            {
+            { intros.
+              destruct_head'_and.
+              inversion_sigma.
+              repeat (subst || cbn [eq_rect] in * ).
+              eliminate_hprop_eq.
+              repeat (subst || cbn [eq_rect] in * ).
+              repeat equiv_t_step. }
+
           Qed.
 
           Local Instance rawexpr_equiv_expr_Proper' {t}
