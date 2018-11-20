@@ -506,27 +506,6 @@ Module Compilers.
           intros ? ? H; destruct (@value_interp_related1_Proper_iff with_lets t v _ _ H); assumption.
         Qed.
 
-        Lemma value_interp_related1_reify_of_wf {under_lets G t e1 re2}
-              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
-              (Hwf : expr.wf G (@reify under_lets t e1) re2)
-          : e1 === expr.interp ident_interp re2.
-        Proof using Type.
-          revert under_lets G e1 re2 HG Hwf; induction t as [|s IHs d IHd];
-            cbn [value_interp_related1 reify]; intros.
-          { destruct under_lets; [ rewrite <- UnderLets.interp_to_expr | ].
-            all: eapply expr.wf_interp_Proper_gen1; eassumption. }
-          { fold (@reify) (@reflect) in *.
-            expr.inversion_wf_one_constr.
-            break_innermost_match_hyps; try tauto; [].
-            expr.invert_subst.
-            cbn [expr.interp].
-            eapply IHd.
-            Focus 2.
-            Search expr.wf.
-            2:eapply expr.wf_trans.
-            {
-
-
         Lemma interp_splice_under_lets_with_value {T t} v k v2
           : k (UnderLets.interp ident_interp v) === v2
             -> @splice_under_lets_with_value T t v k === v2.
@@ -1278,8 +1257,6 @@ Lemma 4: glue together
                                 => eapply expr.wf_interp_Proper_gen1; [ | exact H ]
                               end
                             | break_innermost_match_hyps_step ].
-
-
           erewrite interp_reify.
           apply
           Lemma valu
