@@ -829,6 +829,7 @@ Module Compilers.
             : Transitive (@value'_equiv with_lets with_lets t) | 10
             := fun v1 v2 v3 => value'_equiv_trans.
 
+          (*
           Lemma value'_equiv_reflect {with_lets1 with_lets2 t e1 e2}
             : e1 = e2
               -> @value'_equiv with_lets1 with_lets2 t (reflect e1) (reflect e2).
@@ -857,7 +858,8 @@ Module Compilers.
           Proof using Type.
             cbv [Reflexive]; revert with_lets; induction t as [|s IHs d IHd]; intros; break_innermost_match; cbn; [ reflexivity | ].
             intros; eapply IHd.
-
+           *)
+          (*
           Fixpoint rawexpr_equiv_expr {t0} (e1 : expr t0) (r2 : rawexpr) {struct r2} : Prop
             := match r2 with
                | rIdent _ t idc t' alt
@@ -1019,7 +1021,7 @@ Module Compilers.
                 repeat (subst || cbn [eq_rect type_of_rawexpr] in * );
                 reflexivity.
           Qed.
-
+           *)
           Lemma swap_swap_list {A n m ls ls'}
             : @swap_list A n m ls = Some ls' -> @swap_list A n m ls' = Some ls.
           Proof using Type.
