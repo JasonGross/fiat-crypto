@@ -339,7 +339,7 @@ Module Compilers.
             => destruct x eqn:?
           end; [ | left; reflexivity ]; cbn [Option.sequence_return].
           right; repeat esplit; try eassumption; auto.
-        Qed.*)
+        Qed.
       End with_var.
 
       Axiom proof_admitted : False.
@@ -425,6 +425,9 @@ Module Compilers.
         Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps ident var pident pident_arg_types type_vars_of_pident).
         Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
         Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
+        Local Notation value_interp_ok := (@value_interp_ok ident ident_interp).
+        Local Notation value'_interp := (@value'_interp ident ident_interp).
+        Local Notation rawexpr_interp_ok := (@rawexpr_interp_ok ident ident_interp).
         Let type_base (t : base.type) : type := type.base t.
         Coercion type_base : base.type >-> type.
 
@@ -437,6 +440,91 @@ Module Compilers.
         Local Notation reify_and_let_binds_cps := (@reify_and_let_binds_cps ident var reify_and_let_binds_base_cps).
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
         Local Notation "e <----- e' ; f" := (splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
+
+        Definition rawexpr_interp (r : rawexpr) : type.interp base.interp (type_of_rawexpr r)
+          := match r with
+             | rValue t v => value'_interp v
+             | rExpr t e => expr.interp ident_interp e
+             | rIdent _ _ _ _ alt => expr.interp ident_interp alt
+             | rApp _ _ _ alt => expr.interp ident_interp alt
+             end.
+
+        Lemma interp_assemble_identifier_rewriters'
+              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (dt : decision_tree)
+              (rew_rules : rewrite_rulesT)
+              t re K
+              (res := @assemble_identifier_rewriters' dt rew_rules do_again t re K)
+              (Ht : type_of_rawexpr re = t)
+              (HK : K = (fun P v => rew [P] Ht in v))(*
+                      /\ rew pf in value_of_rawexpr re = ev })*)
+              (Hdo_again : forall G t e1 e2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> value'_interp v1 == v2)
+                  -> expr.wf G e1 e2
+                  -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
+              (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
+              (Hr : rawexpr_interp_ok re)
+          : value_interp_ok res
+            /\ value'_interp res == rew Ht in rawexpr_interp re.
+        Proof using raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct.
+          subst K res.
+          revert dependent re; induction t as [t|s IHs d IHd]; cbn [assemble_identifier_rewriters' value'_interp];
+            intros; fold (@type.interp).
+          Search Compile.value'_interp.
+          Print Compile.value'_interp.
+          Print Compile.value_interp_ok.
+          Focus 2.
+          { cbn [type.related]; cbv [respectful id]; cbn [type_of_rawexpr] in *.
+            intros.
+            match goal with
+            | [ |- assemble_identifier_rewriters' _ _ _ _ ?re _ === _ ]
+              => specialize (fun v ev He => IHd v ev He re eq_refl)
+            end.
+            cbn [type_of_rawexpr eq_rect rawexpr_ok] in *.
+            eapply IHd; cbn [expr_of_rawexpr expr.interp rawexpr_equiv_value type.related] in *; cbv [respectful] in *.
+            { instantiate (1:=ltac:(destruct d)); destruct d; eapply Hv; solve [ eauto ]. }
+            { repeat apply conj;
+                try solve [ repeat first [ (idtac + symmetry); assumption
+                                         | etransitivity; (idtac + symmetry); eassumption
+                                         | apply rawexpr_ok_rValueOrExpr2_reify ] ].
+              apply rawexpr_ok_rValueOrExpr2_reify.
+
+              Set Printing All.
+              apply
+            do 4 esplit; [ eassumption | eapply rawexpr_equiv_value_rValueOrExpr2_reify; reflexivity ]. }
+          Unfocus.
+          { set (t' := type.base t) in pf, He.
+            revert v Hv.
+            change (base.interp t) with (type.interp base.interp t').
+            change (type.base t) with t'.
+            assert (Ht : type.base t = t') by reflexivity.
+            clearbody t'.
+            destruct pf; cbn [eq_rect] in *; intros.
+            eapply interp_eval_rewrite_rules; auto. }
+          { cbn [type.related]; cbv [respectful id]; cbn [type_of_rawexpr] in *.
+            intros.
+            match goal with
+            | [ |- assemble_identifier_rewriters' _ _ _ _ ?re _ === _ ]
+              => specialize (fun e => IHd e re eq_refl)
+            end.
+            cbn [type_of_rawexpr eq_rect] in *.
+            eapply IHd; cbn [expr_of_rawexpr expr.interp rawexpr_equiv_expr type.related] in *; cbv [respectful rValueOrExpr2] in *.
+            all: repeat first [ apply interp_reify
+                              | reflexivity
+                              | progress cbn [rawexpr_equiv_expr]
+                              | match goal with
+                                | [ |- and _ _ ] => apply conj
+                                | [ H : _ |- _ ] => apply H; clear H
+                                end
+                              | break_innermost_match_step ]. }
+        Qed.
+
+
+
+
+
+
+
         (*Local Infix "===" := (@value_interp_related1 ident ident_interp _ _) : type_scope.*)
         Local Infix "====" := (@value'_interp_related ident ident_interp _ _ _) : type_scope.
         Local Notation "e1 ===== e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
@@ -515,20 +603,6 @@ Module Compilers.
           intros ? ? H; destruct (@value_interp_related1_Proper_iff with_lets t v _ _ H); assumption.
         Qed.
 
-        Fixpoint rawexpr_equiv_value {t0} (e1 : @value t0) (r2 : rawexpr) {struct r2} : Prop
-          := match r2 with
-             | rValue t e => e ====== e1
-             | rExpr t e => e ===== @reify false _ e1
-             | rIdent _ t idc t' alt
-               => expr.Ident idc ===== @reify false _ e1
-             | rApp f x t alt
-               => exists s
-                         (fv : @value (s -> t0))
-                         (xv : @value s),
-                  @rawexpr_equiv_value _ fv f
-                  /\ @rawexpr_equiv_value _ xv x
-             end.
-
         Lemma rawexpr_equiv_value_rValueOrExpr2_reify {t v v'}
           : v = v'
             -> @rawexpr_equiv_value t v' (@rValueOrExpr2 _ _ t v (reify v)).
@@ -559,73 +633,6 @@ Module Compilers.
           intro; subst; cbv [rawexpr_ok rValueOrExpr2]; break_innermost_match; assumption.
         Qed.
 
-        Lemma interp_assemble_identifier_rewriters'
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
-              (dt : decision_tree)
-              (rew_rules : rewrite_rulesT)
-              t ev v re K
-              (res := @assemble_identifier_rewriters' dt rew_rules do_again t re K)
-              (HK : { pf : type_of_rawexpr re = t
-                    | K = (fun P v => rew [P] pf in v) })(*
-                      /\ rew pf in value_of_rawexpr re = ev })*)
-              (Hdo_again : forall G t e1 e2,
-                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 === v2)
-                  -> expr.wf G e1 e2
-                  -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
-              (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
-              (Hr : rawexpr_ok re)
-              (He : rawexpr_equiv_value ev re)
-          : ev === v
-            -> res === v.
-        Proof using raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct.
-          destruct HK as [pf HK ]; subst K; intro Hv.
-          subst res; revert dependent re; revert dependent ev; induction t as [t|s IHs d IHd]; cbn [assemble_identifier_rewriters' value_interp_related1]; intros;
-            fold (@type.interp).
-          Focus 2.
-          { cbn [type.related]; cbv [respectful id]; cbn [type_of_rawexpr] in *.
-            intros.
-            match goal with
-            | [ |- assemble_identifier_rewriters' _ _ _ _ ?re _ === _ ]
-              => specialize (fun v ev He => IHd v ev He re eq_refl)
-            end.
-            cbn [type_of_rawexpr eq_rect rawexpr_ok] in *.
-            eapply IHd; cbn [expr_of_rawexpr expr.interp rawexpr_equiv_value type.related] in *; cbv [respectful] in *.
-            { instantiate (1:=ltac:(destruct d)); destruct d; eapply Hv; solve [ eauto ]. }
-            { repeat apply conj;
-                try solve [ repeat first [ (idtac + symmetry); assumption
-                                         | etransitivity; (idtac + symmetry); eassumption
-                                         | apply rawexpr_ok_rValueOrExpr2_reify ] ].
-              apply rawexpr_ok_rValueOrExpr2_reify.
-
-              Set Printing All.
-              apply
-            do 4 esplit; [ eassumption | eapply rawexpr_equiv_value_rValueOrExpr2_reify; reflexivity ]. }
-          Unfocus.
-          { set (t' := type.base t) in pf, He.
-            revert v Hv.
-            change (base.interp t) with (type.interp base.interp t').
-            change (type.base t) with t'.
-            assert (Ht : type.base t = t') by reflexivity.
-            clearbody t'.
-            destruct pf; cbn [eq_rect] in *; intros.
-            eapply interp_eval_rewrite_rules; auto. }
-          { cbn [type.related]; cbv [respectful id]; cbn [type_of_rawexpr] in *.
-            intros.
-            match goal with
-            | [ |- assemble_identifier_rewriters' _ _ _ _ ?re _ === _ ]
-              => specialize (fun e => IHd e re eq_refl)
-            end.
-            cbn [type_of_rawexpr eq_rect] in *.
-            eapply IHd; cbn [expr_of_rawexpr expr.interp rawexpr_equiv_expr type.related] in *; cbv [respectful rValueOrExpr2] in *.
-            all: repeat first [ apply interp_reify
-                              | reflexivity
-                              | progress cbn [rawexpr_equiv_expr]
-                              | match goal with
-                                | [ |- and _ _ ] => apply conj
-                                | [ H : _ |- _ ] => apply H; clear H
-                                end
-                              | break_innermost_match_step ]. }
-        Qed.
 
 
         Lemma interp_assemble_identifier_rewriters
