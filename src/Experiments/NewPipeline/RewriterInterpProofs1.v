@@ -449,6 +449,20 @@ Module Compilers.
              | rApp _ _ _ alt => expr.interp ident_interp alt
              end.
 
+        Lemma rawexpr_interp_ok_rValueOrExpr2_reify {t v}
+          : value_interp_ok v
+            -> rawexpr_interp_ok (@rValueOrExpr2 _ _ t v (reify v)).
+        Proof using Type.
+          cbv [rValueOrExpr2]; break_innermost_match; [ | exact id ].
+          { rewrite value_interp_ok_base.
+            cbn [rawexpr_interp_ok].
+
+            TODO: update value_interp_related to say that two values are interp related at the base iff the exprs are each individually ok, and are interp related to each other
+
+          intro; subst; cbv [rawexpr_ok rValueOrExpr2]; break_innermost_match; assumption.
+        Qed.
+
+
         Lemma interp_assemble_identifier_rewriters'
               (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
               (dt : decision_tree)
@@ -470,6 +484,26 @@ Module Compilers.
           subst K res.
           revert dependent re; induction t as [t|s IHs d IHd]; cbn [assemble_identifier_rewriters' value'_interp];
             intros; fold (@type.interp).
+          { rewrite value_interp_ok_base. admit. }
+          { rewrite value_interp_ok_arrow.
+            split.
+            { intros x y Hx Hy Hxy.
+              repeat apply conj.
+              3:etransitivity; [ | symmetry; etransitivity; [ | ] ].
+              1-4: lazymatch goal with
+                   | [ |- context[assemble_identifier_rewriters' _ _ _ _ ?re ?K] ] => apply (IHd re eq_refl)
+                   end; clear IHd.
+              all: repeat first [ progress cbn [eq_rect rawexpr_interp rawexpr_interp_ok] in *
+                                | apply conj
+                                | assumption ].
+              1-4: repeat first [ progress cbv [rawexpr_interp_ok]
+              1-2: lazymatch goal with
+                   | [ |- context[assemble_identifier_rewriters' _ _ _ _ ?re ?K] ] => apply (IHd re eq_refl)
+                   end; cbn [eq_rect] in *.
+              2:apply IHd.
+            Lemma
+            cbv [value_interp_ok value'_interp_related].
+          Print Compile.value_interp_ok.
           Search Compile.value'_interp.
           Print Compile.value'_interp.
           Print Compile.value_interp_ok.
