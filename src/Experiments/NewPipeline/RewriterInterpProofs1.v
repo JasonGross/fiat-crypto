@@ -457,6 +457,8 @@ Module Compilers.
           { rewrite value_interp_ok_base.
             cbn [rawexpr_interp_ok].
 
+            TODO: make value_or_expr_interp_ok which is different on arrows and base types
+
             TODO: update value_interp_related to say that two values are interp related at the base iff the exprs are each individually ok, and are interp related to each other
 
           intro; subst; cbv [rawexpr_ok rValueOrExpr2]; break_innermost_match; assumption.
