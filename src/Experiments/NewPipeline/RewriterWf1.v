@@ -1921,114 +1921,206 @@ Module Compilers.
                 then UnderLets.interp ident_interp
                 else (fun x => x)).
 
+          Local Notation UnderLets_maybe_wf with_lets G
+            := (if with_lets as with_lets' return (if with_lets' then UnderLets var _ else _) -> (if with_lets' then UnderLets var _ else _) -> _
+                then UnderLets.wf (fun G' => expr.wf G') G
+                else expr.wf G).
+
+          Local Notation G_good G
+            := (forall t v1 v2, List.In (existT (fun t => (var t * var t)%type) t (v1, v2)) G -> v1 == v2) (only parsing).
+
           Definition value'_interp {with_lets t} (v : @value' var with_lets t)
             : var t
             := expr.interp ident_interp (reify v).
 
           Fixpoint value'_interp_related
-                   {with_lets1 with_lets2 t}
+                   {with_lets1 with_lets2} G {t}
             : @value' var with_lets1 t
               -> @value' var with_lets2 t
               -> Prop
             := match t return value' _ t -> value' _ t -> Prop with
                | type.base t
                  => fun v1 v2
-                    => expr.interp ident_interp (UnderLets_maybe_interp with_lets1 v1)
-                       == expr.interp ident_interp (UnderLets_maybe_interp with_lets2 v2)
+                    => UnderLets_maybe_wf with_lets1 G v1 v1
+                       /\ UnderLets_maybe_wf with_lets2 G v2 v2
+                       /\ expr.interp ident_interp (UnderLets_maybe_interp with_lets1 v1)
+                          == expr.interp ident_interp (UnderLets_maybe_interp with_lets2 v2)
                | type.arrow s d
                  => fun (f1 f2 : value' _ s -> value' _ d)
-                    => forall x1 x2,
-                        @value'_interp_related _ _ s x1 x2
-                        -> @value'_interp_related _ _ d (f1 x1) (f2 x2)
+                    => forall seg G' x1 x2,
+                        G' = (seg ++ G)%list
+                        -> @value'_interp_related _ _ seg s x1 x2
+                        -> @value'_interp_related _ _ G' d (f1 x1) (f2 x2)
                end.
 
-          Local Infix "===" := value'_interp_related : type_scope.
+          (*Local Infix "===" := value'_interp_related : type_scope.*)
           Local Notation "e1 ==== e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
 
-          Definition value_interp_related {t} : relation (@value var t)
-            := value'_interp_related.
+          Definition value_interp_related G {t} : relation (@value var t)
+            := value'_interp_related G.
 
-          Definition value_interp_ok {with_lets t} : @value' var with_lets t -> Prop
-            := fun v => value'_interp_related v v.
+          Definition value_interp_ok {with_lets} G {t} : @value' var with_lets t -> Prop
+            := fun v => value'_interp_related G v v.
 
-          Lemma value'_interp_related_sym_iff {with_lets1 with_lets2 t v1 v2}
-            : @value'_interp_related with_lets1 with_lets2 t v1 v2
-              <-> @value'_interp_related with_lets2 with_lets1 t v2 v1.
+          Lemma value'_interp_related_Proper_list {with_lets1 with_lets2} G1 G2
+                (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                t v1 v2
+                (Hwf : @value'_interp_related with_lets1 with_lets2 G1 t v1 v2)
+            : @value'_interp_related with_lets1 with_lets2 G2 t v1 v2.
+          Proof.
+            revert with_lets1 with_lets2 G1 G2 HG1G2 v1 v2 Hwf; induction t;
+              repeat first [ progress cbn in *
+                           | progress intros
+                           | solve [ eauto ]
+                           | progress subst
+                           | progress destruct_head'_and
+                           | progress inversion_sigma
+                           | progress inversion_prod
+                           | progress destruct_head'_or
+                           | progress break_innermost_match_hyps
+                           | apply conj
+                           | eapply UnderLets.wf_Proper_list; [ .. | solve [ eauto ] ]
+                           | wf_unsafe_t_step
+                           | match goal with H : _ |- _ => solve [ eapply H; [ .. | solve [ eauto ] ]; wf_t ] end ].
+          Qed.
+
+          Lemma value'_interp_related_sym_iff {with_lets1 with_lets2 G t v1 v2}
+            : @value'_interp_related with_lets1 with_lets2 G t v1 v2
+              <-> @value'_interp_related with_lets2 with_lets1 G t v2 v1.
           Proof using Type.
-            split; revert with_lets1 with_lets2 v1 v2; induction t as [|s IHs d IHd];
-              cbn [value'_interp_related]; intros.
+            split; revert with_lets1 with_lets2 G v1 v2; induction t as [|s IHs d IHd];
+              cbn [value'_interp_related]; repeat (intros || destruct_head'_and || apply conj).
             all: solve [ symmetry; assumption | eauto ].
           Qed.
 
-          Lemma value'_interp_related_trans {with_lets1 with_lets2 with_lets3 t v1 v2 v3}
-            : @value'_interp_related with_lets1 with_lets2 t v1 v2
-              -> @value'_interp_related with_lets2 with_lets3 t v2 v3
-              -> @value'_interp_related with_lets1 with_lets3 t v1 v3.
+          Lemma value'_interp_related_trans {with_lets1 with_lets2 with_lets3 G t v1 v2 v3}
+            : @value'_interp_related with_lets1 with_lets2 G t v1 v2
+              -> @value'_interp_related with_lets2 with_lets3 G t v2 v3
+              -> @value'_interp_related with_lets1 with_lets3 G t v1 v3.
           Proof using Type.
-            intros H0 H1; revert with_lets1 with_lets2 with_lets3 v1 v2 v3 H0 H1; induction t as [|s IHs d IHd];
-              cbn [value'_interp_related]; intros.
-            all: try solve [ etransitivity; eassumption ].
-            eapply IHd; [ eapply H0; eassumption | eapply H1 ].
+            intros H0 H1; revert with_lets1 with_lets2 with_lets3 G v1 v2 v3 H0 H1; induction t as [|s IHs d IHd];
+              cbn [value'_interp_related]; repeat (intros || destruct_head'_and || apply conj).
+            all: try solve [ etransitivity; eassumption | eauto ].
+            eapply IHd; [ eapply H0; eassumption | eapply H1; try eassumption ].
             eapply IHs; [ eapply value'_interp_related_sym_iff | ]; eassumption.
           Qed.
 
-          Global Instance value'_interp_related_Symmetric {with_lets t}
-            : Symmetric (@value'_interp_related with_lets with_lets t) | 10
+          Global Instance value'_interp_related_Symmetric {with_lets G t}
+            : Symmetric (@value'_interp_related with_lets with_lets G t) | 10
             := fun v1 v2 => proj1 value'_interp_related_sym_iff.
-          Global Instance value'_interp_related_Transitive {with_lets t}
-            : Transitive (@value'_interp_related with_lets with_lets t) | 10
+          Global Instance value'_interp_related_Transitive {with_lets G t}
+            : Transitive (@value'_interp_related with_lets with_lets G t) | 10
             := fun v1 v2 v3 => value'_interp_related_trans.
 
-          Lemma value_interp_related_sym_iff {t v1 v2}
-            : @value_interp_related t v1 v2
-              <-> @value_interp_related t v2 v1.
+          Lemma value_interp_related_sym_iff {G t v1 v2}
+            : @value_interp_related G t v1 v2
+              <-> @value_interp_related G t v2 v1.
           Proof using Type. apply value'_interp_related_sym_iff. Qed.
 
-          Lemma value_interp_related_trans {t v1 v2 v3}
-            : @value_interp_related t v1 v2
-              -> @value_interp_related t v2 v3
-              -> @value_interp_related t v1 v3.
+          Lemma value_interp_related_trans {G t v1 v2 v3}
+            : @value_interp_related G t v1 v2
+              -> @value_interp_related G t v2 v3
+              -> @value_interp_related G t v1 v3.
           Proof using Type. apply value'_interp_related_trans. Qed.
 
-          Global Instance value_interp_related_Symmetric {t}
-            : Symmetric (@value_interp_related t) | 10
+          Global Instance value_interp_related_Symmetric {G t}
+            : Symmetric (@value_interp_related G t) | 10
             := fun v1 v2 => proj1 value_interp_related_sym_iff.
-          Global Instance value_interp_related_Transitive {t}
-            : Transitive (@value_interp_related t) | 10
+          Global Instance value_interp_related_Transitive {G t}
+            : Transitive (@value_interp_related G t) | 10
             := fun v1 v2 v3 => value_interp_related_trans.
 
-          Lemma interp_Base_value {with_lets2 t} v1 (v2 : value' with_lets2 t)
-            : v1 === v2 -> @Base_value var t v1 === v2.
+          Lemma interp_Base_value {with_lets G t} v1 (v2 : value' with_lets t)
+            : value'_interp_related G v1 v2 -> value'_interp_related G (@Base_value var t v1) v2.
           Proof using Type.
-            cbv [Base_value]; break_innermost_match; destruct with_lets2; cbn [value'_interp_related UnderLets.interp];
-              exact id.
+            cbv [Base_value]; break_innermost_match; destruct with_lets; cbn [value'_interp_related UnderLets.interp];
+              try exact id.
+            all: repeat (intros || destruct_head'_and || apply conj); eauto.
+            all: constructor; assumption.
           Qed.
 
-          Fixpoint value_interp_related_reify {with_lets1 with_lets2 t e1 e2} {struct t}
-            : e1 === e2
-              -> expr.interp ident_interp (@reify var with_lets1 t e1) == expr.interp ident_interp (@reify var with_lets2 t e2)
-          with value_interp_related_reflect {with_lets1 with_lets2 t e1 e2} {struct t}
-            : expr.interp ident_interp e1 == expr.interp ident_interp e2
-              -> @reflect var with_lets1 t e1 === @reflect var with_lets2 t e2.
+          Fixpoint value_interp_related_reify {with_lets1 with_lets2 t G e1 e2} {struct t}
+            : value'_interp_related G e1 e2
+              -> expr.wf G (@reify var with_lets1 t e1) (@reify var with_lets1 t e1)
+                 /\ expr.wf G (@reify var with_lets2 t e2) (@reify var with_lets2 t e2)
+                 /\ expr.interp ident_interp (@reify var with_lets1 t e1) == expr.interp ident_interp (@reify var with_lets2 t e2)
+          with value_interp_related_reflect {with_lets1 with_lets2 t G e1 e2} {struct t}
+               : expr.wf G e1 e1
+                 -> expr.wf G e2 e2
+                 -> expr.interp ident_interp e1 == expr.interp ident_interp e2
+                 -> value'_interp_related G (@reflect var with_lets1 t e1) (@reflect var with_lets2 t e2).
           Proof using Type.
             all: destruct t as [t|s d];
               [ clear value_interp_related_reflect value_interp_related_reify
-              | pose proof (fun with_lets1 with_lets2 => value_interp_related_reify with_lets1 with_lets2 s) as value_interp_related_reify_s;
-                pose proof (fun with_lets1 with_lets2 => value_interp_related_reify with_lets1 with_lets2 d) as value_interp_related_reify_d;
-                pose proof (fun with_lets1 with_lets2 => value_interp_related_reflect with_lets1 with_lets2 s) as value_interp_related_reflect_s;
-                pose proof (fun with_lets1 with_lets2 => value_interp_related_reflect with_lets1 with_lets2 d) as value_interp_related_reflect_d;
+              | pose proof (value_interp_related_reify false false s) as value_interp_related_reify_s;
+                pose proof (value_interp_related_reify true true d) as value_interp_related_reify_d;
+                pose proof (value_interp_related_reflect false false s) as value_interp_related_reflect_s;
+                pose proof (value_interp_related_reflect true true d) as value_interp_related_reflect_d;
                 clear value_interp_related_reify value_interp_related_reflect ].
 
-            all: repeat first [ progress cbn [reflect reify type.related value'_interp_related expr.interp] in *
+            all: repeat first [ progress cbn [reflect reify] in *
+                              | progress fold (@reify var) (@reflect var) in *
+                              | progress cbn [type.related value'_interp_related expr.interp List.In eq_rect fst snd] in *
                               | progress cbv [respectful]
-                              | progress fold (@reify) (@reflect) in *
+                              | progress destruct_head'_False
+                              | progress destruct_head'_and
+                              | progress destruct_head'_ex
+                              | progress inversion_sigma
+                              | progress inversion_prod
+                              | progress subst
                               | break_innermost_match_step
                               | rewrite UnderLets.interp_to_expr
                               | exact id
+                              | apply conj
                               | progress intros
+                              | progress destruct_head'_or
+                              | solve [ auto ]
+                              | progress split_and
                               | match goal with
                                 | [ H : _ |- _ ] => apply H; clear H
+                                | [ |- expr.wf _ _ _ ] => constructor
+                                | [ |- UnderLets.wf _ _ _ _ ] => constructor
+                                | [ |- expr.wf _ (UnderLets.to_expr _) (UnderLets.to_expr _) ] => apply UnderLets.wf_to_expr
+                                | [ |- List.In ?v ?G ] => is_evar G; refine (_ : List.In v (v :: nil)); left; reflexivity
+                                | [ H : ?R _ _ |- ?R ?x ?y ] => etransitivity; (idtac + symmetry); eassumption
                                 end ].
+
+            SOMEHOW NEED WF RELATED TO SELF????  (at toplevel? at every level?)
+
+            eapply H
+            : match goal with
+                 | [ H : _ |- _ ] => eapply H; clear H; revgoals
+                 end.
+            1-6:solve [ repeat first [ progress cbn [reflect reify] in *
+                              | progress fold (@reify var) (@reflect var) in *
+                              | progress cbn [type.related value'_interp_related expr.interp List.In eq_rect fst snd] in *
+                              | progress cbv [respectful]
+                              | progress destruct_head'_False
+                              | progress inversion_sigma
+                              | progress inversion_prod
+                              | progress subst
+                              | break_innermost_match_step
+                              | rewrite UnderLets.interp_to_expr
+                              | exact id
+                              | apply conj
+                              | progress intros
+                              | progress destruct_head'_or
+                              | solve [ auto ]
+                              | match goal with
+                                | [ H : _ |- _ ] => apply H; clear H
+                                | [ |- expr.wf _ _ _ ] => constructor
+                                | [ |- List.In ?v ?G ] => is_evar G; refine (_ : List.In v (v :: nil)); left; reflexivity
+                                | [ H : ?R _ _ |- ?R ?x ?y ] => etransitivity; (idtac + symmetry); eassumption
+                                | [ |- exists G, _ /\ UnderLets.wf _ _ (UnderLets.Base _) (UnderLets.Base _) ]
+                                  => eexists; split; [ now auto | constructor; eassumption ]
+                                | [ |- exists G, _ /\ expr.wf _ _ _ ]
+                                  => eexists; split; [ now auto | eassumption ]
+                                end ] ].
+                 else shelve.
+
+            match goal with
+            end.
+            eapply value_interp_related_reflect_s; revgoals.
           Qed.
 
           Lemma interp_reify_reflect {with_lets t} e v
