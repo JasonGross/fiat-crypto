@@ -426,6 +426,7 @@ Module Compilers.
         Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
         Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
         Local Notation value_interp_ok := (@value_interp_ok ident ident_interp).
+        Local Notation value_or_expr_interp_ok := (@value_or_expr_interp_ok ident ident_interp).
         Local Notation value'_interp := (@value'_interp ident ident_interp).
         Local Notation rawexpr_interp_ok := (@rawexpr_interp_ok ident ident_interp).
         Let type_base (t : base.type) : type := type.base t.
@@ -450,18 +451,10 @@ Module Compilers.
              end.
 
         Lemma rawexpr_interp_ok_rValueOrExpr2_reify {t v}
-          : value_interp_ok v
+          : value_or_expr_interp_ok v
             -> rawexpr_interp_ok (@rValueOrExpr2 _ _ t v (reify v)).
         Proof using Type.
-          cbv [rValueOrExpr2]; break_innermost_match; [ | exact id ].
-          { rewrite value_interp_ok_base.
-            cbn [rawexpr_interp_ok].
-
-            TODO: make value_or_expr_interp_ok which is different on arrows and base types
-
-            TODO: update value_interp_related to say that two values are interp related at the base iff the exprs are each individually ok, and are interp related to each other
-
-          intro; subst; cbv [rawexpr_ok rValueOrExpr2]; break_innermost_match; assumption.
+          cbv [rValueOrExpr2 value_or_expr_interp_ok]; break_innermost_match; exact id.
         Qed.
 
 
@@ -480,23 +473,25 @@ Module Compilers.
                   -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
               (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
               (Hr : rawexpr_interp_ok re)
-          : value_interp_ok res
+          : value_or_expr_interp_ok res
             /\ value'_interp res == rew Ht in rawexpr_interp re.
         Proof using raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct.
           subst K res.
           revert dependent re; induction t as [t|s IHs d IHd]; cbn [assemble_identifier_rewriters' value'_interp];
-            intros; fold (@type.interp).
-          { rewrite value_interp_ok_base. admit. }
+            intros; fold (@type.interp); cbv [value_or_expr_interp_ok].
+          { cbv [value_or_expr_interp_ok]. admit. }
           { rewrite value_interp_ok_arrow.
             split.
             { intros x y Hx Hy Hxy.
               repeat apply conj.
               3:etransitivity; [ | symmetry; etransitivity; [ | ] ].
+              1-2: apply value_interp_ok_of_value_or_expr_interp_ok; try exact _.
               1-4: lazymatch goal with
                    | [ |- context[assemble_identifier_rewriters' _ _ _ _ ?re ?K] ] => apply (IHd re eq_refl)
                    end; clear IHd.
               all: repeat first [ progress cbn [eq_rect rawexpr_interp rawexpr_interp_ok] in *
                                 | apply conj
+                                | apply rawexpr_interp_ok_rValueOrExpr2_reify
                                 | assumption ].
               1-4: repeat first [ progress cbv [rawexpr_interp_ok]
               1-2: lazymatch goal with
