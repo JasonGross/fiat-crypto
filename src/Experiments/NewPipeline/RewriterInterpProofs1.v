@@ -429,6 +429,7 @@ Module Compilers.
         Local Notation value_or_expr_interp_ok := (@value_or_expr_interp_ok ident ident_interp).
         Local Notation value'_interp := (@value'_interp ident ident_interp).
         Local Notation rawexpr_interp_ok := (@rawexpr_interp_ok ident ident_interp).
+        Local Notation eval_decision_tree_correct := (@eval_decision_tree_correct ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple invert_bind_args_unknown_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args).
         Let type_base (t : base.type) : type := type.base t.
         Coercion type_base : base.type >-> type.
 
@@ -523,6 +524,15 @@ Module Compilers.
         Local Infix "====" := value_interp_related : type_scope.
         Local Infix "=====" := rawexpr_interp_related : type_scope.
 
+        Global Instance UnderLets_interp_related_Proper_iff {T1 T2}
+          : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@UnderLets_interp_related T1 T2) | 10.
+        Proof using Type.
+          cbv [pointwise_relation respectful Proper].
+          intros R1 R2 HR x y ? x' y' H'; subst y y'.
+          induction x; [ apply HR | ]; cbn [UnderLets_interp_related].
+          setoid_rewrite H; reflexivity.
+        Qed.
+
         Fixpoint reify_interp_related {t with_lets} v1 v2 {struct t}
           : @value_interp_related t with_lets v1 v2
             -> expr_interp_related (reify v1) v2
@@ -568,6 +578,214 @@ Module Compilers.
                             | apply reify_interp_related ].
         Qed.
 
+        Lemma UnderLets_interp_related_splice_iff {A B T R x e} {v : T}
+          : UnderLets_interp_related R (@UnderLets.splice _ ident var A B x e) v
+            <-> UnderLets_interp_related
+                  (fun xv => UnderLets_interp_related R (e xv))
+                  x v.
+        Proof using Type.
+          induction x; cbn [UnderLets.splice UnderLets_interp_related]; [ reflexivity | ].
+          match goal with H : _ |- _ => setoid_rewrite H end.
+          reflexivity.
+        Qed.
+
+        Lemma interp_rewrite_with_rule
+              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (Hdo_again : forall G t e1 e2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> value'_interp v1 == v2)
+                  -> expr.wf G e1 e2
+                  -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
+              (rewr : rewrite_ruleT)
+              (Hrewr : rewrite_rule_data_interp_goodT (projT2 rewr))
+              t e re v1 v2
+              (Ht : t = type_of_rawexpr re)
+              (He : expr_interp_related e v2)
+          : @rewrite_with_rule do_again t e re rewr = Some v1
+            -> rawexpr_interp_related re (rew Ht in v2)
+            -> UnderLets_interp_related expr_interp_related v1 v2.
+        Proof using pident_unify_to_typed.
+          destruct rewr as [p r].
+          cbv [rewrite_with_rule].
+          repeat first [ match goal with
+                         | [ |- Option.bind ?x _ = Some _ -> _ ]
+                           => destruct x eqn:?; cbn [Option.bind]; [ | intros; solve [ inversion_option ] ]
+                         end
+                       | progress cps_id'_with_option unify_pattern_cps_id
+                       | progress cps_id'_with_option app_with_unification_resultT_cps_id ].
+          repeat first [ break_match_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
+                       | progress rewrite_type_transport_correct
+                       | progress type_beq_to_eq
+                       | progress cbv [option_bind'] in *
+                       | progress cbn [Option.bind projT1 projT2 UnderLets.interp eq_rect UnderLets_interp_related] in *
+                       | progress destruct_head'_sigT
+                       | progress destruct_head'_sig
+                       | progress inversion_option
+                       | progress subst
+                       | solve [ intros; inversion_option ]
+                       | rewrite UnderLets_interp_related_splice_iff
+                       | match goal with
+                         | [ H : Option.bind ?x _ = Some _ |- _ ]
+                           => destruct x eqn:?; cbn [Option.bind] in H; [ | solve [ inversion_option ] ]
+                         | [ |- expr.interp _ (UnderLets.interp _ (maybe_do_again _ _ _ _)) == _ ]
+                           => apply interp_maybe_do_again_gen; [ assumption | ]
+                         | [ |- context[rew ?pf in _] ] => is_var pf; destruct pf
+                         | [ |- context[UnderLets_interp_related ?R (UnderLets.splice _ _)] ]
+                           => (* kludge because setoid_rewrite subterm selection doesn't work *)
+                           unshelve
+                             (repeat
+                                (exact UnderLets_interp_related_splice_iff
+                                 || (eapply UnderLets_interp_related_Proper_iff;
+                                     [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ])));
+                           cbv beta
+                         end ].
+
+          eapply UnderLets_interp_related_Proper_iff;
+            [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ].
+          repeat (eapply UnderLets_interp_related_Proper_iff;
+                  [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ]).
+          lazymatch goal with
+          end.
+          Typeclasses eauto := debug.
+          try setoid_rewrite H.
+          cbv [rew_should_do_again rew_with_opt rew_under_lets rew_replacement] in *; destruct r; break_innermost_match_step; revgoals.
+          move u0 at bottom.
+          move Hrewr at bottom.
+          cbv [rewrite_rule_data_interp_goodT] in *.
+          cbv [rew_should_do_again rew_with_opt rew_under_lets rew_replacement] in *.
+          match goal with
+          | [ H :
+          destruct e0.
+          destruct r;
+          destruct (rew_should_do_again _ _ r); revgoals.
+          match goal with
+          end.
+
+          cbv [rewrite_rule_data_interp_goodT] in Hrewr.
+          move Hrewr at bottom.
+          epose proof (Hrewr _ _) as Hrewr'.
+          rewrite Heqo0 in Hrewr'.
+          move u at bottom.
+          cbv [option_eq related_sigT_by_eq deep_rewrite_ruleTP_gen_good_relation] in Hrewr'.
+          revert Hrewr'.
+          cbn [projT1 projT2] in *.
+          break_innermost_match_step.
+          intro.
+          let v := open_constr:(Hrewr' _) in specialize v.
+          cbn [projT1 projT2] in *.
+          destruct_head'_sig; subst.
+          cbn [eq_rect] in *.
+          break_innermost_match_hyps_step.
+          cbn [Option.bind] in *.
+          inversion_option; subst.
+          rewrite !UnderLets.interp_splice; cbn [UnderLets.interp].
+          generalize dependent (match type_of_rawexpr re with type.base t => t | _ => base.type.unit end); intros.
+          apply interp_maybe_do_again_gen; [ assumption | ].
+          move re at bottom.
+          cbv [pattern.pattern_of_anypattern pattern.type_of_anypattern rewrite_ruleTP] in *.
+          destruct p as [pt p].
+          remember (type.base t) as t' eqn:Ht in *.
+          cbv [eq_rect]; break_innermost_match_step.
+          cbv [rewrite_rule_data_interp_goodT] in *.
+
+
+
+          cbv [deep_rewrite_ruleTP_gen_good_relation] in *.
+          cbv [Option.bind] in *; break_inn
+                       ].
+          rewrite_type_transport_correct; break_match; type_beq_to_eq; cbn [Option.bind] in *; intros; inversion_option; subst; [].
+          rewrite !UnderLets.interp_splice; cbn [UnderLets.interp eq_rect]; cbv [id].
+          cbn [projT1 projT2] in *.
+          generalize dependent (match type_of_rawexpr re with type.base t => t | _ => base.type.unit end); intros.
+          apply interp_maybe_do_again_gen; [ assumption | ].
+          move re at bottom.
+          cbv [pattern.pattern_of_anypattern pattern.type_of_anypattern rewrite_ruleTP] in *.
+          destruct p as [pt p].
+          remember (type.base t) as t' eqn:Ht in *.
+          cbv [eq_rect]; break_innermost_match_step.
+          cbv [rewrite_rule_data_interp_goodT] in *.
+          (*cbv [rew_is_cps rew_under_lets rew_replacement rew_should_do_again rew_with_opt] in *; destruct r.*)
+          destruct Hrewr as [Hrewr1 Hrewr2].
+          let H := match goal with H : context[unify_pattern] |- _ => H end in
+          revert H.
+          cbv [unify_pattern].
+          rewrite unify_types_cps_id; unfold Option.bind at 1;
+            break_match_step ltac:(fun v => match v with unify_types _ _ _ _ => idtac end);
+            [ | intros; exfalso; discriminate ].
+          unfold Option.bind at 1;
+            break_match_step ltac:(fun v => match v with pattern.type.app_forall_vars _ _ => idtac end);
+            [ | intros; exfalso; discriminate ].
+          eapply app_under_with_unification_resultT_relation1 in Hrewr1; [ | eassumption ].
+          eapply app_under_with_unification_resultT_relation_hetero in Hrewr2.
+          lazymatch goal with
+          | [ H : ?f = Some _, H' : context[option_eq _ ?f' ?g] |- _ ]
+            => unify f f'; change f' with f in H'; rewrite H in H'; cbv [option_eq] in H'; destruct g eqn:?; [ | exfalso; assumption ]
+          end.
+          cbv beta in *.
+          unshelve eapply interp_unify_pattern'_under_with_unification_resultT'_relation_hetero in Hrewr2; [ assumption.. | ].
+          rewrite unify_pattern'_cps_id.
+          lazymatch goal with
+          | [ H : option_eq ?P (@unify_pattern' ?t ?re ?p ?evm ?K ?v ?T (@Some ?T2)) ?X
+              |- context G[@unify_pattern' ?t' ?re ?p ?evm ?K' ?v ?T' ?T2'] ]
+            => let cst := constr:(@unify_pattern' t re p evm K v T (@Some T2)) in
+               let G' := context G[cst] in
+               change G'; destruct cst eqn:?, X eqn:?; cbv [option_eq] in H;
+                 cbn [Option.bind];
+                 inversion_option; try (exfalso; assumption); [ | intro; discriminate ]
+          end.
+          rewrite_type_transport_correct; break_match_when_head_step (@sumbool);
+            type_beq_to_eq; cbn [Option.bind] in *; [ | intro ]; inversion_option; subst; [].
+          cbv [id eq_rect] in *.
+          break_match_hyps_when_head_step (@eq).
+          cbv [deep_rewrite_ruleTP_gen_good_relation id] in Hrewr2.
+          lazymatch goal with
+          | [ H : normalize_deep_rewrite_rule ?d _ (fun y => y) = Some _, H' : context[normalize_deep_rewrite_rule ?d _ (fun x => x)] |- _ ]
+            => rewrite H in H'
+          end.
+          cbv [rew_is_cps rew_under_lets rew_replacement rew_should_do_again rew_with_opt] in *; destruct r.
+          break_innermost_match.
+          Focus 2.
+          { rewrite Hrewr2.
+            eapply interp_unify_pattern'_default_interp; try eassumption.
+            apply unify_types_match_with in Heqo.
+            move Heqo at bottom.
+            move e at bottom.
+            exact admit. }
+          Unfocus.
+          exact admit.
+        Qed.
+
+        Lemma interp_eval_rewrite_rules
+              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (d : decision_tree)
+              (rew_rules : rewrite_rulesT)
+              (re : rawexpr) v
+              (res := @eval_rewrite_rules do_again d rew_rules re)
+              (Hdo_again : forall G t e1 e2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> value'_interp v1 == v2)
+                  -> expr.wf G e1 e2
+                  -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
+              (Hr : rawexpr_interp_related re v)
+              (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
+          : UnderLets_interp_related expr_interp_related res v.
+        Proof using raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct.
+          subst res; cbv [eval_rewrite_rules].
+          refine (let H := eval_decision_tree_correct d [re] _ in _).
+          destruct H as [H| [? [? [H ?] ] ] ]; rewrite H; cbn [Option.sequence Option.sequence_return UnderLets_interp_related];
+            [ now apply expr_of_rawexpr_interp_related | ]; clear H.
+          inversion_head' eqlistA.
+          unfold Option.bind at 1.
+          break_innermost_match_step; [ | cbn [Option.sequence_return UnderLets_interp_related]; now apply expr_of_rawexpr_interp_related ].
+          cbn [Option.bind Option.sequence Option.sequence_return UnderLets_interp_related].
+          match goal with
+          | [ |- ?R (Option.sequence_return ?x ?y) _ ]
+            => destruct x eqn:Hinterp
+          end; cbn [Option.sequence_return UnderLets.interp]; [ | now apply expr_of_rawexpr_interp_related ].
+          intro; rewrite interp_rewrite_with_rule; try eassumption.
+          { eapply Hrew_rules, nth_error_In; rewrite <- sigT_eta; eassumption. }
+          { rewrite rawexpr_equiv_expr_to_rawexpr_equiv;
+              split; etransitivity; (idtac + symmetry); eassumption. }*)
+        Admitted.
+
         Lemma interp_assemble_identifier_rewriters'
               (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
               (dt : decision_tree)
@@ -591,13 +809,7 @@ Module Compilers.
             intros; fold (@type.interp); cbv [value_or_expr_interp_ok].
           { cbn [value_interp_related].
             destruct Ht; cbn [eq_rect].
-            epose eval_rewrite_rules_correct.
-            Search
-            pattern (eval_rewrite_rules do_again dt rew_rules).
-            generalize dependent (type_of_rawexpr re).
-
-            remember (type.base t) as t' eqn:?.
-
+            apply interp_eval_rewrite_rules; [ exact Hdo_again | | ]; assumption. }
           { cbn [value_interp_related].
             intros x1 x2 Hx.
             lazymatch goal with
@@ -621,65 +833,32 @@ Module Compilers.
                               | reflexivity
                               | apply expr_of_rawexpr_interp_related
                               | apply reify_interp_related ]. }
+        Qed.
 
-
-            { admit. }
-            { admit. }
-            {
-
-            repeat match goal with
-            { instantiate (1:=rew [type.interp base.interp] Ht in _).
-              instantiate (1:=ltac:(eassumption)).
-              destruct Ht; cbn [eq_rect].
-              admit. }
-            { admit. }
-            { destruct Ht; cbn [eq_sym eq_rect]; assumption. }
-            { instantiate (1:=ltac:(eassumption)).
-              cbv [rValueOrExpr2]; break_innermost_match; cbn [eq_rect rawexpr_interp_related]; assumption. }
-            { rewrite <- (eq_sym_involutive Ht); generalize (eq_sym Ht); clear Ht; intro Ht.
-
-            Focus 3.
-            unfold rValueOrExpr2 at 2.
-            cbn [type_of_rawexpr] in IHd.
-            rewrite value_interp_ok_arrow.
-            split.
-            { intros x y Hx Hy Hxy.
-              repeat apply conj.
-              3:etransitivity; [ | symmetry; etransitivity; [ | ] ].
-              1-2: apply value_interp_ok_of_value_or_expr_interp_ok; try exact _.
-              1-4: lazymatch goal with
-                   | [ |- context[assemble_identifier_rewriters' _ _ _ _ ?re ?K] ] => apply (IHd re eq_refl)
-                   end; clear IHd.
-              all: repeat first [ progress cbn [eq_rect rawexpr_interp rawexpr_interp_ok] in *
-                                | apply conj
-                                | apply rawexpr_interp_ok_rValueOrExpr2_reify
-                                | assumption ].
-              1-4: repeat first [ progress cbv [rawexpr_interp_ok]
-              1-2: lazymatch goal with
-                   | [ |- context[assemble_identifier_rewriters' _ _ _ _ ?re ?K] ] => apply (IHd re eq_refl)
-                   end; cbn [eq_rect] in *.
-              2:apply IHd.
-            Lemma
-            cbv [value_interp_ok value'_interp_related].
-          Print Compile.value_interp_ok.
-          Search Compile.value'_interp.
-          Print Compile.value'_interp.
-          Print Compile.value_interp_ok.
-          Focus 2.
-          { cbn [type.related]; cbv [respectful id]; cbn [type_of_rawexpr] in *.
-            intros.
-            match goal with
-            | [ |- assemble_identifier_rewriters' _ _ _ _ ?re _ === _ ]
-              => specialize (fun v ev He => IHd v ev He re eq_refl)
-            end.
-            cbn [type_of_rawexpr eq_rect rawexpr_ok] in *.
-            eapply IHd; cbn [expr_of_rawexpr expr.interp rawexpr_equiv_value type.related] in *; cbv [respectful] in *.
-            { instantiate (1:=ltac:(destruct d)); destruct d; eapply Hv; solve [ eauto ]. }
-            { repeat apply conj;
-                try solve [ repeat first [ (idtac + symmetry); assumption
-                                         | etransitivity; (idtac + symmetry); eassumption
-                                         | apply rawexpr_ok_rValueOrExpr2_reify ] ].
-              apply rawexpr_ok_rValueOrExpr2_reify.
+        Lemma interp_assemble_identifier_rewriters
+              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (d : decision_tree)
+              (rew_rules : rewrite_rulesT)
+              t idc
+              (res := @assemble_identifier_rewriters d rew_rules do_again t idc)
+              (Hdo_again : forall G t e1 e2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> value'_interp v1 == v2)
+                  -> expr.wf G e1 e2
+                  -> expr.interp ident_interp (UnderLets.interp ident_interp (do_again t e1)) == expr.interp ident_interp e2)
+              (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
+          : value_interp_related res (ident_interp t idc).
+        Proof using eta_ident_cps_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct ident_interp_Proper.
+          subst res; cbv [assemble_identifier_rewriters].
+          rewrite eta_ident_cps_correct.
+          match goal with
+          | [ |- ?R (assemble_identifier_rewriters' ?d ?rew_rules ?do_again ?t ?re' ?K) _ ]
+            => apply interp_assemble_identifier_rewriters' with (re:=re') (Ht:=eq_refl)
+          end.
+          all: cbn [rawexpr_interp_related expr.interp].
+          all: try solve [ reflexivity
+                         | assumption ].
+          repeat apply conj; try apply ident_interp_Proper; reflexivity.
+        Qed.
 
         Definition rawexpr_interp (r : rawexpr) : type.interp base.interp (type_of_rawexpr r)
           := match r with
