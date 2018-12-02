@@ -19,6 +19,8 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.CPSId.
+Require Import Crypto.Util.Tactics.SetEvars.
+Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Tactics.TransparentAssert.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.Related.
@@ -629,15 +631,50 @@ Module Compilers.
                          | [ |- expr.interp _ (UnderLets.interp _ (maybe_do_again _ _ _ _)) == _ ]
                            => apply interp_maybe_do_again_gen; [ assumption | ]
                          | [ |- context[rew ?pf in _] ] => is_var pf; destruct pf
-                         | [ |- context[UnderLets_interp_related ?R (UnderLets.splice _ _)] ]
+                         end ].
+          match goal with
+          | [ |- UnderLets_interp_related (fun xv => UnderLets_interp_related _ _) ?x _ ]
+            => is_var x;
+                 eapply UnderLets_interp_related_Proper_iff;
+                 [ cbv [pointwise_relation]; intros; set_evars | reflexivity | reflexivity | ]
+          end.
+          { repeat first [ progress rewrite UnderLets_interp_related_splice_iff
+                         | progress cbn [UnderLets_interp_related] ].
+            cbv [rew_should_do_again] in *; destruct r as [ [|] ].
+            all: cbv [maybe_do_again].
+            Focus 2.
+            { cbn [UnderLets_interp_related].
+              destruct e0.
+              cbn [eq_rect] in *.
+              subst_evars.
+              unshelve instantiate (1:=ltac:(destruct e0; cbn [eq_rect])); cbn [eq_rect].
+              clear e1.
+              shelve.
+              set_evars.
+
+              generalize dependent (eq_sym e1).
+              clear e1.
+              intro e1; destruct e1.
+              case (eq_sym e1).
+
+              all:
+              2: cbn [eq_rect].
+              clearbody e2.
+              destruct e1.
+
+            set (sda := rew_should_do_again _ _ _) in *.
+            destruct sda.
+            edestruct rew_should_do_again.
+            destruct e1.
+Require Import Crypto.Util.Tactics.SetEvars.
+          { repeat first [ ma
+                                                                                             | [ |- context[UnderLets_interp_related ?R (UnderLets.splice _ _)] ]
                            => (* kludge because setoid_rewrite subterm selection doesn't work *)
                            unshelve
                              (repeat
                                 (exact UnderLets_interp_related_splice_iff
-                                 || (eapply UnderLets_interp_related_Proper_iff;
-                                     [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ])));
+                                 ||
                            cbv beta
-                         end ].
 
           eapply UnderLets_interp_related_Proper_iff;
             [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ].
