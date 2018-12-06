@@ -420,12 +420,12 @@ Module Compilers.
         Local Notation under_with_unification_resultT'_relation_hetero := (@under_with_unification_resultT'_relation_hetero ident var pident pident_arg_types).
         Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
         Local Notation assemble_identifier_rewriters' := (@assemble_identifier_rewriters' ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation pattern_default_interp' := (@pattern_default_interp' ident pident pident_arg_types pident_to_typed).
-        Local Notation pattern_default_interp := (@pattern_default_interp ident pident pident_arg_types type_vars_of_pident pident_to_typed).
+        Local Notation pattern_default_interp' := (@pattern_default_interp' ident pident pident_arg_types pident_to_typed (@ident_interp)).
+        Local Notation pattern_default_interp := (@pattern_default_interp ident pident pident_arg_types type_vars_of_pident pident_to_typed (@ident_interp)).
         Local Notation ident_collect_vars := (@ident_collect_vars pident type_vars_of_pident).
         Local Notation pattern_collect_vars := (@pattern.collect_vars pident ident_collect_vars).
-        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps ident var pident pident_arg_types type_vars_of_pident).
-        Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
+        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident).
+        Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps pident pident_arg_types).
         Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
         Local Notation value'_interp := (@value'_interp ident ident_interp).
         Local Notation eval_decision_tree_correct := (@eval_decision_tree_correct ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple invert_bind_args_unknown_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args).
@@ -451,24 +451,6 @@ Module Compilers.
         (*Local Infix "===" := expr_interp_related : type_scope.
         Local Infix "====" := value_interp_related : type_scope.
         Local Infix "=====" := rawexpr_interp_related : type_scope.*)
-
-        (** XXX MOVE ME TO RewriterWf1 *)
-        Lemma value_of_rawexpr_interp_related {e v}
-          : rawexpr_interp_related e v -> value_interp_related (value_of_rawexpr e) v.
-        Proof using Type.
-          destruct e; cbn [rawexpr_interp_related value_of_rawexpr]; break_innermost_match.
-          all: repeat first [ progress intros
-                            | exfalso; assumption
-                            | progress inversion_sigma
-                            | progress subst
-                            | progress cbn [eq_rect expr.interp type_of_rawexpr] in *
-                            | progress destruct_head'_ex
-                            | progress destruct_head'_and
-                            | assumption
-                            | apply reflect_interp_related
-                            | progress cbn [expr_interp_related]
-                            | solve [ eauto ] ].
-        Qed.
 
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
@@ -504,10 +486,15 @@ Module Compilers.
                             | progress cbv [eq_rect] ].
         Qed.
 
+        Check @pattern_default_interp.
+        Check @app_with_unification_resultT_cps.
+
         Lemma interp_unify_pattern {t re p v res}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern t re p _ (@Some _) = Some res)
-          : exists resv : _, unification_resultT_interp_related res resv.
+          : exists resv : _,
+            unification_resultT_interp_related res resv(*
+            /\ app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT _ _ v)*).
         Proof using Type.
           cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT] in *.
           repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
@@ -586,25 +573,9 @@ Module Compilers.
                          | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
                          end
                        | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in *
-                       (*| eapply UnderLets.splice_interp_related_of_ex; eexists _, _; repeat apply conj;
-                         [ eassumption | intros | shelve ]*) ].
-          set (k := rew_should_do_again _ _ r) in *.
-          destruct r; cbv in k.
-          let v := (eval cbv in k) in destruct v; subst k; cbn [maybe_do_again].
-          Focus 2.
-          { cbn [UnderLets.splice].
-            destruct e0.
-            move e1 at bottom.
-            cbn [eq_rect].
-            move u0 at bottom.
-            cbv beta iota zeta in *.
-            destruct s as [s s']; cbn [projT1 projT2] in *.
-            clear dependent y.
-            clear -d
-            cbv [eq_rect]
-          Unshelve.
-          Focus 3.
-          move s at bottom.
+                       | unshelve (eapply UnderLets.splice_interp_related_of_ex; eexists (fun x => rew _ in x), _; repeat apply conj;
+                                   [ eassumption | intros | ]);
+                         [ etransitivity; eassumption | .. ] ].
           set (k := rew_should_do_again _ _ r) in *.
           destruct r; cbv in k.
           let v := (eval cbv in k) in destruct v; subst k; cbn [maybe_do_again].
@@ -617,6 +588,17 @@ Module Compilers.
             assumption. }
           Unfocus.
           Focus 2.
+          assert (match type_of_rawexpr re with type.base _ => True | type.arrow _ _ => False end) by (rewrite <- e1; constructor).
+          destruct e0; cbv [eq_trans eq_rect].
+          move e1 at bottom.
+          destruct s as [s' s]; cbn [projT1 projT2] in *.
+          move s' at bottom.
+          clear dependent u0.
+          clear dependent y.
+          Check @pattern_default_interp.
+          Lemma interp_pattern_default_interp {t p x y
+          generalize dependent ( pattern.type.subst_default (pattern.type_of_anypattern p) s').
+          Foc
 
           case e1.
           destruct e1.
