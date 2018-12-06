@@ -586,28 +586,38 @@ Module Compilers.
                          | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
                          end
                        | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in *
-                       | unshelve (eapply UnderLets.splice_interp_related_of_ex; eexists (fun x => rew _ in x), _; repeat apply conj;
-                                   [ eassumption | intros | ]);
-                         [ etransitivity; eassumption | .. ] ].
-          Focus 2.
-          move v2 at bottom.
-          destruct s as [s s']; cbn [projT1 projT2] in *.
-          move s' at bottom.
-          destruct e1.
-          cbv [eq_trans]; break_innermost_match.
-          etransitivity; eassumption.
-          etransitivity; [
-          generalize (type_of_rawexpr_re
-            shelve_unifiable.
+                       (*| eapply UnderLets.splice_interp_related_of_ex; eexists _, _; repeat apply conj;
+                         [ eassumption | intros | shelve ]*) ].
           set (k := rew_should_do_again _ _ r) in *.
           destruct r; cbv in k.
           let v := (eval cbv in k) in destruct v; subst k; cbn [maybe_do_again].
           Focus 2.
-          cbn in H0.
-          cbn [UnderLets.splice].
-          cbn [UnderLets.interp_related].
-          cbv [eq_rect].
-          break_innermost_match.
+          { cbn [UnderLets.splice].
+            destruct e0.
+            move e1 at bottom.
+            cbn [eq_rect].
+            move u0 at bottom.
+            cbv beta iota zeta in *.
+            destruct s as [s s']; cbn [projT1 projT2] in *.
+            clear dependent y.
+            clear -d
+            cbv [eq_rect]
+          Unshelve.
+          Focus 3.
+          move s at bottom.
+          set (k := rew_should_do_again _ _ r) in *.
+          destruct r; cbv in k.
+          let v := (eval cbv in k) in destruct v; subst k; cbn [maybe_do_again].
+          Focus 2.
+          { cbn in H0.
+            cbn [UnderLets.splice].
+            cbn [UnderLets.interp_related].
+            cbv [eq_rect eq_trans].
+            break_innermost_match.
+            assumption. }
+          Unfocus.
+          Focus 2.
+
           case e1.
           destruct e1.
 
