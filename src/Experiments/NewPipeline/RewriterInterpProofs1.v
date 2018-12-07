@@ -523,7 +523,9 @@ Module Compilers.
                             | match goal with
                               | [ H : forall re res v, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
                                 => specialize (H _ _ _ ltac:(eassumption) ltac:(eassumption))
-                              | [ |- exists x : _ * _, _ /\ _ ] => eexists (_, _); split; eassumption
+                              | [ H : forall re res v Hty, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
+                                => specialize (fun Hty => H _ _ _ Hty ltac:(eassumption) ltac:(eassumption))
+                              | [ |- exists x : _ * _, (_ /\ _) /\ _ ] => eexists (_, _); split; [ split; eassumption | ]
                               | [ |- exists res, value_interp_related (value_of_rawexpr _) res ]
                                 => eexists; eapply value_of_rawexpr_interp_related; eassumption
                               | [ |- value_interp_related (value_of_rawexpr _) _ ]
@@ -533,7 +535,13 @@ Module Compilers.
                             | progress cbn [type_of_rawexpr] in *
                             | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
                             | progress cbv [eq_rect] in * ].
-          Focus 2.
+          exact admit.
+          exact admit.
+          lazymatch goal with
+          | [ H : forall pf : ?x = ?y, _, H' : ?x = ?y |- _ ] => specialize (H H')
+          | [ H : forall pf : ?x = ?y, _, H' : ?y = ?x |- _ ] => specialize (H (eq_sym H'))
+          end.
+                          Focus 2.
           reflexivity.
           lazymatch goal with
           | [ H : pident_unify _ _ _ _ = Some _ |- _ ] => pident_unify_to_typed in H
