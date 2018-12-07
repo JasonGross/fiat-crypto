@@ -448,6 +448,17 @@ Module Compilers.
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
         Local Notation "e <----- e' ; f" := (splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
 
+        Local Lemma pident_unify_to_typed'
+          : forall t t' idc idc' v,
+            pident_unify t t' idc idc' = Some v
+            -> forall evm pf,
+              @pident_to_typed t idc evm v = rew [ident] pf in idc'.
+        Proof using pident_unify_to_typed.
+          intros t t' idc idc' v H evm pf.
+          pose proof (@pident_unify_to_typed t t' idc idc' v H evm (eq_sym pf)).
+          subst; reflexivity.
+        Qed.
+
         (*Local Infix "===" := expr_interp_related : type_scope.
         Local Infix "====" := value_interp_related : type_scope.
         Local Infix "=====" := rawexpr_interp_related : type_scope.*)
@@ -455,10 +466,9 @@ Module Compilers.
         Lemma app_lam_forall_vars_pattern_default_interp'_not_None {t} {p : pattern t} {x}
           : @pattern.type.app_forall_vars (pattern_collect_vars p) _ (pattern.type.lam_forall_vars (fun evm => pattern_default_interp' p evm id)) x <> None.
         Proof using Type.
-          revert x; cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars id]; induction p; cbn [list_rect pattern_collect_vars pattern_default_interp']; intros.
-          { break_innermost_match.
-          Set Printing Implicit.
-          all:
+          revert x; cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars id]; induction p; cbn [list_rect pattern_default_interp']; intros.
+          Focus 2.
+        Admitted.
 
         Local Notation mk_new_evm0 evm ls
           := (fold_right
@@ -478,25 +488,36 @@ Module Compilers.
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
-          : exists resv : _, unification_resultT'_interp_related res resv.
-        Proof using Type.
-          cbv [unification_resultT'_interp_related].
-          revert re res v H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related] in *.
+              (evm' := mk_new_evm evm (pattern_collect_vars p))
+              (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
+          : exists resv : _,
+              unification_resultT'_interp_related res resv
+              /\ app_transport_with_unification_resultT'_cps
+                   (pattern_default_interp' p evm' id) resv _ (@Some _)
+                 = Some (rew Hty in v).
+        Proof using pident_unify_unknown_correct pident_unify_to_typed.
+          subst evm'; cbv [unification_resultT'_interp_related].
+          revert re res v Hty H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
           all: repeat first [ progress intros
-                            | progress cbv [Option.bind] in *
+                            | rewrite pident_unify_unknown_correct in *
+                            | progress cbv [Option.bind option_bind'] in *
                             | progress cbn [fst snd rawexpr_interp_related eq_rect] in *
                             | progress inversion_option
                             | progress destruct_head'_ex
                             | progress destruct_head'_and
+                            | progress inversion_sigma
                             | progress subst
+                            | progress eliminate_hprop_eq
                             | exfalso; assumption
                             | match goal with
                               | [ |- { x : _ | _ = x } ] => eexists; reflexivity
-                              | [ |- exists x, _ = x ] => eexists; reflexivity
+                              | [ |- exists x, _ = x /\ _ ] => eexists; split; [ reflexivity | ]
+                              | [ |- exists x, _ /\ Some x = Some _ ] => eexists; split; [ | reflexivity ]
                               end
                             | progress cps_id'_with_option unify_pattern'_cps_id
                             | progress rewrite_type_transport_correct
                             | progress type_beq_to_eq
+                            | rewrite app_lam_type_of_list
                             | break_innermost_match_hyps_step
                             | break_innermost_match_step
                             | match goal with
@@ -505,8 +526,20 @@ Module Compilers.
                               | [ |- exists x : _ * _, _ /\ _ ] => eexists (_, _); split; eassumption
                               | [ |- exists res, value_interp_related (value_of_rawexpr _) res ]
                                 => eexists; eapply value_of_rawexpr_interp_related; eassumption
+                              | [ |- value_interp_related (value_of_rawexpr _) _ ]
+                                => eapply value_of_rawexpr_interp_related; eassumption
+                              | [ |- Some _ = Some _ ] => apply f_equal
                               end
-                            | progress cbv [eq_rect] ].
+                            | progress cbn [type_of_rawexpr] in *
+                            | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
+                            | progress cbv [eq_rect] in * ].
+          Focus 2.
+          reflexivity.
+          lazymatch goal with
+          | [ H : pident_unify _ _ _ _ = Some _ |- _ ] => pident_unify_to_typed in H
+          end.
+          rewrite pident_to_
+
         Qed.
 
         Check @pattern_default_interp.
@@ -515,7 +548,7 @@ Module Compilers.
         Lemma interp_unify_pattern {t re p v res}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern t re p _ (@Some _) = Some res)
-              (evm' := mk_new_evm (projT1 res) (pattern.collect_vars (ident_collect_vars:=@ident_collect_vars) p))
+              (evm' := mk_new_evm (projT1 res) (pattern_collect_vars p))
               (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
           : exists resv : _,
             unification_resultT_interp_related res resv
@@ -527,10 +560,12 @@ Module Compilers.
                        | progress destruct_head'_ex
                        | progress inversion_option
                        | progress subst
+                       | exfalso; assumption
                        | eassumption
                        | match goal with
                          | [ H : unify_pattern' _ _ _ _ _ = Some _ |- _ ] => eapply interp_unify_pattern' in H; [ | eassumption ]
                          | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ] => pose proof (pattern.type.app_forall_vars_lam_forall_vars H); clear H
+                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = None |- _ ] => apply app_lam_forall_vars_pattern_default_interp'_not_None in H
                          end
                        | progress cps_id'_with_option unify_types_cps_id
                        | progress cps_id'_with_option unify_pattern'_cps_id
@@ -546,7 +581,9 @@ Module Compilers.
                          | [ |- existT _ _ _ = existT _ _ _ ] => apply Sigma.path_sigT_uncurried
                          end
                        | break_match_step ltac:(fun _ => idtac) ].
-          Focus 3.
+          Focus 2.
+          match goal with
+          end.
           exfalso.
           clear -Heqo0.
           Set Printing Implicit.
@@ -1502,17 +1539,6 @@ Require Import Crypto.Util.Tactics.SetEvars.
                             | progress cbv [option_map] ].
         Qed.
 *)
-        Local Lemma pident_unify_to_typed'
-          : forall t t' idc idc' v,
-            pident_unify t t' idc idc' = Some v
-            -> forall evm pf,
-              @pident_to_typed t idc evm v = rew [ident] pf in idc'.
-        Proof using pident_unify_to_typed.
-          intros t t' idc idc' v H evm pf.
-          pose proof (@pident_unify_to_typed t t' idc idc' v H evm (eq_sym pf)).
-          subst; reflexivity.
-        Qed.
-
         Fixpoint types_match_with (evm : EvarMap) {t} (e : rawexpr) (p : pattern t) {struct p} : Prop
           := match p, e with
              | pattern.Wildcard t, e
