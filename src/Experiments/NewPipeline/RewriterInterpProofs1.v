@@ -452,6 +452,29 @@ Module Compilers.
         Local Infix "====" := value_interp_related : type_scope.
         Local Infix "=====" := rawexpr_interp_related : type_scope.*)
 
+        Lemma app_lam_forall_vars_pattern_default_interp'_not_None {t} {p : pattern t} {x}
+          : @pattern.type.app_forall_vars (pattern_collect_vars p) _ (pattern.type.lam_forall_vars (fun evm => pattern_default_interp' p evm id)) x <> None.
+        Proof using Type.
+          revert x; cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars id]; induction p; cbn [list_rect pattern_collect_vars pattern_default_interp']; intros.
+          { break_innermost_match.
+          Set Printing Implicit.
+          all:
+
+        Local Notation mk_new_evm0 evm ls
+          := (fold_right
+                (fun i k evm'
+                 => k match PositiveMap.find i evm with
+                      | Some v => PositiveMap.add i v evm'
+                      | None => evm'
+                      end) (fun evm' => evm')
+                (List.rev ls)) (only parsing).
+
+        Local Notation mk_new_evm evm ps
+          := (mk_new_evm0
+                evm
+                (PositiveSet.elements ps)
+                (PositiveMap.empty _)) (only parsing).
+
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
@@ -492,11 +515,13 @@ Module Compilers.
         Lemma interp_unify_pattern {t re p v res}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern t re p _ (@Some _) = Some res)
+              (evm' := mk_new_evm (projT1 res) (pattern.collect_vars (ident_collect_vars:=@ident_collect_vars) p))
+              (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
           : exists resv : _,
-            unification_resultT_interp_related res resv(*
-            /\ app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT _ _ v)*).
+            unification_resultT_interp_related res resv
+            /\ app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v)).
         Proof using Type.
-          cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT] in *.
+          subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
           repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
                        | progress cbn [projT1 projT2 eq_rect] in *
                        | progress destruct_head'_ex
@@ -505,14 +530,34 @@ Module Compilers.
                        | eassumption
                        | match goal with
                          | [ H : unify_pattern' _ _ _ _ _ = Some _ |- _ ] => eapply interp_unify_pattern' in H; [ | eassumption ]
+                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ] => pose proof (pattern.type.app_forall_vars_lam_forall_vars H); clear H
                          end
                        | progress cps_id'_with_option unify_types_cps_id
                        | progress cps_id'_with_option unify_pattern'_cps_id
+                       | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
                        | break_innermost_match_hyps_step
+                       | break_innermost_match_step
                        | match goal with
                          | [ |- exists x : sigT _, _ ] => eexists (existT _ _ _)
                          | [ |- { pf : _ = _ | _ } ] => exists eq_refl
-                         end ].
+                         | [ |- { pf : _ = _ & _ } ] => exists eq_refl
+                         | [ |- _ /\ _ ] => split
+                         | [ |- Some _ = Some _ ] => apply f_equal
+                         | [ |- existT _ _ _ = existT _ _ _ ] => apply Sigma.path_sigT_uncurried
+                         end
+                       | break_match_step ltac:(fun _ => idtac) ].
+          Focus 3.
+          exfalso.
+          clear -Heqo0.
+          Set Printing Implicit.
+
+
+          Check pattern.type.app_forall_vars_lam_forall_vars.
+          lazymatch goal with
+          end.
+          Focus 2.
+          Focus 2.
+
         Qed.
 
         Lemma interp_rewrite_with_rule
