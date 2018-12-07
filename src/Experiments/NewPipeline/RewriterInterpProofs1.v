@@ -581,7 +581,7 @@ Module Compilers.
                             | reflexivity
                             | progress split_contravariant_or
                             | progress specialize_by_assumption
-                            | erewrite subst_eq_if_mem by eassumption
+                            | erewrite pattern.type.subst_eq_if_mem by eassumption
                             | match goal with
                               | [ H : forall k, PositiveSet.mem k (ident_collect_vars _ _) = true -> _ |- _ ]
                                 => specialize (fun k pf => H k (@type_vars_of_pident_enough' _ _ _ pf))
@@ -589,7 +589,7 @@ Module Compilers.
                               | [ |- (?x = Some ?y) <-> (?x' = Some ?y) ]
                                 => cut (x = x'); [ let H := fresh in intro H; rewrite H; reflexivity | ]
                               end
-                            | apply subst_eq_if_mem ].
+                            | apply pattern.type.subst_eq_if_mem ].
         Qed.
 
         Lemma app_lam_forall_vars_pattern_default_interp'_not_None {t} {p : pattern t} {x}
