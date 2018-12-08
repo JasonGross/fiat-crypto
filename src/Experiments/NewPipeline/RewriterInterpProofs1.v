@@ -431,7 +431,7 @@ Module Compilers.
         Local Notation pattern_collect_vars := (@pattern.collect_vars pident ident_collect_vars).
         Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident).
         Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps pident pident_arg_types).
-        Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
+        Local Notation with_unification_resultT' := (@with_unification_resultT' pident pident_arg_types).
         Local Notation value'_interp := (@value'_interp ident ident_interp).
         Local Notation eval_decision_tree_correct := (@eval_decision_tree_correct ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple invert_bind_args_unknown_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args).
         Local Notation expr_interp_related := (@expr.interp_related _ ident _ ident_interp).
@@ -651,17 +651,13 @@ Module Compilers.
                             | progress cbv [eq_rect] in * ].
           exact admit.
           exact admit.
-          lazymatch goal with
-          | [ H : forall pf : ?x = ?y, _, H' : ?x = ?y |- _ ] => specialize (H H')
-          | [ H : forall pf : ?x = ?y, _, H' : ?y = ?x |- _ ] => specialize (H (eq_sym H'))
-          end.
-                          Focus 2.
-          reflexivity.
-          lazymatch goal with
-          | [ H : pident_unify _ _ _ _ = Some _ |- _ ] => pident_unify_to_typed in H
-          end.
-          rewrite pident_to_
-
+          change (fun x => ?f x) with f.
+          fold (@with_unification_resultT').
+          move re2 at bottom.
+          specialize (fun H => IHp1 (eq_trans (eq_sym x1) H)).
+          cbn [pattern.type.subst_default] in *.
+          specialize (fun H1 H2 => IHp1 (f_equal2 type.arrow H1 H2)).
+          exact admit.
         Qed.
 
         Check @pattern_default_interp.
@@ -675,11 +671,12 @@ Module Compilers.
           : exists resv : _,
             unification_resultT_interp_related res resv
             /\ app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v)).
-        Proof using Type.
+        Proof using pident_unify_unknown_correct pident_unify_to_typed.
           subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
           repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
                        | progress cbn [projT1 projT2 eq_rect] in *
                        | progress destruct_head'_ex
+                       | progress destruct_head'_and
                        | progress inversion_option
                        | progress subst
                        | exfalso; assumption
@@ -702,21 +699,8 @@ Module Compilers.
                          | [ |- Some _ = Some _ ] => apply f_equal
                          | [ |- existT _ _ _ = existT _ _ _ ] => apply Sigma.path_sigT_uncurried
                          end
-                       | break_match_step ltac:(fun _ => idtac) ].
-          Focus 2.
-          match goal with
-          end.
-          exfalso.
-          clear -Heqo0.
-          Set Printing Implicit.
-
-
-          Check pattern.type.app_forall_vars_lam_forall_vars.
-          lazymatch goal with
-          end.
-          Focus 2.
-          Focus 2.
-
+                       | break_match_step ltac:(fun _ => idtac)
+                       | reflexivity ].
         Qed.
 
         Lemma interp_rewrite_with_rule
@@ -762,6 +746,7 @@ Module Compilers.
                          end ].
           repeat first [ progress destruct_head'_ex
                        | progress destruct_head'_sig
+                       | progress destruct_head'_and
                        | exfalso; assumption
                        | progress inversion_option
                        | progress subst
@@ -791,13 +776,27 @@ Module Compilers.
             break_innermost_match.
             assumption. }
           Unfocus.
+          Unshelve.
+          Focus 3.
+          { symmetry.
+            etransitivity; [ | eassumption ].
+            etransitivity; [ | eassumption ].
+            move x at bottom.
+            shelve. }
+          Unfocus.
           Focus 2.
-          assert (match type_of_rawexpr re with type.base _ => True | type.arrow _ _ => False end) by (rewrite <- e1; constructor).
-          destruct e0; cbv [eq_trans eq_rect].
-          move e1 at bottom.
-          destruct s as [s' s]; cbn [projT1 projT2] in *.
-          move s' at bottom.
-          clear dependent u0.
+          { repeat match goal with
+                   | [ |- context[rew ?pf in _] ]
+                     => generalize pf
+                   end.
+            clear.
+            generalize dependent (type_of_rawexpr re); clear.
+            intros; subst; eliminate_hprop_eq.
+            reflexivity. }
+          Unfocus.
+          Unshelve.
+          Focus 2.
+
           clear dependent y.
           Check @pattern_default_interp.
           Lemma interp_pattern_default_interp {t p x y
