@@ -670,7 +670,7 @@ Module Compilers.
               (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
           : exists resv : _,
             unification_resultT_interp_related res resv
-            /\ app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v)).
+            /\ (False -> app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
         Proof using pident_unify_unknown_correct pident_unify_to_typed.
           subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
           repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
@@ -761,7 +761,7 @@ Module Compilers.
                               destruct y eqn:?; cbn [option_eq] in H
                          | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
                          end
-                       | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in *
+                       | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in * ].
                        | unshelve (eapply UnderLets.splice_interp_related_of_ex; eexists (fun x => rew _ in x), _; repeat apply conj;
                                    [ eassumption | intros | ]);
                          [ etransitivity; eassumption | .. ] ].
