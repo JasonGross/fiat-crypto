@@ -583,6 +583,98 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                 {interp_ident : forall t, ident t -> type.interp interp_base_type t}
                 {interp_ident_Proper : forall t, Proper (eq ==> type.eqv) (interp_ident t)}.
 
+        Local Ltac by_apply_assumptions :=
+          match goal with
+          | [ |- _ == _ ] => etransitivity; (idtac + symmetry); eassumption
+          | [ H : _ |- _ ] => eapply H; clear H; solve [ by_apply_assumptions ]
+          | [ H : _ |- _ == _ ] => etransitivity; [ eapply H | ]; clear H; solve [ by_apply_assumptions ]
+          | [ H : _ |- _ == _ ] => etransitivity; [ | eapply H ]; clear H; solve [ by_apply_assumptions ]
+          end.
+
+        Global Instance interp_related_Proper_eqv_iff {t}
+          : Proper (eq ==> @type.eqv t ==> iff) (expr.interp_related interp_ident) | 5.
+        Proof using Type.
+          intros x y ? f g Hfg; subst y.
+          split; induction x; intro.
+          all: repeat first [ progress cbn [expr.interp_related_gen type.related] in *
+                            | progress cbv [respectful expr.interp_related] in *
+                            | progress intros
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | solve [ by_apply_assumptions ]
+                            | match goal with
+                              | [ |- exists fv xv, _ /\ _ /\ _ ] => do 2 eexists; repeat apply conj; [ eassumption | eassumption | ]
+                              end ].
+        Qed.
+
+        Global Instance interp_related_Proper_eqv_impl {t}
+          : Proper (eq ==> @type.eqv t ==> Basics.impl) (expr.interp_related interp_ident) | 5.
+        Proof using Type.
+          intros x y H f g H'; exact (proj1 (@interp_related_Proper_eqv_iff t x y H f g H')).
+        Qed.
+
+        Global Instance interp_related_Proper_eqv_flip_impl {t}
+          : Proper (eq ==> @type.eqv t ==> Basics.flip Basics.impl) (expr.interp_related interp_ident) | 5.
+        Proof using Type.
+          intros x y H f g H'; exact (proj2 (@interp_related_Proper_eqv_iff t x y H f g H')).
+        Qed.
+
+        Lemma eqv_of_interp_related_gen {var R t e v v'}
+              (HR : forall t x y y', (R t x y:Prop) -> (R t x y':Prop)  -> type.eqv y y')
+          : expr.interp_related_gen interp_ident (var:=var) R e v
+            -> expr.interp_related_gen interp_ident (var:=var) R e v'
+            -> @type.eqv t v v'.
+        Proof using Type.
+          induction e; cbn [expr.interp_related_gen type.related]; cbv [respectful LetIn.Let_In].
+          all: repeat first [ progress intros
+                            | assumption
+                            | solve [ eauto ]
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | solve [ by_apply_assumptions ]
+                            | progress cbn [type.related type.interp] in *
+                            | progress cbv [respectful] in * ].
+          2: etransitivity; [ etransitivity | ]; (((idtac + symmetry); eassumption) + idtac); solve [ by_apply_assumptions ].
+          Focus 2.
+          etransitivity; [ etransitivity | ].
+          2: eapply H.
+          2:eapply H2.
+          2: eauto.
+          (idtac + symmetry); eassumption.
+          2: (idtac + symmetry); eassumption.
+          eapply H.
+
+          by_apply_assumptions.
+ (((idtac + symmetry); eassumption) + idtac); solve [ by_apply_assumptions ].
+
+
+Focus 2.
+
+{ by_apply_assumptions. }
+{ eapply IHe1; eauto.
+
+eauto.
+          etransitivity; [ eapply H | ].
+          move v at bottom.
+          eapply
+          revert x y H1.
+          eapply (HR (type.arrow _ _)).
+          eauto.
+        Qed.
+
+        Lemma eqv_of_interp_related_gen {t e v}
+          : expr.interp_related interp_ident e v
+            -> @type.eqv t (expr.interp interp_ident e) v.
+        Proof using Type.
+          cbv [expr.interp_related]; induction e; cbn [expr.interp_related_gen expr.interp type.related]; cbv [respectful LetIn.Let_In].
+          all: repeat first [ progress intros
+                            | assumption
+                            | solve [ eauto ]
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | solve [ by_apply_assumptions ] ].
+        Qed.
+
         Lemma eqv_of_interp_related {t e v}
           : expr.interp_related interp_ident e v
             -> @type.eqv t (expr.interp interp_ident e) v.
@@ -593,8 +685,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                             | solve [ eauto ]
                             | progress destruct_head'_ex
                             | progress destruct_head'_and
-                            | progress subst
-                            | match goal with H : _ |- _ => apply H; clear H end ].
+                            | solve [ by_apply_assumptions ] ].
         Qed.
 
         Lemma interp_related_gen_of_wf {var R G t e1 e2}
@@ -604,7 +695,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         Proof using interp_ident_Proper.
           induction Hwf.
           all: repeat first [ progress cbn [expr.interp_related_gen expr.interp List.In eq_rect] in *
-                            | progress cbv [LetIn.Let_In] in *
+                            | progress cbv [LetIn.Let_In expr.interp_related] in *
                             | reflexivity
                             | solve [ eauto ]
                             | progress intros
@@ -617,9 +708,12 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                             | match goal with
                               | [ |- exists fv xv, _ /\ _ /\ _ ]
                                 => eexists (expr.interp interp_ident (expr.Abs _)), _;
-                                   cbn [expr.interp]; repeat apply conj; [ eassumption | | reflexivity ]
+                                   cbn [expr.interp]; repeat apply conj; [ eassumption | | ]
                               | [ H : _ |- _ ] => apply H; clear H
                               end ].
+          Focus 2.
+          etransitivity; (idtac + symmetry); eapply eqv_of_interp_related; cbv [expr.interp_related].
+          2:eapply H0.
         Qed.
       End with_interp.
 

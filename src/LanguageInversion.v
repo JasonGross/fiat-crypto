@@ -629,6 +629,7 @@ Module Compilers.
                             | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
                             | [ H : forall a x y, x = y -> _ |- _ ] => specialize (fun a x => H a x x eq_refl)
                             | [ H : forall x y, _ = ?f x y, H' : context[?f _ _] |- _ ] => rewrite <- H in H'
+                            | [ H : forall x, _ = ?f x, H' : context[?f _] |- _ ] => rewrite <- H in H'
                             | [ H : _ |- _ ] => apply H; clear H
                             | [ |- ex _ ] => eexists
                             end ].

@@ -333,16 +333,16 @@ Module Compilers.
                                  @interp _ (f xv)
              end.
 
-        Fixpoint interp_related {T1 T2} (R : T1 -> T2 -> Prop) (e : UnderLets T1) (v2 : T2) : Prop
+        Fixpoint interp_related {t} (e : UnderLets (expr t)) (v2 : type.interp base_interp t) : Prop
           := match e with
-             | Base v1 => R v1 v2
+             | Base v1 => expr.interp_related ident_interp v1 v2
              | UnderLet t e f (* combine the App rule with the Abs rule *)
                => exists fv ev,
                   expr.interp_related ident_interp e ev
                   /\ (forall x1 x2,
                          x1 == x2
-                         -> @interp_related T1 T2 R (f x1) (fv x2))
-                  /\ fv ev = v2
+                         -> @interp_related _ (f x1) (fv x2))
+                  /\ fv ev == v2
              end.
 
         Lemma interp_splice {A B} (x : UnderLets A) (e : A -> UnderLets B)
@@ -366,7 +366,7 @@ Module Compilers.
         Proof. induction x; cbn [expr.interp interp of_expr]; cbv [LetIn.Let_In]; eauto. Qed.
 
         Lemma to_expr_interp_related_iff {t e v}
-          : interp_related (expr.interp_related ident_interp (t:=t)) e v
+          : @interp_related t e v
             <-> expr.interp_related ident_interp (UnderLets.to_expr e) v.
         Proof using Type.
           revert v; induction e; cbn [UnderLets.to_expr interp_related expr.interp_related]; try reflexivity.
@@ -374,99 +374,143 @@ Module Compilers.
           reflexivity.
         Qed.
 
-        Global Instance interp_related_Proper_iff {T1 T2}
-          : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@interp_related T1 T2) | 10.
+        Global Instance interp_related_Proper_iff {t}
+          : Proper (eq ==> type.eqv ==> iff) (@interp_related t) | 10.
         Proof using Type.
-          cbv [pointwise_relation respectful Proper].
-          intros R1 R2 HR x y ? x' y' H'; subst y y'.
-          revert x'; induction x; [ apply HR | ]; cbn [interp_related].
-          setoid_rewrite H; reflexivity.
+          intros x y ? f g Hfg; subst y.
+          induction x as [|? ? ? IHxs]; cbn [interp_related].
+          { rewrite Hfg; reflexivity. }
+          { split; intro H.
+            all: repeat first [ let x := fresh "x" in destruct H as [x H]; exists x
+                              | let H' := fresh "H" in destruct H as [H' H]; split; [ exact H' | ]
+                              | let H' := fresh "H" in destruct H as [H H']; split; [ | exact H' ] ].
+            all: rewrite H; (idtac + symmetry); eassumption. }
         Qed.
 
-        Lemma splice_interp_related_iff {A B T R x e} {v : T}
-          : interp_related R (@UnderLets.splice _ ident _ A B x e) v
-            <-> interp_related
-                  (fun xv => interp_related R (e xv))
-                  x v.
+        Global Instance interp_related_Proper_impl {t}
+          : Proper (eq ==> type.eqv ==> Basics.impl) (@interp_related t) | 10.
         Proof using Type.
-          revert v; induction x; cbn [UnderLets.splice interp_related]; [ reflexivity | ].
-          match goal with H : _ |- _ => setoid_rewrite H end.
-          reflexivity.
+          intros x y H f g Hfg H'; apply (proj1 (@interp_related_Proper_iff t x y H f g Hfg) H').
         Qed.
 
-        Lemma splice_list_interp_related_iff_gen {A B T R x e1 e2 base} {v : T}
-              (He1e2 : forall ls', e1 ls' = e2 (base ++ ls'))
-          : interp_related R (@UnderLets.splice_list _ ident _ A B x e1) v
-            <-> list_rect
-                  (fun _ => list _ -> _ -> Prop)
-                  (fun ls v => interp_related R (e2 ls) v)
-                  (fun x xs recP ls v
-                   => interp_related
-                        (fun x' v => recP (ls ++ [x']) v)
-                        x
-                        v)
-                  x
-                  base
-                  v.
+        Global Instance interp_related_Proper_flip_impl {t}
+          : Proper (eq ==> type.eqv ==> Basics.flip Basics.impl) (@interp_related t) | 10.
         Proof using Type.
-          revert base v e1 e2 He1e2; induction x as [|? ? IHx]; cbn [UnderLets.splice_list interp_related list_rect]; intros.
-          { intros; rewrite He1e2, ?app_nil_r; reflexivity. }
-          { setoid_rewrite splice_interp_related_iff.
-            apply interp_related_Proper_iff; [ | reflexivity.. ]; cbv [pointwise_relation]; intros.
-            specialize (fun v => IHx (base ++ [v])).
-            setoid_rewrite IHx; [ reflexivity | ].
-            intros; rewrite He1e2, <- ?app_assoc; reflexivity. }
+          intros x y H f g Hfg H'; apply (proj2 (@interp_related_Proper_iff t x y H f g Hfg) H').
         Qed.
 
-        Lemma splice_list_interp_related_iff {A B T R x e} {v : T}
-          : interp_related R (@UnderLets.splice_list _ ident _ A B x e) v
-            <-> list_rect
-                  (fun _ => list _ -> _ -> Prop)
-                  (fun ls v => interp_related R (e ls) v)
-                  (fun x xs recP ls v
-                   => interp_related
-                        (fun x' v => recP (ls ++ [x']) v)
-                        x
-                        v)
-                  x
-                  nil
-                  v.
+        Lemma expr_interp_related_of_interp_related {t e v}
+          : @interp_related t e v
+            -> expr.interp_related ident_interp (interp e) v.
         Proof using Type.
-          apply splice_list_interp_related_iff_gen; reflexivity.
+          induction e as [|? ? ? IH]; cbn [interp_related interp].
+          all: repeat first [ now apply expr.eqv_of_interp_related
+                            | progress intros
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | match goal with
+                              | [ H : _ == ?x |- ?R _ ?x ]
+                                => is_var x; rewrite <- H; clear H x
+                              end
+                            | match goal with H : _ |- _ => apply H; clear H end ].
         Qed.
 
-        Lemma splice_interp_related_of_ex {A B T T' RA RB x e} {v : T}
-          : (exists ev (xv : T'),
-                interp_related RA x xv
+        Lemma eqv_of_interp_related {t e v}
+          : @interp_related t e v
+            -> expr.interp ident_interp (interp e) == v.
+        Proof using Type.
+          intros; now apply expr.eqv_of_interp_related, expr_interp_related_of_interp_related.
+        Qed.
+
+        Local Ltac by_apply_assumptions :=
+          match goal with
+          | [ |- _ == _ ] => etransitivity; (idtac + symmetry); eassumption
+          | [ H : _ |- _ ] => eapply H; clear H; solve [ by_apply_assumptions ]
+          | [ H : _ |- _ == _ ] => etransitivity; [ eapply H | ]; clear H; solve [ by_apply_assumptions ]
+          | [ H : _ |- _ == _ ] => etransitivity; [ | eapply H ]; clear H; solve [ by_apply_assumptions ]
+          end.
+
+
+        Lemma splice_interp_related_of_ex {t t' x e} {v : type.interp base_interp t}
+          : (exists ev (xv : type.interp base_interp t'),
+                interp_related x xv
                 /\ (forall x1 x2,
-                       RA x1 x2
-                       -> interp_related RB (e x1) (ev x2))
-                /\ ev xv = v)
-            -> interp_related RB (@UnderLets.splice _ ident _ A B x e) v.
+                       expr.interp_related ident_interp x1 x2
+                       -> interp_related (e x1) (ev x2))
+                /\ ev xv == v)
+            -> interp_related (@UnderLets.splice _ ident _ _ _ x e) v.
         Proof using Type.
           revert e v; induction x; cbn [interp_related UnderLets.splice]; intros.
           all: repeat first [ progress destruct_head'_ex
                             | progress destruct_head'_and
                             | progress subst
+                            | apply conj
+                            | progress intros
                             | reflexivity
                             | match goal with
                               | [ H : _ |- _ ] => apply H; clear H
+                              | [ H : _ == ?x |- interp_related _ ?x ]
+                                => is_var x; rewrite <- H; clear H x
                               end ].
-          do 2 eexists; repeat apply conj; [ eassumption | | ]; intros.
-          { match goal with H : _ |- _ => apply H; clear H end.
-            do 2 eexists; repeat apply conj; now eauto. }
-          { reflexivity. }
-        Qed.
+          { do 2 eexists; repeat apply conj; [ eassumption | | ]; intros.
+            { match goal with H : _ |- _ => apply H; clear H end.
+              do 2 eexists; repeat apply conj; [ now eauto.. | ].
+              etransitivity; [ symmetry | ]; eapply eqv_of_interp_related.
+              { match goal with H : _ |- _ => eapply H; clear H end.
+                eapply expr_interp_related_of_interp_related; eauto. }
+              { match goal with H : _ |- _ => eapply H; clear H end.
+                eapply expr_interp_related_of_interp_related; eauto. } }
+            { cbv beta.
+              match goal with
+              | [ H : _ == ?x |- ?R _ ?x ]
+                => is_var x; rewrite <- H; clear H x
+              end.
+              etransitivity; [ symmetry | ]; eapply eqv_of_interp_related.
+              { match goal with H : _ |- _ => eapply H; clear H end.
+move x2 at
+                eapply expr_interp_related_of_interp_related; }
+              { match goal with H : _ |- _ => eapply H; clear H end.
+                eapply expr_interp_related_of_interp_related; eauto. } }
+              move v at bottom.
+                eauto. }
+              eapply H1.
 
-        Lemma splice_list_interp_related_of_ex {A B T T' RA RB x e} {v : T}
+              specialize (fun x1 => H3 x1 x5).
+              refine (H3 _ _ _).
+              move x2 at bottom.
+              1: by_apply_assumptions.
+              repeat match goal with
+                     | [ H : forall x y, x == y -> _, H' : _ == _ |- _ ]
+                     => unique pose proof (H _ _ H')
+                   end.
+
+
+            etransitivity; [ match goal with H : _ |- _ => eapply H; clear H end | ].
+            move x1 at bottom.
+            move x3 at bottom.
+            clear H0.
+            move x2 at bottom.
+            move x5 at bottom.
+
+            replace x5 with x4.
+            { clear H5 x5.
+              move x4 at bottom.
+            rewrite <- H5.
+            move H0
+            .
+ }
+          { reflexivity. }
+        Qed.*)
+
+        Lemma splice_list_interp_related_of_ex {A B T T' RA R2 R2' RB x e} {v : T}
           : (exists ev (xv : list T'),
-                    List.Forall2 (interp_related RA) x xv
+                    List.Forall2 (interp_related RA R2') x xv
                     /\ (forall x1 x2,
                            List.length x2 = List.length xv
                            -> List.Forall2 RA x1 x2
-                           -> interp_related RB (e x1) (ev x2))
-                    /\ ev xv = v)
-            -> interp_related RB (@UnderLets.splice_list _ ident _ A B x e) v.
+                           -> interp_related RB R2 (e x1) (ev x2))
+                    /\ R2 (ev xv) v)
+            -> interp_related RB R2 (@UnderLets.splice_list _ ident _ A B x e) v.
         Proof using Type.
           revert e v; induction x as [|x xs IHxs]; cbn [interp_related UnderLets.splice_list]; intros.
           all: repeat first [ progress destruct_head'_ex
