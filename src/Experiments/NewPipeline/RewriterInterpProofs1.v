@@ -5,6 +5,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
+Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.LanguageInversion.
 Require Import Crypto.Experiments.NewPipeline.LanguageWf.
@@ -646,22 +647,21 @@ Module Compilers.
                                 => eapply value_of_rawexpr_interp_related; eassumption
                               | [ |- Some _ = Some _ ] => apply f_equal
                               end
-                            | progress cbn [type_of_rawexpr] in *
+                            | progress cbn [type_of_rawexpr expr.interp] in *
                             | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
-                            | progress cbv [eq_rect] in * ].
-          exact admit.
-          exact admit.
+                            | progress cbv [eq_rect] in *
+                            | progress fold (@with_unification_resultT') ].
+          1-2: match goal with
+               | [ H : ?x == ?y |- ?x = ?y ]
+                 => apply (type.eqv_iff_eq_of_funext (fun _ _ => functional_extensionality)), H
+               end.
           change (fun x => ?f x) with f.
-          fold (@with_unification_resultT').
           move re2 at bottom.
           specialize (fun H => IHp1 (eq_trans (eq_sym x1) H)).
           cbn [pattern.type.subst_default] in *.
           specialize (fun H1 H2 => IHp1 (f_equal2 type.arrow H1 H2)).
           exact admit.
         Qed.
-
-        Check @pattern_default_interp.
-        Check @app_with_unification_resultT_cps.
 
         Lemma interp_unify_pattern {t re p v res}
               (Hre : rawexpr_interp_related re v)
@@ -670,7 +670,7 @@ Module Compilers.
               (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
           : exists resv : _,
             unification_resultT_interp_related res resv
-            /\ (False -> app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
+            /\ (app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
         Proof using pident_unify_unknown_correct pident_unify_to_typed.
           subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
           repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
@@ -761,7 +761,7 @@ Module Compilers.
                               destruct y eqn:?; cbn [option_eq] in H
                          | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
                          end
-                       | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in * ].
+                       | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in *
                        | unshelve (eapply UnderLets.splice_interp_related_of_ex; eexists (fun x => rew _ in x), _; repeat apply conj;
                                    [ eassumption | intros | ]);
                          [ etransitivity; eassumption | .. ] ].
@@ -796,7 +796,7 @@ Module Compilers.
           Unfocus.
           Unshelve.
           Focus 2.
-
+          { move x at bottom.
           clear dependent y.
           Check @pattern_default_interp.
           Lemma interp_pattern_default_interp {t p x y
