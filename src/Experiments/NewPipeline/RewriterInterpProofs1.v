@@ -493,6 +493,7 @@ Module Compilers.
                => pattern.type.subst t evm = Some (type_of_rawexpr e)
              | pattern.Ident t idc, rIdent known t' _ _ _
                => pattern.type.subst t evm = Some t'
+             (** XXX FIXME say something about ident_collect_vars *)
              | pattern.App s d f x, rApp f' x' _ _
                => @types_match_with evm _ f' f
                   /\ @types_match_with evm _ x' x
@@ -593,12 +594,17 @@ Module Compilers.
                             | apply pattern.type.subst_eq_if_mem ].
         Qed.
 
-        Lemma app_lam_forall_vars_pattern_default_interp'_not_None {t} {p : pattern t} {x}
-          : @pattern.type.app_forall_vars (pattern_collect_vars p) _ (pattern.type.lam_forall_vars (fun evm => pattern_default_interp' p evm id)) x <> None.
-        Proof using Type.
-          revert x; cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars id]; induction p; cbn [list_rect pattern_default_interp']; intros.
-          Focus 2.
-        Admitted.
+        Lemma mem_pattern_collect_vars_types_match_with {evm t re p x}
+              (H : @types_match_with evm t re p)
+              (Hmem : PositiveSet.mem x (pattern_collect_vars p) = true)
+          : PositiveMap.find x evm <> None.
+        Proof using type_vars_of_pident_enough.
+          revert re H; induction p; intros.
+          all: repeat first [ progress cbn [pattern_collect_vars types_match_with] in *
+                            | eapply pattern.type.mem_collect_vars_subst_Some_find; eassumption
+                            | break_innermost_match_hyps_step ].
+
+
 
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
@@ -684,7 +690,13 @@ Module Compilers.
                        | match goal with
                          | [ H : unify_pattern' _ _ _ _ _ = Some _ |- _ ] => eapply interp_unify_pattern' in H; [ | eassumption ]
                          | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ] => pose proof (pattern.type.app_forall_vars_lam_forall_vars H); clear H
-                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = None |- _ ] => apply app_lam_forall_vars_pattern_default_interp'_not_None in H
+                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = None |- None = Some _ ]
+                           => exfalso; revert H;
+                              lazymatch goal with
+                              | [ |- ?x = None -> False ]
+                                => change (x <> None)
+                              end;
+                              rewrite app_lam_forall_vars_not_None_iff
                          end
                        | progress cps_id'_with_option unify_types_cps_id
                        | progress cps_id'_with_option unify_pattern'_cps_id
@@ -700,7 +712,16 @@ Module Compilers.
                          | [ |- existT _ _ _ = existT _ _ _ ] => apply Sigma.path_sigT_uncurried
                          end
                        | break_match_step ltac:(fun _ => idtac)
-                       | reflexivity ].
+                       | reflexivity
+                       | match goal with
+                         | [ H : unify_types _ _ _ _ = Some _ |- _ ] => apply unify_types_match_with in H
+                         end ].
+
+          move t0 at bottom.
+          lazymatch goal with
+          end.
+
+
         Qed.
 
         Lemma interp_rewrite_with_rule
