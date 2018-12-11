@@ -602,9 +602,18 @@ Module Compilers.
           revert re H; induction p; intros.
           all: repeat first [ progress cbn [pattern_collect_vars types_match_with] in *
                             | eapply pattern.type.mem_collect_vars_subst_Some_find; eassumption
-                            | break_innermost_match_hyps_step ].
-
-
+                            | progress destruct_head'_and
+                            | progress specialize_by_assumption
+                            | assumption
+                            | exfalso; assumption
+                            | rewrite PositiveSetFacts.union_b, Bool.orb_true_iff in *
+                            | progress destruct_head'_or
+                            | break_innermost_match_hyps_step
+                            | match goal with
+                              | [ H : forall re, types_match_with ?evm re ?p -> _, H' : types_match_with ?evm _ ?p |- _ ] => specialize (H _ H')
+                              end ].
+          exact admit. (* ident_collect_vars *)
+        Qed.
 
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
@@ -677,7 +686,7 @@ Module Compilers.
           : exists resv : _,
             unification_resultT_interp_related res resv
             /\ (app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
-        Proof using pident_unify_unknown_correct pident_unify_to_typed.
+        Proof using pident_unify_unknown_correct pident_unify_to_typed type_vars_of_pident_enough.
           subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
           repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
                        | progress cbn [projT1 projT2 eq_rect] in *
@@ -715,13 +724,9 @@ Module Compilers.
                        | reflexivity
                        | match goal with
                          | [ H : unify_types _ _ _ _ = Some _ |- _ ] => apply unify_types_match_with in H
-                         end ].
-
-          move t0 at bottom.
-          lazymatch goal with
-          end.
-
-
+                         end
+                       | progress intros
+                       | eapply mem_pattern_collect_vars_types_match_with; eassumption ].
         Qed.
 
         Lemma interp_rewrite_with_rule
