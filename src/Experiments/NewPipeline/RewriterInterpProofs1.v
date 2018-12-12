@@ -536,11 +536,13 @@ Module Compilers.
                       end) (fun evm' => evm')
                 (List.rev ls)) (only parsing).
 
-        Local Notation mk_new_evm evm ps
+        Local Notation mk_new_evm' evm ps
           := (mk_new_evm0
                 evm
-                (PositiveSet.elements ps)
-                (PositiveMap.empty _)) (only parsing).
+                (PositiveSet.elements ps)) (only parsing).
+
+        Local Notation mk_new_evm evm ps
+          := (mk_new_evm' evm ps (PositiveMap.empty _)) (only parsing).
 
         Lemma types_match_with_Proper_evm {t p evm evm' re}
               (Hevm : forall k, PositiveSet.mem k (pattern_collect_vars p) = true -> PositiveMap.find k evm = PositiveMap.find k evm')
@@ -586,44 +588,91 @@ Module Compilers.
                               end ].
         Qed.
 
+        Lemma mem_collect_vars_pattern_to_type {t p k}
+          : PositiveSet.mem k (pattern.type.collect_vars t) = true
+            -> PositiveSet.mem k (@pattern_collect_vars t p) = true.
+        Proof using Type.
+          induction p.
+          all: repeat first [ progress intros
+                            | assumption
+                            | progress cbn [pattern_collect_vars pattern.type.collect_vars] in *
+                            | progress split_contravariant_or
+                            | progress specialize_by_assumption
+                            | rewrite PositiveSetFacts.union_b, Bool.orb_true_iff in *
+                            | solve [ auto ] ].
+        Qed.
+
+        Lemma eq_subst_types_pattern_collect_vars t0 pt t evm evm0
+              (evm' := mk_new_evm' evm (@pattern_collect_vars t0 pt) evm0)
+              (Hty : pattern.type.subst t0 evm = Some t)
+          : pattern.type.subst t0 evm' = Some t.
+        Proof using Type.
+          rewrite <- Hty; symmetry; apply pattern.type.subst_eq_Some_if_mem; subst evm'; intros; try congruence; [].
+          rewrite pattern.base.fold_right_evar_map_find_In.
+          erewrite mem_collect_vars_pattern_to_type by eassumption.
+          break_innermost_match; congruence.
+        Qed.
+
         Lemma eq_type_of_rawexpr_of_unify_pattern' {t re p evm res}
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
               (evm' := mk_new_evm evm (pattern_collect_vars p))
-          : type_of_rawexpr re = pattern.type.subst_default t evm'.
-        Proof using Type.
-          subst evm'; revert re res H; generalize (PositiveMap.empty base.type).
-          generalize (fun x => @PositiveSetFacts.In_elements_mem_iff x (pattern_collect_vars p)).
-          setoid_rewrite List.in_rev.
-          generalize (List.rev (PositiveSet.elements (pattern_collect_vars p))).
+          : pattern.type.subst t evm' = Some (type_of_rawexpr re).
+        Proof using pident_unify_unknown_correct.
+          subst evm'.
+          apply eq_subst_types_pattern_collect_vars.
+          revert re res H.
           induction p.
           all: repeat first [ progress intros
-                            | progress cbn [pattern_collect_vars type_of_rawexpr unify_pattern'] in *
+                            | progress cbn [type_of_rawexpr unify_pattern'] in *
                             | progress inversion_option
                             | progress subst
                             | progress rewrite_type_transport_correct
                             | progress type_beq_to_eq
                             | break_innermost_match_hyps_step
-                            | progress cbv [Option.bind] in *
+                            | rewrite pident_unify_unknown_correct in *
+                            | reflexivity
+                            | progress cps_id'_with_option unify_pattern'_cps_id
+                            | progress cbv [Option.bind option_map option_bind'] in *
                             | match goal with
-                              | [ H : type_of_rawexpr ?re = _ |- type_of_rawexpr ?re = _ ]
+                              | [ H : type_of_rawexpr ?re = _ |- _ ]
                                 => generalize dependent (type_of_rawexpr re); clear re
+                              | [ H : pattern.type.subst ?t ?evm = Some _ |- context[pattern.type.subst_default ?t ?evm] ]
+                                => rewrite (pattern.type.subst_Some_subst_default H) in *
+                              | [ IH : forall re res, unify_pattern' re ?p ?evm _ (@Some _) = Some res -> _, H : unify_pattern' _ ?p ?evm _ (@Some _) = Some _ |- _ ]
+                                => specialize (IH _ _ H)
                               end ].
-          Search pattern.type.subst_default.
-          Search PositiveSet.elements.
+          1-3: exact admit.
+        Qed.
+
+        Lemma eq_type_of_rawexpr_of_unify_pattern'' {t re p evm res}
+              (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
+              (evm' := mk_new_evm evm (pattern_collect_vars p))
+          : type_of_rawexpr re = pattern.type.subst_default t evm'.
+        Proof using pident_unify_unknown_correct.
+          symmetry; eapply pattern.type.subst_Some_subst_default, eq_type_of_rawexpr_of_unify_pattern'; eassumption.
+        Qed.
 
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
               (evm' := mk_new_evm evm (pattern_collect_vars p))
-              (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
+              (Hty : type_of_rawexpr re = pattern.type.subst_default t evm'
+               := eq_type_of_rawexpr_of_unify_pattern'' H)
           : exists resv : _,
               unification_resultT'_interp_related res resv
               /\ app_transport_with_unification_resultT'_cps
                    (pattern_default_interp' p evm' id) resv _ (@Some _)
                  = Some (rew Hty in v).
         Proof using pident_unify_unknown_correct pident_unify_to_typed.
-          subst evm'; cbv [unification_resultT'_interp_related].
-          revert re res v Hty H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
+          clearbody Hty.
+          assert (Hfind
+                  : forall k, PositiveMap.find k evm' =
+                              (if PositiveSet.mem k (pattern_collect_vars p)
+                               then PositiveMap.find k evm
+                               else None)).
+          { intro k; subst evm'; rewrite (@pattern.base.fold_right_evar_map_find_In _ evm (pattern_collect_vars p) (PositiveMap.empty base.type) k); rewrite ?PositiveMap.gempty; break_innermost_match; reflexivity. }
+          clearbody evm'; cbv [unification_resultT'_interp_related].
+          revert re res v evm' Hfind Hty H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
           all: repeat first [ progress intros
                             | rewrite pident_unify_unknown_correct in *
                             | progress cbv [Option.bind option_bind'] in *
@@ -641,6 +690,7 @@ Module Compilers.
                               | [ |- exists x, _ /\ Some x = Some _ ] => eexists; split; [ | reflexivity ]
                               end
                             | progress cps_id'_with_option unify_pattern'_cps_id
+                            | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
                             | progress rewrite_type_transport_correct
                             | progress type_beq_to_eq
                             | rewrite app_lam_type_of_list
@@ -657,19 +707,24 @@ Module Compilers.
                               | [ |- value_interp_related (value_of_rawexpr _) _ ]
                                 => eapply value_of_rawexpr_interp_related; eassumption
                               | [ |- Some _ = Some _ ] => apply f_equal
+                              | [ H : forall Hty : type_of_rawexpr _ = _, _ |- _ ]
+                                => specialize (H (eq_type_of_rawexpr_of_unify_pattern'' ltac:(eassumption)))
+                              | [ H : context[eq_type_of_rawexpr_of_unify_pattern'' ?H] |- _ ]
+                                => generalize dependent (eq_type_of_rawexpr_of_unify_pattern'' H)
                               end
                             | progress cbn [type_of_rawexpr expr.interp] in *
                             | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
                             | progress cbv [eq_rect] in *
-                            | progress fold (@with_unification_resultT') ].
+                            | break_match_step ltac:(fun _ => idtac)
+                            | progress fold (@with_unification_resultT') in * ].
           1-2:match goal with
               | [ H : ?x == ?y |- ?x = ?y ]
                 => apply (type.eqv_iff_eq_of_funext (fun _ _ => functional_extensionality)), H
               end.
-          move re2 at bottom.
-          specialize (fun H => IHp1 (eq_trans (eq_sym x1) H)).
-          cbn [pattern.type.subst_default] in *.
-          specialize (fun H1 H2 => IHp1 (f_equal2 type.arrow H1 H2)).
+          lazymatch goal with
+          | [ H : forall re res v evm' pf1 pf2, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
+            => specialize (fun evm' pf1 pf2 => H _ _ _ evm' pf1 pf2 ltac:(eassumption) ltac:(eassumption))
+          end.
           exact admit. (** FIXME: needs an assumption about deep type matching of evm to re *)
         Qed.
 
@@ -677,54 +732,64 @@ Module Compilers.
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern t re p _ (@Some _) = Some res)
               (evm' := mk_new_evm (projT1 res) (pattern_collect_vars p))
-              (Hty : type_of_rawexpr re = pattern.type.subst_default t evm')
-          : exists resv : _,
+          : exists resv,
             unification_resultT_interp_related res resv
-            /\ (app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
+            /\ exists Hty, (app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
         Proof using pident_unify_unknown_correct pident_unify_to_typed.
           subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
-          repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
-                       | progress cbn [projT1 projT2 eq_rect] in *
-                       | progress destruct_head'_ex
-                       | progress destruct_head'_and
-                       | progress inversion_option
-                       | progress subst
-                       | exfalso; assumption
-                       | eassumption
-                       | match goal with
-                         | [ H : unify_pattern' _ _ _ _ _ = Some _ |- _ ]
-                           => let T := type of H in
-                              pose proof (H : id T) (* save an extra copy *);
-                              eapply interp_unify_pattern' in H; [ | eassumption ]
-                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ] => pose proof (pattern.type.app_forall_vars_lam_forall_vars H); clear H
-                         | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = None |- None = Some _ ]
-                           => exfalso; revert H;
-                              lazymatch goal with
-                              | [ |- ?x = None -> False ]
-                                => change (x <> None)
-                              end;
-                              rewrite app_lam_forall_vars_not_None_iff
-                         end
-                       | progress cps_id'_with_option unify_types_cps_id
-                       | progress cps_id'_with_option unify_pattern'_cps_id
-                       | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
-                       | break_innermost_match_hyps_step
-                       | break_innermost_match_step
-                       | match goal with
-                         | [ |- exists x : sigT _, _ ] => eexists (existT _ _ _)
-                         | [ |- { pf : _ = _ | _ } ] => exists eq_refl
-                         | [ |- { pf : _ = _ & _ } ] => exists eq_refl
-                         | [ |- _ /\ _ ] => split
-                         | [ |- Some _ = Some _ ] => apply f_equal
-                         | [ |- existT _ _ _ = existT _ _ _ ] => apply Sigma.path_sigT_uncurried
-                         end
-                       | break_match_step ltac:(fun _ => idtac)
-                       | reflexivity
-                       | match goal with
-                         | [ H : unify_types _ _ _ _ = Some _ |- _ ] => apply unify_types_match_with in H
-                         end
-                       | progress intros
-                       | eapply mem_pattern_collect_vars_types_match_with; eassumption ].
+          repeat
+            (unshelve
+               (repeat first [ progress cbv [Option.bind related_sigT_by_eq] in *
+                             | progress cbn [projT1 projT2 eq_rect] in *
+                             | progress destruct_head'_ex
+                             | progress destruct_head'_and
+                             | progress inversion_option
+                             | progress subst
+                             | exfalso; assumption
+                             | eassumption
+                             | match goal with
+                               | [ H : unify_pattern' _ _ _ _ _ = Some _ |- _ ]
+                                 => let T := type of H in
+                                    unique pose proof (H : id T) (* save an extra copy *);
+                                    epose proof (interp_unify_pattern' _ H)
+                               | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = Some _ |- _ ] => pose proof (pattern.type.app_forall_vars_lam_forall_vars H); clear H
+                               | [ H : pattern.type.app_forall_vars (pattern.type.lam_forall_vars _) _ = None |- None = Some _ ]
+                                 => exfalso; revert H;
+                                    lazymatch goal with
+                                    | [ |- ?x = None -> False ]
+                                      => change (x <> None)
+                                    end;
+                                    rewrite app_lam_forall_vars_not_None_iff
+                               end
+                             | progress cps_id'_with_option unify_types_cps_id
+                             | progress cps_id'_with_option unify_pattern'_cps_id
+                             | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
+                             | break_innermost_match_hyps_step
+                             | break_innermost_match_step
+                             | match goal with
+                               | [ |- exists x : sigT _, _ ] => eexists (existT _ _ _)
+                               | [ |- { pf : _ = _ | _ } ] => exists eq_refl
+                               | [ |- { pf : _ = _ & _ } ] => exists eq_refl
+                               | [ |- _ /\ _ ] => split
+                               | [ |- Some _ = Some _ ] => apply f_equal
+                               | [ |- existT _ _ _ = existT _ _ _ ] => apply Sigma.path_sigT_uncurried
+                               end
+                             | break_match_step ltac:(fun _ => idtac)
+                             | reflexivity
+                             | match goal with
+                               | [ H : unify_types _ _ _ _ = Some _ |- _ ] => apply unify_types_match_with in H
+                               end
+                             | progress intros
+                             | eapply mem_pattern_collect_vars_types_match_with; eassumption
+                             | exists (eq_type_of_rawexpr_of_unify_pattern'' ltac:(eassumption))
+                             | match goal with
+                               | [ |- rew ?pf in _ = rew ?pf' in _ ]
+                                 => cut (pf = pf'); generalize pf pf'; [ intros; subst; reflexivity | clear; cbv beta zeta; intros ];
+                                    lazymatch goal with
+                                    | [ |- ?a = ?b :> (?x = ?y) ]
+                                      => generalize dependent x; generalize dependent y; intros; subst; eliminate_hprop_eq; reflexivity
+                                    end
+                               end ])).
         Qed.
 
         Lemma interp_rewrite_with_rule
@@ -819,24 +884,6 @@ Module Compilers.
                            end ]. }
           Unfocus.
           exact admit.
-          repeat first [ match goal with
-                           | [ H : app_with_unification_resultT_cps _ _ _ (@Some _) = Some (existT _ ?evm _) |- _ ]
-                             => is_var evm;
-                                let H' := fresh in
-                                pose proof (projT1_app_with_unification_resultT _ H) as H';
-                                cbn [projT1] in H'; subst evm
-                         end ].
-          move re at bottom.
-          { exact admit. }
-          (*
-            repeat first [ match goal with
-                           | [ H : app_with_unification_resultT_cps _ _ _ (@Some _) = Some (existT _ ?evm _) |- _ ]
-                             => is_var evm;
-                                let H' := fresh in
-                                pose proof (projT1_app_with_unification_resultT _ H) as H';
-                                cbn [projT1] in H'; subst evm
-                           end ].
-etransitivity; symmetry; eassumption. } *)
         Qed.
 
         Lemma interp_eval_rewrite_rules
