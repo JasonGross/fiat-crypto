@@ -641,7 +641,6 @@ Module Compilers.
               | [ H : ?x == ?y |- ?x = ?y ]
                 => apply (type.eqv_iff_eq_of_funext (fun _ _ => functional_extensionality)), H
               end.
-          change (fun x => ?f x) with f.
           move re2 at bottom.
           specialize (fun H => IHp1 (eq_trans (eq_sym x1) H)).
           cbn [pattern.type.subst_default] in *.
@@ -717,7 +716,7 @@ Module Compilers.
           : @rewrite_with_rule do_again t e re rewr = Some v1
             -> rawexpr_interp_related re (rew Ht in v2)
             -> UnderLets_interp_related v1 v2.
-        Proof using pident_unify_to_typed.
+        Proof using pident_unify_to_typed pident_unify_unknown_correct.
           destruct rewr as [p r].
           cbv [rewrite_with_rule].
           repeat first [ match goal with
@@ -777,13 +776,6 @@ Module Compilers.
             assumption. }
           Unfocus.
           Unshelve.
-          Focus 3.
-          { symmetry.
-            etransitivity; [ | eassumption ].
-            etransitivity; [ | eassumption ].
-            move x at bottom.
-            shelve. }
-          Unfocus.
           Focus 2.
           { repeat match goal with
                    | [ |- context[rew ?pf in _] ]
@@ -794,192 +786,7 @@ Module Compilers.
             intros; subst; eliminate_hprop_eq.
             reflexivity. }
           Unfocus.
-          Unshelve.
-          Focus 2.
-          { move x at bottom.
-          clear dependent y.
-          Check @pattern_default_interp.
-          Lemma interp_pattern_default_interp {t p x y
-          generalize dependent ( pattern.type.subst_default (pattern.type_of_anypattern p) s').
-          Foc
-
-          case e1.
-          destruct e1.
-
-          cbv [rew_should_do_again].
-          destruct (rew_should_do_again _ _ r).
-
-          Focus 2.
-          move v2 at bottom.
-          eassumption.
-          move d at bottom.
-          progress cbv [deep_rewrite_ruleTP_gen_good_relation] in *.
-          Print deep_rewrite_ruleTP_gen_good_relation.
-          Focus 2.
-          match goal with
-          end.
-          specialize (Hrewr _ _ ltac:(eassumption)).
-          move Hrewr at bottom.
-          setoid_rewrite Heqo0 in Hrewr.
-          Print unify_pattern.
-          eapply UnderLets.splice_interp_related_of_ex. with (RA:=expr_interp_related).
-          (*match goal with
-          | [ |- UnderLets_interp_related (fun xv => UnderLets_interp_related _ _) ?x _ ]
-            => is_var x;
-                 eapply UnderLets_interp_related_Proper_iff;
-                 [ cbv [pointwise_relation]; intros; set_evars | reflexivity | reflexivity | ]
-          end.
-          { repeat first [ progress rewrite UnderLets_interp_related_splice_iff
-                         | progress cbn [UnderLets_interp_related] ].
-            cbv [rew_should_do_again] in *; destruct r as [ [|] ].
-            all: cbv [maybe_do_again].
-            Focus 2.
-            { cbn [UnderLets_interp_related].
-              destruct e0.
-              cbn [eq_rect] in *.
-              subst_evars.
-              unshelve instantiate (1:=ltac:(destruct e0; cbn [eq_rect])); cbn [eq_rect].
-              clear e1.
-              shelve.
-              set_evars.
-
-              generalize dependent (eq_sym e1).
-              clear e1.
-              intro e1; destruct e1.
-              case (eq_sym e1).
-
-              all:
-              2: cbn [eq_rect].
-              clearbody e2.
-              destruct e1.
-
-            set (sda := rew_should_do_again _ _ _) in *.
-            destruct sda.
-            edestruct rew_should_do_again.
-            destruct e1.
-Require Import Crypto.Util.Tactics.SetEvars.
-          { repeat first [ ma
-                                                                                             | [ |- context[UnderLets_interp_related ?R (UnderLets.splice _ _)] ]
-                           => (* kludge because setoid_rewrite subterm selection doesn't work *)
-                           unshelve
-                             (repeat
-                                (exact UnderLets_interp_related_splice_iff
-                                 ||
-                           cbv beta
-
-          eapply UnderLets_interp_related_Proper_iff;
-            [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ].
-          repeat (eapply UnderLets_interp_related_Proper_iff;
-                  [ cbv [pointwise_relation]; intros | reflexivity | reflexivity | shelve ]).
-          lazymatch goal with
-          end.
-          Typeclasses eauto := debug.
-          try setoid_rewrite H.
-          cbv [rew_should_do_again rew_with_opt rew_under_lets rew_replacement] in *; destruct r; break_innermost_match_step; revgoals.
-          move u0 at bottom.
-          move Hrewr at bottom.
-          cbv [rewrite_rule_data_interp_goodT] in *.
-          cbv [rew_should_do_again rew_with_opt rew_under_lets rew_replacement] in *.
-          match goal with
-          | [ H :
-          destruct e0.
-          destruct r;
-          destruct (rew_should_do_again _ _ r); revgoals.
-          match goal with
-          end.
-
-          cbv [rewrite_rule_data_interp_goodT] in Hrewr.
-          move Hrewr at bottom.
-          epose proof (Hrewr _ _) as Hrewr'.
-          rewrite Heqo0 in Hrewr'.
-          move u at bottom.
-          cbv [option_eq related_sigT_by_eq deep_rewrite_ruleTP_gen_good_relation] in Hrewr'.
-          revert Hrewr'.
-          cbn [projT1 projT2] in *.
-          break_innermost_match_step.
-          intro.
-          let v := open_constr:(Hrewr' _) in specialize v.
-          cbn [projT1 projT2] in *.
-          destruct_head'_sig; subst.
-          cbn [eq_rect] in *.
-          break_innermost_match_hyps_step.
-          cbn [Option.bind] in *.
-          inversion_option; subst.
-          rewrite !UnderLets.interp_splice; cbn [UnderLets.interp].
-          generalize dependent (match type_of_rawexpr re with type.base t => t | _ => base.type.unit end); intros.
-          apply interp_maybe_do_again_gen; [ assumption | ].
-          move re at bottom.
-          cbv [pattern.pattern_of_anypattern pattern.type_of_anypattern rewrite_ruleTP] in *.
-          destruct p as [pt p].
-          remember (type.base t) as t' eqn:Ht in *.
-          cbv [eq_rect]; break_innermost_match_step.
-          cbv [rewrite_rule_data_interp_goodT] in *.
-
-
-
-          cbv [deep_rewrite_ruleTP_gen_good_relation] in *.
-          cbv [Option.bind] in *; break_inn
-                       ].
-          rewrite_type_transport_correct; break_match; type_beq_to_eq; cbn [Option.bind] in *; intros; inversion_option; subst; [].
-          rewrite !UnderLets.interp_splice; cbn [UnderLets.interp eq_rect]; cbv [id].
-          cbn [projT1 projT2] in *.
-          generalize dependent (match type_of_rawexpr re with type.base t => t | _ => base.type.unit end); intros.
-          apply interp_maybe_do_again_gen; [ assumption | ].
-          move re at bottom.
-          cbv [pattern.pattern_of_anypattern pattern.type_of_anypattern rewrite_ruleTP] in *.
-          destruct p as [pt p].
-          remember (type.base t) as t' eqn:Ht in *.
-          cbv [eq_rect]; break_innermost_match_step.
-          cbv [rewrite_rule_data_interp_goodT] in *.
-          (*cbv [rew_is_cps rew_under_lets rew_replacement rew_should_do_again rew_with_opt] in *; destruct r.*)
-          destruct Hrewr as [Hrewr1 Hrewr2].
-          let H := match goal with H : context[unify_pattern] |- _ => H end in
-          revert H.
-          cbv [unify_pattern].
-          rewrite unify_types_cps_id; unfold Option.bind at 1;
-            break_match_step ltac:(fun v => match v with unify_types _ _ _ _ => idtac end);
-            [ | intros; exfalso; discriminate ].
-          unfold Option.bind at 1;
-            break_match_step ltac:(fun v => match v with pattern.type.app_forall_vars _ _ => idtac end);
-            [ | intros; exfalso; discriminate ].
-          eapply app_under_with_unification_resultT_relation1 in Hrewr1; [ | eassumption ].
-          eapply app_under_with_unification_resultT_relation_hetero in Hrewr2.
-          lazymatch goal with
-          | [ H : ?f = Some _, H' : context[option_eq _ ?f' ?g] |- _ ]
-            => unify f f'; change f' with f in H'; rewrite H in H'; cbv [option_eq] in H'; destruct g eqn:?; [ | exfalso; assumption ]
-          end.
-          cbv beta in *.
-          unshelve eapply interp_unify_pattern'_under_with_unification_resultT'_relation_hetero in Hrewr2; [ assumption.. | ].
-          rewrite unify_pattern'_cps_id.
-          lazymatch goal with
-          | [ H : option_eq ?P (@unify_pattern' ?t ?re ?p ?evm ?K ?v ?T (@Some ?T2)) ?X
-              |- context G[@unify_pattern' ?t' ?re ?p ?evm ?K' ?v ?T' ?T2'] ]
-            => let cst := constr:(@unify_pattern' t re p evm K v T (@Some T2)) in
-               let G' := context G[cst] in
-               change G'; destruct cst eqn:?, X eqn:?; cbv [option_eq] in H;
-                 cbn [Option.bind];
-                 inversion_option; try (exfalso; assumption); [ | intro; discriminate ]
-          end.
-          rewrite_type_transport_correct; break_match_when_head_step (@sumbool);
-            type_beq_to_eq; cbn [Option.bind] in *; [ | intro ]; inversion_option; subst; [].
-          cbv [id eq_rect] in *.
-          break_match_hyps_when_head_step (@eq).
-          cbv [deep_rewrite_ruleTP_gen_good_relation id] in Hrewr2.
-          lazymatch goal with
-          | [ H : normalize_deep_rewrite_rule ?d _ (fun y => y) = Some _, H' : context[normalize_deep_rewrite_rule ?d _ (fun x => x)] |- _ ]
-            => rewrite H in H'
-          end.
-          cbv [rew_is_cps rew_under_lets rew_replacement rew_should_do_again rew_with_opt] in *; destruct r.
-          break_innermost_match.
-          Focus 2.
-          { rewrite Hrewr2.
-            eapply interp_unify_pattern'_default_interp; try eassumption.
-            apply unify_types_match_with in Heqo.
-            move Heqo at bottom.
-            move e at bottom.
-            exact admit. }
-          Unfocus.*)
-          exact admit.
+          all: exact admit.
         Qed.
 
         Lemma interp_eval_rewrite_rules
@@ -1008,11 +815,13 @@ Require Import Crypto.Util.Tactics.SetEvars.
           | [ |- ?R (Option.sequence_return ?x ?y) _ ]
             => destruct x eqn:Hinterp
           end; cbn [Option.sequence_return UnderLets.interp]; [ | now apply expr_of_rawexpr_interp_related ].
-          (*intro; rewrite interp_rewrite_with_rule; try eassumption.
+          unshelve (eapply interp_rewrite_with_rule; [ | | | eassumption | ]; try eassumption).
+          { apply eq_type_of_rawexpr_equiv; assumption. }
           { eapply Hrew_rules, nth_error_In; rewrite <- sigT_eta; eassumption. }
+          { apply expr_of_rawexpr_interp_related; assumption. }
           { rewrite rawexpr_equiv_expr_to_rawexpr_equiv;
-              split; etransitivity; (idtac + symmetry); eassumption. }*)
-        Admitted.
+              split; etransitivity; (idtac + symmetry); eassumption. }
+        Qed.
 
         Lemma interp_assemble_identifier_rewriters'
               (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
