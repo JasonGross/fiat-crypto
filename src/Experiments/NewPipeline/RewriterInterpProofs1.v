@@ -586,6 +586,31 @@ Module Compilers.
                               end ].
         Qed.
 
+        Lemma eq_type_of_rawexpr_of_unify_pattern' {t re p evm res}
+              (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
+              (evm' := mk_new_evm evm (pattern_collect_vars p))
+          : type_of_rawexpr re = pattern.type.subst_default t evm'.
+        Proof using Type.
+          subst evm'; revert re res H; generalize (PositiveMap.empty base.type).
+          generalize (fun x => @PositiveSetFacts.In_elements_mem_iff x (pattern_collect_vars p)).
+          setoid_rewrite List.in_rev.
+          generalize (List.rev (PositiveSet.elements (pattern_collect_vars p))).
+          induction p.
+          all: repeat first [ progress intros
+                            | progress cbn [pattern_collect_vars type_of_rawexpr unify_pattern'] in *
+                            | progress inversion_option
+                            | progress subst
+                            | progress rewrite_type_transport_correct
+                            | progress type_beq_to_eq
+                            | break_innermost_match_hyps_step
+                            | progress cbv [Option.bind] in *
+                            | match goal with
+                              | [ H : type_of_rawexpr ?re = _ |- type_of_rawexpr ?re = _ ]
+                                => generalize dependent (type_of_rawexpr re); clear re
+                              end ].
+          Search pattern.type.subst_default.
+          Search PositiveSet.elements.
+
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
@@ -759,6 +784,11 @@ Module Compilers.
                            => change x with x' in H; rewrite H' in H;
                               destruct y eqn:?; cbn [option_eq] in H
                          | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
+                         | [ H : app_with_unification_resultT_cps _ _ _ (@Some _) = Some (existT _ ?evm _) |- _ ]
+                           => is_var evm;
+                              let H' := fresh in
+                              pose proof (projT1_app_with_unification_resultT _ H) as H';
+                              cbn [projT1] in H'; subst evm
                          end
                        | progress cbv [deep_rewrite_ruleTP_gen_good_relation] in *
                        | unshelve (eapply UnderLets.splice_interp_related_of_ex; eexists (fun x => rew _ in x), _; repeat apply conj;
@@ -777,16 +807,36 @@ Module Compilers.
           Unfocus.
           Unshelve.
           Focus 2.
-          { repeat match goal with
-                   | [ |- context[rew ?pf in _] ]
-                     => generalize pf
-                   end.
-            clear.
-            generalize dependent (type_of_rawexpr re); clear.
-            intros; subst; eliminate_hprop_eq.
-            reflexivity. }
+          { repeat first [ reflexivity
+                         | progress cbn [eq_rect] in *
+                         | progress intros
+                         | progress eliminate_hprop_eq
+                         | match goal with
+                           | [ |- context[rew _ in rew _ in _] ]
+                             => rewrite <- eq_trans_rew_distr
+                           | [ |- context[rew ?pf in _] ]
+                             => tryif is_var pf then fail else generalize pf
+                           end ]. }
           Unfocus.
-          all: exact admit.
+          exact admit.
+          repeat first [ match goal with
+                           | [ H : app_with_unification_resultT_cps _ _ _ (@Some _) = Some (existT _ ?evm _) |- _ ]
+                             => is_var evm;
+                                let H' := fresh in
+                                pose proof (projT1_app_with_unification_resultT _ H) as H';
+                                cbn [projT1] in H'; subst evm
+                         end ].
+          move re at bottom.
+          { exact admit. }
+          (*
+            repeat first [ match goal with
+                           | [ H : app_with_unification_resultT_cps _ _ _ (@Some _) = Some (existT _ ?evm _) |- _ ]
+                             => is_var evm;
+                                let H' := fresh in
+                                pose proof (projT1_app_with_unification_resultT _ H) as H';
+                                cbn [projT1] in H'; subst evm
+                           end ].
+etransitivity; symmetry; eassumption. } *)
         Qed.
 
         Lemma interp_eval_rewrite_rules
