@@ -1094,39 +1094,12 @@ Module Compilers.
                               | eapply @interp_splice_under_lets_with_value_of_ex with (R:=expr_interp_related);
                                 do 2 eexists; repeat apply conj
                               | apply interp_reify_and_let_binds
+                              | apply UnderLets.reify_and_let_binds_base_interp_related
                               | match goal with
                                 | [ H : _ |- _ ] => eapply H; clear H
                                 | [ |- ?f ?x = ?f ?y ] => is_evar x; reflexivity
                                 | [ |- ?x = ?x ] => reflexivity
                                 end ].
-
-
-            Focus 2.
-
-            eapply @interp_splice_under_lets_with_value_of_ex with (R:=expr_interp_related).
-            Focus 2.
-            eapply
-
-                              | progress cbn [value_interp_related1 type.related List.In eq_rect fst snd] in *
-                              | progress cbv [respectful LetIn.Let_In] in *
-                              | match goal with
-                                | [ H : context[rewrite_bottomup] |- value_interp_related (@rewrite_bottomup _ _ _ _) _ ]
-                                  => apply H; clear H
-                                end
-                              | solve [ eauto ]
-                              | progress specialize_by_assumption
-                              | progress intros
-                              | progress inversion_sigma
-                              | progress inversion_prod
-                              | progress subst
-                              | progress fold (@type.interp) in *
-                              | progress destruct_head'_or
-                              | rewrite UnderLets.interp_reify_and_let_binds_base
-                              | eapply interp_splice_under_lets_with_value
-                              | eapply interp_splice_value_with_lets
-                              | apply interp_reflect
-                              | apply interp_reify_and_let_binds ].
-            all: exact admit.
           Qed.
         End with_rewrite_head.
 
