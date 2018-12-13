@@ -977,14 +977,15 @@ Module Compilers.
               (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
               (d : decision_tree)
               (rew_rules : rewrite_rulesT)
-              t idc
+              t idc v
               (res := @assemble_identifier_rewriters d rew_rules do_again t idc)
               (Hdo_again : forall t e v,
                   expr.interp_related_gen ident_interp (fun t => value_interp_related) e v
                   -> UnderLets_interp_related (do_again t e) v)
               (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
-          : value_interp_related res (ident_interp t idc).
-        Proof using eta_ident_cps_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct ident_interp_Proper pident_unify_to_typed.
+              (Hv : ident_interp t idc == v)
+          : value_interp_related res v.
+        Proof using eta_ident_cps_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed.
           subst res; cbv [assemble_identifier_rewriters].
           rewrite eta_ident_cps_correct.
           match goal with
@@ -993,8 +994,8 @@ Module Compilers.
           end.
           all: cbn [rawexpr_interp_related expr.interp].
           all: try solve [ reflexivity
-                         | assumption ].
-          repeat apply conj; try apply ident_interp_Proper; reflexivity.
+                         | assumption
+                         | auto ].
         Qed.
 
 (*

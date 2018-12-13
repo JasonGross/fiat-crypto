@@ -75,7 +75,7 @@ Module Compilers.
       eapply Compile.InterpRewrite; [ | assumption ];
       intros; eapply Compile.interp_assemble_identifier_rewriters with (pident_to_typed:=@pattern.ident.to_typed);
       eauto using
-            pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct,
+            pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct, pattern.ident.unify_to_typed,
       @ident.gen_interp_Proper, eq_refl
         with nocore.
 
@@ -144,7 +144,7 @@ Module Compilers.
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
     Proof.
       start_Interp_proof fancy_rewrite_head_eq fancy_all_rewrite_rules_eq (@fancy_rewrite_head0).
-      apply fancy_rewrite_rules_interp_good; assumption.
+      eapply fancy_rewrite_rules_interp_good; eassumption.
     Qed.
 
     Lemma Interp_gen_RewriteToFancyWithCasts {cast_outside_of_range} (invert_low invert_high : Z -> Z -> option Z)
