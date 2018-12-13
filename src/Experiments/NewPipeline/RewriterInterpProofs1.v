@@ -1143,8 +1143,8 @@ Module Compilers.
         Qed.
 
         Lemma interp_rewrite
-              {rewrite_head fuel t e v}
-              (retT := expr.interp (@ident_interp) (@rewrite _ rewrite_head fuel t e) == v)
+              {rewrite_head fuel G t e1 e2}
+              (retT := expr.interp (@ident_interp) (@rewrite _ rewrite_head fuel t e1) == expr.interp (@ident_interp) e2)
               (Hrewrite_head
                : forall do_again
                         (Hdo_again : forall t e v,
@@ -1153,11 +1153,12 @@ Module Compilers.
                         t idc v,
                   ident_interp idc == v
                   -> value_interp_related (@rewrite_head do_again t idc) v)
-              (He : expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v)
+              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> value_interp_related v1 v2)
+              (Hwf : expr.wf G e1 e2)
           : retT.
         Proof using Type.
-          subst retT; cbv [rewrite].
-          apply reify_interp_related, interp_repeat_rewrite; auto.
+          apply expr.eqv_of_interp_related, interp_related_rewrite; try assumption; [].
+          exact admit.
         Qed.
 
         Lemma InterpRewrite
@@ -1165,12 +1166,12 @@ Module Compilers.
               (retT := expr.Interp (@ident_interp) (@Rewrite rewrite_head fuel t e) == expr.Interp (@ident_interp) e)
               (Hrewrite_head
                : forall do_again
-                        (Hdo_again : forall G t e1 e2,
-                            (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 === v2)
-                            -> expr.wf G e1 e2
-                            -> expr.interp (@ident_interp) (UnderLets.interp (@ident_interp) (do_again t e1)) == expr.interp (@ident_interp) e2)
-                        t idc,
-                  @rewrite_head _ do_again t idc === ident_interp idc)
+                        (Hdo_again : forall t e v,
+                            expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v
+                            -> UnderLets.interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (do_again t e) v)
+                        t idc v,
+                  ident_interp idc == v
+                  -> value_interp_related (@rewrite_head _ do_again t idc) v)
               (Hwf : expr.Wf e)
           : retT.
         Proof using Type.
