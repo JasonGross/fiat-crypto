@@ -439,9 +439,9 @@ Module Compilers.
 
         Context (reify_and_let_binds_base_cps : forall (t : base.type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T)
                 (interp_reify_and_let_binds_base
-                 : forall t e1 v1,
-                    expr.interp ident_interp e1 == v1
-                    -> expr.interp ident_interp (UnderLets.interp ident_interp (@reify_and_let_binds_base_cps t e1 _ UnderLets.Base)) == v1).
+                 : forall t e v,
+                    expr_interp_related e v
+                    -> UnderLets_interp_related (@reify_and_let_binds_base_cps t e _ UnderLets.Base) v).
 
         Local Notation reify_and_let_binds_cps := (@reify_and_let_binds_cps ident var reify_and_let_binds_base_cps).
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
@@ -456,6 +456,68 @@ Module Compilers.
           intros t t' idc idc' v H evm pf.
           pose proof (@pident_unify_to_typed t t' idc idc' v H evm (eq_sym pf)).
           subst; reflexivity.
+        Qed.
+
+        Lemma interp_Base_value {t v1 v2}
+          : value_interp_related v1 v2
+            -> value_interp_related (@Base_value t v1) v2.
+        Proof using Type.
+          cbv [Base_value]; destruct t; exact id.
+        Qed.
+
+        Lemma interp_splice_under_lets_with_value_of_ex {T T' t R e f v}
+          : (exists fv (xv : T'),
+                UnderLets.interp_related ident_interp R e xv
+                /\ (forall x1 x2,
+                       R x1 x2
+                       -> value_interp_related (f x1) (fv x2))
+                /\ fv xv = v)
+            -> value_interp_related (@splice_under_lets_with_value T t e f) v.
+        Proof using Type.
+          induction t as [|s IHs d IHd].
+          all: repeat first [ progress cbn [value_interp_related splice_under_lets_with_value] in *
+                            | progress intros
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | progress subst
+                            | eassumption
+                            | solve [ eauto ]
+                            | now (eapply UnderLets.splice_interp_related_of_ex; eauto)
+                            | match goal with
+                              | [ H : _ |- _ ] => eapply H; clear H
+                              | [ |- exists fv xv, _ /\ _ /\ _ ]
+                                => do 2 eexists; repeat apply conj; [ eassumption | | ]
+                              end ].
+        Qed.
+
+        Lemma interp_splice_value_with_lets_of_ex {t t' e f v}
+          : (exists fv xv,
+                value_interp_related e xv
+                /\ (forall x1 x2,
+                       value_interp_related x1 x2
+                       -> value_interp_related (f x1) (fv x2))
+                /\ fv xv = v)
+            -> value_interp_related (@splice_value_with_lets t t' e f) v.
+        Proof using Type.
+          cbv [splice_value_with_lets]; break_innermost_match.
+          { apply interp_splice_under_lets_with_value_of_ex. }
+          { intros; destruct_head'_ex; destruct_head'_and; subst; eauto. }
+        Qed.
+
+        Lemma interp_reify_and_let_binds {with_lets t v1 v}
+          : value_interp_related v1 v
+            -> UnderLets_interp_related (@reify_and_let_binds_cps with_lets t v1 _ UnderLets.Base) v.
+        Proof using interp_reify_and_let_binds_base.
+          cbv [reify_and_let_binds_cps]; break_innermost_match;
+            repeat first [ progress intros
+                         | progress destruct_head'_ex
+                         | progress destruct_head'_and
+                         | progress subst
+                         | solve [ eauto ]
+                         | apply reify_interp_related
+                         | eapply @UnderLets.splice_interp_related_of_ex with (RA:=expr_interp_related);
+                           eexists (fun x => x), _; repeat apply conj;
+                           [ eassumption | | reflexivity ] ].
         Qed.
 
         (*Local Infix "===" := expr_interp_related : type_scope.
@@ -997,59 +1059,6 @@ Module Compilers.
                          | assumption
                          | auto ].
         Qed.
-
-(*
-        Local Notation eval_decision_tree_correct := (@eval_decision_tree_correct ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple invert_bind_args_unknown_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args).
-        Lemma value_interp_related1_reify_of_wf {under_lets G t e1 re2}
-              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
-              (Hwf : expr.wf G (@reify under_lets t e1) re2)
-          : e1 === expr.interp ident_interp re2.
-        Proof using Type.
-          revert under_lets G e1 re2 HG Hwf; induction t as [|s IHs d IHd];
-            cbn [value_interp_related1 reify]; intros.
-          { destruct under_lets; [ rewrite <- UnderLets.interp_to_expr | ].
-            all: eapply expr.wf_interp_Proper_gen1; eassumption. }
-          { fold (@reify) (@reflect) in *.
-            expr.inversion_wf_one_constr.
-            break_innermost_match_hyps; try tauto; [].
-            expr.invert_subst.
-            cbn [expr.interp].
-            eapply IHd.
-            Focus 2.
-            Search expr.wf.
-            2:eapply expr.wf_trans.
-            {
-
-
-        Lemma interp_splice_under_lets_with_value {T t} v k v2
-          : k (UnderLets.interp ident_interp v) === v2
-            -> @splice_under_lets_with_value T t v k === v2.
-        Proof using Type.
-          cbv [value_with_lets] in *.
-          induction t as [|s IHs d IHd]; cbn [splice_under_lets_with_value value' value_interp_related1 type.related] in *; cbv [respectful];
-            fold (@type.interp) in *; eauto.
-          rewrite UnderLets.interp_splice; exact id.
-        Qed.
-
-        Lemma interp_splice_value_with_lets {t t'} v1 k1 v2 k2
-          : v1 === v2
-            -> (forall v1, v1 === v2 -> k1 v1 === k2)
-            -> @splice_value_with_lets t t' v1 k1 === k2.
-        Proof using Type.
-          cbv [splice_value_with_lets]; break_innermost_match; auto; [].
-          intros; apply interp_splice_under_lets_with_value; auto.
-        Qed.
-
-        Lemma interp_reify_and_let_binds {with_lets t v1 v2}
-          : v1 === v2
-            -> expr.interp ident_interp (UnderLets.interp ident_interp (@reify_and_let_binds_cps with_lets t v1 _ UnderLets.Base))
-               == v2.
-        Proof using interp_reify_and_let_binds_base.
-          cbv [reify_and_let_binds_cps]; break_innermost_match;
-            rewrite ?UnderLets.interp_splice; cbn [UnderLets.interp];
-              try apply interp_reify; auto.
-        Qed.
-*)
       End with_interp.
 
       Section with_cast.
@@ -1069,6 +1078,35 @@ Module Compilers.
           Proof using interp_rewrite_head.
             induction e; cbn [rewrite_bottomup value_interp_related expr.interp_related_gen] in *; auto.
             all: repeat first [ apply interp_Base_value
+                              | eassumption
+                              | progress cbv beta
+                              | progress intros
+                              | progress destruct_head'_ex
+                              | progress destruct_head'_and
+                              | progress subst
+                              | match goal with
+                                | [ IH : forall v, expr.interp_related_gen _ _ ?e v -> _, H' : expr.interp_related_gen _ _ ?e _ |- _ ]
+                                  => specialize (IH _ H')
+                                end
+                              | apply reflect_interp_related
+                              | eapply interp_splice_value_with_lets_of_ex;
+                                do 2 eexists; repeat apply conj; [ eassumption | | reflexivity ]
+                              | eapply @interp_splice_under_lets_with_value_of_ex with (R:=expr_interp_related);
+                                do 2 eexists; repeat apply conj
+                              | apply interp_reify_and_let_binds
+                              | match goal with
+                                | [ H : _ |- _ ] => eapply H; clear H
+                                | [ |- ?f ?x = ?f ?y ] => is_evar x; reflexivity
+                                | [ |- ?x = ?x ] => reflexivity
+                                end ].
+
+
+            Focus 2.
+
+            eapply @interp_splice_under_lets_with_value_of_ex with (R:=expr_interp_related).
+            Focus 2.
+            eapply
+
                               | progress cbn [value_interp_related1 type.related List.In eq_rect fst snd] in *
                               | progress cbv [respectful LetIn.Let_In] in *
                               | match goal with
@@ -1159,7 +1197,7 @@ Module Compilers.
           : retT.
         Proof using Type.
           apply expr.eqv_of_interp_related, interp_related_rewrite; try assumption; [].
-          exact admit.
+          eapply expr.interp_related_gen_of_wf; eassumption.
         Qed.
 
         Lemma InterpRewrite
