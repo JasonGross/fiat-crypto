@@ -677,15 +677,16 @@ Module Compilers.
 
         Lemma eq_type_of_rawexpr_of_unify_pattern' {t re p evm res}
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
+              (Ht : @types_match_with evm t re p)
               (evm' := mk_new_evm evm (pattern_collect_vars p))
           : pattern.type.subst t evm' = Some (type_of_rawexpr re).
         Proof using pident_unify_unknown_correct.
           subst evm'.
           apply eq_subst_types_pattern_collect_vars.
-          revert re res H.
+          revert re res H Ht.
           induction p.
           all: repeat first [ progress intros
-                            | progress cbn [type_of_rawexpr unify_pattern'] in *
+                            | progress cbn [type_of_rawexpr unify_pattern' types_match_with] in *
                             | progress inversion_option
                             | progress subst
                             | progress rewrite_type_transport_correct
@@ -708,6 +709,7 @@ Module Compilers.
 
         Lemma eq_type_of_rawexpr_of_unify_pattern'' {t re p evm res}
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
+              (Ht : @types_match_with evm t re p)
               (evm' := mk_new_evm evm (pattern_collect_vars p))
           : type_of_rawexpr re = pattern.type.subst_default t evm'.
         Proof using pident_unify_unknown_correct.
@@ -717,9 +719,10 @@ Module Compilers.
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
+              (Ht : @types_match_with evm t re p)
               (evm' := mk_new_evm evm (pattern_collect_vars p))
               (Hty : type_of_rawexpr re = pattern.type.subst_default t evm'
-               := eq_type_of_rawexpr_of_unify_pattern'' H)
+               := eq_type_of_rawexpr_of_unify_pattern'' H Ht)
           : exists resv : _,
               unification_resultT'_interp_related res resv
               /\ app_transport_with_unification_resultT'_cps
@@ -734,7 +737,7 @@ Module Compilers.
                                else None)).
           { intro k; subst evm'; rewrite (@pattern.base.fold_right_evar_map_find_In _ evm (pattern_collect_vars p) (PositiveMap.empty base.type) k); rewrite ?PositiveMap.gempty; break_innermost_match; reflexivity. }
           clearbody evm'; cbv [unification_resultT'_interp_related].
-          revert re res v evm' Hfind Hty H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
+          revert re res v evm' Hfind Hty Ht H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
           all: repeat first [ progress intros
                             | rewrite pident_unify_unknown_correct in *
                             | progress cbv [Option.bind option_bind'] in *
@@ -763,6 +766,8 @@ Module Compilers.
                                 => specialize (H _ _ _ ltac:(eassumption) ltac:(eassumption))
                               | [ H : forall re res v Hty, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
                                 => specialize (fun Hty => H _ _ _ Hty ltac:(eassumption) ltac:(eassumption))
+                              | [ H : forall re res v Hty Ht, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
+                                => specialize (fun Hty Ht => H _ _ _ Hty Ht ltac:(eassumption) ltac:(eassumption))
                               | [ |- exists x : _ * _, (_ /\ _) /\ _ ] => eexists (_, _); split; [ split; eassumption | ]
                               | [ |- exists res, value_interp_related (value_of_rawexpr _) res ]
                                 => eexists; eapply value_of_rawexpr_interp_related; eassumption
