@@ -675,6 +675,32 @@ Module Compilers.
           break_innermost_match; congruence.
         Qed.
 
+        Lemma eq_type_of_rawexpr_of_types_match_with {t re p evm}
+              (Ht : @types_match_with evm t re p)
+              (evm' := mk_new_evm evm (pattern_collect_vars p))
+          : pattern.type.subst t evm' = Some (type_of_rawexpr re).
+        Proof using Type.
+          subst evm'.
+          apply eq_subst_types_pattern_collect_vars.
+          revert re Ht; induction p.
+          all: repeat first [ progress intros
+                            | progress cbn [type_of_rawexpr types_match_with pattern.type.subst] in *
+                            | progress cbv [Option.bind] in *
+                            | progress inversion_option
+                            | progress subst
+                            | assumption
+                            | exfalso; assumption
+                            | progress destruct_head'_and
+                            | break_innermost_match_hyps_step
+                            | match goal with
+                              | [ H : forall re, types_match_with ?evm re ?p -> _, H' : types_match_with ?evm _ ?p |- _ ]
+                                => specialize (H _ H')
+                              end ].
+Focus 2.
+
+
+
+
         Lemma eq_type_of_rawexpr_of_unify_pattern' {t re p evm res}
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
               (Ht : @types_match_with evm t re p)
