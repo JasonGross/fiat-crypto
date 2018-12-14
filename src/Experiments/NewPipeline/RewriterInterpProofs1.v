@@ -675,80 +675,87 @@ Module Compilers.
           break_innermost_match; congruence.
         Qed.
 
+        Fail Check rawexpr_types_ok.
+          Fixpoint rawexpr_types_ok (r : rawexpr) (t : type) : Prop
+            := match r with
+               | rExpr t' _
+               | rValue t' _
+                 => t' = t
+               | rIdent _ t1 _ t2 _
+                 => t1 = t /\ t2 = t
+               | rApp f x t' alt
+                 => t' = t
+                    /\ match alt with
+                       | expr.App s d _ _
+                         => rawexpr_types_ok f (type.arrow s d)
+                            /\ rawexpr_types_ok x s
+                       | _ => False
+                       end
+               end.
+          Lemma eq_type_of_rawexpr_of_rawexpr_types_ok {re t}
+            : rawexpr_types_ok re t
+              -> t = type_of_rawexpr re.
+          Proof using Type.
+            destruct re; cbn; break_innermost_match; intuition.
+          Qed.
+
+          Lemma rawexpr_types_ok_for_type_of_rawexpr {re t}
+            : rawexpr_types_ok re t
+              -> rawexpr_types_ok re (type_of_rawexpr re).
+          Proof using Type.
+            intro H; pose proof H; apply eq_type_of_rawexpr_of_rawexpr_types_ok in H; subst; assumption.
+          Qed.
+
         Lemma eq_type_of_rawexpr_of_types_match_with {t re p evm}
               (Ht : @types_match_with evm t re p)
+              (Ht' : rawexpr_types_ok re (type_of_rawexpr re))
               (evm' := mk_new_evm evm (pattern_collect_vars p))
           : pattern.type.subst t evm' = Some (type_of_rawexpr re).
         Proof using Type.
+          clear -Ht Ht' type_base.
           subst evm'.
           apply eq_subst_types_pattern_collect_vars.
-          revert re Ht; induction p.
+          revert re Ht Ht'; induction p.
           all: repeat first [ progress intros
-                            | progress cbn [type_of_rawexpr types_match_with pattern.type.subst] in *
+                            | progress cbn [type_of_rawexpr types_match_with pattern.type.subst rawexpr_types_ok] in *
                             | progress cbv [Option.bind] in *
                             | progress inversion_option
+                            | progress specialize_by_assumption
+                            | progress specialize_by eauto using rawexpr_types_ok_for_type_of_rawexpr
                             | progress subst
                             | assumption
+                            | reflexivity
                             | exfalso; assumption
                             | progress destruct_head'_and
                             | break_innermost_match_hyps_step
                             | match goal with
                               | [ H : forall re, types_match_with ?evm re ?p -> _, H' : types_match_with ?evm _ ?p |- _ ]
                                 => specialize (H _ H')
+                              | [ H : rawexpr_types_ok _ _ |- _ ] => apply eq_type_of_rawexpr_of_rawexpr_types_ok in H
+                              | [ H : context[type_of_rawexpr ?re] |- _ ]
+                                => generalize dependent (type_of_rawexpr re)
+                              | [ H : type.arrow _ _ = type.arrow _ _ |- _ ]
+                                => inversion_clear H
                               end ].
-Focus 2.
-
-
-
-
-        Lemma eq_type_of_rawexpr_of_unify_pattern' {t re p evm res}
-              (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
-              (Ht : @types_match_with evm t re p)
-              (evm' := mk_new_evm evm (pattern_collect_vars p))
-          : pattern.type.subst t evm' = Some (type_of_rawexpr re).
-        Proof using pident_unify_unknown_correct.
-          subst evm'.
-          apply eq_subst_types_pattern_collect_vars.
-          revert re res H Ht.
-          induction p.
-          all: repeat first [ progress intros
-                            | progress cbn [type_of_rawexpr unify_pattern' types_match_with] in *
-                            | progress inversion_option
-                            | progress subst
-                            | progress rewrite_type_transport_correct
-                            | progress type_beq_to_eq
-                            | break_innermost_match_hyps_step
-                            | rewrite pident_unify_unknown_correct in *
-                            | reflexivity
-                            | progress cps_id'_with_option unify_pattern'_cps_id
-                            | progress cbv [Option.bind option_map option_bind'] in *
-                            | match goal with
-                              | [ H : type_of_rawexpr ?re = _ |- _ ]
-                                => generalize dependent (type_of_rawexpr re); clear re
-                              | [ H : pattern.type.subst ?t ?evm = Some _ |- context[pattern.type.subst_default ?t ?evm] ]
-                                => rewrite (pattern.type.subst_Some_subst_default H) in *
-                              | [ IH : forall re res, unify_pattern' re ?p ?evm _ (@Some _) = Some res -> _, H : unify_pattern' _ ?p ?evm _ (@Some _) = Some _ |- _ ]
-                                => specialize (IH _ _ H)
-                              end ].
-          1-3: exact admit.
         Qed.
 
-        Lemma eq_type_of_rawexpr_of_unify_pattern'' {t re p evm res}
-              (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
+        Lemma eq_type_of_rawexpr_of_types_match_with' {t re p evm}
               (Ht : @types_match_with evm t re p)
+              (Ht' : rawexpr_types_ok re (type_of_rawexpr re))
               (evm' := mk_new_evm evm (pattern_collect_vars p))
           : type_of_rawexpr re = pattern.type.subst_default t evm'.
-        Proof using pident_unify_unknown_correct.
-          symmetry; eapply pattern.type.subst_Some_subst_default, eq_type_of_rawexpr_of_unify_pattern'; eassumption.
+        Proof using Type.
+          symmetry; eapply pattern.type.subst_Some_subst_default, eq_type_of_rawexpr_of_types_match_with; eassumption.
         Qed.
 
         Lemma interp_unify_pattern' {t re p evm res v}
               (Hre : rawexpr_interp_related re v)
               (H : @unify_pattern' t re p evm _ (@Some _) = Some res)
               (Ht : @types_match_with evm t re p)
+              (Ht' : rawexpr_types_ok re (type_of_rawexpr re))
               (evm' := mk_new_evm evm (pattern_collect_vars p))
               (Hty : type_of_rawexpr re = pattern.type.subst_default t evm'
-               := eq_type_of_rawexpr_of_unify_pattern'' H Ht)
+               := eq_type_of_rawexpr_of_types_match_with' Ht Ht')
           : exists resv : _,
               unification_resultT'_interp_related res resv
               /\ app_transport_with_unification_resultT'_cps
@@ -763,17 +770,18 @@ Focus 2.
                                else None)).
           { intro k; subst evm'; rewrite (@pattern.base.fold_right_evar_map_find_In _ evm (pattern_collect_vars p) (PositiveMap.empty base.type) k); rewrite ?PositiveMap.gempty; break_innermost_match; reflexivity. }
           clearbody evm'; cbv [unification_resultT'_interp_related].
-          revert re res v evm' Hfind Hty Ht H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
+          revert re res v evm' Hfind Hty Ht Ht' H Hre; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
           all: repeat first [ progress intros
                             | rewrite pident_unify_unknown_correct in *
                             | progress cbv [Option.bind option_bind'] in *
-                            | progress cbn [fst snd rawexpr_interp_related eq_rect] in *
+                            | progress cbn [fst snd rawexpr_interp_related eq_rect rawexpr_types_ok] in *
                             | progress inversion_option
                             | progress destruct_head'_ex
                             | progress destruct_head'_and
                             | progress inversion_sigma
                             | progress subst
                             | progress eliminate_hprop_eq
+                            | progress specialize_by_assumption
                             | exfalso; assumption
                             | match goal with
                               | [ |- { x : _ | _ = x } ] => eexists; reflexivity
@@ -788,18 +796,16 @@ Focus 2.
                             | break_innermost_match_hyps_step
                             | break_innermost_match_step
                             | match goal with
-                              | [ H : forall re res v evm' Hevm Hty Ht, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
-                                => specialize (fun evm' Hevm Hty Ht => H _ _ _ evm' Hevm Hty Ht ltac:(eassumption) ltac:(eassumption))
+                              | [ H : forall re res v evm' Hevm Hty Ht Ht', _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
+                                => specialize (fun Ht Ht' evm' Hevm Hty => H _ _ _ evm' Hevm Hty Ht Ht' ltac:(eassumption) ltac:(eassumption))
                               | [ |- exists x : _ * _, (_ /\ _) /\ _ ] => eexists (_, _); split; [ split; eassumption | ]
                               | [ |- exists res, value_interp_related (value_of_rawexpr _) res ]
                                 => eexists; eapply value_of_rawexpr_interp_related; eassumption
                               | [ |- value_interp_related (value_of_rawexpr _) _ ]
                                 => eapply value_of_rawexpr_interp_related; eassumption
                               | [ |- Some _ = Some _ ] => apply f_equal
-                              | [ H : forall Hty : type_of_rawexpr _ = _, _ |- _ ]
-                                => specialize (H (eq_type_of_rawexpr_of_unify_pattern'' ltac:(eassumption)))
-                              | [ H : context[eq_type_of_rawexpr_of_unify_pattern'' ?H] |- _ ]
-                                => generalize dependent (eq_type_of_rawexpr_of_unify_pattern'' H)
+                              | [ H : context[eq_type_of_rawexpr_of_types_match_with' ?H1 ?H2] |- _ ]
+                                => generalize dependent (eq_type_of_rawexpr_of_types_match_with' H1 H2)
                               end
                             | progress cbn [type_of_rawexpr expr.interp types_match_with] in *
                             | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
@@ -810,6 +816,9 @@ Focus 2.
               | [ H : ?x == ?y |- ?x = ?y ]
                 => apply (type.eqv_iff_eq_of_funext (fun _ _ => functional_extensionality)), H
               end.
+
+          match goal with
+          | [ H
           exact admit. (** FIXME: needs an assumption about deep type matching of evm to re *)
         Qed.
 
