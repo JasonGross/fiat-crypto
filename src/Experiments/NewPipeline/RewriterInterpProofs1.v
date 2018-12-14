@@ -762,12 +762,8 @@ Module Compilers.
                             | break_innermost_match_hyps_step
                             | break_innermost_match_step
                             | match goal with
-                              | [ H : forall re res v, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
-                                => specialize (H _ _ _ ltac:(eassumption) ltac:(eassumption))
-                              | [ H : forall re res v Hty, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
-                                => specialize (fun Hty => H _ _ _ Hty ltac:(eassumption) ltac:(eassumption))
-                              | [ H : forall re res v Hty Ht, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
-                                => specialize (fun Hty Ht => H _ _ _ Hty Ht ltac:(eassumption) ltac:(eassumption))
+                              | [ H : forall re res v evm' Hevm Hty Ht, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
+                                => specialize (fun evm' Hevm Hty Ht => H _ _ _ evm' Hevm Hty Ht ltac:(eassumption) ltac:(eassumption))
                               | [ |- exists x : _ * _, (_ /\ _) /\ _ ] => eexists (_, _); split; [ split; eassumption | ]
                               | [ |- exists res, value_interp_related (value_of_rawexpr _) res ]
                                 => eexists; eapply value_of_rawexpr_interp_related; eassumption
@@ -779,7 +775,7 @@ Module Compilers.
                               | [ H : context[eq_type_of_rawexpr_of_unify_pattern'' ?H] |- _ ]
                                 => generalize dependent (eq_type_of_rawexpr_of_unify_pattern'' H)
                               end
-                            | progress cbn [type_of_rawexpr expr.interp] in *
+                            | progress cbn [type_of_rawexpr expr.interp types_match_with] in *
                             | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
                             | progress cbv [eq_rect] in *
                             | break_match_step ltac:(fun _ => idtac)
@@ -788,10 +784,6 @@ Module Compilers.
               | [ H : ?x == ?y |- ?x = ?y ]
                 => apply (type.eqv_iff_eq_of_funext (fun _ _ => functional_extensionality)), H
               end.
-          lazymatch goal with
-          | [ H : forall re res v evm' pf1 pf2, _ = Some res -> rawexpr_interp_related _ _ -> _ |- _ ]
-            => specialize (fun evm' pf1 pf2 => H _ _ _ evm' pf1 pf2 ltac:(eassumption) ltac:(eassumption))
-          end.
           exact admit. (** FIXME: needs an assumption about deep type matching of evm to re *)
         Qed.
 
