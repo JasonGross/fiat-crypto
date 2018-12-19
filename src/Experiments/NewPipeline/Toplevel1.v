@@ -545,6 +545,8 @@ Module Pipeline.
   | Value_not_leZ (descr : string) (lhs rhs : Z)
   | Value_not_leQ (descr : string) (lhs rhs : Q)
   | Value_not_ltZ (descr : string) (lhs rhs : Z)
+  | Value_not_lt_listZ (descr : string) (lhs rhs : list Z)
+  | Value_not_le_listZ (descr : string) (lhs rhs : list Z)
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
@@ -650,6 +652,10 @@ Module Pipeline.
                 => ["Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs]
               | Value_not_ltZ descr lhs rhs
                 => ["Value not < (" ++ descr ++ ") : expected " ++ show false lhs ++ " < " ++ show false rhs]
+              | Value_not_lt_listZ descr lhs rhs
+                => ["Value not < (" ++ descr ++ ") : expected " ++ show false lhs ++ " < " ++ show false rhs]
+              | Value_not_le_listZ descr lhs rhs
+                => ["Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs]
               | Values_not_provably_distinctZ descr lhs rhs
                 => ["Values not provably distinct (" ++ descr ++ ") : expected " ++ show true lhs ++ " ≠ " ++ show true rhs]
               | Values_not_provably_equalZ descr lhs rhs
@@ -1300,9 +1306,44 @@ Hint Extern 1 (_ = cmovznz _ _ _ _) => simple apply (proj1 cmovznz_gen_correct) 
 Hint Immediate (proj2 cmovznz_gen_correct) : wf_gen_cache.
 
 
-Axiom admit_pf : False.
-Notation admit := (match admit_pf with end).
-
+(** XXX TODO MOVE ME *)
+Module Import HelperLemmas.
+  Lemma eval_is_bounded_by wt n' bounds bounds' f
+        (H : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) bounds f = true)
+        (Hb : bounds = Some (List.map (@Some _) bounds'))
+        (Hblen : length bounds' = n')
+        (Hwt : forall i, List.In i (seq 0 n') -> 0 <= wt i)
+  : eval wt n' (List.map lower bounds') <= eval wt n' f <= eval wt n' (List.map upper bounds').
+  Proof.
+    clear -H Hb Hblen Hwt.
+    setoid_rewrite in_seq in Hwt.
+    subst bounds.
+    pose proof H as H'; apply fold_andb_map_length in H'.
+    revert dependent bounds'; intro bounds'.
+    revert dependent f; intro f.
+    rewrite <- (List.rev_involutive bounds'), <- (List.rev_involutive f);
+      generalize (List.rev bounds') (List.rev f); clear bounds' f; intros bounds f; revert bounds f.
+    induction n' as [|n IHn], bounds as [|b bounds], f as [|f fs]; intros;
+      cbn [length rev map] in *; distr_length.
+    { rewrite !map_app in *; cbn [map] in *.
+      erewrite !eval_snoc by (distr_length; eauto).
+      cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *.
+      cbv [is_bounded_by_bool] in *.
+      specialize_by (intros; auto with omega).
+      specialize (Hwt n); specialize_by omega.
+      repeat first [ progress Bool.split_andb
+                   | rewrite Nat.add_1_r in *
+                   | rewrite fold_andb_map_snoc in *
+                   | rewrite Nat.succ_inj_wd in *
+                   | progress Z.ltb_to_lt
+                   | progress cbn [In seq] in *
+                   | match goal with
+                     | [ H : length _ = ?v |- _ ] => rewrite H in *
+                     | [ H : ?v = length _ |- _ ] => rewrite <- H in *
+                     end ].
+      split; apply Z.add_le_mono; try apply IHn; auto; distr_length; nia. }
+  Qed.
+End HelperLemmas.
 
 (** XXX TODO: Translate Jade's python script *)
 Module Import UnsaturatedSolinas.
@@ -1371,7 +1412,10 @@ Module Import UnsaturatedSolinas.
                (negb (list_beq _ Z.eqb v1 v2), Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2));
               (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
                let v2 := s - Associational.eval c in
-               (negb (v1 =? v2)%Z, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2))].
+               (negb (v1 =? v2)%Z, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2));
+              (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n tight_upperbounds in
+               let v2 := 2 * eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
+               (negb (v1 <? v2)%Z, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2))].
 
     Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
@@ -1731,7 +1775,8 @@ Module Import UnsaturatedSolinas.
                      | solve [ auto ] ].
 
       Lemma use_curve_good
-        : Z.pos m = s - Associational.eval c
+        : let eval := eval (weight (Qnum limbwidth) (QDen limbwidth)) n in
+          Z.pos m = s - Associational.eval c
           /\ Z.pos m <> 0
           /\ s - Associational.eval c <> 0
           /\ s <> 0
@@ -1742,9 +1787,10 @@ Module Import UnsaturatedSolinas.
           /\ 0 < Qden limbwidth <= Qnum limbwidth
           /\ s = weight (Qnum limbwidth) (QDen limbwidth) n
           /\ map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc
-          /\ eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc = s - Associational.eval c
+          /\ eval m_enc = s - Associational.eval c
           /\ Datatypes.length m_enc = n
-          /\ 0 < Associational.eval c < s.
+          /\ 0 < Associational.eval c < s
+          /\ eval tight_upperbounds < 2 * eval m_enc.
       Proof.
         clear -curve_good.
         cbv [check_args fold_right] in curve_good.
@@ -1764,6 +1810,7 @@ Module Import UnsaturatedSolinas.
                end.
         repeat apply conj.
         { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
+        { use_curve_good_t. }
         { use_curve_good_t. }
         { use_curve_good_t. }
         { use_curve_good_t. }
@@ -1805,45 +1852,9 @@ Module Import UnsaturatedSolinas.
                                                = type.app_curried (t:=to_bytesT) (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f))
                   /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f)) = (Positional.eval (weight (Qnum limbwidth) (Z.pos (Qden limbwidth))) n (fst f) mod m))).
 
-      (** XXX TODO MOVE ME? *)
-      Lemma eval_is_bounded_by wt n' bounds bounds' f
-            (H : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) bounds f = true)
-            (Hb : bounds = Some (List.map (@Some _) bounds'))
-            (Hblen : length bounds' = n')
-            (Hwt : forall i, List.In i (seq 0 n') -> 0 <= wt i)
-        : eval wt n' (List.map lower bounds') <= eval wt n' f <= eval wt n' (List.map upper bounds').
-      Proof.
-        clear -H Hb Hblen Hwt.
-        setoid_rewrite in_seq in Hwt.
-        subst bounds.
-        pose proof H as H'; apply fold_andb_map_length in H'.
-        revert dependent bounds'; intro bounds'.
-        revert dependent f; intro f.
-        rewrite <- (List.rev_involutive bounds'), <- (List.rev_involutive f);
-          generalize (List.rev bounds') (List.rev f); clear bounds' f; intros bounds f; revert bounds f.
-        induction n' as [|n IHn], bounds as [|b bounds], f as [|f fs]; intros;
-          cbn [length rev map] in *; distr_length.
-        { rewrite !map_app in *; cbn [map] in *.
-          erewrite !eval_snoc by (distr_length; eauto).
-          cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *.
-          cbv [is_bounded_by_bool] in *.
-          specialize_by (intros; auto with omega).
-          specialize (Hwt n); specialize_by omega.
-          repeat first [ progress Bool.split_andb
-                       | rewrite Nat.add_1_r in *
-                       | rewrite fold_andb_map_snoc in *
-                       | rewrite Nat.succ_inj_wd in *
-                       | progress Z.ltb_to_lt
-                       | progress cbn [In seq] in *
-                       | match goal with
-                         | [ H : length _ = ?v |- _ ] => rewrite H in *
-                         | [ H : ?v = length _ |- _ ] => rewrite <- H in *
-                         end ].
-          split; apply Z.add_le_mono; try apply IHn; auto; distr_length; nia. }
-      Qed.
       Theorem Good : GoodT.
       Proof.
-        pose proof use_curve_good; destruct_head'_and; destruct_head_hnf' ex.
+        pose proof use_curve_good; cbv zeta in *; destruct_head'_and; destruct_head_hnf' ex.
         split.
         { eapply Ring.Good;
             lazymatch goal with
@@ -1873,29 +1884,23 @@ Module Import UnsaturatedSolinas.
             { lazymatch goal with
               | [ H : eval _ _ _ = ?x |- _ <= _ < 2 * ?x ] => rewrite <- H
               end.
-              cbv [m_enc tight_bounds tight_upperbounds prime_upperbound_list] in H15 |- *.
-              eapply eval_is_bounded_by with (wt:=weight (Qnum limbwidth) (QDen limbwidth)) in H15.
-              2:rewrite <- (map_map _ (@Some _)); reflexivity.
-              2:distr_length; reflexivity.
-              rewrite ?map_map in *.
+              let H := match goal with H : ZRange.type.base.option.is_bounded_by _ _ = true |- _ => H end in
+              cbv [m_enc tight_bounds tight_upperbounds prime_upperbound_list] in H |- *;
+                eapply eval_is_bounded_by with (wt:=weight (Qnum limbwidth) (QDen limbwidth)) in H;
+                [
+                | rewrite <- (map_map _ (@Some _)); reflexivity
+                | autorewrite with distr_length; reflexivity
+                | intros; apply Z.lt_le_incl, weight_positive, wprops; lia ].
+              progress rewrite ?map_map in *.
               cbn [lower upper] in *.
               split.
-              { etransitivity; [ erewrite <- eval_zeros | apply H15 ].
+              { destruct_head'_and.
+                etransitivity; [ erewrite <- eval_zeros | eassumption ].
                 apply Z.eq_le_incl; f_equal.
-                repeat match goal with H : _ |- _ => revert H end; exact admit. }
-              { eapply Z.le_lt_trans; [ apply H15 | ].
-                assert (Hlen : length (encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1)) = n) by distr_length.
-                revert Hlen.
-                generalize ((encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1))).
-                intro ls.
-                clear.
-                revert ls.
-                clearbody limbwidth.
-                induction n as [|n' IHn'], ls as [|l ls]; cbn [length]; intros; try omega.
-                repeat match goal with H : _ |- _ => revert H end; exact admit.
-                cbn [map].
-                repeat match goal with H : _ |- _ => revert H end; exact admit. }
-              repeat match goal with H : _ |- _ => revert H end; exact admit. } } }
+                erewrite zeros_ext_map; [ reflexivity | now autorewrite with distr_length ]. }
+              { destruct_head'_and.
+                eapply Z.le_lt_trans; [ eassumption | ].
+                assumption. } } } }
       Qed.
     End make_ring.
 
@@ -2525,8 +2530,10 @@ Module WordByWordMontgomery.
       := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
     Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
       := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
+    Definition saturated_upper_bounds : list Z
+      := List.repeat (2^machine_wordsize-1)%Z n.
     Definition saturated_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-      := Some (List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n).
+      := Some (List.map (fun u => Some r[0 ~> u]%zrange) saturated_upper_bounds).
 
     Definition m_enc : list Z
       := encode (UniformWeight.uweight machine_wordsize) n s c (s-Associational.eval c).
@@ -2558,7 +2565,12 @@ Module WordByWordMontgomery.
               (negb ((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1);
               (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
               (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
-              (negb (1 <? s - Associational.eval c), Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 1" 1 (s - Associational.eval c))].
+              (negb (1 <? s - Associational.eval c), Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 1" 1 (s - Associational.eval c));
+              (let v1 := eval (n:=n) machine_wordsize saturated_upper_bounds in
+               let v2 := m in
+               (negb (v1 <? v2), Pipeline.Value_not_ltZ "m ≤ eval saturated_upper_bounds" v1 v2));
+              (negb (fold_andb_map Z.leb prime_upperbound_list saturated_upper_bounds),
+               Pipeline.Value_not_le_listZ "saturated_upper_bounds < prime_upperbound_list" prime_upperbound_list saturated_upper_bounds)].
 
     Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
@@ -2862,18 +2874,19 @@ Module WordByWordMontgomery.
           /\ 0 < machine_wordsize
           /\ n <> 0%nat
           /\ List.length bounds = n
-          /\ List.length bounds = n
           /\ 0 < 1 <= machine_wordsize
           /\ 0 < Associational.eval c < s
           /\ (r * r') mod m = 1
           /\ (m * m') mod r = (-1) mod r
           /\ 0 < machine_wordsize
           /\ 1 < m
-          /\ m < r^n.
+          /\ m < r^n
+          /\ eval (n:=n) machine_wordsize saturated_upper_bounds < m
+          /\ fold_andb_map Z.leb prime_upperbound_list saturated_upper_bounds = true.
       Proof.
         clear -curve_good.
         cbv [check_args fold_right] in curve_good.
-        cbv [bounds prime_bound m_enc prime_bounds] in *.
+        cbv [bounds prime_bound m_enc prime_bounds saturated_upper_bounds saturated_bounds] in *.
         break_innermost_match_hyps; try discriminate.
         rewrite negb_false_iff in *.
         Z.ltb_to_lt.
@@ -2888,6 +2901,7 @@ Module WordByWordMontgomery.
                end.
         repeat apply conj.
         { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
+        { use_curve_good_t. }
         { use_curve_good_t. }
         { use_curve_good_t. }
         { use_curve_good_t. }
@@ -2931,6 +2945,88 @@ Module WordByWordMontgomery.
            /\ (forall f
                  (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=(base.type.list base.type.Z -> base.type.Z)%etype) (@ZRange.type.option.is_bounded_by) (Some bounds, tt) f = true), (Interp rnonzerov (fst f) = 0) <-> ((@eval machine_wordsize n (from_montgomery_mod machine_wordsize n m m' (fst f))) mod m = 0)).
 
+      (** XXX TODO: MOVE ME *)
+      Lemma is_bounded_by_repeat_In_iff {rg n'} {ls : list Z}
+            (H : @ZRange.type.base.option.is_bounded_by (base.type.list (base.type.type_base base.type.Z)) (Some (List.repeat (Some rg) n')) ls = true)
+        : forall x, List.In x ls -> lower rg <= x <= upper rg.
+      Proof using Type.
+        clear -H.
+        cbn [ZRange.type.base.option.is_bounded_by] in *.
+        rewrite fold_andb_map_iff in H.
+        destruct H as [H' H].
+        intros x H''; specialize (H (Some rg, x)).
+        repeat first [ progress subst
+                     | progress cbn [fst snd] in *
+                     | progress cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool] in *
+                     | progress autorewrite with distr_length in *
+                     | progress rewrite combine_same in *
+                     | progress rewrite in_map_iff in *
+                     | progress specialize_by_assumption
+                     | progress Bool.split_andb
+                     | progress Z.ltb_to_lt
+                     | solve [ auto ]
+                     | match goal with
+                       | [ H : context[List.In _ (combine (repeat _ _) _)] |- _ ]
+                         => rewrite <- map_const, combine_map_l, in_map_iff in H
+                       | [ H : (exists x, _ = _ /\ _) -> _ |- _ ]
+                         => specialize (fun x0 pf => H (ex_intro _ (x0, _) (conj eq_refl pf)))
+                       | [ H : (exists x, _ = _ /\ _) -> _ |- _ ]
+                         => specialize (fun pf => H (ex_intro _ _ (conj eq_refl pf)))
+                       | [ H : forall x, List.In (x, ?y) _ -> _ |- _ ]
+                         => specialize (H y)
+                       end ].
+      Qed.
+
+      (** XXX TODO: MOVE ME *)
+      Lemma bounded_valid v
+            (H0 : 0 < machine_wordsize)
+            (H1 : eval (n:=n) machine_wordsize saturated_upper_bounds < m)
+            (Hv : @ZRange.type.base.option.is_bounded_by (base.type.list (base.type.type_base base.type.Z)) (Some bounds) v = true)
+        : valid machine_wordsize n m v.
+      Proof using Type.
+        clear -Hv H0 H1.
+        cbv [valid small].
+        cbv [bounds prime_bounds saturated_bounds saturated_upper_bounds invert_Some] in Hv.
+        assert (length v = n)
+          by (erewrite Ring.length_is_bounded_by by eassumption; autorewrite with distr_length; reflexivity).
+        split.
+        { cbv [eval saturated_upper_bounds] in *.
+          rewrite map_repeat in Hv.
+          pose proof (is_bounded_by_repeat_In_iff Hv) as Hv'; cbn [lower upper] in *.
+          now apply UniformWeight.uweight_partition_unique. }
+        { eapply eval_is_bounded_by with (wt:=(UniformWeight.uweight machine_wordsize)) in Hv;
+            [
+            | rewrite <- (map_map _ (@Some _)); reflexivity
+            | autorewrite with distr_length; reflexivity
+            | intros; apply Z.lt_le_incl, weight_positive, UniformWeight.uwprops; assumption ].
+          progress rewrite ?map_map in *.
+          cbn [lower upper] in *.
+          rewrite map_const, map_id in Hv.
+          autorewrite with distr_length in *.
+          rewrite eval_zeros in Hv.
+          destruct_head'_and; split; [ assumption | ].
+          eapply Z.le_lt_trans; [ eassumption | ].
+          assumption. }
+      Qed.
+
+      (** XXX TODO: MOVE ME *)
+      Lemma prime_bounded_valid v
+            (H0 : 0 < machine_wordsize)
+            (H1 : eval (n:=n) machine_wordsize saturated_upper_bounds < m)
+            (H2 : fold_andb_map Z.leb prime_upperbound_list saturated_upper_bounds = true)
+            (Hv : ZRange.type.base.option.is_bounded_by prime_bounds v = true)
+        : valid machine_wordsize n m v.
+      Proof using Type.
+        apply bounded_valid; try assumption; [].
+        eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; [ | eassumption ].
+        cbv [prime_bounds bounds saturated_bounds invert_Some].
+        cbn [ZRange.type.base.option.is_tighter_than fold_andb_map].
+        rewrite fold_andb_map_map, fold_andb_map_map1.
+        cbn [ZRange.type.base.is_tighter_than]; cbv [ZRange.is_tighter_than_bool]; cbn [upper lower].
+        rewrite Z.leb_refl; cbn [andb].
+        assumption.
+      Qed.
+
       (** XXX TODO MOVE ME *)
       Local Opaque valid addmod submod oppmod encodemod mulmod from_montgomery_mod nonzeromod.
       Theorem Good : GoodT.
@@ -2962,16 +3058,14 @@ Module WordByWordMontgomery.
           { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
             rewrite Bool.andb_true_iff in *; split_and'.
             apply to_bytesmod_correct; eauto; [].
-            split; cbv [small].
-            repeat match goal with H : _ |- _ => revert H end; exact admit.
-            repeat match goal with H : _ |- _ => revert H end; exact admit. } }
+            all: apply prime_bounded_valid; assumption. } }
         { intros.
           split; [ intro H'; eapply nonzeromod_correct;
                    [ .. | rewrite <- H'; symmetry; eapply Hrnonzerov ]
                  | etransitivity; [ apply Hrnonzerov | eapply nonzeromod_correct; [ .. | eassumption ] ] ];
           try solve [ eassumption | repeat split ].
-          repeat match goal with H : _ |- _ => revert H end; exact admit.
-          repeat match goal with H : _ |- _ => revert H end; exact admit. }
+          all: cbn [type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *; Bool.split_andb.
+          all: apply bounded_valid; assumption. }
       Qed.
     End make_ring.
 
