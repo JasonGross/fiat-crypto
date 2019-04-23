@@ -443,6 +443,17 @@ Module Compilers.
         cbv [folded_unify arg_types Raw.ident.assemble_ident];
           cbn [Primitive.projT1 Primitive.projT2].
         intros v.
+        Time generalize_proj1_sig_step.
+        Time specialize_sig_step. (* 0.05; reasonably fast *)
+        Undo.
+        Time match goal with
+             | [ H : { f : forall (a : ?A) (b : @?B a), @?T a b | forall a' b', f a' b' = @?g a' b' } |- _ ]
+               => time revert dependent H;
+                    intro H;
+                    time pose (fun a b => @exist (T a b) (fun f => f = g a b) (proj1_sig H a b) (proj2_sig H a b))
+             end.
+        (* about .6 s each *)
+        Time specialize_sig_step
         Time do_rew_proj2_sig.
         Time
         repeat first [ progress cbn [eq_rect eq_sym] in *
