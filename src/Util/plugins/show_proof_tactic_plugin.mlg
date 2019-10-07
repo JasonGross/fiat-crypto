@@ -1,0 +1,12 @@
+{
+
+open Ltac_plugin
+open Show_proof_tactic
+
+}
+
+DECLARE PLUGIN "show_proof_tactic_plugin"
+
+TACTIC EXTEND show_proof
+ | [ "show_proof" ] -> { tclSHOW_PROOF }
+END
