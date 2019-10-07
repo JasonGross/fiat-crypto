@@ -19,8 +19,54 @@ Module Compilers.
   .
 
   Section print_ident.
-    Local Set Printing All.
-    Local Set Printing Width 10000.
+    (*Local Set Printing All.
+    Local Set Printing Width 10000.*)
+    Require Import Ltac2.Ltac2.
+    Require Ltac2.Std.
+    Require Ltac2.Constr.
+    Require Ltac2.Control.
+    Require Ltac2.Message.
+
+    Ltac2 rec constr_list_to_list (ls : constr) :=
+      let ls := Std.eval_hnf ls in
+      lazy_match! ls with
+      | Datatypes.nil => []
+      | Datatypes.cons ?x ?xs => x :: constr_list_to_list xs
+      | ?ls => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "Invalid non-list: ") (Message.of_constr ls))))
+    end.
+
+    Ltac2 rec named_list_to_list (ls : constr) :=
+      let ls := Std.eval_hnf ls in
+      lazy_match! ls with
+      | GallinaIdentList.nil => []
+      | GallinaIdentList.cons ?x ?xs => x :: named_list_to_list xs
+      | ?ls => Control.zero (Tactic_failure (Some (Message.concat (Message.of_string "Invalid non-list: ") (Message.of_constr ls))))
+      end.
+
+    Ltac2 rec message_of_list (f : 'a -> message) (ls : 'a list) :=
+      match ls with
+      | [] => Message.of_string "[]"
+      | x :: xs => Message.concat (f x) (Message.concat (Message.of_string " :: ") (message_of_list f xs))
+      end.
+
+    Goal True.
+      let v := named_list_to_list 'base_type_list_named in
+      Message.print (message_of_list Message.of_constr v).
+
+    Ltac2 make_base_interp (base : constr) (base_type_list_named : constr) :=
+      let base_type_list_named := Std.eval_hnf base_type_list_named in
+
+      base_type_list_named.
+
+    Print base_type_list_named.
+    Print ident_
+    Print base_type_list_named.
+    Require Import Template.All.
+    Quote Recursively Definition rnat := nat.
+    Require Import Coq.Strings.String.
+    Local Open Scope string_scope.
+    Print rnat.
+
     (*Goal True. PrintIdent.print_ident base base_type_list_named all_ident_named_interped. Abort.*)
   End print_ident.
 
