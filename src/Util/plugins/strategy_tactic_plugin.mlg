@@ -1,0 +1,17 @@
+{
+
+open Ltac_plugin
+
+}
+
+DECLARE PLUGIN "strategy_tactic_plugin"
+
+
+TACTIC EXTEND strategy
+ | [ "strategy" strategy_level(v)  ] -> { Proofview.tclUNIT () }
+END
+
+(*
+v=strategy_level; "["; q=LIST1 smart_global; "]" -> { (v,q) }  ->
+            { VernacSetStrategy l }
+            *)
