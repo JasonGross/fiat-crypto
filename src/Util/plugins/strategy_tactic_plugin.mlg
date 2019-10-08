@@ -1,6 +1,8 @@
 {
 
 open Ltac_plugin
+(*open Stdarg*)
+open Strategy_tactic
 
 }
 
