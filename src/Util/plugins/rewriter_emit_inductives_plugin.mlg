@@ -1,0 +1,18 @@
+{
+
+open Stdarg
+open Rewriter_emit_inductives
+
+}
+
+VERNAC COMMAND EXTEND RewriterEmitInductives CLASSIFIED AS SIDEFF
+  | [ "Rewriter" "Emit" "Inductives" "From" constr(scraped_data) "As" ident(base_ind) ident(ident_ind) ident(raw_ident_ind) ident(pattern_ident_ind) ] -> {
+    vernac_rewriter_emit_inductives scraped_data base_ind ident_ind raw_ident_ind pattern_ident_ind
+  }
+END;;
+
+VERNAC COMMAND EXTEND DefinitionViaTactic CLASSIFIED AS SIDEFF
+  | [ "DefinitionViaTactic" ident(name) ":" constr(type) ":=" tactic3(tac) ] -> {
+    ()
+  }
+END;;
