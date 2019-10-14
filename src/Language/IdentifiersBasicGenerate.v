@@ -19,7 +19,6 @@ Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.plugins.StrategyTactic.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.Tactics.ConstrFail.
@@ -1237,7 +1236,10 @@ Module Compilers.
       Ltac cache_build_base_interp eta_base_cps base_type_list index_of_base :=
         let name := fresh "base_interp" in
         let term := build_base_interp eta_base_cps base_type_list index_of_base in
-        cache_term term name.
+        let base_interp := cache_term term name in
+        let base_interp_head := head base_interp in
+        (*let __ := match goal with _ => strategy -1000 [base_interp_head] end in*)
+        base_interp.
 
       Ltac cache_build_all_gen T mk P :=
         let name := fresh "all_gen" in
@@ -1392,7 +1394,10 @@ Module Compilers.
       Ltac cache_build_ident_interp base_interp ident index_of_ident all_ident_named_interped :=
         let name := fresh "ident_interp" in
         let term := build_ident_interp base_interp ident index_of_ident all_ident_named_interped in
-        cache_term term name.
+        let ident_interp := cache_term term name in
+        let ident_interp_head := head ident_interp in
+        (*let __ := match goal with _ => strategy -1000 [ident_interp_head] end in*)
+        ident_interp.
 
       Ltac cache_build_all_idents ident :=
         let name := fresh "all_idents" in
@@ -1559,28 +1564,23 @@ Module Compilers.
                          ident
                          base_interp
                          ident_interp) in
-        let res :=
-            constr:(@GoalType.Build_package
-                      exprInfo
-                      (ltac:(
-                         econstructor;
-                         first [ exact base_default
-                               | exact (@reflect_base_interp_beq)
-                               | exact try_make_base_transport_cps_correct
-                               | exact toFromRestrictedIdent
-                               | exact buildInvertIdentCorrect
-                               | exact (@buildInterpIdentCorrect)
-                               | exact (@buildInterpEagerIdentCorrect)
-                               | exact (@ident_interp_Proper) ]))
-                      (@GoalType.Build_ExprReifyInfoT
-                         exprInfo
-                         all_base_and_interp
-                         all_ident_and_interp)
-                      ident_is_var_like) in
-        let ident_interp_head := head ident_interp in
-        let base_interp_head := head base_interp in
-        let __ := match goal with _ => strategy -1000 [ident_interp_head base_interp_head] end in
-        res.
+        constr:(@GoalType.Build_package
+                  exprInfo
+                  (ltac:(
+                     econstructor;
+                     first [ exact base_default
+                           | exact (@reflect_base_interp_beq)
+                           | exact try_make_base_transport_cps_correct
+                           | exact toFromRestrictedIdent
+                           | exact buildInvertIdentCorrect
+                           | exact (@buildInterpIdentCorrect)
+                           | exact (@buildInterpEagerIdentCorrect)
+                           | exact (@ident_interp_Proper) ]))
+                  (@GoalType.Build_ExprReifyInfoT
+                     exprInfo
+                     all_base_and_interp
+                     all_ident_and_interp)
+                  ident_is_var_like).
       Ltac make_package_via base ident base_type_list_named var_like_idents all_ident_named_interped :=
         let res := build_package base ident base_type_list_named var_like_idents all_ident_named_interped in refine res.
 
