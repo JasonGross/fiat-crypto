@@ -613,9 +613,15 @@ Module Compilers.
                          | true => constr:(pattern.base.type base)
                          end in
         let lookup := fresh in
-        let identType := constr:(Type) in
-        let base_interpType := lazymatch type of base_interp with _ -> ?TYPE => TYPE end in
-        let _enforce_univs := constr:(base_interpType : identType) in
+        let identType
+            := lazymatch is_pattern with
+               | false
+                 => let identType := constr:(Type) in
+                    let base_interpType := lazymatch type of base_interp with _ -> ?TYPE => TYPE end in
+                    let _enforce_univs := constr:(base_interpType : identType) in
+                    identType
+               | true => constr:(Set)
+               end in
         let t := fresh "t" in
         let res
             := constr:(forall (lookup : positive -> Type)
