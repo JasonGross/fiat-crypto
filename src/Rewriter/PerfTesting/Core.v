@@ -103,7 +103,7 @@ Module Import UnsaturatedSolinas.
 
 
   Section foo.
-    Definition ps := Eval vm_compute in of_string "2^9-1"%string 16.
+    Definition ps := Eval vm_compute in of_string "2^9-1"%string 8.
     Definition p : params := Eval vm_compute in match ps as ps' return match ps' with nil => _ | _ => _ end with cons x _ => x | _ => I end.
     Existing Instance p.
     Print p.
@@ -253,20 +253,20 @@ Module Import UnsaturatedSolinas.
           (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv)))));(*.
         Time*)
           (rewrite_strat eval cbv [Init.Nat.pred Core.Positional.zeros repeat Core.Positional.place nat_rect]);
-          (rewrite_strat ((repeat (topdown (hints mydb; eval mycbv)))));(*.
+          (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv)))));(*.
         Time*)
-          (rewrite_strat ((repeat (topdown (hints mydb; eval mycbv)))));
+          (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv)))));
           (rewrite_strat eval cbv [Core.Positional.add_to_nth Core.Associational.reduce]);(*.
         Set Printing Depth 1000000.
         Typeclasses eauto := debug.
         Time*)
-          (rewrite_strat ((repeat (topdown (hints mydb; eval mycbv)))));(*.
+          (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv)))));(*.
         Time*)
-          (rewrite_strat ((repeat (topdown (hints mydb; eval mycbv))))).
+          (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv))))).
         Time
         Print Core.Associational.split.
         Time rewrite_strat eval cbv [Core.Associational.split Core.Associational.mul].
-        Time (rewrite_strat ((repeat (topdown (hints mydb; eval mycbv))))).
+        Time (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv))))).
         Time rewrite_strat eval cbv [Core.Associational.split Core.Associational.mul].
         Print Core.Associational.split.
         Time (rewrite_strat ((repeat (topdown (hints mydb; eval mycbv))))).
