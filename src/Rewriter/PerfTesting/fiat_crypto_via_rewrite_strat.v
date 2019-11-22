@@ -1,3 +1,8 @@
+(** This file can be run interactively in emacs/PG from the
+    fiat-crypto directory *)
+(** If you want to use coqc, you must set [COQPATH] to the value
+    emitted by [make printenv] in fiat-crypto, and then invoke [coqc
+    -q -R /path/to/fiat-crypto/src Crypto /path/to/this-file.v]. *)
 Require Import Coq.Lists.List.
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Classes.Morphisms.
@@ -167,3 +172,5 @@ Goal True.
       (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv)))));(*.
         Time*)
       (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv))))).
+    Show.
+Abort.
