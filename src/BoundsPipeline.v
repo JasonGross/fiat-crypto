@@ -3,6 +3,7 @@
     composed pipeline.  It is the final interface for the compiler,
     right before integration with Arithmetic. *)
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Coq.QArith.QArith_base.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
@@ -13,11 +14,14 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Rewriter.Language.Language.
@@ -99,23 +103,33 @@ Proof.
   specialize_by_assumption; omega.
 Qed.
 
-Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
+Definition relax_zrange_gen_internal (possible_values : list Z)
+  : zrange -> option zrange
   := (fun '(r[ l ~> u ])
       => if (0 <=? l)%Z
-         then option_map (fun u => r[0~>2^u-1])
-                         (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
-        else None)%zrange.
+         then
+           option_map (fun u => r[0~>2^u-1])
+                      (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
+         else
+           if ((l <? 0) && (0 <=? u))%Z%bool
+           then
+             option_map (fun u => r[-2^(u-1)~>2^(u-1)-1])
+                        (round_up_bitwidth_gen
+                           possible_values
+                           (1 + Z.log2_up (Z.max (-l) (u+1))))
+           else
+             None)%zrange.
 
-Lemma relax_zrange_gen_good
+Lemma relax_zrange_gen_internal_good
       (possible_values : list Z)
   : forall r r' z : zrange,
-    (z <=? r)%zrange = true -> relax_zrange_gen possible_values r = Some r' -> (z <=? r')%zrange = true.
+    (z <=? r)%zrange = true -> relax_zrange_gen_internal possible_values r = Some r' -> (z <=? r')%zrange = true.
 Proof.
-  cbv [is_tighter_than_bool relax_zrange_gen]; intros *.
+  cbv [is_tighter_than_bool relax_zrange_gen_internal]; intros *.
   pose proof (Z.log2_up_nonneg (upper r + 1)).
   rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
   cbv [List.fold_right option_map].
-  break_innermost_match; intros; destruct_head'_and;
+  break_innermost_match; intros; destruct_head'_and; Bool.split_andb;
     try match goal with
         | [ H : _ |- _ ] => apply round_up_bitwidth_gen_le in H
         end;
@@ -124,8 +138,25 @@ Proof.
       repeat apply conj;
       Z.ltb_to_lt; try omega;
         try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
+  all: repeat match goal with
+              | [ H : context[Z.log2_up (Z.max _ _)] |- _ ] => rewrite <- Z.max_log2_up in H
+              | [ H : 1 + Z.max ?a ?b <= ?c |- _ ]
+                => assert (a <= c - 1)
+                  by (transitivity (Z.max a b); [ apply Z.le_max_l | clear -H; lia ]);
+                     assert (b <= c - 1)
+                     by (transitivity (Z.max a b); [ apply Z.le_max_r | clear -H; lia ]);
+                     clear H
+              | [ H : Z.log2_up _ <= _ |- context[2^_] ]
+                => rewrite <- Z.log2_up_le_pow2_full in H by lia
+              | [ H : context[Z.log2_up ?x] |- _ ]
+                => unique assert (0 <= Z.log2_up x) by auto with zarith
+              | _ => lia
+              end.
 Qed.
 
+(** Use only signed integer types *)
+Class only_signed_opt := only_signed : bool.
+Typeclasses Opaque only_signed_opt.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
@@ -156,6 +187,27 @@ Notation prefix_with_carry bitwidths :=
 Notation prefix_with_carry_bytes bitwidths :=
   (prefix_with_carry (match bitwidths return _ with bw => if widen_bytes then bw else 8::bw end)%Z) (* master and 8.9 are incompatible about scoping of multiple occurrences of an argument *)
     (only parsing).
+
+Definition relax_zrange_gen {only_signed : only_signed_opt} (possible_values : list Z) (r : zrange) : option zrange
+  := let r := if only_signed
+              then if (r =? r[0~>1])%zrange
+                   then r
+                   else ZRange.union r[-1~>0] r
+              else r in
+     relax_zrange_gen_internal possible_values r.
+
+Lemma relax_zrange_gen_good
+      {only_signed : only_signed_opt}
+      (possible_values : list Z)
+  : forall r r' z : zrange,
+    (z <=? r)%zrange = true -> relax_zrange_gen possible_values r = Some r' -> (z <=? r')%zrange = true.
+Proof.
+  cbv [relax_zrange_gen]; intros ??? ?.
+  apply relax_zrange_gen_internal_good.
+  eapply (_ : Transitive (fun x y : zrange => is_true (x <=? y)%zrange)); [ eassumption | ].
+  break_innermost_match; try reflexivity; [].
+  apply ZRange.is_tighter_than_bool_union_r.
+Qed.
 
 Module Pipeline.
   Import GeneralizeVar.
@@ -342,6 +394,7 @@ Module Pipeline.
        E.
 
   Definition BoundsPipeline
+             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -389,6 +442,7 @@ Module Pipeline.
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
+             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              (type_prefix : string)
              (name : string)
@@ -421,6 +475,7 @@ Module Pipeline.
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
+             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              (type_prefix : string)
              (name : string)
@@ -447,10 +502,10 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c d t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c d t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString prefix name result
@@ -524,6 +579,7 @@ Module Pipeline.
   Local Opaque CheckedPartialEvaluateWithBounds.
   Local Opaque FromFlat ToFlat.
   Lemma BoundsPipeline_correct
+             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -606,6 +662,7 @@ Module Pipeline.
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
+        {only_signed : only_signed_opt}
         {split_mul_to : split_mul_to_opt}
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)

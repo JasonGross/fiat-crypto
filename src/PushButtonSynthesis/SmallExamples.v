@@ -21,6 +21,7 @@ Import Compilers.API.
 Import Associational Positional.
 
 Local Instance : split_mul_to_opt := None.
+Local Instance only_signed : only_signed_opt := false.
 
 Time Redirect "log" Compute
      (Pipeline.BoundsPipeline

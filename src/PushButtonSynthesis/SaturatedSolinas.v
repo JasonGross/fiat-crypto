@@ -59,6 +59,7 @@ Local Opaque expr.Interp.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
+          {only_signed : only_signed_opt}
           {static : static_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}

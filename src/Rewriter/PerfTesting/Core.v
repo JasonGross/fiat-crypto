@@ -49,6 +49,7 @@ Local Instance : emit_primitives_opt := true.
 Local Instance : should_split_mul_opt := false.
 Local Instance : widen_bytes_opt := false.
 Local Instance : widen_carry_opt := false.
+Local Instance : only_signed_opt := false.
 
 Import API.
 

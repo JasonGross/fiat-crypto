@@ -37,11 +37,12 @@ Module X25519_64.
             (s : Z := 2^255)
             (c : list (Z * Z) := [(1,19)])
             (machine_wordsize : Z := 64)
+            (only_signed : only_signed_opt := false)
             (should_split_mul : should_split_mul_opt := true)
             (widen_carry : widen_carry_opt := true)
             (widen_bytes : widen_bytes_opt := true).
 
-    Local Existing Instances should_split_mul widen_carry widen_bytes.
+    Local Existing Instances only_signed should_split_mul widen_carry widen_bytes.
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
@@ -654,11 +655,12 @@ Module X25519_32.
             (s : Z := 2^255)
             (c : list (Z * Z) := [(1,19)])
             (machine_wordsize : Z := 32)
+            (only_signed : only_signed_opt := false)
             (should_split_mul : should_split_mul_opt := true)
             (widen_carry : widen_carry_opt := true)
             (widen_bytes : widen_bytes_opt := true).
 
-    Local Existing Instances should_split_mul widen_carry widen_bytes.
+    Local Existing Instances only_signed should_split_mul widen_carry widen_bytes.
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.

@@ -142,6 +142,8 @@ Module ForExtraction.
        "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
   Definition static_help
     := "  --static                Declare the functions as static, i.e., local to the file.".
+  Definition only_signed_help
+    := "  --only-signed           Disallow the use of unsigned integers, picking the narrowest valid signed integer type instead.".
   Definition no_wide_int_help
     := "  --no-wide-int           Don't use integers wider than the bitwidth.".
   Definition no_primitives_help
@@ -221,6 +223,8 @@ Module ForExtraction.
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
 
+      (** Should we disallow unsigned types? *)
+      ; only_signed :> only_signed_opt
       (** Should we split apart oversized operations? *)
       ; should_split_mul :> should_split_mul_opt
       (** Should we widen the carry to the full bitwidth? *)
@@ -348,11 +352,12 @@ Module ForExtraction.
                match argv with
                | nil => error ["empty argv"]
                | prog::args
-                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-primitives] curve_description " ++ pipeline_usage_string;
+                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-primitives] [--only-signed] curve_description " ++ pipeline_usage_string;
                                "Got " ++ show false (List.length args) ++ " arguments.";
                                "";
                                lang_help;
                                static_help;
+                               only_signed_help;
                                no_wide_int_help;
                                no_primitives_help;
                                curve_description_help]%string)
@@ -362,6 +367,7 @@ Module ForExtraction.
            let '(argv, output_language_api) := argv_to_language_and_argv argv in
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
 
+           let '(argv, only_signedv) := argv_to_contains_opt_and_argv "--only-signed" argv in
            let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
            match argv with
@@ -370,6 +376,7 @@ Module ForExtraction.
                 | Some (inl args)
                   => let opts
                          := {| static := staticv
+                               ; only_signed := only_signedv
                                ; should_split_mul := no_wide_intsv
                                ; emit_primitives := negb no_primitivesv |} in
                      Pipeline curve_description args success error
