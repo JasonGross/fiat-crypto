@@ -11,6 +11,7 @@
 package fiat_p448
 
 import "math/bits"
+var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers
 
 
 /*
@@ -52,9 +53,9 @@ func fiat_p448_addcarryx_u56(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint6
  */
 /*inline*/
 func fiat_p448_subborrowx_u56(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 int64 = ((int64(arg2) - int64(arg1)) - int64(arg3))
-  var x2 int64 = (x1 >> 56)
-  var x3 uint64 = (uint64(x1) & 0xffffffffffffff)
+  var x1 fiat_p448_int128 = ((fiat_p448_int128(arg2) - fiat_p448_int128(arg1)) - fiat_p448_int128(arg3))
+  var x2 int64 = (int64(x1) >> 56)
+  var x3 uint64 = (uint64(int64(x1)) & 0xffffffffffffff)
   *out1 = x3
   *out2 = (uint64(0x0) - uint64(x2))
 }

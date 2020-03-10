@@ -238,6 +238,56 @@ Module debugging_p256_uint1.
   End __.
 End debugging_p256_uint1.
 
+Module debugging_go_build_int128.
+  Import Stringification.Go.
+  Section __.
+    Local Existing Instance Go.OutputGoAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : should_split_mul_opt := true. (* only for x64 *)
+
+    Context (n : nat := 5%nat)
+            (s : Z := 2^255)
+            (c : list (Z * Z) := [(1,19)])
+            (machine_wordsize : Z := 64).
+
+    (*Compute Primitives.ssubborrowx machine_wordsize "" 51.*)
+    Goal True.
+      pose (Primitives.ssubborrowx machine_wordsize "" 51) as v.
+      cbv [Primitives.ssubborrowx] in v.
+      set (v' := Primitives.subborrowx _ _) in (value of v).
+      vm_compute in v'.
+      subst v'; cbv beta iota zeta in v.
+      set (v' := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _) in (value of v); clear v; rename v' into v.
+      cbv [Language.Compilers.ToString.ToFunctionLines Go.OutputGoAPI] in v.
+      cbv [Go.ToFunctionLines] in v.
+      set (k := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of v).
+      clear v; rename k into v.
+      cbv [IR.OfPHOAS.ExprOfPHOAS] in v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS] in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of v).
+      vm_compute in k; subst k.
+      cbv beta iota zeta in v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS'] in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of v).
+      vm_compute in k; subst k.
+      cbv beta iota zeta in v.
+      cbv [invert_expr.invert_Abs] in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of v).
+      vm_compute in k; subst k.
+      cbv beta iota zeta in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of v).
+      vm_compute in k; subst k.
+      cbv beta iota zeta in v.
+      cbv [IR.OfPHOAS.expr_of_base_PHOAS] in v.
+    Abort.
+  End __.
+End debugging_go_build_int128.
+
 Module debugging_go_build0.
   Import Stringification.Go.
   Section __.

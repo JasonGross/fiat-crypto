@@ -51,9 +51,9 @@ func fiat_25519_addcarryx_u26(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint
  */
 /*inline*/
 func fiat_25519_subborrowx_u26(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
-  var x1 int32 = ((int32(arg2) - int32(arg1)) - int32(arg3))
-  var x2 int32 = (x1 >> 26)
-  var x3 uint32 = (uint32(x1) & 0x3ffffff)
+  var x1 int64 = ((int64(arg2) - int64(arg1)) - int64(arg3))
+  var x2 int32 = (int32(x1) >> 26)
+  var x3 uint32 = (uint32(int32(x1)) & 0x3ffffff)
   *out1 = x3
   *out2 = (uint32(0x0) - uint32(x2))
 }
@@ -97,9 +97,9 @@ func fiat_25519_addcarryx_u25(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint
  */
 /*inline*/
 func fiat_25519_subborrowx_u25(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
-  var x1 int32 = ((int32(arg2) - int32(arg1)) - int32(arg3))
-  var x2 int32 = (x1 >> 25)
-  var x3 uint32 = (uint32(x1) & 0x1ffffff)
+  var x1 int64 = ((int64(arg2) - int64(arg1)) - int64(arg3))
+  var x2 int32 = (int32(x1) >> 25)
+  var x3 uint32 = (uint32(int32(x1)) & 0x1ffffff)
   *out1 = x3
   *out2 = (uint32(0x0) - uint32(x2))
 }

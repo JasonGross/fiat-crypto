@@ -307,6 +307,7 @@ Module Go.
           | Some desired_type
             => let ct := ToString.int.union t1 t2 in
                if bin_op_commutes_with_mod_pow2 idc
+                  && ToString.int.is_unsigned desired_type
                then
                  (* these operations commute with mod, so we just pre-cast them *)
                  (None, (Some desired_type, Some desired_type))
