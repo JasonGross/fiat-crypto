@@ -231,16 +231,51 @@ Module Rust.
     := fun idc '(t1, t2)
        => ToString.int.union t1 t2.
 
+  (* Does the binary operation commute with (-- mod 2^bw)? *)
+  Definition bin_op_commutes_with_mod_pow2 (idc : IR.Z_binop)
+    := match idc with
+       | IR.Z_land
+       | IR.Z_lor
+       | IR.Z_add
+       | IR.Z_mul
+       | IR.Z_sub
+         => true
+       end.
+
+  (* Does the binary operation commute with bitwise truncation to a smaller integer type? *)
+  Definition bin_op_commutes_with_truncation (idc : IR.Z_binop)
+    := match idc with
+       | IR.Z_land
+       | IR.Z_lor
+         => true
+       | IR.Z_add
+       | IR.Z_mul
+       | IR.Z_sub
+         => false
+       end.
+
   Definition Rust_bin_op_casts
     : IR.Z_binop -> option ToString.int.type -> ToString.int.type * ToString.int.type -> option ToString.int.type * (option ToString.int.type * option ToString.int.type)
     := fun idc desired_type '(t1, t2)
        => match desired_type with
           | Some desired_type
             => let ct := ToString.int.union t1 t2 in
-               let desired_type' := Some (ToString.int.union ct desired_type) in
-               (Some desired_type,
-                (get_Zcast_up_if_needed desired_type' (Some t1),
-                 get_Zcast_up_if_needed desired_type' (Some t2)))
+               if bin_op_commutes_with_mod_pow2 idc
+                  && ToString.int.is_unsigned desired_type
+               then
+                 (* these operations commute with unsigned mod, so we just pre-cast them *)
+                 (None, (Some desired_type, Some desired_type))
+               else if bin_op_commutes_with_truncation idc
+                       && ToString.int.is_tighter_than desired_type t1
+                       && ToString.int.is_tighter_than desired_type t2
+                    then
+                      (* these operations commute with bit-truncation / cast down, so we can simply truncate them to the desired type first *)
+                      (None, (Some desired_type, Some desired_type))
+                    else
+                      let desired_type' := Some (ToString.int.union ct desired_type) in
+                      (desired_type',
+                       (get_Zcast_up_if_needed desired_type' (Some t1),
+                        get_Zcast_up_if_needed desired_type' (Some t2)))
           | None => (None, (None, None))
           end.
 
