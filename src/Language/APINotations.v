@@ -103,6 +103,7 @@ Module Compilers.
   Global Arguments ident_is_var_like {_} _ : assert.
   Global Arguments eqv_Reflexive_Proper {_} _.
   Global Arguments ident_interp_Proper {_}.
+  Global Arguments ident_Q_rect {_} : assert.
 
   Ltac reify_base :=
     let package := reify_package_of_package package in
@@ -128,6 +129,8 @@ Module Compilers.
       Notation nat := nat (only parsing).
       Notation zrange := zrange (only parsing).
       Notation bool := bool (only parsing).
+      Notation positive := positive (only parsing).
+      Notation Q := Q (only parsing).
       Notation base_beq := Compilers.base_beq (only parsing).
 
       Export Language.Compilers.base.type.
@@ -248,6 +251,12 @@ Module Compilers.
     Notation Some := Compilers.ident_Some (only parsing).
     Notation None := Compilers.ident_None (only parsing).
     Notation option_rect := Compilers.ident_option_rect (only parsing).
+    Notation Q_rect := Compilers.ident_Q_rect (only parsing).
+    Notation Qmake := Compilers.ident_Qmake (only parsing).
+    Notation Qnum := Compilers.ident_Qnum (only parsing).
+    Notation Qden := Compilers.ident_Qden (only parsing).
+    Notation Zpos := Compilers.ident_Zpos (only parsing).
+    Notation Zneg := Compilers.ident_Zneg (only parsing).
     Notation Build_zrange := Compilers.ident_Build_zrange (only parsing).
     Notation zrange_rect := Compilers.ident_zrange_rect (only parsing).
     Notation fancy_add := Compilers.ident_fancy_add (only parsing).

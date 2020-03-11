@@ -236,6 +236,8 @@ Module Pipeline.
          | base.type.type_base base.type.nat
          | base.type.type_base base.type.bool
          | base.type.type_base base.type.zrange
+         | base.type.type_base base.type.positive
+         | base.type.type_base base.type.Q
            => fun _ _ => (false, nil, nil)
          | base.type.type_base base.type.Z
            => fun a b

@@ -758,6 +758,12 @@ Module Compilers.
                  | ident.Z_combine_at_bitwidth
                  | ident.Z_cast
                  | ident.Z_cast2
+                 | ident.Q_rect _
+                 | ident.Qmake
+                 | ident.Qnum
+                 | ident.Qden
+                 | ident.Zpos
+                 | ident.Zneg
                  | ident.Build_zrange
                  | ident.zrange_rect _
                  | ident.fancy_add

@@ -1,4 +1,5 @@
 Require Import Coq.micromega.Lia.
+Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationPairs.
@@ -262,6 +263,13 @@ Module Compilers.
                                 apply nth_error_error_length in H';
                                 omega
                            | [ |- (0 <= 1)%Z ] => clear; omega
+                           | [ H : ?beq ?x ?y = true |- ?x = ?y ]
+                             => progress reflect_beq_to_eq beq
+                           | [ H : ?beq ?x ?y = true |- _ ]
+                             => lazymatch beq with base.interp_beq _ => idtac end;
+                                progress reflect_beq_to_eq beq
+                           | [ |- ?beq ?x ?x = true ]
+                             => progress reflect_beq_to_eq beq
                            end
                          | handle_lt_le_t_step_fast
                          | simplify_ranges_t_step_fast
@@ -270,6 +278,7 @@ Module Compilers.
                          | progress subst
                          | progress inversion_option
                          | progress inversion_prod
+                         | progress inversion_zrange
                          | progress destruct_head'_and
                          | progress destruct_head'_unit
                          | progress destruct_head'_prod
@@ -277,8 +286,9 @@ Module Compilers.
                          | break_innermost_match_step
                          | break_innermost_match_hyps_step
                          | progress cbn [id
-                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Crypto.Util.Option.bind fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
+                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Crypto.Util.Option.bind fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp QUtil.Q_rect_nodep] in *
                          | progress ident.fancy.cbv_fancy_in_all
+                         | progress destruct_head' Q
                          | progress destruct_head'_bool
                          | solve [ auto with nocore ]
                          | progress fold (@base.interp) in *

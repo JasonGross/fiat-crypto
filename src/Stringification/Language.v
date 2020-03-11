@@ -1,3 +1,4 @@
+Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
@@ -52,6 +53,8 @@ Module Compilers.
                | base.type.type_base base.type.bool => @show bool _
                | base.type.type_base base.type.nat => @show nat _
                | base.type.type_base base.type.zrange => @show zrange _
+               | base.type.type_base base.type.positive => @show positive _
+               | base.type.type_base base.type.Q => @show Q _
                | base.type.prod A B
                  => fun _ '(a, b)
                     => "(" ++ @show_interp A false a ++ ", " ++ @show_interp B true b ++ ")"
@@ -71,6 +74,8 @@ Module Compilers.
                  | base.type.type_base base.type.bool => @show (option bool) _
                  | base.type.type_base base.type.nat => @show (option nat) _
                  | base.type.type_base base.type.zrange => @show (option zrange) _
+                 | base.type.type_base base.type.positive => @show (option positive) _
+                 | base.type.type_base base.type.Q => @show (option Q) _
                  | base.type.prod A B
                    => let SA := @show_interp A in
                       let SB := @show_interp B in
@@ -108,6 +113,8 @@ Module Compilers.
                        | base.type.bool => "𝔹"
                        | base.type.nat => "ℕ"
                        | base.type.zrange => "zrange"
+                       | base.type.positive => "ℤ⁺"
+                       | base.type.Q => "ℚ"
                        end.
           Fixpoint show_type (with_parens : bool) (t : base.type) : string
             := match t with
@@ -128,6 +135,8 @@ Module Compilers.
                | base.type.bool => @show bool _
                | base.type.nat => @show nat _
                | base.type.zrange => @show zrange _
+               | base.type.positive => @show positive _
+               | base.type.Q => @show Q _
                end.
           Global Existing Instance show_base_interp.
           Fixpoint show_interp {t} : Show (base.interp t)
@@ -297,6 +306,19 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "fold_right") args, ZRange.type.base.option.None)
              | ident.List_update_nth T
                => fun args => (show_application with_casts (fun _ => "update_nth") args, ZRange.type.base.option.None)
+             | ident.Q_rect T
+               => fun args => (show_application with_casts (fun _ => "Q_rect") args, ZRange.type.base.option.None)
+             | ident.Qmake
+               => fun '(n, (d, tt))
+                  => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (maybe_wrap_cast with_casts n 55 ++ " # " ++ maybe_wrap_cast with_casts d 55), ZRange.type.base.option.None)
+             | ident.Qnum
+               => fun args => (show_application with_casts (fun _ => "Qnum") args, ZRange.type.base.option.None)
+             | ident.Qden
+               => fun args => (show_application with_casts (fun _ => "Qden") args, ZRange.type.base.option.None)
+             | ident.Zpos
+               => fun args => (show_application with_casts (fun _ => "Zpos") args, ZRange.type.base.option.None)
+             | ident.Zneg
+               => fun args => (show_application with_casts (fun _ => "Zneg") args, ZRange.type.base.option.None)
              | ident.eager_List_nth_default T
                => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[[" ++ i 200%nat ++ "]]"), ZRange.type.base.option.None)
              | ident.List_nth_default T
@@ -439,6 +461,12 @@ Module Compilers.
                 | ident.Some _ => "Some"
                 | ident.None _ => "None"
                 | ident.option_rect _ _ => "option_rect"
+                | ident.Q_rect _ => "Q_rect"
+                | ident.Qmake => "Qmake"
+                | ident.Qnum => "Qnum"
+                | ident.Qden => "Qden"
+                | ident.Zpos => "Zpos"
+                | ident.Zneg => "Zneg"
                 | ident.Z_add => "(+)"
                 | ident.Z_mul => "( * )"
                 | ident.Z_pow => "(^)"

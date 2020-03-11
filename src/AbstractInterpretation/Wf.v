@@ -784,6 +784,7 @@ Module Compilers.
                        | discriminate
                        | solve [ eauto ]
                        | apply NatUtil.nat_rect_Proper_nondep
+                       | apply QUtil.Q_rect_Proper_nondep
                        | apply ListUtil.list_rect_Proper
                        | apply ListUtil.list_rect_arrow_Proper
                        | apply ListUtil.list_case_Proper

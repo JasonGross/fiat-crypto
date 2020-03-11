@@ -450,27 +450,47 @@ Module Compilers.
                => ident.interp idc
              | ident.Nat_succ as idc
              | ident.Nat_pred as idc
-               => option_map (ident.interp idc)
              | ident.Z_of_nat as idc
-               => option_map (fun n => r[Z.of_nat n~>Z.of_nat n]%zrange)
              | ident.Z_to_nat as idc
-               => fun v => v <- to_literal v; Some (ident.interp idc v)
-             | ident.List_length _
-               => option_map (@List.length _)
+             | ident.Qnum as idc
+             | ident.Qden as idc
+             | ident.Zpos as idc
+             | ident.Zneg as idc
+               => fun x => match to_literal x with
+                           | Some x => of_literal (ident.interp idc x)
+                           | _ => ZRange.type.base.option.None
+                           end
              | ident.Nat_max as idc
              | ident.Nat_mul as idc
              | ident.Nat_add as idc
              | ident.Nat_sub as idc
              | ident.Nat_eqb as idc
+             | ident.Z_eqb as idc
+             | ident.Z_leb as idc
+             | ident.Z_ltb as idc
+             | ident.Z_geb as idc
+             | ident.Z_gtb as idc
+             | ident.Z_max as idc
+             | ident.Z_min as idc
+             | ident.Z_pow as idc
+             | ident.Z_modulo as idc
+             | ident.Build_zrange as idc
+             | ident.Qmake as idc
+               => fun x y => match to_literal x, to_literal y with
+                             | Some x, Some y => of_literal (ident.interp idc x y)
+                             | _, _ => ZRange.type.base.option.None
+                             end
              | ident.List_seq as idc
                => fun x y => x <- x; y <- y; rSome (ident.interp idc x y)
+             | ident.List_length _
+               => option_map (@List.length _)
              | ident.List_repeat _
                => fun x y => y <- y; Some (repeat x y)
-             | ident.List_firstn _
-               => fun n ls => n <- n; ls <- ls; Some (firstn n ls)
-             | ident.List_skipn _
-               => fun n ls => n <- n; ls <- ls; Some (skipn n ls)
-             | ident.List_combine _ _
+             | ident.List_firstn _ as idc
+               => fun x y => x <- x; y <- y; Some (firstn x y)
+             | ident.List_skipn _ as idc
+               => fun x y => x <- x; y <- y; Some (skipn x y)
+             | ident.List_combine _ _ as idc
                => fun x y => x <- x; y <- y; Some (List.combine x y)
              | ident.List_flat_map _ _
                => fun f ls
@@ -496,20 +516,6 @@ Module Compilers.
                          ls
                    | None => (None, None)
                    end
-             | ident.Z_eqb as idc
-             | ident.Z_leb as idc
-             | ident.Z_ltb as idc
-             | ident.Z_geb as idc
-             | ident.Z_gtb as idc
-             | ident.Z_max as idc
-             | ident.Z_min as idc
-             | ident.Z_pow as idc
-             | ident.Z_modulo as idc
-             | ident.Build_zrange as idc
-               => fun x y => match to_literal x, to_literal y with
-                             | Some x, Some y => of_literal (ident.interp idc x y)
-                             | _, _ => ZRange.type.base.option.None
-                             end
              | ident.Z_ltz as idc
                => fun x y => match to_literal x, to_literal y with
                              | Some x, Some y => of_literal (ident.interp idc x y)
@@ -554,6 +560,12 @@ Module Compilers.
                    | Some o => option_rect _ s (n tt) o
                    | None => ZRange.type.base.option.None
                    end
+             | ident.Q_rect _
+               => fun f q
+                  => match q with
+                     | Some q => QUtil.Q_rect_nodep _ (fun n d => f (of_literal (t:=tZ) n) (Some d)) q
+                     | None => ZRange.type.base.option.None
+                     end
              | ident.zrange_rect _
                => fun f v
                  => match v with

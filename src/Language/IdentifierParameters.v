@@ -1,3 +1,4 @@
+Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
@@ -14,8 +15,12 @@ Ltac reify_preprocess_extra term ::=
   | match ?x with ZRange.Build_zrange a b => @?f a b end
     => let T := type of term in
        constr:(@ZRange.zrange_rect_nodep T f x)
+  | match ?x with Qmake n d => @?f n d end
+    => let T := type of term in
+       constr:(@Q_rect_nodep T f x)
   | _ => term
   end.
+
 
 Ltac reify_ident_preprocess_extra term ::=
   lazymatch term with
@@ -24,6 +29,12 @@ Ltac reify_ident_preprocess_extra term ::=
        | fun _ => ?T => constr:(@ZRange.zrange_rect_nodep T)
        | T0 => term
        | ?T' => constr:(@ZRange.zrange_rect T')
+       end
+  | @QUtil.Q_rect ?T0
+    => lazymatch (eval cbv beta in T0) with
+       | fun _ => ?T => constr:(@QUtil.Q_rect_nodep T)
+       | T0 => term
+       | ?T' => constr:(@QUtil.Q_rect T')
        end
   | _ => term
   end.
@@ -44,7 +55,9 @@ Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
       ; with_name bool Datatypes.bool
       ; with_name nat Datatypes.nat
-      ; with_name zrange ZRange.zrange]%hlist.
+      ; with_name zrange ZRange.zrange
+      ; with_name positive positive
+      ; with_name Q Q]%hlist.
 
 Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
@@ -130,6 +143,12 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Some (@Datatypes.Some)
       ; with_name ident_None (@Datatypes.None)
       ; with_name ident_option_rect (@Thunked.option_rect)
+      ; with_name ident_Q_rect (@Q_rect_nodep)
+      ; with_name ident_Qmake Qmake
+      ; with_name ident_Qnum Qnum
+      ; with_name ident_Qden Qden
+      ; with_name ident_Zpos Zpos
+      ; with_name ident_Zneg Zneg
       ; with_name ident_Build_zrange ZRange.Build_zrange
       ; with_name ident_zrange_rect (@ZRange.zrange_rect_nodep)
       ; with_name ident_fancy_add ident.fancy.add
