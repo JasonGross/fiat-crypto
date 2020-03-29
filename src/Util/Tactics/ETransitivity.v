@@ -1,4 +1,6 @@
 Require Import Coq.Classes.RelationClasses.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Tactic Notation "etransitivity" open_constr(y) :=
   intros;

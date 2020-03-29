@@ -1,5 +1,7 @@
 Require Import Coq.omega.Omega.
 Require Import Coq.ZArith.BinInt.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Ltac rewrite_min_max_side_condition_t := omega.
 

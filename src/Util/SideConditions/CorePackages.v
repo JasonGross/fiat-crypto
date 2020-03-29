@@ -1,3 +1,5 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 Import EqNotations.
 
 Local Set Primitive Projections.

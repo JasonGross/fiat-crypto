@@ -1,5 +1,7 @@
 (*** Boolean Utility Lemmas and Databases *)
 Require Import Coq.Bool.Bool.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 (** For equalities of booleans *)
 Create HintDb bool_congr discriminated.

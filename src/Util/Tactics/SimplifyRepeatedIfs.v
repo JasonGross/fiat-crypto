@@ -1,3 +1,6 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
+
 Ltac simplify_repeated_ifs_step :=
   match goal with
   | [ |- context G[if ?b then ?x else ?y] ]

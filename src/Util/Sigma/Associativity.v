@@ -1,3 +1,5 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 (** * Reassociation of [sig] *)
 Definition sig_sig_assoc {A} {P : A -> Prop} {Q}
   : { a : A | P a /\ Q a } -> { ap : { a : A | P a } | Q (proj1_sig ap) }

@@ -3,6 +3,8 @@ Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.micromega.Lia.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 Import Nat.
 
 Scheme Equality for nat.

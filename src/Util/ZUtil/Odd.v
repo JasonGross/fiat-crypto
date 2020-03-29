@@ -1,6 +1,8 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.ZArith.Znumtheory.
 Require Import Coq.micromega.Lia.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 Local Open Scope Z_scope.
 
 Module Z.

@@ -1,4 +1,6 @@
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Lemma PER_valid_l {A} {R : relation A} {HS : Symmetric R} {HT : Transitive R} x y (H : R x y) : Proper R x.
 Proof. hnf; etransitivity; eassumption || symmetry; eassumption. Qed.

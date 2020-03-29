@@ -1,5 +1,7 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Module Z.
   Module Order <: TotalLeBool.

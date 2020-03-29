@@ -1,3 +1,6 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
+
 (** A tactic that executes immediately (during expression evaluation / constr-construction) and fails.  Ideally we can eventually give it a nicer error message.  COQBUG(3913) *)
 
 Ltac constr_fail :=

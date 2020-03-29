@@ -1,4 +1,6 @@
 Require Import Coq.PArith.BinPosDef.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Open Scope positive_scope.
 (** Append two sequences *)

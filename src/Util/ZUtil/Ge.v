@@ -1,4 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.Classes.RelationClasses.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Open Scope Z_scope.
 

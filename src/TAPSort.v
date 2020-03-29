@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Sorting.Mergesort.
-
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Module TAPOrder <: Orders.TotalLeBool.
   Local Coercion is_true : bool >-> Sortclass.

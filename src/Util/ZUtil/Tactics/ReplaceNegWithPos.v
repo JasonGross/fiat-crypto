@@ -1,4 +1,6 @@
 Require Import Coq.omega.Omega Coq.ZArith.ZArith.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 Local Open Scope Z_scope.
 
 Module Z.

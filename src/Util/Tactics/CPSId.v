@@ -1,3 +1,6 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
+
 (** * [cps_id] is a scaffold for writing tactics that convert to cps normal form (where the continuation is the identity *)
 
 Ltac ensure_complex_continuation allow_option k :=

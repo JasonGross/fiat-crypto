@@ -1,6 +1,8 @@
 (** * Declaration of Hint Databases with lemmas about ℤ from the standard library *)
 Require Import Coq.micromega.Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.ZArith.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 (* Should we [Require Import Coq.ZArith.Zhints.]? *)
 
 Hint Extern 1 => lia : lia.

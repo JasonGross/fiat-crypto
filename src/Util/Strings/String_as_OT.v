@@ -1,5 +1,7 @@
 Require Import Coq.omega.Omega Coq.Strings.String Coq.Strings.Ascii.
 Require Import Coq.Structures.OrderedType.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Lemma nat_compare_eq_refl : forall x, Nat.compare x x = Eq.
   intros; apply Nat.compare_eq_iff; trivial.

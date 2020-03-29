@@ -1,4 +1,6 @@
 Require Import Coq.omega.Omega Coq.ZArith.Znumtheory.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Module Z.
   Ltac prime_bound := match goal with

@@ -1,3 +1,6 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
+
 (** * Evar-normalize terms *)
 (** Useful for working around things like COQBUG(https://github.com/coq/coq/issues/10044) *)
 Local Definition dummy := Set.

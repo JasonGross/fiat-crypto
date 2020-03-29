@@ -86,3 +86,4 @@ Ltac solve_Proper_eq :=
       apply (@reflexive_proper A R')
   end.
 Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
+Abort.

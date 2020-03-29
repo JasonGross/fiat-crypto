@@ -1,6 +1,8 @@
 (** * Push-Button Synthesis fancy argument definitions *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 Local Open Scope Z_scope.
 
 Section with_wordmax.

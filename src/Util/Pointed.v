@@ -1,4 +1,6 @@
 Require Import Coq.Numbers.BinNums.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Generalizable All Variables.
 

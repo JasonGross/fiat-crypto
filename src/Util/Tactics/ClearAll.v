@@ -1,3 +1,6 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
+
 Ltac clear_all :=
   clear;
   repeat match goal with

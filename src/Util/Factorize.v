@@ -4,6 +4,8 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.PArith.PArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Init.Wf.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Local Open Scope positive_scope.
 

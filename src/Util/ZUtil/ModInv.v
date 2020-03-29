@@ -1,5 +1,7 @@
 (*** Compute the modular inverse of a ℤ *)
 Require Import Coq.ZArith.ZArith.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 Local Open Scope Z_scope.
 Module Z.
   (** Quoting https://stackoverflow.com/a/9758173:

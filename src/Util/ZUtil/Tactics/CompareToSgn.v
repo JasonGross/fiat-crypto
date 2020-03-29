@@ -1,4 +1,7 @@
 Require Import Coq.ZArith.ZArith.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
+
 Module Z.
   Ltac compare_to_sgn :=
     repeat match goal with
