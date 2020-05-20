@@ -54,8 +54,8 @@ else:
          List.map Z.to_nat (starts ++ chain2 ++ chain3)
        else (List.seq 0 n ++ [0; 1])%list%nat.
 
+  Definition coef := 2. (* for balance in sub *)
   Definition tight_upperbound_fraction : Q := (11/10)%Q.
-  Definition loose_upperbound_extra_multiplicand : Z := 3.
   Definition prime_upperbound_list : list Z
     := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
   Definition tight_upperbounds : list Z
@@ -65,8 +65,8 @@ else:
 
   Definition loose_upperbounds : list Z
     := List.map
-         (fun v : Z => loose_upperbound_extra_multiplicand * v)
-         tight_upperbounds.
+         (fun '(v, bal) => v + Z.max v bal)
+         (List.combine tight_upperbounds (balance (weight (Qnum limbwidth) (Qden limbwidth)) n s c coef)).
 
   Definition tight_bounds : list (option zrange)
     := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.

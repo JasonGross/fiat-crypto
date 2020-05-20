@@ -90,8 +90,8 @@ static void fiat_25519_cmovznz_u64(uint64_t* out1, fiat_25519_uint1 arg1, uint64
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
- *   arg2: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
+ *   arg2: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
@@ -161,7 +161,7 @@ static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
@@ -229,7 +229,7 @@ static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
  *   eval out1 mod m = eval arg1 mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
@@ -262,7 +262,7 @@ static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  *   arg2: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   out1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  */
 static void fiat_25519_add(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
   uint64_t x1 = ((arg1[0]) + (arg2[0]));
@@ -286,7 +286,7 @@ static void fiat_25519_add(uint64_t out1[5], const uint64_t arg1[5], const uint6
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  *   arg2: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   out1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  */
 static void fiat_25519_sub(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
   uint64_t x1 = ((UINT64_C(0xfffffffffffda) + (arg1[0])) - (arg2[0]));
@@ -309,7 +309,7 @@ static void fiat_25519_sub(uint64_t out1[5], const uint64_t arg1[5], const uint6
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   out1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  */
 static void fiat_25519_opp(uint64_t out1[5], const uint64_t arg1[5]) {
   uint64_t x1 = (UINT64_C(0xfffffffffffda) - (arg1[0]));
@@ -574,7 +574,7 @@ static void fiat_25519_from_bytes(uint64_t out1[5], const uint8_t arg1[32]) {
  *   eval out1 mod m = (121666 * eval arg1) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */

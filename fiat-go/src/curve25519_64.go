@@ -86,8 +86,8 @@ func fiat_25519_cmovznz_u64(out1 *uint64, arg1 uint64, arg2 uint64, arg3 uint64)
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
- *   arg2: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
+ *   arg2: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
@@ -315,7 +315,7 @@ func fiat_25519_carry_mul(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
@@ -471,7 +471,7 @@ func fiat_25519_carry_square(out1 *[5]uint64, arg1 *[5]uint64) {
  *   eval out1 mod m = eval arg1 mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
@@ -505,7 +505,7 @@ func fiat_25519_carry(out1 *[5]uint64, arg1 *[5]uint64) {
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  *   arg2: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   out1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  */
 /*inline*/
 func fiat_25519_add(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
@@ -530,7 +530,7 @@ func fiat_25519_add(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  *   arg2: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   out1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  */
 /*inline*/
 func fiat_25519_sub(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
@@ -554,7 +554,7 @@ func fiat_25519_sub(out1 *[5]uint64, arg1 *[5]uint64, arg2 *[5]uint64) {
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   out1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  */
 /*inline*/
 func fiat_25519_opp(out1 *[5]uint64, arg1 *[5]uint64) {
@@ -823,7 +823,7 @@ func fiat_25519_from_bytes(out1 *[5]uint64, arg1 *[32]uint64) {
  *   eval out1 mod m = (121666 * eval arg1) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg1: [[0x0 ~> 0x18cccccccccca6], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca], [0x0 ~> 0x18ccccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
