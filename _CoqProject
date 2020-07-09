@@ -384,6 +384,7 @@ src/Util/ZUtil/Sorting.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v
 src/Util/ZUtil/Testbit.v
+src/Util/ZUtil/Tritwise.v
 src/Util/ZUtil/TruncatingShiftl.v
 src/Util/ZUtil/Z2Nat.v
 src/Util/ZUtil/ZSimplify.v

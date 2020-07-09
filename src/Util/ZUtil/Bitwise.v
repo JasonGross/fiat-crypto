@@ -4,6 +4,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Bool.Bvector.
+Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ListUtil.
@@ -30,6 +31,7 @@ Module Import Bitlist.
   Hint Transparent bitcount : rewrite bitlist.
   Definition bitlist (v : t) (len : nat) : list bool
     := firstn len (internal_bitlist v) ++ repeat (Z.testbit (signbit v) 0) (len - bitcount v).
+  Notation Zbitcount v := (Z.stabilization_time v + 1).
   Notation bitlist_default v := (bitlist v (bitcount v)) (only parsing).
   Definition to_Z (v : t) : Z
     := List.fold_right
@@ -40,7 +42,7 @@ Module Import Bitlist.
     := Build_t
          (List.map (fun n => Z.testbit v (Z.of_nat n)) (seq 0 (Z.to_nat len)))
          (v <? 0).
-  Definition of_Z (v : Z) : t := of_Z_len v (Z.stabilization_time v + 1).
+  Definition of_Z (v : Z) : t := of_Z_len v (Zbitcount v).
 
   Lemma length_bitlist v len : length (bitlist v len) = len.
   Proof.
@@ -53,9 +55,16 @@ Module Import Bitlist.
   Proof. cbv [bitcount of_Z_len internal_bitlist]; now autorewrite with distr_length. Qed.
   Hint Rewrite bitcount_of_Z_len : distr_length bitlist.
 
-  Lemma bitcount_of_Z v : bitcount (of_Z v) = Z.to_nat (Z.stabilization_time v + 1).
+  Lemma bitcount_of_Z v : bitcount (of_Z v) = Z.to_nat (Zbitcount v).
   Proof. apply bitcount_of_Z_len. Qed.
   Hint Rewrite bitcount_of_Z : distr_length bitlist.
+
+  Lemma eq_internal_bitlist_default v : bitlist_default v = internal_bitlist v.
+  Proof.
+    cbv [bitcount bitlist].
+    autorewrite with natsimplify; cbn [repeat].
+    now rewrite firstn_all, List.app_nil_r by lia.
+  Qed.
 
   Lemma enumerate_bitlist_default_eq v
     : enumerate (bitlist_default v) = List.combine (List.seq 0 (bitcount v)) (internal_bitlist v).
@@ -147,7 +156,7 @@ Module Import Bitlist.
       [ destruct (proj1 (Z.bits_iff_neg_ex v) ltac:(lia)) as [k H'']
       | pose proof (proj2 (Z.bits_iff_neg_ex v)) as H'' ].
     { rewrite Z.bits_m1 by lia.
-      specialize (H (Z.max (Z.stabilization_time v + 1) (k + 1)) ltac:(lia)).
+      specialize (H (Z.max (Zbitcount v) (k + 1)) ltac:(lia)).
       rewrite H'' in H by lia; congruence. }
     { rewrite Z.testbit_0_l.
       destruct b; [ cut (v < 0); [ lia | ] | reflexivity ].
@@ -163,13 +172,13 @@ Module Import Bitlist.
        Build_t (List.map (fun '(a, b) => f a b) (List.combine (bitlist v1 len) (bitlist v2 len)))
                (f (test_signbit v1) (test_signbit v2)).
 
-  Lemma testbit_signbit v n : 0 <= n -> Z.testbit (signbit v) n = test_signbit v.
+  Lemma Ztestbit_signbit v n : 0 <= n -> Z.testbit (signbit v) n = test_signbit v.
   Proof.
     cbv [signbit]; break_innermost_match; intro.
     { now rewrite Z.bits_m1. }
     { now rewrite Z.testbit_0_l. }
   Qed.
-  Hint Rewrite testbit_signbit : bitlist Ztestbit.
+  Hint Rewrite Ztestbit_signbit using solve [zutil_arith] : bitlist Ztestbit.
 
   Lemma testbit_bitwise f v1 v2 n : testbit (bitwise f v1 v2) n = if n <? 0 then false else f (testbit v1 n) (testbit v2 n).
   Proof.
@@ -177,15 +186,15 @@ Module Import Bitlist.
       cbn [internal_bitlist test_signbit].
     rewrite nth_error_map, nth_error_combine.
     break_innermost_match_step; Z.ltb_to_lt; [ reflexivity | ].
-    rewrite testbit_signbit by lia; cbn [test_signbit].
+    rewrite Ztestbit_signbit by lia; cbn [test_signbit].
     apply Nat.max_case_strong; intro.
     all: cbv [bitlist bitcount] in *;
       autorewrite with natsimplify;
-      cbn [List.repeat]; rewrite List.app_nil_r, !firstn_all2, nth_error_app, nth_error_repeat_alt, testbit_signbit by lia.
+      cbn [List.repeat]; rewrite List.app_nil_r, !firstn_all2, nth_error_app, nth_error_repeat_alt, Ztestbit_signbit by lia.
     all: cbv [option_map].
     all: break_innermost_match.
     all: repeat first [ reflexivity
-                      | rewrite testbit_signbit by lia
+                      | rewrite Ztestbit_signbit by lia
                       | progress inversion_option
                       | match goal with
                         | [ H : nth_error _ _ = None |- _ ] => apply nth_error_error_length in H; exfalso; lia
@@ -193,9 +202,120 @@ Module Import Bitlist.
                         end ].
   Qed.
   Hint Rewrite testbit_bitwise : bitlist Ztestbit.
+
+  Lemma test_signbit_bitwise f v1 v2
+    : test_signbit (bitwise f v1 v2) = f (test_signbit v1) (test_signbit v2).
+  Proof. reflexivity. Qed.
+  Hint Rewrite test_signbit_bitwise : bitlist.
+
+  Lemma testbit_signbit v n : (bitcount v < Z.to_nat n)%nat -> testbit v n = test_signbit v.
+  Proof.
+    cbv [testbit bitcount nth_default]; intros; break_innermost_match; Z.ltb_to_lt; try lia.
+    all: autorewrite with bitlist; try reflexivity.
+    all: rewrite nth_error_length_error in * by lia; inversion_option.
+  Qed.
+
+  Lemma testbit_signbit' v n : Z.of_nat (bitcount v) < n -> testbit v n = test_signbit v.
+  Proof. intro; now rewrite testbit_signbit by lia. Qed.
+
+  Lemma test_signbit_of_Z z : test_signbit (of_Z z) = (z <? 0).
+  Proof. reflexivity. Qed.
+  Hint Rewrite test_signbit_of_Z : bitlist.
+
+  Lemma ltb_0_to_Z v : (to_Z v <? 0) = test_signbit v.
+  Proof.
+    cbn.
+    pose proof (Z.bits_iff_neg (to_Z v) (Z.max (Z.succ (Z.log2 (Z.abs (to_Z v)))) (Z.succ (Z.of_nat (bitcount v)))) ltac:(lia)) as H.
+    let term := lazymatch type of H with _ <-> ?x = true => x end in
+    transitivity term;
+      [ destruct term;
+        (edestruct Z.ltb eqn:?); Z.ltb_to_lt;
+        destruct_head' iff;
+        now intuition idtac..
+      | ].
+    autorewrite with bitlist.
+    now rewrite testbit_signbit' by lia.
+  Qed.
+  Hint Rewrite ltb_0_to_Z : bitlist.
+
+  Lemma test_signbit_of_to_Z v : test_signbit (of_Z (to_Z v)) = test_signbit v.
+  Proof. now autorewrite with bitlist. Qed.
+  Hint Rewrite test_signbit_of_to_Z : bitlist.
+
+  Fixpoint bitlist_sign_compare (l1 : list bool) (s1 s2 : bool) : comparison
+    := match l1 with
+       | nil => bit_compare s1 s2
+       | x :: xs => match bitlist_sign_compare xs s1 s2 with
+                    | Eq => bit_compare x s2
+                    | (Lt | Gt) as c => c
+                    end
+       end.
+
+  Fixpoint sign_bitlist_compare (l2 : list bool) (s1 s2 : bool) : comparison
+    := match l2 with
+       | nil => bit_compare s1 s2
+       | x :: xs => match sign_bitlist_compare xs s1 s2 with
+                    | Eq => bit_compare s1 x
+                    | (Lt | Gt) as c => c
+                    end
+       end.
+
+  Fixpoint bitlist_compare (v1 v2 : list bool) (sign1 sign2 : bool) : comparison
+    := match v1, v2 with
+       | nil, nil => bit_compare sign1 sign2
+       | v1 :: v1s, v2 :: v2s
+         => match bitlist_compare v1s v2s sign1 sign2 with
+            | Eq => bit_compare v1 v2
+            | (Lt | Gt) as c => c
+            end
+       | nil, v2 => sign_bitlist_compare v2 sign1 sign2
+       | v1, nil => bitlist_sign_compare v1 sign1 sign2
+       end.
+
+  Definition compare (v1 v2 : t) : comparison
+    := let len := Nat.max (bitcount v1) (bitcount v2) in
+       bitlist_compare (bitlist v1 len) (bitlist v2 len) (test_signbit v1) (test_signbit v2).
+
+  Lemma Z_lt_
+
+  Lemma bitlist_compare_spec v1 v2
+        (z1 := to_Z v1) (z2 := to_Z v2)
+    : CompareSpec (z1 = z2) (z1 < z2) (z2 < z1) (compare v1 v2).
+  Proof.
+    subst z1 z2; cbv [compare].
+    apply Nat.max_case_strong; autorewrite with bitlist; rewrite !eq_internal_bitlist_default.
+    all: destruct v1 as [v1 s1], v2 as [v2 s2]; cbv [bitlist bitcount]; cbn [internal_bitlist test_signbit]; rewrite !Ztestbit_signbit by reflexivity; cbn [test_signbit].
+    all: match goal with
+         | [ |- (length ?v1 <= length ?v2)%nat -> _ ]
+           => revert v1; induction v2 as [|x xs IH];
+                (intro v1; destruct v1 as [|y ys];
+                 [ try specialize (IH nil) | try specialize (IH ys) ]);
+                cbn [List.length] in *; intro;
+                  try specialize (IH ltac:(lia))
+         end.
+    all: repeat first [ progress cbn [List.firstn List.app List.repeat bitlist_compare] in *
+                      | progress autorewrite with natsimplify in *
+                      | progress rewrite ?firstn_nil in *
+                      | lia
+                      | progress destruct_head' CompareSpec
+                      | break_innermost_match_step
+                      | match goal with
+                        | [ |- CompareSpec _ _ _ _ ] => constructor
+                        end ].
+    4: {
+    2: {
+    6: {
+    Search (S _ <= S _)%nat.
+    all:
+
+    Search Z.testbit signbit.
+
+
 End Bitlist.
 Hint Rewrite length_bitlist bitcount_of_Z_len bitcount_of_Z : distr_length bitlist.
-Hint Rewrite testbit_to_Z testbit_of_Z_len testbit_of_Z testbit_bitwise testbit_signbit : bitlist Ztestbit.
+Hint Rewrite testbit_to_Z testbit_of_Z_len testbit_of_Z testbit_bitwise : bitlist Ztestbit.
+Hint Rewrite Ztestbit_signbit using solve [zutil_arith] : bitlist Ztestbit.
+Hint Rewrite test_signbit_bitwise test_signbit_of_Z ltb_0_to_Z test_signbit_of_to_Z bit_compare_refl : bitlist.
 Hint Transparent bitcount : rewrite.
 
 Module Z2Bitlist.
@@ -208,7 +328,7 @@ Definition bitwise (f : bool -> bool -> bool) (v1 v2 : Z) : Z
 
 Lemma testbit_bitwise f v1 v2 n : Z.testbit (bitwise f v1 v2) n = if n <? 0 then false else f (Z.testbit v1 n) (Z.testbit v2 n).
 Proof. now cbv [bitwise]; autorewrite with bitlist. Qed.
-Hint Rewrite testbit_bitwise : Ztestbit.
+Hint Rewrite testbit_bitwise : Ztestbit bitlist.
 
 Lemma bitwise_land v1 v2 : bitwise andb v1 v2 = Z.land v1 v2.
 Proof.
