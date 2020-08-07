@@ -104,6 +104,60 @@ Section encode_distributed.
   Proof using wprops.
     apply nth_default_encode_distributed_bounded'; auto.
   Abort.
+  Lemma nth_default_encode_distributed_minimal'
+        (** We add an extra hypothesis that is too bulky to prove *)
+        (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = map2 Z.add x y)
+        minvalues x alt
+        (orig := encode_distributed minvalues x)
+        (Halt_eval : eval n orig = eval n alt)
+        (length_alt : List.length alt = n)
+        (length_minvalues : length minvalues = n)
+        (Halt_bounded : forall i, nth_default 0 minvalues i <= nth_default 0 alt i)
+        i
+        (Halt_same : List.firstn i alt = List.firstn i orig)
+        (Halt_diff : nth_default 0 alt i <> nth_default 0 orig i)
+    : nth_default 0 orig i < nth_default 0 alt i.
+  Proof using wprops.
+    pose proof (fun i => nth_default_encode_distributed_bounded_eq' Hadd minvalues x i 0) as Hnth.
+    rewrite firstn_app_sharp in Hnth by distr_length.
+    assert (Hlen : length (encode_distributed minvalues x) = n) by distr_length.
+    generalize dependent (encode_distributed minvalues x); intro orig; cbv zeta; intros.
+    clear Hadd.
+    revert dependent i; intro i.
+    revert dependent n; clear n; intro n'.
+    destruct wprops; clear wprops.
+    match goal with H : weight 0 = 1 |- _ => clear H end.
+    generalize dependent weight; clear dependent weight; intros weight.
+    revert Halt_bounded.
+    revert n' i alt orig minvalues weight;
+      induction n' as [|n' IHn], i as [|i], alt as [|a alt], orig as [|o orig], minvalues as [|m minvalues];
+      try solve [ cbn; congruence ].
+    { cbn -[Positional.eval]; intros.
+      specialize (Hnth 0%nat); cbn -[Positional.eval] in Hnth.
+      rewrite !eval_cons in * by distr_length.
+      shelve. }
+    { cbn -[Positional.eval]; intros.
+      pose proof (Halt_bounded 0%nat) as Halt_bounded0.
+      pose proof (fun i => Halt_bounded (S i)) as Halt_boundedS.
+      clear Halt_bounded.
+      setoid_rewrite nth_default_cons_S in Halt_boundedS.
+      pose proof (Hnth 0%nat) as Hnth0.
+      pose proof (fun i => Hnth (S i)) as HnthS.
+      clear Hnth.
+      setoid_rewrite nth_default_cons_S in HnthS.
+      match goal with H : cons _ _ = cons _ _ |- _ => inversion H; clear H end.
+      subst.
+      rewrite !nth_default_cons_S in *.
+      autorewrite with natsimplify in *.
+      rewrite !eval_cons in * by distr_length.
+      apply IHn with (minvalues:=minvalues) (weight:=fun n => weight (S n)); auto; try lia.
+      { intros; rewrite HnthS, nth_default_cons_S.
+        break_innermost_match; try lia.
+        f_equal; [].
+        let i := match goal with |- context[weight (S (S ?i))] => i end in
+        rewrite (Z.div_mod (weight (S (S i))) (weight (S i))), weight_multiples, Z.add_0_r, (Z.mul_comm (weight (S i))) by auto with zarith.
+        rewrite <- !Z.mod_pull_div by auto with zarith.
+  Qed.
 End encode_distributed.
 Hint Rewrite @eval_encode_distributed using solve [auto; lia] : push_eval.
 Hint Rewrite @length_encode_distributed : distr_length.
