@@ -194,3 +194,6 @@ src/Rewriter/PerfTesting/Specific/generated/primes.mk
 # Rust
 /fiat-rust/Cargo.lock
 /fiat-rust/target/
+
+# Generated .v files:
+src/AuthorsLines.v

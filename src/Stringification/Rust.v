@@ -22,7 +22,7 @@ Import Stringification.Language.Compilers.ToString.
 Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Rust.
-  Definition comment_module_header_block := List.map (fun line => "//! " ++ line)%string.
+  Definition comment_module_header_block := List.map (fun line => "//! " ++ String.rtrim line)%string.
   Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
   (* Header imports and type defs *)

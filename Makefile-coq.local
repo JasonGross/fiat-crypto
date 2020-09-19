@@ -1,0 +1,3 @@
+src/AuthorsLines.v: AUTHORS etc/generate-authors-lines.sh
+	$(SHOW)'PROCESS $< > $@'
+	$(HIDE)etc/generate-authors-lines.sh $< > $@
