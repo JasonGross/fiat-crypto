@@ -175,7 +175,7 @@ Proof.
 Qed.
 
 Definition p : params
-  := Eval vm_compute in invert_Some (List.nth_error (of_string "2^5-3" 8) 0).
+  := Eval vm_compute in invert_Some (List.nth_error (of_string "2^10-3" 8) 0).
 Existing Instance p.
 Print p.
 
@@ -196,10 +196,11 @@ Goal True.
                            | [ |- context[Let_In (S ?x)] ] => setoid_rewrite inline_dlet_S
                            end
                          | time progress mycbv
-                         | time progress rewrite ?Z_of_nat_O, ?Z_of_nat_S, ?Z_mul_pos_pos, ?Z.mul_0_l, ?Z.mul_0_r, ?Z.opp_0, ?Z_div_0_l_pos, ?Z_opp_pos, ?Z_opp_neg, ?unfold_Z_div_pos_pos, ?unfold_Z_div_pos_neg, ?unfold_Z_div_neg_pos,?unfold_Z_div_neg_neg, ?Z.pow_0_r, ?Z_pow_pos_pos, ?Z_modulo_pos_pos, ?Z_eqb_pos_pos, ?Z.eqb_refl, ?Nat.eqb_refl, ?Z_eqb_neg_neg, ?Z_eqb_pos_0, ?Z_eqb_0_pos, ?Z_eqb_pos_neg, ?Z_eqb_neg_pos, ?Z_eqb_neg_0, ?Z_eqb_0_neg, ?length_nil, <- ?pred_Sn
+                         | time progress rewrite ?Z_of_nat_O, ?Z_of_nat_S, ?Z_mul_pos_pos, ?Z.mul_0_l, ?Z.mul_0_r, ?Z.opp_0, ?Z_div_0_l_pos, ?Z_opp_pos, ?Z_opp_neg, ?unfold_Z_div_pos_pos, ?unfold_Z_div_pos_neg, ?unfold_Z_div_neg_pos,?unfold_Z_div_neg_neg, ?Z.pow_0_r, ?Z_pow_pos_pos, ?Z_modulo_pos_pos, ?Z_eqb_pos_pos, ?Z.eqb_refl, ?Nat.eqb_refl, ?Z_eqb_neg_neg, ?Z_eqb_pos_0, ?Z_eqb_0_pos, ?Z_eqb_pos_neg, ?Z_eqb_neg_pos, ?Z_eqb_neg_0, ?Z_eqb_0_neg, ?length_nil, <- ?pred_Sn, ?nat_eqb_S_O, ?nat_eqb_O_S
                          | progress cbn [nat_rect]
                          | match goal with
                            | [ |- context[prod_rect _ (_, _)] ] => setoid_rewrite prod_rect_pair
+                           | [ |- context[List.length (_ :: _)] ] => setoid_rewrite @length_cons
                            | [ |- context[fst (_, _)] ] => setoid_rewrite @Prod.fst_pair
                            | [ |- context[snd (_, _)] ] => setoid_rewrite @Prod.snd_pair
                            | [ |- context[(_ :: _) ++ _] ] => setoid_rewrite app_cons
@@ -242,6 +243,8 @@ Goal True.
     Ltac go := go_count O (*repeat go_step*).
     Set Printing Depth 1000000.
     Time go.
+    (* size 1: Finished transaction in 100.141 secs (99.967u,0.171s) (successful) *)
+    (* Size 2: Finished transaction in 607.765 secs (606.448u,1.267s) (successful), Finished: 1269%nat *)
     lazymatch goal with
     | [ |- context[prod_rect _ _ (_, _)] ] => setoid_rewrite prod_rect_pair
     end.
@@ -347,7 +350,6 @@ Goal True.
                         lazymatch idx with O => idtac | S _ => idtac end;
                         cbv [Core.Positional.carry_reduce Core.Positional.carry Core.Positional.to_associational seq Core.Associational.carry Core.Associational.carryterm]
                           end ]).
-    (* size 1: Finished transaction in 100.141 secs (99.967u,0.171s) (successful) *)
 
 
     Time (rewrite_strat (((topdown (hints mydb; eval mycbv));
