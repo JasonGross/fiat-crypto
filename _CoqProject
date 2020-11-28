@@ -35,6 +35,9 @@ src/Arithmetic/BYInv.v
 src/Arithmetic/BarrettReduction.v
 src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
+src/Arithmetic/CoreAssociational.v
+src/Arithmetic/CoreExtra.v
+src/Arithmetic/CorePositional.v
 src/Arithmetic/FancyMontgomeryReduction.v
 src/Arithmetic/Freeze.v
 src/Arithmetic/ModOps.v
@@ -44,6 +47,9 @@ src/Arithmetic/Partition.v
 src/Arithmetic/PrimeFieldTheorems.v
 src/Arithmetic/Primitives.v
 src/Arithmetic/Saturated.v
+src/Arithmetic/SaturatedAssociational.v
+src/Arithmetic/SaturatedColumns.v
+src/Arithmetic/SaturatedRows.v
 src/Arithmetic/UniformWeight.v
 src/Arithmetic/WordByWordMontgomery.v
 src/Arithmetic/BarrettReduction/Generalized.v
