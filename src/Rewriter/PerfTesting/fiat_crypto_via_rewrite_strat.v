@@ -239,13 +239,35 @@ Goal True.
                          | progress cbv [Core.Positional.chained_carries]
                          | progress cbv [Core.Positional.add_to_nth]
                          | progress cbv [Core.Positional.carry_reduce Core.Positional.carry Core.Positional.to_associational seq Core.Associational.carry Core.Associational.carryterm] ]).
-    Ltac go_count n := idtac "Cur:" n; tryif go_step then go_count (S n) else idtac "Finished:" n.
+    Ltac go_count_max n max :=
+      lazymatch max with
+      | O => idtac "Not Finished:" n
+      | _
+        => let max := lazymatch max with
+                      | S ?max => max
+                      | _ => max
+                      end in
+           idtac "Cur:" n; tryif go_step then go_count_max (S n) max else idtac "Finished:" n
+      end.
+    Ltac go_count n := go_count_max n tt.
     Ltac go := go_count O (*repeat go_step*).
     Set Printing Depth 1000000.
-    Time go.
+    Time go_count_max O constr:(1000%nat).
+    Time Optimize Proof.
+    Time Optimize Heap.
+    Time go_count_max constr:(1000%nat) constr:(1000%nat).
+    Time Optimize Proof.
+    Time Optimize Heap.
+    Time go_count_max constr:(2000%nat) constr:(1000%nat).
+    Time Optimize Proof.
+    Time Optimize Heap.
+    Time go_count constr:(3000%nat).
     (* size 1: Finished transaction in 100.141 secs (99.967u,0.171s) (successful) *)
     (* Size 2: Finished transaction in 607.765 secs (606.448u,1.267s) (successful), Finished: 1269%nat *)
     (* size 3: Finished transaction in 8706.089 secs (8692.561u,13.515s) (successful), Finished: 2398%nat, src/Rewriter/PerfTesting/fiat_crypto_via_rewrite_strat.vo (real: 8711.19, user: 8695.54, sys: 15.63, mem: 58206840 ko) *)
+    (* size 4: Fatal error: out of memory.
+Command exited with non-zero status 2
+src/Rewriter/PerfTesting/fiat_crypto_via_rewrite_strat.vo (real: 7473.28, user: 7459.76, sys: 13.31, mem: 52415844 ko) *)
 
     (* Size 3 end:
 Goal: ((dlet y' : Z := 1 * (nth_default 0 f 0 * nth_default 0 g 0) in
