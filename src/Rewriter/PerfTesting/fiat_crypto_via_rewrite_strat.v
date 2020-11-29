@@ -174,10 +174,10 @@ Proof.
   match goal with H : _ |- _ => apply H; intuition (subst; eauto) end.
 Qed.
 
+Definition p' := Eval vm_compute in of_string "2^190 - 11" 64.
 Definition p : params
-  := Eval vm_compute in invert_Some (List.nth_error (of_string "2^10-3" 8) 0).
+  := Eval vm_compute in invert_Some (List.nth_error p' 0).
 Existing Instance p.
-Print p.
 
 Goal True.
   pose (fun f g : list Z => Arithmetic.ModOps.carry_mulmod (Qnum limbwidth) (Zpos (Qden limbwidth)) s c n idxs (ListUtil.expand_list 0 f n) (ListUtil.expand_list 0 g n)) as v.
@@ -239,119 +239,16 @@ Goal True.
                          | progress cbv [Core.Positional.chained_carries]
                          | progress cbv [Core.Positional.add_to_nth]
                          | progress cbv [Core.Positional.carry_reduce Core.Positional.carry Core.Positional.to_associational seq Core.Associational.carry Core.Associational.carryterm] ]).
-    Ltac go_count n := tryif go_step then go_count (S n) else idtac "Finished:" n.
+    Ltac go_count n := idtac "Cur:" n; tryif go_step then go_count (S n) else idtac "Finished:" n.
     Ltac go := go_count O (*repeat go_step*).
     Set Printing Depth 1000000.
     Time go.
     (* size 1: Finished transaction in 100.141 secs (99.967u,0.171s) (successful) *)
     (* Size 2: Finished transaction in 607.765 secs (606.448u,1.267s) (successful), Finished: 1269%nat *)
-    lazymatch goal with
-    | [ |- context[prod_rect _ _ (_, _)] ] => setoid_rewrite prod_rect_pair
-    end.
-    Time do 10 go_step.
-    Time do 5 go_step.
-    Time go_step.
-    Time go_step.
-    Time go_step.
-
-    setoid_rewrite Prod.fst_pair.
-
-    Opaque nat_rect.
-    Opaque nth_default.
-    Opaque Core.Positional.chained_carries.
-    generalize Core.Positional.chained_carries Core.Positional.add_to_nth; intros.
-    generalize @Let_In;intros.
-    generalize nat_rect; intros.
-    Typeclasses eauto := debug.
-    setoid_rewrite Prod.fst_pair.
-          time (match goal with |- ?G => idtac "Goal:" G end;
-                   first [ time setoid_rewrite lift_dlet
-                         | time setoid_rewrite lift_dlet1
-                         | match goal with
-                           | [ |- context[Let_In _ _ ++ _] ] => setoid_rewrite app_dlet
-                           | [ |- context[dlet x := (_, _) in _] ] => setoid_rewrite dlet_pair
-                           | [ |- context[Let_In O] ] => setoid_rewrite inline_dlet_O
-                           | [ |- context[Let_In (S ?x)] ] => setoid_rewrite inline_dlet_S
-                           end
-                         | time progress mycbv
-                         | time progress rewrite ?Z_of_nat_O, ?Z_of_nat_S, ?Z_mul_pos_pos, ?Z.mul_0_l, ?Z.mul_0_r, ?Z.opp_0, ?Z_div_0_l_pos, ?Z_opp_pos, ?Z_opp_neg, ?unfold_Z_div_pos_pos, ?unfold_Z_div_pos_neg, ?unfold_Z_div_neg_pos,?unfold_Z_div_neg_neg, ?Z.pow_0_r, ?Z_pow_pos_pos, ?Z_modulo_pos_pos, ?Z_eqb_pos_pos, ?Z.eqb_refl, ?Nat.eqb_refl, ?Z_eqb_neg_neg, ?Z_eqb_pos_0, ?Z_eqb_0_pos, ?Z_eqb_pos_neg, ?Z_eqb_neg_pos, ?Z_eqb_neg_0, ?Z_eqb_0_neg, ?length_nil, <- ?pred_Sn
-                         | match goal with
-                           | [ |- context[prod_rect _ (_, _)] ] => setoid_rewrite prod_rect_pair
-                           | [ |- context[fst (_, _)] ] => setoid_rewrite @Prod.fst_pair                                                                           end ]).
-                           | [ |- context[snd (_, _)] ] => setoid_rewrite @Prod.snd_pair                                                                           end ]).
-                           | [ |- context[(_ :: _) ++ _] ] => setoid_rewrite app_cons
-                           | [ |- context[nil ++ _] ] => setoid_rewrite app_nil
-                           | [ |- context[rev (_ :: _)] ] => setoid_rewrite rev_cons
-                           | [ |- context[rev nil] ] => setoid_rewrite rev_nil
-                           | [ |- context[prod_rect _ _ _ (_, _)] ] => setoid_rewrite prod_rect_pair
-                           | [ |- context[partition _ nil] ] => setoid_rewrite partition_nil
-                           | [ |- context[fold_right _ _ nil] ] => setoid_rewrite @fold_right_nil
-                           | [ |- context[update_nth _ _ nil] ] => setoid_rewrite @update_nth_nil
-                           | [ |- context[update_nth O _ (_ :: _)] ] => setoid_rewrite @update_nth_cons
-                           | [ |- context[update_nth (S _) _ (_ :: _)] ] => setoid_rewrite @update_nth_S_cons
-                           | [ |- context[List.map _ nil] ] => setoid_rewrite map_nil
-                           | [ |- context[List.combine _ nil] ] => setoid_rewrite @combine_nil_r
-
-                           | [ |- context[flat_map _ nil] ] => setoid_rewrite @flat_map_nil
-                           | [ |- context[partition _ (_ :: _)] ] => setoid_rewrite partition_cons
-                           | [ |- context[fold_right _ _ (_ :: _)] ] => setoid_rewrite @fold_right_cons
-                           | [ |- context[List.map _ (_ :: _)] ] => setoid_rewrite map_cons
-                           | [ |- context[List.combine (_ :: _) (_ :: _)] ] => setoid_rewrite @combine_cons
-                           | [ |- context[flat_map _ (_ :: _)] ] => setoid_rewrite @flat_map_cons
-                           | [ |- context[Core.Associational.split _ (_ :: _)] ] => setoid_rewrite split_cons
-                           | [ |- context[Core.Associational.reduce _ _ _] ] => setoid_rewrite unfold_reduce
-                           | [ |- context[Core.Associational.mul (_ :: _) (_ :: _)] ] => setoid_rewrite mul_cons_cons
-                           | [ |- context[Core.Associational.mul nil (_ :: _)] ] => setoid_rewrite mul_nil_cons
-                           | [ |- context[Core.Associational.mul (_ :: _) nil] ] => setoid_rewrite mul_cons_nil
-                           | [ |- context[Core.Associational.mul nil nil] ] => setoid_rewrite mul_nil_nil
-                           | [ |- context[nat_rect _ _ _ O _] ] => idtac "0arr"; setoid_rewrite nat_rect_O_arr
-                           | [ |- context[nat_rect _ _ _ (S _) _] ] => idtac "Sarr"; setoid_rewrite nat_rect_S_arr
-                           | [ |- context[nat_rect _ _ _ (S _)] ] => idtac "S"; setoid_rewrite nat_rect_S
-                           | [ |- context[nat_rect _ _ _ O] ] => idtac "0"; setoid_rewrite nat_rect_O
-                           end
-                         | progress cbv [Core.Associational.repeat_reduce]
-                         | progress cbv [Core.Positional.from_associational]
-                         | progress cbv [Core.Positional.zeros repeat]
-                         | progress cbv [Core.Positional.place]
-                         | progress cbv [Core.Positional.chained_carries]
-                         | progress cbv [Core.Positional.add_to_nth]
-                         | progress cbv [Core.Positional.carry_reduce Core.Positional.carry Core.Positional.to_associational seq Core.Associational.carry Core.Associational.carryterm] ]).
-    Time go_step.
-    Time go
-    Time go.
-                         ]).
-    Time rewrite_strat ((bottomup hints mydb); eval mycbv; eval morecbv).
-    Time rewrite_strat bottomup hints mydb.
-    Time rewrite_strat (topdown hints letdb).
-    Time rewrite_strat ((bottomup hints mydb); eval mycbv; eval morecbv).
-    Set Printing Depth 100000.
-    Info 1
-    go.
-                        | [ |- context[Core.Associational.repeat_reduce ?n] ]
-                          => lazymatch n with O => idtac | S _ => idtac end;
-                               cbv [Core.Associational.repeat_reduce]
-                        | [ |- context[Core.Positional.from_associational _ ?n] ]
-                          => lazymatch n with O => idtac | S _ => idtac end;
-                               cbv [Core.Positional.from_associational]
-                        | [ |- context[Core.Positional.zeros ?n] ]
-                          => lazymatch n with O => idtac | S _ => idtac end;
-                               cbv [Core.Positional.zeros repeat]
-                        | [ |- context[Core.Positional.place _ (_, _) ?i] ]
-                          => lazymatch i with O => idtac | S _ => idtac end;
-                               cbv [Core.Positional.place]
-                        | [ |- context[Core.Positional.chained_carries _ ?n] ]
-                          => lazymatch n with O => idtac | S _ => idtac end;
-                               cbv [Core.Positional.chained_carries]
-                        | [ |- context[Core.Positional.add_to_nth ?n] ]
-                          => lazymatch n with O => idtac | S _ => idtac end;
-                               cbv [Core.Positional.add_to_nth]
-                        | [ |- context[Core.Positional.carry_reduce _ ?n _ _ ?idx] ]
-                          => lazymatch n with O => idtac | S _ => idtac end;
-                        lazymatch idx with O => idtac | S _ => idtac end;
-                        cbv [Core.Positional.carry_reduce Core.Positional.carry Core.Positional.to_associational seq Core.Associational.carry Core.Associational.carryterm]
-                          end ]).
-
-
+    (* size 3: Finished transaction in 8706.089 secs (8692.561u,13.515s) (successful), Finished: 2398%nat, src/Rewriter/PerfTesting/fiat_crypto_via_rewrite_strat.vo (real: 8711.19, user: 8695.54, sys: 15.63, mem: 58206840 ko) *)
+    Show.
+Abort.
+(*
     Time (rewrite_strat (((topdown (hints mydb; eval mycbv));
                             eval cbv [Core.Associational.repeat_reduce nat_rect Core.Associational.split Core.Associational.mul];
                             ((topdown (hints mydb; eval mycbv)));
@@ -379,3 +276,4 @@ Goal True.
       (rewrite_strat ((try repeat (topdown (hints mydb; eval mycbv))))).
     Show.
 Abort.
+*)
