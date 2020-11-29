@@ -246,6 +246,74 @@ Goal True.
     (* size 1: Finished transaction in 100.141 secs (99.967u,0.171s) (successful) *)
     (* Size 2: Finished transaction in 607.765 secs (606.448u,1.267s) (successful), Finished: 1269%nat *)
     (* size 3: Finished transaction in 8706.089 secs (8692.561u,13.515s) (successful), Finished: 2398%nat, src/Rewriter/PerfTesting/fiat_crypto_via_rewrite_strat.vo (real: 8711.19, user: 8695.54, sys: 15.63, mem: 58206840 ko) *)
+
+    (* Size 3 end:
+Goal: ((dlet y' : Z := 1 * (nth_default 0 f 0 * nth_default 0 g 0) in
+        dlet x' : Z := 1 * (nth_default 0 f 0 * nth_default 0 g 1) in
+        dlet x'0 : Z := 1 * (nth_default 0 f 0 * nth_default 0 g 2) in
+        dlet x'1 : Z := 1 * (nth_default 0 f 1 * nth_default 0 g 0) in
+        dlet x'2 : Z := 2 * (nth_default 0 f 1 * nth_default 0 g 1) in
+        dlet x'3 : Z := 1 * (nth_default 0 f 2 * nth_default 0 g 0) in
+        dlet x'4 : Z := 2 * (5 * (nth_default 0 f 1 * nth_default 0 g 2)) in
+        dlet x'5 : Z := 2 * (5 * (nth_default 0 f 2 * nth_default 0 g 1)) in
+        dlet x'6 : Z := 1 * (5 * (nth_default 0 f 2 * nth_default 0 g 2)) in
+        dlet x'7 : Z := y' + (x'4 + (x'5 + 0)) in
+        dlet x'8 : Z := x'7 / 17592186044416 in
+        dlet x'9 : Z := x'7 mod 17592186044416 in
+        dlet y'0 : Z := 1 * x'8 in
+        dlet y'1 : Z := 1 * x'9 in
+        dlet y'2 : Z := 1 * (x' + (x'1 + (x'6 + 0))) in
+        dlet y'3 : Z := 1 * (x'0 + (x'2 + (x'3 + 0))) in
+        dlet y'4 : Z := 1 * (y'1 + 0) in
+        dlet y'5 : Z := 1 * (y'0 + (y'2 + 0)) in
+        dlet y'6 : Z := 1 * (y'3 + 0) in
+        dlet y'7 : Z := 0 in
+        dlet y'8 : Z := 1 * (y'4 + (y'7 + 0)) in
+        dlet x'10 : Z := y'5 + 0 in
+        dlet x'11 : Z := x'10 / 8796093022208 in
+        dlet x'12 : Z := x'10 mod 8796093022208 in
+        dlet y'9 : Z := 1 * x'11 in
+        dlet y'10 : Z := 1 * x'12 in
+        dlet y'11 : Z := 1 * (y'6 + 0) in
+        dlet y'12 : Z := 1 * (y'8 + 0) in
+        dlet y'13 : Z := 1 * (y'10 + 0) in
+        dlet y'14 : Z := 1 * (y'9 + (y'11 + 0)) in
+        dlet y'15 : Z := 0 in
+        dlet y'16 : Z := 1 * (y'12 + (y'15 + 0)) in
+        dlet y'17 : Z := 1 * (y'13 + 0) in
+        dlet x'13 : Z := y'14 + 0 in
+        dlet x'14 : Z := x'13 / 8796093022208 in
+        dlet x'15 : Z := x'13 mod 8796093022208 in
+        dlet y'18 : Z := 1 * x'14 in
+        dlet y'19 : Z := 1 * x'15 in
+        dlet y'20 : Z := 1 * (y'16 + 0) in
+        dlet y'21 : Z := 1 * (y'17 + 0) in
+        dlet y'22 : Z := 1 * (y'19 + 0) in
+        dlet y'23 : Z := 1 * (5 * (y'18 + 0)) in
+        dlet x'16 : Z := y'20 + (y'23 + 0) in
+        dlet x'17 : Z := x'16 / 17592186044416 in
+        dlet x'18 : Z := x'16 mod 17592186044416 in
+        dlet y'24 : Z := 1 * x'17 in
+        dlet y'25 : Z := 1 * x'18 in
+        dlet y'26 : Z := 1 * (y'21 + 0) in
+        dlet y'27 : Z := 1 * (y'22 + 0) in
+        dlet y'28 : Z := 1 * (y'25 + 0) in
+        dlet y'29 : Z := 1 * (y'24 + (y'26 + 0)) in
+        dlet y'30 : Z := 1 * (y'27 + 0) in
+        dlet y'31 : Z := 0 in
+        dlet y'32 : Z := 1 * (y'28 + (y'31 + 0)) in
+        dlet x'19 : Z := y'29 + 0 in
+        dlet x'20 : Z := x'19 / 8796093022208 in
+        dlet x'21 : Z := x'19 mod 8796093022208 in
+        dlet y'33 : Z := 1 * x'20 in
+        dlet y'34 : Z := 1 * x'21 in
+        dlet y'35 : Z := 1 * (y'30 + 0) in
+        dlet y'36 : Z := 1 * (y'32 + 0) in
+        dlet y'37 : Z := 1 * (y'34 + 0) in
+        dlet y'38 : Z := 1 * (y'33 + (y'35 + 0)) in
+        dlet y'39 : Z := 0 in
+        [y'36 + (y'39 + 0); y'37 + 0; y'38 + 0]) = f)
+*)
     Show.
 Abort.
 (*
