@@ -68,6 +68,7 @@ Module Compilers.
         | Z_add
         | Z_mul
         | Z_sub
+        | Z_ltz
         .
         Inductive Z_unop : Set :=
         | Z_shiftr (offset : BinInt.Z)
@@ -553,6 +554,16 @@ Module Compilers.
                  let '((e1, t1), (e2, t2)) := (Zcast cst1 (e1, t1), Zcast cst2 (e2, t2)) in
                  Zcast cstout ((idc @@@ (e1, e2))%Cexpr, typ).
 
+          Definition comparison_bin_arith_expr_of_PHOAS_ident
+                     (s:=(tZ * tZ)%etype)
+                     (d:=tZ)
+                     (idc : Z_binop)
+            : option int.type -> arith_expr_for (type.base s) -> arith_expr_for (type.base d)
+            := fun desired_type '((e1, t1), (e2, t2)) =>
+                 let '(cstout, (cst1, cst2)) := bin_op_casts_opt idc desired_type (t1, t2) in
+                 let '((e1, t1), (e2, t2)) := (Zcast cst1 (e1, t1), Zcast cst2 (e2, t2)) in
+                 Zcast cstout ((idc @@@ (e1, e2))%Cexpr, None).
+
           Definition arith_un_arith_expr_of_PHOAS_ident
                      (s:=tZ)
                      (d:=tZ)
@@ -714,6 +725,7 @@ Module Compilers.
                  | ident.Z_add => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_add r (x, y))
                  | ident.Z_mul => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_mul r (x, y))
                  | ident.Z_sub => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_sub r (x, y))
+                 | ident.Z_ltz => fun r x y => ret (comparison_bin_arith_expr_of_PHOAS_ident Z_sub r (x, y))
                  | ident.Z_lnot_modulo
                    => fun rout '(e, r) '(modulus, _)
                       => match invert_literal modulus with
@@ -788,7 +800,6 @@ Module Compilers.
                  | ident.Z_log2_up
                  | ident.Z_of_nat
                  | ident.Z_to_nat
-                 | ident.Z_ltz
                  | ident.Z_zselect
                  | ident.Z_mul_split
                  | ident.Z_mul_high

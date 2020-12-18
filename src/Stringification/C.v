@@ -149,6 +149,8 @@ Module Compilers.
              => "(" ++ @arith_to_string prefix _ x1 ++ " * " ++ @arith_to_string prefix _ x2 ++ ")"
            | (Z_sub @@@ (x1, x2))
              => "(" ++ @arith_to_string prefix _ x1 ++ " - " ++ @arith_to_string prefix _ x2 ++ ")"
+           | (Z_ltz @@@ (x1, x2))
+             => "(" ++ @arith_to_string prefix _ x1 ++ " - " ++ @arith_to_string prefix _ x2 ++ ")"
            | (Z_lnot _ @@@ e)
              => "(~" ++ @arith_to_string prefix _ e ++ ")"
            | (Z_bneg @@@ e)
@@ -187,6 +189,7 @@ Module Compilers.
            | (Z_land @@@ _)
            | (Z_lor @@@ _)
            | (Z_lxor @@@ _)
+           | (Z_ltz @@@ _)
            | (Z_add_modulo @@@ _)
              => "#error bad_arg;"
            | TT
@@ -385,7 +388,12 @@ Module Compilers.
           - relational operators <, >, <=, >=, ==, !=
           - binary bitwise arithmetic &, ^, |,
           - the conditional operator ?: *)
-      Inductive binop_kind := use_common_type.
+      (** Quoting https://en.cppreference.com/w/c/language/operator_comparison: *)
+      (** The type of any relational operator expression is [int], and
+          its value (which is not an lvalue) is [1] when the specified
+          relationship holds true and [0] when the specified
+          relationship does not hold. *)
+      Inductive binop_kind := use_common_type | relational.
       Definition kind_of_binop (idc : Z_binop) : binop_kind
         := match idc with
            | Z_land
@@ -395,6 +403,8 @@ Module Compilers.
            | Z_mul
            | Z_sub
              => use_common_type
+           | Z_ltz
+             => relational
            end.
 
       Definition C_bin_op_natural_output
@@ -402,6 +412,7 @@ Module Compilers.
         := fun idc '(t1, t2)
            => match kind_of_binop idc with
               | use_common_type => C_common_type t1 t2
+              | relational => int32
               end.
 
       Definition C_bin_op_casts
@@ -420,6 +431,23 @@ Module Compilers.
                                else (None, get_Zcast_up_if_needed desired_type (Some t2)) in
                         let ct := C_common_type (Option.value t1o t1) (Option.value t2o t2) in
                         (get_Zcast_down_if_needed desired_type (Some ct), (t1o, t2o))
+                   end
+              | relational
+                => match desired_type with
+                   | None => (None, (None, None))
+                   | Some _
+                     => let t1 := integer_promote_type t1 in
+                        let t2 := integer_promote_type t2 in
+                        let ct := C_common_type t1 t2 in
+                        (* if the common type is not large enough to hold both values, we need to pick an even bigger type *)
+                        let desired_ct := int.union t1 t2 in
+                        let '(t1o, t2o)
+                            := if int.is_tighter_than ct desired_ct
+                               then (None, None)
+                               else if int.is_tighter_than t2 t1
+                                    then (get_Zcast_up_if_needed (Some desired_ct) (Some t1), None)
+                                    else (None, get_Zcast_up_if_needed (Some desired_ct) (Some t2)) in
+                        (get_Zcast_down_if_needed desired_type (Some int32), (t1o, t2o))
                    end
               end.
 

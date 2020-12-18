@@ -125,6 +125,8 @@ Module JSON.
          => handle_op1 "*" args
        | (IR.Z_sub @@@ args)
          => handle_op1 "-" args
+       | (IR.Z_ltz @@@ args)
+         => handle_op1 "<" args
        | (IR.Z_bneg @@@ args)
          => handle_op1 "!" args
        | (IR.Z_mul_split lg2s @@@ ((IR.Addr @@@ IR.Var _ x1, IR.Addr @@@ IR.Var _ x2), args))
@@ -233,10 +235,26 @@ Module JSON.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
 
+  Inductive binop_kind := arithmetic | comparison.
+  Definition kind_of_binop (idc : IR.Z_binop) : binop_kind
+    := match idc with
+       | IR.Z_land
+       | IR.Z_lor
+       | IR.Z_lxor
+       | IR.Z_add
+       | IR.Z_mul
+       | IR.Z_sub
+         => arithmetic
+       | IR.Z_ltz
+         => comparison
+       end.
   Definition JSON_bin_op_natural_output
     : IR.Z_binop -> ToString.int.type * ToString.int.type -> ToString.int.type
     := fun idc '(t1, t2)
-       => ToString.int.union t1 t2.
+       => match kind_of_binop idc with
+          | arithmetic => ToString.int.union t1 t2
+          | comparison => _Bool
+          end.
 
   (* Does the binary operation commute with (-- mod 2^bw)? *)
   Definition bin_op_commutes_with_mod_pow2 (idc : IR.Z_binop)
@@ -248,6 +266,8 @@ Module JSON.
        | IR.Z_mul
        | IR.Z_sub
          => true
+       | IR.Z_ltz
+         => false
        end.
 
   Definition JSON_bin_op_casts

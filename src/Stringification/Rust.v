@@ -120,6 +120,8 @@ Module Rust.
          "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
+       | (IR.Z_ltz @@@ (x1, x2)) =>
+         "(" ++ arith_to_string prefix x1 ++ " < " ++ arith_to_string prefix x2 ++ ")"
        | (IR.Z_bneg @@@ e) => "(!" ++ arith_to_string prefix e ++ ")" (* logical negation. XXX this has different semantics for numbers <>
                                                                         0 or 1 than it did before *)
        | (IR.Z_mul_split lg2s @@@ args) =>
@@ -157,6 +159,7 @@ Module Rust.
        | (IR.Z_land @@@ _)
        | (IR.Z_lor @@@ _)
        | (IR.Z_lxor @@@ _)
+       | (IR.Z_ltz @@@ _)
        | (IR.Z_add_modulo @@@ _) => "#error bad_arg;"
        | IR.TT => "#error tt;"
        end%string%Cexpr.
@@ -242,10 +245,26 @@ Module Rust.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
 
+  Inductive binop_kind := arithmetic | comparison.
+  Definition kind_of_binop (idc : IR.Z_binop) : binop_kind
+    := match idc with
+       | IR.Z_land
+       | IR.Z_lor
+       | IR.Z_lxor
+       | IR.Z_add
+       | IR.Z_mul
+       | IR.Z_sub
+         => arithmetic
+       | IR.Z_ltz
+         => comparison
+       end.
   Definition Rust_bin_op_natural_output
     : IR.Z_binop -> ToString.int.type * ToString.int.type -> ToString.int.type
     := fun idc '(t1, t2)
-       => ToString.int.union t1 t2.
+       => match kind_of_binop idc with
+          | arithmetic => ToString.int.union t1 t2
+          | comparison => _Bool
+          end.
 
   Definition Rust_bin_op_casts
     : IR.Z_binop -> option ToString.int.type -> ToString.int.type * ToString.int.type -> option ToString.int.type * (option ToString.int.type * option ToString.int.type)

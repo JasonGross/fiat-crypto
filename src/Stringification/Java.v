@@ -119,6 +119,8 @@ Module Java.
          "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
+       | (IR.Z_ltz @@@ (x1, x2)) =>
+         "((" ++ arith_to_string prefix x1 ++ " < " ++ arith_to_string prefix x2 ++ ") ? 1 : 0)"
        | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
          prefix
@@ -155,6 +157,7 @@ Module Java.
        | (IR.Z_land @@@ _)
        | (IR.Z_lor @@@ _)
        | (IR.Z_lxor @@@ _)
+       | (IR.Z_ltz @@@ _)
        | (IR.Z_add_modulo @@@ _) => "int _error = error_bad_arg"
        | IR.TT => "error_tt"
        end%string%Cexpr.
@@ -247,10 +250,26 @@ Module Java.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
 
+  Inductive binop_kind := arithmetic | comparison.
+  Definition kind_of_binop (idc : IR.Z_binop) : binop_kind
+    := match idc with
+       | IR.Z_land
+       | IR.Z_lor
+       | IR.Z_lxor
+       | IR.Z_add
+       | IR.Z_mul
+       | IR.Z_sub
+         => arithmetic
+       | IR.Z_ltz
+         => comparison
+       end.
   Definition Java_bin_op_natural_output
     : IR.Z_binop -> ToString.int.type * ToString.int.type -> ToString.int.type
     := fun idc '(t1, t2)
-       => ToString.int.union t1 t2.
+       => match kind_of_binop idc with
+          | arithmetic => ToString.int.union t1 t2
+          | comparison => _Bool
+          end.
 
   (* Does the binary operation commute with (-- mod 2^bw)? *)
   Definition bin_op_commutes_with_mod_pow2 (idc : IR.Z_binop)
@@ -262,6 +281,8 @@ Module Java.
        | IR.Z_mul
        | IR.Z_sub
          => true
+       | IR.Z_ltz
+         => false
        end.
 
   Definition Java_bin_op_casts
