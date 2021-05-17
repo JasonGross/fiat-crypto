@@ -112,6 +112,20 @@ Module Compilers.
       := {| text_before_function_name_opt := None
             ; newline_before_package_declaration := false
          |}.
+
+    Inductive ReturnTypeConvention :=
+    | ReturnTuples
+    | ReturnAtMostScalars (max_return_scalars : nat).
+    Notation ReturnVoid := (ReturnAtMostScalars 0).
+    Existing Class ReturnTypeConvention.
+    Inductive ReturnPositionConvention := InputsFirst | OutputsFirst.
+    Existing Class ReturnPositionConvention.
+    Definition default_ReturnPositionConvention : ReturnPositionConvention := OutputsFirst.
+    Definition default_ReturnTypeConvention : ReturnTypeConvention := ReturnVoid.
+    Class CallingConvention := { return_type_convention :> ReturnTypeConvention ; return_position_convention :> ReturnPositionConvention }.
+    Definition default_CallingConvention : CallingConvention
+      := {| return_type_convention := default_ReturnTypeConvention
+            ; return_position_convention := default_ReturnPositionConvention |}.
   End Options.
 
   Module ToString.
