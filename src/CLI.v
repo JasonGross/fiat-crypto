@@ -316,6 +316,8 @@ Module ForExtraction.
         ["For any (comma-separated) bitwidths passed to this argument, use bitwidth-sized bounds rather than tighter bounds for the carry return value of primitives such as addcarryx and subborrowx."]).
   Definition cmovznz_by_mul_spec : named_argT
     := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
+  Definition subst01_selectznz_spec : named_argT
+    := ([Arg.long_key "subst01-selectznz"], Arg.Unit, ["Run the subst01 pass on selectznz.  This results in the output assignments being moved up.  Note that this changes the semantics of the function when the output partially overlaps with the input without fully overlapping."]).
   Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
   Definition tight_bounds_multiplier_spec : named_argT
     := ([Arg.long_key "tight-bounds-mul-by"],
@@ -471,8 +473,10 @@ Module ForExtraction.
       (** Should we skip emitting typedefs for field elements *)
       (** Should we relax the bounds on the return carry type of sbb/adc operations? *)
       ; output_options :> output_options_opt
+      (** Various pipeline synthesis options including: *)
       (** Should we use the alternate implementation of cmovznz *)
-      ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
+      (** Should we use subst01 for selectznz *)
+      ; synthesis_pipeline_options :> synthesis_pipeline_options_opt
       (** Should we split apart oversized operations? *)
       ; should_split_mul :> should_split_mul_opt
       (** Should we split apart multi-return operations? *)
@@ -574,6 +578,7 @@ Module ForExtraction.
         ; no_field_element_typedefs_spec
         ; relax_primitive_carry_to_bitwidth_spec
         ; cmovznz_by_mul_spec
+        ; subst01_selectznz_spec
         ; only_signed_spec
         ; hint_file_spec
         ; output_file_spec
@@ -620,6 +625,7 @@ Module ForExtraction.
              , no_field_element_typedefsv
              , relax_primitive_carry_to_bitwidthv
              , cmovznz_by_mulv
+             , subst01_selectznzv
              , only_signedv
              , hint_file_namesv
              , output_file_namev
@@ -681,7 +687,10 @@ Module ForExtraction.
                   ; should_split_mul := to_bool no_wide_intv
                   ; should_split_multiret := to_bool split_multiretv
                   ; unfold_value_barrier := negb (to_bool value_barrierv)
-                  ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
+                  ; synthesis_pipeline_options :=
+                      {| use_mul_for_cmovznz_ := to_bool cmovznz_by_mulv
+                         ; subst01_selectznz_ := to_bool subst01_selectznzv
+                      |}
                   ; emit_primitives := negb (to_bool no_primitivesv)
                   ; output_options :=
                       {| skip_typedefs_ := to_bool no_field_element_typedefsv

@@ -792,7 +792,7 @@ Section __.
           {low_level_rewriter_method : low_level_rewriter_method_opt}
           {only_signed : only_signed_opt}
           {no_select : no_select_opt}
-          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
+          {synthesis_pipeline_options : synthesis_pipeline_options_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {should_split_multiret : should_split_multiret_opt}
@@ -839,7 +839,7 @@ Section __.
          (only parsing, at level 10, summary at next level, correctness at next level).
   Definition selectznz
     := Pipeline.BoundsPipeline
-         false (* subst01 *)
+         subst01_selectznz (* subst01 *)
          None (* fancy *)
          possible_values_with_bytes
          reified_selectznz_gen

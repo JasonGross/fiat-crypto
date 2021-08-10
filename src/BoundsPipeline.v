@@ -226,6 +226,17 @@ Typeclasses Opaque assembly_hints_lines_opt.
 (** Error if there are un-requested assembly functions *)
 Class error_on_unused_assembly_functions_opt := error_on_unused_assembly_functions : bool.
 Typeclasses Opaque error_on_unused_assembly_functions_opt.
+(** Use a [subst01] pass on selectznz *)
+Class subst01_selectznz_opt := subst01_selectznz : bool.
+Typeclasses Opaque subst01_selectznz_opt.
+(** Collection of options for the [Synthesize] methods *)
+Class synthesis_pipeline_options_opt :=
+  { use_mul_for_cmovznz_ :> use_mul_for_cmovznz_opt
+    ; subst01_selectznz_ :> subst01_selectznz_opt
+  }.
+Definition default_synthesis_pipeline_options : synthesis_pipeline_options_opt
+  := {| use_mul_for_cmovznz_ := false
+        ; subst01_selectznz_ := false |}.
 Inductive synthesis_output_kind := normal_output | assembly_output.
 Notation no_select_size_of_no_select machine_wordsize
   := (if no_select return no_select_size_opt

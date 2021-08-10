@@ -37,6 +37,8 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
+Local Existing Instance Build_synthesis_pipeline_options_opt.
+Local Instance : subst01_selectznz_opt := let _ := default_synthesis_pipeline_options in _.
 Local Instance : unfold_value_barrier_opt := true.
 Local Instance : assembly_hints_lines_opt := None.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
@@ -2575,7 +2577,7 @@ Local Instance static : static_opt := true.
 Local Instance : internal_static_opt := true.
 Local Instance : inline_opt := true.
 Local Instance : inline_internal_opt := true.
-Local Instance : use_mul_for_cmovznz_opt := false.
+Local Existing Instance default_synthesis_pipeline_options.
 Local Instance : emit_primitives_opt := true.
 
 Module debugging_remove_mul_split_to_C_uint1_carry.

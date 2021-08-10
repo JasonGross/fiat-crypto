@@ -47,13 +47,13 @@ Local Existing Instance Stringification.C.Compilers.ToString.C.OutputCAPI.
 Local Existing Instance default_language_naming_conventions.
 Local Existing Instance default_documentation_options.
 Local Existing Instance default_output_options.
+Local Existing Instance default_synthesis_pipeline_options.
 Local Instance : package_name_opt := None.
 Local Instance : class_name_opt := None.
 Local Instance : static_opt := true.
 Local Instance : internal_static_opt := true.
 Local Instance : inline_opt := true.
 Local Instance : inline_internal_opt := true.
-Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
 Local Instance : only_signed_opt := false.
 Local Instance : no_select_opt := false.
