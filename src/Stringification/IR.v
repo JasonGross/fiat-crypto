@@ -102,10 +102,12 @@ Module Compilers.
       Inductive stmt :=
       | Call (val : arith_expr type.unit)
       | Comment (lines : list string) (mentioned_variables : list { t : _ & OfPHOAS.var_data t})
-      | Assign (declare : bool) (t : type.primitive) (sz : option int.type) (name : string) (val : arith_expr t)
+      | DeclareAssign (t : type.primitive) (sz : option int.type) (name : string) (val : arith_expr t)
       | AssignZPtr (name : string) (sz : option int.type) (val : arith_expr type.Z)
       | DeclareVar (t : type.primitive) (sz : option int.type) (name : string)
-      | AssignNth (name : string) (n : nat) (val : arith_expr type.Z).
+      | AssignNth (name : string) (n : nat) (val : arith_expr type.Z)
+      | Return {t} (val : arith_expr t)
+      .
       Definition expr := list stmt.
 
       Module Export Notations.
