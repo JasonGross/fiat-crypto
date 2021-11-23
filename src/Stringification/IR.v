@@ -1267,7 +1267,7 @@ Module Compilers.
                  match idc in ident.ident t
                        return option (forall (rout : option int.type),
                                                         type.for_each_lhs_of_arrow (fun t => @API.expr var_data t * (arith_expr type.Z * option int.type))%type t
-                                                        -> ErrT (arith_expr type.Zptr -> expr))
+                                                        -> ErrT ((arith_expr type.Zptr -> expr) + expr))
                  with
                  | ident.Z_zselect
                    => Some
@@ -1281,7 +1281,10 @@ Module Compilers.
                                      => inl rout
                                    | None => inr ["Missing cast annotation on return of Z.zselect"]
                                    end;
-                               ret (fun retptr => [Call (Z_zselect ty @@@ (retptr, (econd, e1, e2)))]%Cexpr))
+                         ret (let as_ret =>
+                                    match return_type_convention with
+                              | ReturnVoid => inl (fun retptr => [Call (Z_zselect ty @@@ (retptr, (econd, e1, e2)))]%Cexpr)
+                              | ))
                  | _ => None (* fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show idc]%string *)
                  end.
 
