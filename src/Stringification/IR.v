@@ -77,6 +77,15 @@ Module Compilers.
         | Z_bneg
         | Z_value_barrier (ty:int.type)
         .
+
+        Inductive ident_2ret : type -> Set :=
+        | Z_mul_split (lgs:BinInt.Z) : ident_2ret (Z * Z)
+        | Z_add_with_get_carry (lgs:BinInt.Z) : ident_2ret (Z * Z * Z)
+        | Z_sub_with_get_borrow (lgs:BinInt.Z) : ident_2ret (Z * Z * Z)
+        .
+        Inductive ident_1ret : type -> Set :=
+        | Z_zselect (ty:int.type) : ident_1ret (Z * Z * Z)
+        .
         Inductive ident : type -> type -> Set :=
         | literal (v : BinInt.Z) : ident unit Z
         | List_nth (n : Datatypes.nat) : ident Zptr Z
@@ -84,10 +93,12 @@ Module Compilers.
         | Dereference : ident Zptr Z
         | iunop (op : Z_unop) : ident Z Z
         | ibinop (op : Z_binop) : ident (Z * Z) Z
-        | Z_mul_split (lgs:BinInt.Z) : ident ((Zptr * Zptr) * (Z * Z)) unit
-        | Z_add_with_get_carry (lgs:BinInt.Z) : ident ((Zptr * Zptr) * (Z * Z * Z)) unit
-        | Z_sub_with_get_borrow (lgs:BinInt.Z) : ident ((Zptr * Zptr) * (Z * Z * Z)) unit
-        | Z_zselect (ty:int.type) : ident (Zptr * (Z * Z * Z)) unit
+        | func_ret2_ptr_inputs_first {t} (op : ident_2ret t) : ident (t * (Zptr * Zptr)) unit
+        | func_ret1_ptr_inputs_first {t} (op : ident_1ret t) : ident (t * Zptr) unit
+        | func_ret2_ptr_outputs_first {t} (op : ident_2ret t) : ident ((Zptr * Zptr) * t) unit
+        | func_ret1_ptr_outputs_first {t} (op : ident_1ret t) : ident (Zptr * t) unit
+        | func_ret2 {t} (op : ident_2ret t) : ident t (Z * Z)
+        | func_ret1 {t} (op : ident_1ret t) : ident t Z
         | Z_add_modulo : ident (Z * Z * Z) Z
         | Z_static_cast (ty : int.type) : ident Z Z
         .
@@ -102,7 +113,7 @@ Module Compilers.
       Inductive stmt :=
       | Call (val : arith_expr type.unit)
       | Comment (lines : list string) (mentioned_variables : list { t : _ & OfPHOAS.var_data t})
-      | DeclareAssign (t : type.primitive) (sz : option int.type) (name : string) (val : arith_expr t)
+      | Assign (declare : bool) (t : type.type) (sz_name : list (type.primitive * option int.type * string)) (val : arith_expr t)
       | AssignZPtr (name : string) (sz : option int.type) (val : arith_expr type.Z)
       | DeclareVar (t : type.primitive) (sz : option int.type) (name : string)
       | AssignNth (name : string) (n : nat) (val : arith_expr type.Z)
@@ -134,18 +145,32 @@ Module Compilers.
            end.
 
       Module ident_infos.
-        Definition collect_infos_of_ident {s d} (idc : ident s d) : ident_infos
+        Definition collect_infos_of_ident_1ret {t} (idc : ident_1ret t) : ident_infos
           := match idc with
-             | Z_static_cast ty => ident_info_of_bitwidths_used (IntSet.singleton ty)
+             | Z_zselect ty
+               => ident_info_of_cmovznz (IntSet.singleton ty)
+             end.
+        Definition collect_infos_of_ident_2ret {t} (idc : ident_2ret t) : ident_infos
+          := match idc with
              | Z_mul_split lg2s
                => ident_info_of_mulx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
              | Z_add_with_get_carry lg2s
              | Z_sub_with_get_borrow lg2s
                => ident_info_of_addcarryx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
-             | Z_zselect ty
-               => ident_info_of_cmovznz (IntSet.singleton ty)
+             end.
+        Definition collect_infos_of_ident {s d} (idc : ident s d) : ident_infos
+          := match idc with
+             | Z_static_cast ty => ident_info_of_bitwidths_used (IntSet.singleton ty)
+             | func_ret2_ptr_inputs_first _ idc
+             | func_ret2_ptr_outputs_first _ idc
+             | func_ret2 _ idc
+               => collect_infos_of_ident_2ret idc
+             | func_ret1_ptr_inputs_first _ idc
+             | func_ret1_ptr_outputs_first _ idc
+             | func_ret1 _ idc
+               => collect_infos_of_ident_1ret idc
              | iunop (Z_value_barrier ty)
-               =>ident_info_of_value_barrier (IntSet.singleton ty)
+               => ident_info_of_value_barrier (IntSet.singleton ty)
              | literal _
              | List_nth _
              | Addr
@@ -165,13 +190,21 @@ Module Compilers.
 
         Definition collect_infos_of_stmt (e : stmt) : ident_infos
           := match e with
-             | Assign _ _ (Some sz) _ val
+             | Assign _ _ sz_name val
+               => List.fold_right
+                    (fun '(_, sz, n) infos
+                     => match sz with
+                        | Some sz => ident_info_union (ident_info_of_bitwidths_used (IntSet.singleton sz)) infos
+                        | None => infos
+                        end)
+                    (collect_infos_of_arith_expr val)
+                    sz_name
              | AssignZPtr _ (Some sz) val
                => ident_info_union (ident_info_of_bitwidths_used (IntSet.singleton sz)) (collect_infos_of_arith_expr val)
              | Call val
-             | Assign _ _ None _ val
              | AssignZPtr _ None val
              | AssignNth _ _ val
+             | Return _ val
                => collect_infos_of_arith_expr val
              | DeclareVar _ (Some sz) _
                => ident_info_of_bitwidths_used (IntSet.singleton sz)
@@ -282,7 +315,8 @@ Module Compilers.
 
           Definition collect_live_of_stmt (e : stmt) : t
             := match e with
-               | Assign _ _ _ _ val
+               | Return _ val
+               | Assign _ _ _ val
                | AssignZPtr _ _ val
                | Call val
                | AssignNth _ _ val
@@ -319,12 +353,14 @@ Module Compilers.
               := match e with
                  | Call val
                    => [Call (adjust_dead_of_arith_expr val)]
-                 | Assign declare t sz name val
-                   => [Assign declare t sz name (adjust_dead_of_arith_expr val)]
+                 | Assign declare t sz_name val
+                   => [Assign declare t sz_name (adjust_dead_of_arith_expr val)]
                  | AssignZPtr name sz val
                    => [AssignZPtr name sz (adjust_dead_of_arith_expr val)]
                  | AssignNth name n val
                    => [AssignNth name n (adjust_dead_of_arith_expr val)]
+                 | Return _ val
+                   => [Return (adjust_dead_of_arith_expr val)]
                  | DeclareVar t sz name
                    => if mem name live
                       then [DeclareVar t sz name]
@@ -347,8 +383,8 @@ Module Compilers.
 
         Definition split_declare (e : stmt) : list stmt (* decls *) * list stmt (* non-decls *)
           := match e with
-             | Assign true t sz name val
-               => ([DeclareVar t sz name], [Assign false t sz name val])
+             | Assign true t sz_name val
+               => (List.map (fun '(t, sz, name) => DeclareVar t sz name) sz_name, [Assign false t sz_name val])
              | DeclareVar _ _ _ as e
                => ([e], [])
              | e => ([], [e])
@@ -431,7 +467,8 @@ Module Compilers.
                   {relax_zrange : relax_zrange_opt}
                   {consider_retargs_live : consider_retargs_live_opt}
                   {rename_dead : rename_dead_opt}
-                  {lift_declarations : lift_declarations_opt}.
+                  {lift_declarations : lift_declarations_opt}
+                  {calling_convention : calling_convention_opt}.
 
           (* None means unconstrained *)
           Definition bin_op_natural_output_opt
@@ -1051,7 +1088,7 @@ Module Compilers.
                             let '(e, r) := result_upcast (t:=tZ) r rhs in
                             ret (if is_ptr
                                  then [AssignZPtr n r e]
-                                 else [Assign false type.Z r n e]))
+                                 else [Assign false type.Z [(type.Z, r, n)] e]))
                  | base.type.type_base _
                  | base.type.unit
                    => fun _ _ => inr ["Invalid type " ++ show t]%string
@@ -1219,7 +1256,7 @@ Module Compilers.
                         else inr ["Final bounds check failed on " ++ descr ++ " " ++ show idc ++ "; expected an unsigned " ++ Decimal.Z.to_string s ++ "-bit number (relaxed to " ++ show (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show ty ++ "."]%string
                    end.
 
-            Let recognize_1ref_ident
+            Definition recognize_1ref_ident
                 (do_bounds_check : bool)
                 {t}
                 (idc : ident.ident t)

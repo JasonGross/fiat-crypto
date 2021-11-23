@@ -129,29 +129,43 @@ Module Compilers.
             ; newline_in_typedef_bounds := false
          |}.
 
+    Inductive return_type_convention_opt :=
+    | ReturnTuplesWithArrays
+    | ReturnTuplesNoArrays
+    | ReturnAtMostScalars (max_return_scalars : nat).
+    Notation ReturnVoid := (ReturnAtMostScalars 0).
+    Existing Class return_type_convention_opt.
+    Inductive return_position_convention_opt := InputsFirst | OutputsFirst.
+    Existing Class return_position_convention_opt.
+    Inductive return_statement_convention_opt :=
+    | NoReturn
+    | ReturnUnit
+    | ReturnValue
+    .
+    Existing Class return_statement_convention_opt.
+    Definition default_return_position_convention : return_position_convention_opt := OutputsFirst.
+    Definition default_return_type_convention : return_type_convention_opt := ReturnVoid.
+    Definition default_return_statement_convention : return_statement_convention_opt := NoReturn.
+    Class calling_convention_opt :=
+      { return_type_convention :> return_type_convention_opt
+      ; return_position_convention :> return_position_convention_opt
+      ; return_statement_convention :> return_statement_convention_opt }.
+    Definition default_calling_convention : calling_convention_opt
+      := {| return_type_convention := default_return_type_convention
+         ; return_position_convention := default_return_position_convention
+         ; return_statement_convention := default_return_statement_convention |}.
+
     Class output_options_opt :=
       { skip_typedefs_ :> skip_typedefs_opt
-        ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
+      ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
+      ; calling_convention :> calling_convention_opt
       }.
 
     Definition default_output_options : output_options_opt
       := {| skip_typedefs_ := true
-            ; relax_adc_sbb_return_carry_to_bitwidth_ := []
+         ; relax_adc_sbb_return_carry_to_bitwidth_ := []
+         ; calling_convention := default_calling_convention
          |}.
-
-    Inductive ReturnTypeConvention :=
-    | ReturnTuples
-    | ReturnAtMostScalars (max_return_scalars : nat).
-    Notation ReturnVoid := (ReturnAtMostScalars 0).
-    Existing Class ReturnTypeConvention.
-    Inductive ReturnPositionConvention := InputsFirst | OutputsFirst.
-    Existing Class ReturnPositionConvention.
-    Definition default_ReturnPositionConvention : ReturnPositionConvention := OutputsFirst.
-    Definition default_ReturnTypeConvention : ReturnTypeConvention := ReturnVoid.
-    Class CallingConvention := { return_type_convention :> ReturnTypeConvention ; return_position_convention :> ReturnPositionConvention }.
-    Definition default_CallingConvention : CallingConvention
-      := {| return_type_convention := default_ReturnTypeConvention
-            ; return_position_convention := default_ReturnPositionConvention |}.
   End Options.
 
   Module ToString.
@@ -369,7 +383,7 @@ Module Compilers.
           := fun idc
              => match idc with
                 | ident.Literal base.type.Z v => show_lvl_compact_Z v
-                | ident.Literal t v => show_lvl v
+                | ident.Literal _ v => show_lvl v
                 | ident.value_barrier => neg_wrap_parens "value_barrier"
                 | ident.comment _ => neg_wrap_parens "comment"
                 | ident.comment_no_keep _ => neg_wrap_parens "comment_no_keep"
