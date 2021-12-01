@@ -189,6 +189,7 @@ Backend | Maintainer / Person of Contact | Build Checked by CI | Generated Code 
 :-- | :-- | :-- | :-- | :--
 C | :heavy_check_mark: @JasonGross / entire team | :heavy_check_mark: | :heavy_check_mark: (BoringSSL test-suite) |
 Bedrock2/C | :heavy_check_mark: @andres-erbsen / entire team | :heavy_check_mark: | :heavy_check_mark: (BoringSSL test-suite) | :heavy_check_mark:
+Coq IR | @JasonGross | | | :heavy_check_mark:
 Go | :white_check_mark: @mdempsky | :heavy_check_mark: | |
 Java | :x: Unmaintained | :heavy_check_mark: | :x: Known Buggy [#707](https://github.com/mit-plv/fiat-crypto/issues/707#issuecomment-763098543) |
 JSON | Experimental | :white_check_mark: (only syntax) | |

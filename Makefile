@@ -37,8 +37,8 @@ NORMAL:=$(shell tput sgr0)
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util all-except-generated \
-	c-files bedrock2-files rust-files go-files json-files java-files zig-files generated-files \
-	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files lite-generated-files \
+	c-files bedrock2-files rust-files go-files json-files coq-ir-files java-files zig-files generated-files \
+	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-coq-ir-files lite-java-files lite-zig-files lite-generated-files \
 	bedrock2-backend \
 	update-go-pkg-cache \
 	deps \
@@ -46,8 +46,8 @@ NORMAL:=$(shell tput sgr0)
 	lite only-heavy printlite \
 	all-except-compiled \
 	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files test-amd64-files \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files only-test-amd64-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-coq-ir-files test-java-files test-zig-files test-amd64-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-coq-ir-files only-test-java-files only-test-zig-files only-test-amd64-files \
 	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	check-output accept-output
@@ -170,6 +170,7 @@ BEDROCK2_DIR := fiat-bedrock2/src/
 RUST_DIR := fiat-rust/src/
 GO_DIR := fiat-go/
 JSON_DIR := fiat-json/src/
+COQIR_DIR := fiat-coq-ir/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
 ZIG_DIR := fiat-zig/src/
@@ -253,6 +254,7 @@ ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_
 ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 ALL_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(ALL_BASE_FILES))
+ALL_COQIR_FILES := $(patsubst %,$(COQIR_DIR)%.v,$(ALL_BASE_FILES))
 ALL_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 ALL_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(ALL_BASE_FILES))
 
@@ -261,6 +263,7 @@ LITE_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES
 LITE_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(LITE_BASE_FILES))
 LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 LITE_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(LITE_BASE_FILES))
+LITE_COQIR_FILES := $(patsubst %,$(COQIR_DIR)%.v,$(LITE_BASE_FILES))
 LITE_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 
@@ -317,8 +320,8 @@ endif
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS) fiat-amd64.test)
 
-generated-files: c-files rust-files go-files json-files java-files zig-files
-lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files
+generated-files: c-files rust-files go-files json-files coq-ir-files java-files zig-files
+lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files coq-ir-files lite-java-files lite-zig-files
 all-except-compiled: coq pre-standalone-extracted check-output
 all-except-generated: standalone-ocaml perf-standalone all-except-compiled
 all: all-except-generated generated-files
@@ -334,6 +337,7 @@ bedrock2-files: $(ALL_BEDROCK2_FILES)
 rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
 json-files: $(ALL_JSON_FILES)
+coq-ir-files: $(ALL_COQIR_FILES)
 java-files: $(ALL_JAVA_FILES)
 zig-files: $(ALL_ZIG_FILES)
 
@@ -342,6 +346,7 @@ lite-bedrock2-files: $(LITE_BEDROCK2_FILES)
 lite-rust-files: $(LITE_RUST_FILES)
 lite-go-files: $(LITE_GO_FILES)
 lite-json-files: $(LITE_JSON_FILES)
+lite-coq-ir-files: $(LITE_COQIR_FILES)
 lite-java-files: $(LITE_JAVA_FILES)
 lite-zig-files: $(LITE_ZIG_FILES)
 
@@ -650,6 +655,26 @@ $(addprefix only-test-,$(ALL_JSON_FILES)) : only-test-% :
 
 test-json-files: $(addprefix test-,$(ALL_JSON_FILES))
 only-test-json-files: $(addprefix only-test-,$(ALL_JSON_FILES))
+
+$(ALL_COQIR_FILES) : $(COQIR_DIR)%.v : $$($$($$*_BINARY_NAME))
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang CoqIR $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+.PHONY: $(addprefix test-,$(ALL_COQIR_FILES))
+.PHONY: $(addprefix only-test-,$(ALL_COQIR_FILES))
+
+$(addprefix test-,$(ALL_COQIR_FILES)) : test-% : %
+	$(SHOW)'COQC $*'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $*
+
+$(addprefix only-test-,$(ALL_COQIR_FILES)) : only-test-% :
+	$(SHOW)'COQC $*'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $*
+
+test-coq-ir-files: $(addprefix test-,$(ALL_COQIR_FILES))
+only-test-coq-ir-files: $(addprefix only-test-,$(ALL_COQIR_FILES))
 
 $(ALL_JAVA_FILES) : $(JAVA_DIR)%.java : $$($$(JAVA_$$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'

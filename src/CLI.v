@@ -24,6 +24,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.C.
 Require Import Crypto.BoundsPipeline.
+Require Import Crypto.Stringification.CoqIR.
 Require Import Crypto.Stringification.Rust.
 Require Import Crypto.Stringification.Go.
 Require Import Crypto.Stringification.Java.
@@ -230,7 +231,8 @@ Module ForExtraction.
         ; ("Go", Go.OutputGoAPI)
         ; ("Java", Java.OutputJavaAPI)
         ; ("JSON", JSON.OutputJSONAPI)
-        ; ("Zig", Zig.OutputZigAPI)].
+        ; ("Zig", Zig.OutputZigAPI)
+        ; ("CoqIR", CoqIR.OutputCoqIRAPI)].
 
   Local Notation anon_argT := (string * Arg.spec * Arg.doc)%type (only parsing).
   Local Notation named_argT := (list Arg.key * Arg.spec * Arg.doc)%type (only parsing).
