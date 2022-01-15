@@ -46,34 +46,20 @@
           {
             "datatype": "u128",
             "name": [],
-            "operation": "+",
+            "operation": "static_cast",
             "arguments": [
               {
                 "datatype": "u128",
                 "name": [],
-                "operation": "static_cast",
+                "operation": "+",
                 "arguments": [
-                  "arg1"
-                ]
-              },
-              {
-                "datatype": "u128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
+                  "arg1",
                   "arg2"
                 ]
               }
             ]
           },
-          {
-            "datatype": "u128",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "arg3"
-            ]
-          }
+          "arg3"
         ]
       },
       {
@@ -81,17 +67,17 @@
         "name": [
           "x2"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x1"
+              "x1",
+              "0xffffffffffffffff"
             ]
-          },
-          "0xffffffffffffffff"
+          }
         ]
       },
       {
@@ -181,34 +167,20 @@
           {
             "datatype": "i128",
             "name": [],
-            "operation": "-",
+            "operation": "static_cast",
             "arguments": [
               {
                 "datatype": "i128",
                 "name": [],
-                "operation": "static_cast",
+                "operation": "-",
                 "arguments": [
-                  "arg2"
-                ]
-              },
-              {
-                "datatype": "i128",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
+                  "arg2",
                   "arg1"
                 ]
               }
             ]
           },
-          {
-            "datatype": "i128",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "arg3"
-            ]
-          }
+          "arg3"
         ]
       },
       {
@@ -234,17 +206,17 @@
         "name": [
           "x3"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x1"
+              "x1",
+              "0xffffffffffffffff"
             ]
-          },
-          "0xffffffffffffffff"
+          }
         ]
       },
       {
@@ -262,14 +234,14 @@
         "name": [
           "out2"
         ],
-        "operation": "-",
+        "operation": "static_cast",
         "arguments": [
-          "0x0",
           {
             "datatype": "u1",
             "name": [],
-            "operation": "static_cast",
+            "operation": "-",
             "arguments": [
+              "0x0",
               "x2"
             ]
           }
@@ -313,21 +285,14 @@
         "name": [
           "x1"
         ],
-        "operation": "*",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u128",
             "name": [],
-            "operation": "static_cast",
+            "operation": "*",
             "arguments": [
-              "arg1"
-            ]
-          },
-          {
-            "datatype": "u128",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "arg1",
               "arg2"
             ]
           }
@@ -338,17 +303,17 @@
         "name": [
           "x2"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x1"
+              "x1",
+              "0xffffffffffffffff"
             ]
-          },
-          "0xffffffffffffffff"
+          }
         ]
       },
       {
@@ -444,39 +409,32 @@
         "name": [
           "x2"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
               {
-                "datatype": "u64",
+                "datatype": "i1",
                 "name": [],
-                "operation": "-",
+                "operation": "static_cast",
                 "arguments": [
                   {
                     "datatype": "i1",
                     "name": [],
-                    "operation": "static_cast",
+                    "operation": "-",
                     "arguments": [
-                      "0x0"
-                    ]
-                  },
-                  {
-                    "datatype": "i1",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
+                      "0x0",
                       "x1"
                     ]
                   }
                 ]
-              }
+              },
+              "0xffffffffffffffff"
             ]
-          },
-          "0xffffffffffffffff"
+          }
         ]
       },
       {
@@ -876,14 +834,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x33"
-            ]
-          },
+          "x33",
           "x9"
         ]
       },
@@ -1095,14 +1046,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x60"
-            ]
-          },
+          "x60",
           "x36"
         ]
       },
@@ -1442,14 +1386,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x103"
-            ]
-          },
+          "x103",
           "x79"
         ]
       },
@@ -1796,14 +1733,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x146"
-            ]
-          },
+          "x146",
           "x122"
         ]
       },
@@ -1940,21 +1870,14 @@
         "name": [
           "x164"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x163"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x163",
               "x120"
             ]
           }
@@ -2168,14 +2091,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x190"
-            ]
-          },
+          "x190",
           "x166"
         ]
       },
@@ -2515,14 +2431,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x233"
-            ]
-          },
+          "x233",
           "x209"
         ]
       },
@@ -2659,21 +2568,14 @@
         "name": [
           "x251"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x250"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x250",
               "x207"
             ]
           }
@@ -2887,14 +2789,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x277"
-            ]
-          },
+          "x277",
           "x253"
         ]
       },
@@ -3234,14 +3129,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x320"
-            ]
-          },
+          "x320",
           "x296"
         ]
       },
@@ -3378,21 +3266,14 @@
         "name": [
           "x338"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x337"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x337",
               "x294"
             ]
           }
@@ -3606,14 +3487,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x364"
-            ]
-          },
+          "x364",
           "x340"
         ]
       },
@@ -3953,14 +3827,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x407"
-            ]
-          },
+          "x407",
           "x383"
         ]
       },
@@ -4097,21 +3964,14 @@
         "name": [
           "x425"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x424"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x424",
               "x381"
             ]
           }
@@ -4325,14 +4185,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x451"
-            ]
-          },
+          "x451",
           "x427"
         ]
       },
@@ -4672,14 +4525,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x494"
-            ]
-          },
+          "x494",
           "x470"
         ]
       },
@@ -4816,21 +4662,14 @@
         "name": [
           "x512"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x511"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x511",
               "x468"
             ]
           }
@@ -5044,14 +4883,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x538"
-            ]
-          },
+          "x538",
           "x514"
         ]
       },
@@ -5391,14 +5223,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x581"
-            ]
-          },
+          "x581",
           "x557"
         ]
       },
@@ -5535,21 +5360,14 @@
         "name": [
           "x599"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x598"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x598",
               "x555"
             ]
           }
@@ -6175,14 +5993,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x33"
-            ]
-          },
+          "x33",
           "x9"
         ]
       },
@@ -6394,14 +6205,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x60"
-            ]
-          },
+          "x60",
           "x36"
         ]
       },
@@ -6741,14 +6545,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x103"
-            ]
-          },
+          "x103",
           "x79"
         ]
       },
@@ -7095,14 +6892,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x146"
-            ]
-          },
+          "x146",
           "x122"
         ]
       },
@@ -7239,21 +7029,14 @@
         "name": [
           "x164"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x163"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x163",
               "x120"
             ]
           }
@@ -7467,14 +7250,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x190"
-            ]
-          },
+          "x190",
           "x166"
         ]
       },
@@ -7814,14 +7590,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x233"
-            ]
-          },
+          "x233",
           "x209"
         ]
       },
@@ -7958,21 +7727,14 @@
         "name": [
           "x251"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x250"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x250",
               "x207"
             ]
           }
@@ -8186,14 +7948,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x277"
-            ]
-          },
+          "x277",
           "x253"
         ]
       },
@@ -8533,14 +8288,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x320"
-            ]
-          },
+          "x320",
           "x296"
         ]
       },
@@ -8677,21 +8425,14 @@
         "name": [
           "x338"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x337"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x337",
               "x294"
             ]
           }
@@ -8905,14 +8646,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x364"
-            ]
-          },
+          "x364",
           "x340"
         ]
       },
@@ -9252,14 +8986,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x407"
-            ]
-          },
+          "x407",
           "x383"
         ]
       },
@@ -9396,21 +9123,14 @@
         "name": [
           "x425"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x424"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x424",
               "x381"
             ]
           }
@@ -9624,14 +9344,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x451"
-            ]
-          },
+          "x451",
           "x427"
         ]
       },
@@ -9971,14 +9684,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x494"
-            ]
-          },
+          "x494",
           "x470"
         ]
       },
@@ -10115,21 +9821,14 @@
         "name": [
           "x512"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x511"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x511",
               "x468"
             ]
           }
@@ -10343,14 +10042,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x538"
-            ]
-          },
+          "x538",
           "x514"
         ]
       },
@@ -10690,14 +10382,7 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x581"
-            ]
-          },
+          "x581",
           "x557"
         ]
       },
@@ -10834,21 +10519,14 @@
         "name": [
           "x599"
         ],
-        "operation": "+",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u64",
             "name": [],
-            "operation": "static_cast",
+            "operation": "+",
             "arguments": [
-              "x598"
-            ]
-          },
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
+              "x598",
               "x555"
             ]
           }
@@ -13356,40 +13034,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x53"
-                ]
-              },
+              "x53",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x41"
-                    ]
-                  },
+                  "x41",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x27"
-                        ]
-                      },
+                      "x27",
                       "x3"
                     ]
                   }
@@ -13845,40 +13502,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x105"
-                ]
-              },
+              "x105",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x93"
-                    ]
-                  },
+                  "x93",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x79"
-                        ]
-                      },
+                      "x79",
                       "x55"
                     ]
                   }
@@ -14334,40 +13970,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x157"
-                ]
-              },
+              "x157",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x145"
-                    ]
-                  },
+                  "x145",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x131"
-                        ]
-                      },
+                      "x131",
                       "x107"
                     ]
                   }
@@ -14823,40 +14438,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x209"
-                ]
-              },
+              "x209",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x197"
-                    ]
-                  },
+                  "x197",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x183"
-                        ]
-                      },
+                      "x183",
                       "x159"
                     ]
                   }
@@ -15312,40 +14906,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x261"
-                ]
-              },
+              "x261",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x249"
-                    ]
-                  },
+                  "x249",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x235"
-                        ]
-                      },
+                      "x235",
                       "x211"
                     ]
                   }
@@ -15801,40 +15374,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x313"
-                ]
-              },
+              "x313",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x301"
-                    ]
-                  },
+                  "x301",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x287"
-                        ]
-                      },
+                      "x287",
                       "x263"
                     ]
                   }
@@ -15852,27 +15404,13 @@
         ],
         "operation": "+",
         "arguments": [
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x353"
-            ]
-          },
+          "x353",
           {
             "datatype": "u64",
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x339"
-                ]
-              },
+              "x339",
               "x315"
             ]
           }
@@ -17130,27 +16668,13 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x73"
-                    ]
-                  },
+                  "x73",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x33"
-                        ]
-                      },
+                      "x33",
                       "x9"
                     ]
                   }
@@ -17161,14 +16685,7 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x59"
-                    ]
-                  },
+                  "x59",
                   "x35"
                 ]
               }
@@ -17809,40 +17326,19 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x153"
-                    ]
-                  },
+                  "x153",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x113"
-                        ]
-                      },
+                      "x113",
                       {
                         "datatype": "u64",
                         "name": [],
                         "operation": "+",
                         "arguments": [
-                          {
-                            "datatype": "u64",
-                            "name": [],
-                            "operation": "static_cast",
-                            "arguments": [
-                              "x99"
-                            ]
-                          },
+                          "x99",
                           "x75"
                         ]
                       }
@@ -17855,14 +17351,7 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x139"
-                    ]
-                  },
+                  "x139",
                   "x115"
                 ]
               }
@@ -18503,40 +17992,19 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x233"
-                    ]
-                  },
+                  "x233",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x193"
-                        ]
-                      },
+                      "x193",
                       {
                         "datatype": "u64",
                         "name": [],
                         "operation": "+",
                         "arguments": [
-                          {
-                            "datatype": "u64",
-                            "name": [],
-                            "operation": "static_cast",
-                            "arguments": [
-                              "x179"
-                            ]
-                          },
+                          "x179",
                           "x155"
                         ]
                       }
@@ -18549,14 +18017,7 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x219"
-                    ]
-                  },
+                  "x219",
                   "x195"
                 ]
               }
@@ -19197,40 +18658,19 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x313"
-                    ]
-                  },
+                  "x313",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x273"
-                        ]
-                      },
+                      "x273",
                       {
                         "datatype": "u64",
                         "name": [],
                         "operation": "+",
                         "arguments": [
-                          {
-                            "datatype": "u64",
-                            "name": [],
-                            "operation": "static_cast",
-                            "arguments": [
-                              "x259"
-                            ]
-                          },
+                          "x259",
                           "x235"
                         ]
                       }
@@ -19243,14 +18683,7 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x299"
-                    ]
-                  },
+                  "x299",
                   "x275"
                 ]
               }
@@ -19891,40 +19324,19 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x393"
-                    ]
-                  },
+                  "x393",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x353"
-                        ]
-                      },
+                      "x353",
                       {
                         "datatype": "u64",
                         "name": [],
                         "operation": "+",
                         "arguments": [
-                          {
-                            "datatype": "u64",
-                            "name": [],
-                            "operation": "static_cast",
-                            "arguments": [
-                              "x339"
-                            ]
-                          },
+                          "x339",
                           "x315"
                         ]
                       }
@@ -19937,14 +19349,7 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x379"
-                    ]
-                  },
+                  "x379",
                   "x355"
                 ]
               }
@@ -20585,40 +19990,19 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x473"
-                    ]
-                  },
+                  "x473",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x433"
-                        ]
-                      },
+                      "x433",
                       {
                         "datatype": "u64",
                         "name": [],
                         "operation": "+",
                         "arguments": [
-                          {
-                            "datatype": "u64",
-                            "name": [],
-                            "operation": "static_cast",
-                            "arguments": [
-                              "x419"
-                            ]
-                          },
+                          "x419",
                           "x395"
                         ]
                       }
@@ -20631,14 +20015,7 @@
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x459"
-                    ]
-                  },
+                  "x459",
                   "x435"
                 ]
               }
@@ -20972,40 +20349,19 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x553"
-                ]
-              },
+              "x553",
               {
                 "datatype": "u64",
                 "name": [],
                 "operation": "+",
                 "arguments": [
-                  {
-                    "datatype": "u64",
-                    "name": [],
-                    "operation": "static_cast",
-                    "arguments": [
-                      "x513"
-                    ]
-                  },
+                  "x513",
                   {
                     "datatype": "u64",
                     "name": [],
                     "operation": "+",
                     "arguments": [
-                      {
-                        "datatype": "u64",
-                        "name": [],
-                        "operation": "static_cast",
-                        "arguments": [
-                          "x499"
-                        ]
-                      },
+                      "x499",
                       "x475"
                     ]
                   }
@@ -21018,14 +20374,7 @@
             "name": [],
             "operation": "+",
             "arguments": [
-              {
-                "datatype": "u64",
-                "name": [],
-                "operation": "static_cast",
-                "arguments": [
-                  "x539"
-                ]
-              },
+              "x539",
               "x515"
             ]
           }
@@ -21884,17 +21233,17 @@
         "name": [
           "x8"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x7"
+              "x7",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -21913,17 +21262,17 @@
         "name": [
           "x10"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x9"
+              "x9",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -21942,17 +21291,17 @@
         "name": [
           "x12"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x11"
+              "x11",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -21971,17 +21320,17 @@
         "name": [
           "x14"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x13"
+              "x13",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22000,17 +21349,17 @@
         "name": [
           "x16"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x15"
+              "x15",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22029,17 +21378,17 @@
         "name": [
           "x18"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x17"
+              "x17",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22058,17 +21407,17 @@
         "name": [
           "x20"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x19"
+              "x19",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22094,17 +21443,17 @@
         "name": [
           "x22"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x6"
+              "x6",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22123,17 +21472,17 @@
         "name": [
           "x24"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x23"
+              "x23",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22152,17 +21501,17 @@
         "name": [
           "x26"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x25"
+              "x25",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22181,17 +21530,17 @@
         "name": [
           "x28"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x27"
+              "x27",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22210,17 +21559,17 @@
         "name": [
           "x30"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x29"
+              "x29",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22239,17 +21588,17 @@
         "name": [
           "x32"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x31"
+              "x31",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22268,17 +21617,17 @@
         "name": [
           "x34"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x33"
+              "x33",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22304,17 +21653,17 @@
         "name": [
           "x36"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x5"
+              "x5",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22333,17 +21682,17 @@
         "name": [
           "x38"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x37"
+              "x37",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22362,17 +21711,17 @@
         "name": [
           "x40"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x39"
+              "x39",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22391,17 +21740,17 @@
         "name": [
           "x42"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x41"
+              "x41",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22420,17 +21769,17 @@
         "name": [
           "x44"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x43"
+              "x43",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22449,17 +21798,17 @@
         "name": [
           "x46"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x45"
+              "x45",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22478,17 +21827,17 @@
         "name": [
           "x48"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x47"
+              "x47",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22514,17 +21863,17 @@
         "name": [
           "x50"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x4"
+              "x4",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22543,17 +21892,17 @@
         "name": [
           "x52"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x51"
+              "x51",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22572,17 +21921,17 @@
         "name": [
           "x54"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x53"
+              "x53",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22601,17 +21950,17 @@
         "name": [
           "x56"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x55"
+              "x55",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22630,17 +21979,17 @@
         "name": [
           "x58"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x57"
+              "x57",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22659,17 +22008,17 @@
         "name": [
           "x60"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x59"
+              "x59",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22688,17 +22037,17 @@
         "name": [
           "x62"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x61"
+              "x61",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22724,17 +22073,17 @@
         "name": [
           "x64"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x3"
+              "x3",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22753,17 +22102,17 @@
         "name": [
           "x66"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x65"
+              "x65",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22782,17 +22131,17 @@
         "name": [
           "x68"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x67"
+              "x67",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22811,17 +22160,17 @@
         "name": [
           "x70"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x69"
+              "x69",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22840,17 +22189,17 @@
         "name": [
           "x72"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x71"
+              "x71",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22869,17 +22218,17 @@
         "name": [
           "x74"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x73"
+              "x73",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22898,17 +22247,17 @@
         "name": [
           "x76"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x75"
+              "x75",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22934,17 +22283,17 @@
         "name": [
           "x78"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x2"
+              "x2",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22963,17 +22312,17 @@
         "name": [
           "x80"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x79"
+              "x79",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -22992,17 +22341,17 @@
         "name": [
           "x82"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x81"
+              "x81",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23021,17 +22370,17 @@
         "name": [
           "x84"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x83"
+              "x83",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23050,17 +22399,17 @@
         "name": [
           "x86"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x85"
+              "x85",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23079,17 +22428,17 @@
         "name": [
           "x88"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x87"
+              "x87",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23108,17 +22457,17 @@
         "name": [
           "x90"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x89"
+              "x89",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23144,17 +22493,17 @@
         "name": [
           "x92"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x1"
+              "x1",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23173,17 +22522,17 @@
         "name": [
           "x94"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x93"
+              "x93",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23202,17 +22551,17 @@
         "name": [
           "x96"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x95"
+              "x95",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23231,17 +22580,17 @@
         "name": [
           "x98"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x97"
+              "x97",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23260,17 +22609,17 @@
         "name": [
           "x100"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x99"
+              "x99",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -23289,17 +22638,17 @@
         "name": [
           "x102"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u8",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x101"
+              "x101",
+              "0xff"
             ]
-          },
-          "0xff"
+          }
         ]
       },
       {
@@ -24961,14 +24310,7 @@
         "operation": "+",
         "arguments": [
           "x54",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x55"
-            ]
-          }
+          "x55"
         ]
       },
       {
@@ -25045,14 +24387,7 @@
         "operation": "+",
         "arguments": [
           "x46",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x47"
-            ]
-          }
+          "x47"
         ]
       },
       {
@@ -25129,14 +24464,7 @@
         "operation": "+",
         "arguments": [
           "x38",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x39"
-            ]
-          }
+          "x39"
         ]
       },
       {
@@ -25213,14 +24541,7 @@
         "operation": "+",
         "arguments": [
           "x30",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x31"
-            ]
-          }
+          "x31"
         ]
       },
       {
@@ -25297,14 +24618,7 @@
         "operation": "+",
         "arguments": [
           "x22",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x23"
-            ]
-          }
+          "x23"
         ]
       },
       {
@@ -25381,14 +24695,7 @@
         "operation": "+",
         "arguments": [
           "x14",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x15"
-            ]
-          }
+          "x15"
         ]
       },
       {
@@ -25465,14 +24772,7 @@
         "operation": "+",
         "arguments": [
           "x6",
-          {
-            "datatype": "u64",
-            "name": [],
-            "operation": "static_cast",
-            "arguments": [
-              "x7"
-            ]
-          }
+          "x7"
         ]
       },
       {
@@ -26073,17 +25373,17 @@
           {
             "datatype": "u1",
             "name": [],
-            "operation": "&",
+            "operation": "static_cast",
             "arguments": [
               {
                 "datatype": "u1",
                 "name": [],
-                "operation": "static_cast",
+                "operation": "&",
                 "arguments": [
-                  "arg3[0]"
+                  "arg3[0]",
+                  "0x1"
                 ]
-              },
-              "0x1"
+              }
             ]
           }
         ]
@@ -27383,17 +26683,17 @@
         "name": [
           "x119"
         ],
-        "operation": "&",
+        "operation": "static_cast",
         "arguments": [
           {
             "datatype": "u1",
             "name": [],
-            "operation": "static_cast",
+            "operation": "&",
             "arguments": [
-              "x31"
+              "x31",
+              "0x1"
             ]
-          },
-          "0x1"
+          }
         ]
       },
       {

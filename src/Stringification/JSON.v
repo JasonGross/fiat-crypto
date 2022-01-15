@@ -265,20 +265,7 @@ Module JSON.
   Definition JSON_bin_op_casts
     : IR.Z_binop -> option ToString.int.type -> ToString.int.type * ToString.int.type -> option ToString.int.type * (option ToString.int.type * option ToString.int.type)
     := fun idc desired_type '(t1, t2)
-       => match desired_type with
-          | Some desired_type
-            => let ct := ToString.int.union t1 t2 in
-               if bin_op_commutes_with_mod_pow2 idc
-               then
-                 (* these operations commute with mod, so we just pre-cast them *)
-                 (None, (Some desired_type, Some desired_type))
-               else
-                 let desired_type' := Some (ToString.int.union ct desired_type) in
-                 (desired_type',
-                  (get_Zcast_up_if_needed desired_type' (Some t1),
-                   get_Zcast_up_if_needed desired_type' (Some t2)))
-          | None => (None, (None, None))
-          end.
+       => (desired_type, (Some t1, Some t2)).
 
   Definition JSON_un_op_casts
     : IR.Z_unop -> option ToString.int.type -> ToString.int.type -> option ToString.int.type * option ToString.int.type
