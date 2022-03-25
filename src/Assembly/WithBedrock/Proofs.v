@@ -3088,405 +3088,77 @@ Proof.
      | [ |- asm_args_out = _ ] => idtac
      end.
   all: [ > | ].
-    (*
-  1: { rewrite Forall_forall_iff_nth_error in Hreg_wide_enough;
-       cbv [get_asm_reg val_or_list_val_matches_spec] in *.
-       rewrite <- !@Forall2_eq, ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *.
-       saturate_lengths.
-       Print Ltac Foralls_to_nth_error.
-       Set Ltac Profiling.
-       revert_Foralls_to_nth_error.
-       intros *.
-       Foralls_to_nth_error_rewrites.
-       Show Ltac Profile.
-       Time Foralls_to_nth_error_destructs.
-       Show Ltac Profile.
-       all: Foralls_to_nth_error_cleanup.
-       all: try specialize (Hreg_wide_enough _ eq_refl).
-       all: try specialize (Hreg_wide_enough _ _ ltac:(eassumption)).
-       { all: intros; saturate_lengths.
-         all: try specialize (Hreg_wide_enough _ _ ltac:(eassumption)).
-         intros.
-         destruct_head'_ex.
-         destruct_head'_and.
-         split_iff.
-         cbv [eval_idx_or_list_idx] in *.
-         repeat match goal with
-                | [ H : forall v, (0 <= v < _)%Z -> eval_idx_Z _ _ ?a v -> _, H' : eval_idx_Z _ _ ?a ?v' |- _ ]
-                  => specialize (fun H1 H2 => H v' (conj H1 H2))
-                end.
-         all: specialize_by (rewrite !Z.land_ones by (clear; lia); apply Z.mod_pos_bound; clear; lia).
-         all: specialize_by_assumption.
-         all: specialize_by (cbv [eval_idx_Z] in *; eauto).
-         handle_eval_eval.
-         subst.
-         match goal with
-         | [ H : Symbolic.get_reg _ _ = Some _ |- _ ]
-           => eapply get_reg_of_R_regs in H; [ | eassumption .. ]
-         end.
-         handle_eval_eval.
-         subst.
-         apply Properties.word.unsigned_inj.
-         generalize dependent (word.unsigned r0); intros; subst.
-         generalize dependent (word.unsigned r3); intros; subst.
-         move r4 at bottom.
-         move r5 at bottom.
-         generalize dependent (word.unsigned r5).
-         intros; subst.
-         move r4 at bottom.
-         rewrite !(fun x y => Z.land_ones (Semantics.get_reg x y)) in * by (clear; lia).
-         rewrite !(fun x y => Z.mod_small (Semantics.get_reg x y)) in * by now apply get_reg_bounded.
-         move r4 at bottom.
-         move r2 at bottom.
-         match goal with
-         | [ H : nth_error ?ls (?a + ?b) = _, H' : nth_error ?ls (?a' + ?b) = _ |- _ ]
-           => replace a' with a in * by congruence;
-              rewrite H in H'
-         end.
-         inversion_option; subst.
-         move r2 at bottom.
-         rewrite !Z.land_ones in * by (clear; lia).
-         rewrite Z.mod_small in H208.
-         Search Semantics.get_reg.
-         2: split; eauto.
-
-         move z at bottom.
-         move i4 at bottom.
-         move i3 at bottom.
-         move x15 at bottom.
-         2: { move Hreg_wide_enough at bottom.
-
-              move re
-         handle_eval_eval.
-
-         2: { move r2 at bottom.
-         move
-         split_iff.
-         cbv [eval_idx_or_list_idx] in *.
-         handle_eval_eval.
-         repeat match goal with
-                | [ H : forall v, (0 <= v < _)%Z -> eval_idx_Z _ _ ?a v -> _, H' : eval_idx_Z _ _ ?a ?v' |- _ ]
-                  => specialize (fun H1 H2 => H v' (conj H1 H2))
-                end.
-         all: specialize_by_assumption.
-         all: specialize_by (rewrite !Z.land_ones by (clear; lia); apply Z.mod_pos_bound; clear; lia).
-         all: specialize_by_assumption.
-         all: specialize_by (cbv [eval_idx_Z] in *; eauto).
-         handle_eval_eval.
-         subst.
-         move r3 at bottom.
-         move i4 at bottom.
-         apply Properties.word.unsigned_inj.
-         move r0 at bottom.
-         generalize dependent (word.unsigned r0); intros; subst.
-         move r3 at bottom.
-         generalize dependent (word.unsigned r3); intros; subst.
-         move z at bottom.
-         move i2 at bottom.
-         move i1 at bottom.
-         move x15 at bottom.
-         match goal with
-         | [ H : Symbolic.get_reg _ _ = Some _ |- _ ]
-           => eapply get_reg_of_R_regs in H; [ | try eassumption .. ]
-         end.
-         2: { move r2 at bottom.
-              move reg_available at bottom.
-         3: eassumption.
-         Search get_reg Semantics.get_reg.
-         move x6 at bottom.
-         move x17 at bottom.
-         move x14 at bottom.
-         match g
-       move asm_args_out at bottom.
-       Search word.unsigned.
-  move asm_args_in at bottom.
-
-  all: lazymatch goal with
-       | [ |- _ = _ :> list _ ]
-         => rewrite <- !@Forall2_eq, ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *
-       | _ => idtac
-       end.
-  move asm_args_in at bottom.
-  match goal with
-  |
-
-    all: try congruence.
-    { move i0 at bottom.
-      revert dependent i0.
-      rewrite !map_length in *.
-      move x20 at bottom.
-      rewrite !combine_length in *.
-        repeat rewrite ?combine_length, ?map_length, ?firstn_length, ?List.length_skipn, ?seq_length in *.
-  repeat match goal with H : ?T, H' : ?T |- _ => clear H' | H : ?x = ?x |- _ => clear H end.
-  repeat match goal with H : _ = _ :> nat |- _ => revert H end.
-  intros.
-  repeat match goal with
-         | [ |- List.length ?x = _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ |- _ = List.length ?x ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ H : List.length ?x = _ |- _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ H : _ = List.length ?x |- _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         end.
-  repeat match goal with H : ?T, H' : ?T |- _ => clear H' | H : ?x = ?x |- _ => clear H end.
-  repeat match goal with H : _ = _ :> nat |- _ => revert H end.
-  intros.
-  move i0 at bottom.
-
-  lia.
-  lia.
-
-  move x21 at bottom.
-  move word_runtime_inputs at bottom.
-  4: { move rets at bottom.
-
-       | _ => idtac
-       end.
-  match g
-  { move x at bottom.
-    generalize dependent (List.length x); intros; subst.
-    move l0 at bottom.
-    saturate_lengths.
-      congruence.
-  repeat rewrite ?combine_length, ?map_length, ?firstn_length, ?List.length_skipn, ?seq_length in *.
-  repeat match goal with
-         | [ |- List.length ?x = _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ |- _ = List.length ?x ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ H : List.length ?x = _ |- _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         end.
-  repeat match goal with H : ?T, H' : ?T |- _ => clear H' | H : ?x = ?x |- _ => clear H end.
-  repeat match goal with H : _ = _ :> nat |- _ => revert H end.
-  intros.
-
-  move x at bottom.
-  move x12 at bottom.
-  saturate_lengths.
-  generalize dependent (List.length x); intros; subst.
-  move l0 at bottom.
-  move x12 at bottom.
-  assumption.
-  5: { move asm_args_out at bottom.
-       move H6 at bottom.
-       match goal with
-       revert H6.
-       move x14 at bottom.
-       move
-  5: { move machine_mem_state at bottom.
-       | [ |- forall x y, eval _ _ _ _ -> eval _ _ _ _ ] => solve [ eauto 100 ]
-       | [ |- Forall2 (eval_idx_or_list_idx _ _) _ _ ]
-         => eapply Forall2_weaken; [ | eassumption ];
-            eapply lift_eval_idx_or_list_idx_impl; eauto 100
-       | _ => idtac
-       end.
-  all: lazymatch goal with
-       | [ |- _ = _ :> list _ ]
-         => rewrite <- !@Forall2_eq, ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *
-       | _ => idtac
-       end.
-  (* HERE *)
-  cbv [get_asm_reg] in *.
-  saturate_lengths.
-  repeat rewrite ?combine_length, ?map_length, ?firstn_length, ?List.length_skipn, ?seq_length in *.
-  repeat match goal with
-         | [ |- List.length ?x = _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ |- _ = List.length ?x ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         | [ H : List.length ?x = _ |- _ ]
-           => is_var x; generalize dependent (List.length x); intros; subst
-         end.
-  repeat match goal with H : ?T, H' : ?T |- _ => clear H' | H : ?x = ?x |- _ => clear H end.
-  repeat match goal with H : _ = _ :> nat |- _ => revert H end.
-  intros.
-  move n at bottom.
-  move stack_base at bottom.
-  move x18 at bottom.
-  move x21 at bottom.
-  move v10 at bottom.
-  6: { move rets at bottom.
-
-
-  7: { eauto 100.
-  2: { cbv [type_spec_of_runtime word_args_to_Z_args val_or_list_val_matches_spec get_asm_reg] in *.
-       rewrite !@Forall2_map_r_iff in *.
-       Foralls_to_nth_error.
-       cbv [eval_idx_or_list_idx] in *.
-       saturate_lengths.
-       move x21 at bottom.
-       generalize dependent (List.length x21); intros; subst.
-       move n at bottom.
-       move i0 at bottom.
-       move n at bottom.
-       lia.
-         match goal with
-
-    end.
-
-       subst.
-       subst e.
-       move x18 at bottom.
-       move asm_args_out at bottom.
-  2: { move x21 at bottom.
-       move v10 at bottom.
-       move wor
-  rewrite map_length.
-  saturate_lengths.
-  move x at bottom.
-  move x18 at bottom.
-  rewrite !combine_length in *.
-  rewrite !map_length in *.
-  rewrite !firstn_length in *.
-  rewrite !List.length_skipn in *.
-  cbv [get_asm_reg] in *.
-  rewrite !map_length in *.
-  rewrite !seq_length in *.
-  generalize dependent (List.length x); intros; subst.
-  generalize dependent (List.length l0); intros; subst.
-  generalize dependent (List.length x12); intros; subst.
-  repeat match goal with |- List.length ?x = _ => is_var x; generalize dependent (List.length x); intros; subst end.
-  repeat match goal with |- _ = List.length ?x => is_var x; generalize dependent (List.length x); intros; subst end.
-  repeat match goal with H : List.length ?x = _ |- _ => is_var x; generalize dependent (List.length x); intros; subst end.
-  repeat match goal with H : ?T, H' : ?T |- _ => clear H' | H : ?x = ?x |- _ => clear H end.
-  repeat match goal with H : _ = _ :> nat |- _ => revert H end.
-  move n at bottom.
-  move stack_base at bottom.
-  clear.
-
-  intros.
-  repeat
-  lia.
-  generalize
-  move
-                                           d
-
-  (* FIXME *)
-  repeat first [ progress destruct_head'_ex
-               | progress destruct_head'_and
-               | progress cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *
-               | solve [ auto ]
-               | match goal with
-                 | [ H : filter _ (List.combine _ (List.combine ?l1 ?l2))  = [] |- _ ]
-                   => is_var l1; is_var l2; apply eq_list_of_filter_nil in H;
-                      [ try (subst l1 || subst l2)
-                      | cbv [idx] in *; saturate_lengths;
-                        generalize dependent (List.length l1);
-                        generalize dependent (List.length l2);
-                        intros; subst; rewrite ?map_length; split; try reflexivity; try congruence; lia ]
-                 | [ H : Forall2 (eval_idx_Z _ _) ?l ?v, H' : Forall2 (eval_idx_Z _ _) ?l ?v' |- _ ]
-                   => unique assert (v = v')
-                     by (eapply eval_eval_idx_Z_Forall2; eapply Forall2_weaken; [ | eassumption | | eassumption ];
-                         intros *; apply lift_eval_idx_Z_impl;
-                         now typeclasses eauto with core)
-                 | [ H : R _ _ _ ?m |- _ ]
-                   => is_var m; unique pose proof (@reg_bounded_of_R _ _ _ _ H)
-                 end
-               | lazymatch reverse goal with
-                 | [ H : LoadOutputs _ _ _ = Success _ |- ex _ ]
-                   => debug_run ltac:(fun _ => idtac "LoadOutputs start");
-                      eapply LoadOutputs_ok_R in H;
-                      [ | try eassumption .. ];
-                      [ | try solve [ eapply Forall2_weaken; [ | eassumption ];
-                                      cbv beta; intros *; break_innermost_match; eauto 10 using lift_eval_idx_Z_impl ] .. ];
-                      [
-                      | let handle_foralls _ :=
-                          (saturate_lengths;
-                           adjust_Foralls_firstn_skipn;
-                           cbv [val_or_list_val_matches_spec eval_idx_or_list_idx get_asm_reg] in *;
-                           rewrite Forall_forall_iff_nth_error in Hreg_wide_enough;
-                           repeat (Foralls_to_nth_error; rewrite ?@nth_error_skipn in *; break_innermost_match_hyps);
-                           repeat first [ progress inversion_option
-                                        | progress intros
-                                        | progress split_iff
-                                        | progress destruct_head'_and
-                                        | progress specialize_by_assumption
-                                        | progress inversion_prod
-                                        | progress subst
-                                        | rewrite !Z.land_ones in * by (clear; lia)
-                                        | rewrite Z.mod_small in * by (split; assumption)
-                                        | match goal with
-                                          | [ H : forall v, (0 <= v < _)%Z -> eval_idx_Z _ _ ?a v -> _, H' : eval_idx_Z _ _ ?a ?v' |- _ ]
-                                            => specialize (fun H1 H2 => H v' (conj H1 H2))
-                                          | [ H : forall r, Option.is_Some (?f (reg_index r)) = true, H' : ?f (reg_index ?r') = None |- _ ]
-                                            => exfalso; clear -H H'; specialize (H r'); rewrite H' in H; cbv [Option.is_Some] in H; discriminate
-                                          | [ H : forall v, ?x = Some v -> _, H' : ?x = Some _ |- _ ]
-                                            => specialize (H _ H')
-                                          | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
-                                          | [ H : forall x, Some x = Some _ -> _ |- _ ] => specialize (H _ eq_refl)
-                                          | [ H : Semantics.get_reg _ _ = word.unsigned ?x |- eval_idx_Z _ _ _ (word.unsigned ?x) ]
-                                            => rewrite <- H
-                                          end
-                                        | progress handle_eval_eval
-                                        | rewrite nth_error_map in *; cbv [option_map] in *
-                                        | break_innermost_match_hyps_step
-                                        | solve [ eauto ] ]) in
-                        lazymatch goal with
-                        | [ |- _ = List.map word.unsigned _ ]
-                          => symmetry;
-                             saturate_lengths;
-                             rewrite ?firstn_firstn;
-                             adjust_Foralls_firstn_skipn;
-                             try eassumption
-                        | [ |- Forall2 _ _ _ ] => handle_foralls ()
-                        | [ |- Forall _ _ ] => handle_foralls ()
-                        | _ => idtac
-                        end .. ];
-                      (*[];*)
-                      debug_run ltac:(fun _ => idtac "LoadOutputs end")
-                 end ].
-  all: [ > | match goal with
-             | [ H : get_reg _ _ = Some _ |- _ ]
-               => eapply get_reg_of_R in H; [ | eassumption .. ]; revert H
-             end .. ].
-  cbv [R_runtime_output_mem].
-  { all: destruct_head' symbolic_state; cbn [update_dag_with Symbolic.dag_state Symbolic.symbolic_flag_state Symbolic.symbolic_mem_state Symbolic.symbolic_reg_state] in *; subst.
-    all: cbv [R update_dag_with] in *; destruct_head'_and.
-    all: destruct_head' machine_state; cbn [Semantics.machine_reg_state Semantics.machine_flag_state Semantics.machine_mem_state] in *.
-    all: cbn [R_mem] in *.
-    eexists.
-    all: let rec tac _ :=
-           first [ eassumption
-                 | solve [ trivial ]
-                 | first [ eapply Forall2_weaken
-                         | eapply lift_eval_idx_or_list_idx_impl ];
-                   [ | tac () .. ];
-                   cbv beta; intros *; break_innermost_match;
-                   try tac ()
-                 | solve [ eauto 100 ] ] in
-         cbv [get_asm_reg]; repeat (apply conj; (eauto 100 + tac ()); []).
-    do 2 eexists.
-    all: let rec tac _ :=
-           first [ eassumption
-                 | solve [ trivial ]
-                 | first [ eapply Forall2_weaken
-                         | eapply lift_eval_idx_or_list_idx_impl ];
-                   [ | tac () .. ];
-                   cbv beta; intros *; break_innermost_match;
-                   try tac ()
-                 | solve [ eauto 100 ] ] in
-         cbv [get_asm_reg]; repeat ((rewrite <- ?and_assoc + rewrite -> ?and_assoc); apply conj; (eauto 100 + tac ()); []).
-    match goal with
-    | [ H : sep ?A ?B ?m |- context[sep ?A' ?B' ?m] ]
-      => cut (Lift1Prop.iff1 (sep A B) (sep A' B'));
-         [ let H' := fresh in
-           intro H'; apply H' in H
-         | now SeparationLogic.cancel ]
-    end.
-    repeat ((rewrite <- ?and_assoc + rewrite -> ?and_assoc); apply conj; eauto; []).
-    saturate_lengths.
-    split; try congruence; [].
-    cbv [type_spec_of_runtime].
-    rewrite Forall2_map_r_iff.
-    saturate_lengths.
-    cbv [val_or_list_val_matches_spec eval_idx_or_list_idx] in *.
+  all: rewrite Forall_forall_iff_nth_error in Hreg_wide_enough;
+    cbv [get_asm_reg val_or_list_val_matches_spec] in *;
+    rewrite <- !@Forall2_eq, ?@Forall2_map_l_iff, ?@Forall2_map_r_iff in *;
+    saturate_lengths;
     Foralls_to_nth_error.
-    all: intros; saturate_lengths.
-    all: try congruence. }
-*)
+  all: try specialize (Hreg_wide_enough _ eq_refl).
+  all: try specialize (Hreg_wide_enough _ _ ltac:(eassumption)).
+  all: intros; saturate_lengths.
+  all: try specialize (Hreg_wide_enough _ _ ltac:(eassumption)).
+  all: try match goal with
+           | [ H : (?x < ?y)%nat, H' : (?x >= ?y')%nat |- _ ]
+             => exfalso; cut (y = y'); [ clear -H H'; lia | congruence ]
+           end.
+  all: repeat match goal with
+              | [ H : ?x = Some _, H' : ?x = None |- _ ]
+                => rewrite H in H'; inversion_option
+              | [ H : ?x = Some _, H' : ?x = Some _ |- _ ]
+                => rewrite H in H'; inversion_option
+              end.
+  all: repeat match goal with
+              | [ H : nth_error ?ls (?a + ?b) = _, H' : nth_error ?ls (?a' + ?b) = _ |- _ ]
+                => replace a' with a in * by congruence;
+                   rewrite H in H'
+              end.
+  all: inversion_option; subst.
+  all: cbv [eval_idx_or_list_idx] in *.
+  all: handle_eval_eval.
+  all: subst.
+  all: apply Properties.word.unsigned_inj.
+  all: try congruence.
+  all: rewrite ?(fun x y => Z.land_ones (Semantics.get_reg x y)) in * by (clear; lia).
+  all: rewrite ?(fun x y => Z.mod_small (Semantics.get_reg x y)) in * by now apply get_reg_bounded.
+  all: split_iff.
+  all: repeat match goal with
+              | [ H : forall v, (0 <= v < _)%Z -> eval_idx_Z _ _ ?a v -> _, H' : eval_idx_Z _ _ ?a ?v' |- _ ]
+                => specialize (fun H1 H2 => H v' (conj H1 H2))
+              end.
+  all: specialize_by_assumption.
+  all: specialize_by (cbv [eval_idx_Z] in *; eauto).
+  all: specialize_by apply get_reg_bounded.
+  all: specialize_by_assumption.
+  all: handle_eval_eval.
+  all: subst.
+  all: try congruence.
+  all: destruct_head'_ex.
+  all: destruct_head'_and.
+  all: handle_eval_eval.
+  all: subst.
+  all: try match goal with
+           | [ H : Symbolic.get_reg _ _ = Some _ |- _ ]
+             => eapply get_reg_of_R_regs in H; [ | eassumption .. ]
+           end.
+  all: handle_eval_eval.
+  all: repeat match goal with
+              | [ H : eval_idx_Z ?G ?d ?e ?v, H' : forall a b, eval ?G ?d a b -> eval ?G' ?d' a b |- _ ]
+                => apply H' in H; change (eval_idx_Z G' d' e v) in H
+              end.
+  all: handle_eval_eval.
+  all: subst.
+  all: try congruence.
+  all: match goal with
+       | [ |- word.unsigned ?x = word.unsigned ?y ]
+         => generalize dependent (word.unsigned x);
+            generalize dependent (word.unsigned y);
+            intros; subst
+       end.
+  all: [ > | ].
+  all: lazymatch goal with
+       | [ |- Semantics.get_reg ?m1 ?r = Semantics.get_reg ?m2 ?r ]
+         => idtac
+       end.
 Admitted.
 
 Theorem symex_asm_func_correct
