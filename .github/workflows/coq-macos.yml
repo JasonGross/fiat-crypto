@@ -19,7 +19,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "8.14.0"
+      COQ_VERSION: "8.15.2"
       COQCHKEXTRAFLAGS: ""
 
     steps:
