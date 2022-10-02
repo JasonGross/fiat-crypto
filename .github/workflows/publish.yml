@@ -48,3 +48,4 @@ jobs:
         git push publisher master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: always ()
