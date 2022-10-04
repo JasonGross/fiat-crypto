@@ -175,7 +175,7 @@ Strategy -500 [Crypto.Arithmetic.Core.Positional.add_to_nth
                  Crypto.Arithmetic.SolinasReduction.SolinasReduction.fold_andb_map'
                  Crypto.Arithmetic.Saturated.Columns.from_associational
                  Coq.Init.Decimal.Little.double].
-
+Ltac2 Set Reify.should_debug_profile := fun () => Init.true.
 Derive reified_solmul_gen
        SuchThat (is_reification_of reified_solmul_gen mulmod)
        As reified_solmul_gen_correct.
