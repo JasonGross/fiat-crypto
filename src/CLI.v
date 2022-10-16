@@ -959,8 +959,59 @@ Module ForExtraction.
           Synthesize
           := fun _ opts '(n, s, c, tight_bounds_multiplier, requests) comment_header prefix
              => UnsaturatedSolinas.Synthesize n s c comment_header prefix requests;
-        }.
-
+      }.
+  End UnsaturatedSolinas.
+End ForExtraction.
+Require Import Coq.extraction.Extraction.
+Set Printing Implicit.
+Print ForExtraction.UnsaturatedSolinas.api.
+Definition foo := fun
+      (opts : ForExtraction.SynthesizeOptions)
+                 =>
+      {|
+        Primitives.package_name :=
+          @ForExtraction.internal_package_name
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.class_name :=
+          @ForExtraction.internal_class_name
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.inline :=
+          @ForExtraction.inline (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.inline_internal :=
+          @ForExtraction.inline_internal
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.no_select :=
+          @ForExtraction.no_select (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.use_mul_for_cmovznz :=
+          @ForExtraction.use_mul_for_cmovznz
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.emit_primitives :=
+          @ForExtraction.emit_primitives
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.should_split_mul :=
+          @ForExtraction.should_split_mul
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.should_split_multiret :=
+          @ForExtraction.should_split_multiret
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.assembly_hints_lines := @ForExtraction.assembly_hints_lines opts;
+        Primitives.widen_carry :=
+          @ForExtraction.widen_carry
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.widen_bytes :=
+          @ForExtraction.widen_bytes
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.error_on_unused_assembly_functions :=
+          @ForExtraction.error_on_unused_assembly_functions
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.ignore_unique_asm_names :=
+          @ForExtraction.ignore_unique_asm_names
+            (@ForExtraction.parsed_synthesize_options opts);
+        Primitives.assembly_conventions :=
+          @ForExtraction.assembly_conventions
+            (@ForExtraction.parsed_synthesize_options opts)
+      |}.
+Extraction TestCompile ForExtraction.UnsaturatedSolinas.api.
     Definition PipelineMain
                {supported_languages : supported_languagesT}
                {A}
