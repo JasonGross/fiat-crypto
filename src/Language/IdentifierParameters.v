@@ -177,6 +177,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_option_rect (@Thunked.option_rect)
       ; with_name ident_Build_zrange ZRange.Build_zrange
       ; with_name ident_zrange_rect (@ZRange.zrange_rect_nodep)
+      ; with_name compile_time_if (@ident.compile_time_if)
       ; with_name ident_fancy_add ident.fancy.add
       ; with_name ident_fancy_addc ident.fancy.addc
       ; with_name ident_fancy_sub ident.fancy.sub

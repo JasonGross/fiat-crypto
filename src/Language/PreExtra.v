@@ -49,6 +49,12 @@ Module ident.
     Definition comment_no_keep {A} (x : A) := tt.
   End comment.
 
+  Definition compile_time_if {A} (test_branches : list (string * A)) (else_branch : A) : A
+    := match test_branches with
+       | (_, a) :: _ => a
+       | _ => else_branch
+       end.
+
   Module fancy.
     Module with_wordmax.
       Section with_wordmax.
